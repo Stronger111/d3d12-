@@ -103,6 +103,6 @@ void InitDirect3DApp::Draw(const GameTimer& gt)
 	ThrowIfFailed(mSwapChain->Present(0, 0));
 
 	mCurrBackBuffer = (mCurrBackBuffer + 1) % SwapChainBufferCount;
-
+	//
 	FlushCommandQueue();
 }
