@@ -13,10 +13,24 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="资源文件\UniformBuffer">
+      <UniqueIdentifier>{fb39ee4f-d844-4dea-b84c-7ec3f3418aea}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="资源文件\Texture">
+      <UniqueIdentifier>{7c23cd7a-b129-4042-a6c0-43938600d29d}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="VulkanTutorial.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Shaders\shader_ubo.vert">
+      <Filter>资源文件\UniformBuffer</Filter>
+    </None>
+    <None Include="Shaders\09_shader_base.frag">
+      <Filter>资源文件\UniformBuffer</Filter>
+    </None>
   </ItemGroup>
 </Project>
