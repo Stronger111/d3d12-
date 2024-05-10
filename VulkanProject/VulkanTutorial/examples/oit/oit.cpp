@@ -86,7 +86,7 @@ public:
 		VkDescriptorSet color;
 	}descriptorSets;
 
-	VulkanExample() :VulkanExampleBase(ENABLE_VALIDATION)
+	VulkanExample() :VulkanExampleBase()
 	{
 		title = "Order independent transparency rendering";
 		camera.setPosition(glm::vec3(0.0f, 0.0f, -6.0f));

@@ -102,14 +102,14 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;VK_EXAMPLE_DATA_DIR="E:/Project/GithubPro/DX12/d3d12-/VulkanProject/VulkanTutorial/data/";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;VK_EXAMPLE_DATA_DIR="D:/Project/GrphicsStudy/DX12/d3d12-/VulkanProject/VulkanTutorial/data/";%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>E:\Project\GithubPro\DX12\d3d12-\VulkanProject\VulkanTutorial\external\tinygltf;E:\Project\GithubPro\DX12\d3d12-\VulkanProject\VulkanTutorial\external\glm;E:\Project\GithubPro\DX12\d3d12-\VulkanProject\VulkanTutorial\external;E:\Project\GithubPro\DX12\d3d12-\VulkanProject\VulkanTutorial\external\ktx\include;E:\Project\GithubPro\DX12\d3d12-\VulkanProject\VulkanTutorial\external\ktx\other_include;E:\Project\GithubPro\DX12\Vulkan\base;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\Project\GrphicsStudy\DX12\d3d12-\VulkanProject\VulkanTutorial\external\tinygltf;D:\Project\GrphicsStudy\DX12\d3d12-\VulkanProject\VulkanTutorial\external\glm;D:\Project\GrphicsStudy\DX12\d3d12-\VulkanProject\VulkanTutorial\external;D:\Project\GrphicsStudy\DX12\d3d12-\VulkanProject\VulkanTutorial\external\ktx\include;D:\Project\GrphicsStudy\DX12\d3d12-\VulkanProject\VulkanTutorial\\external\ktx\other_include;D:\Project\GrphicsStudy\DX12\Vulkan\base;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>..\..\base\base\Debug\base.lib;E:\Project\GithubPro\DX12\d3d12-\VulkanProject\VulkanTutorial\libs\vulkan\vulkan-1.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>D:\Project\GrphicsStudy\DX12\d3d12-\VulkanProject\VulkanTutorial\libs\vulkan\vulkan-1.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib;D:\Project\GrphicsStudy\DX12\Vulkan\base\Debug\base.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
