@@ -54,7 +54,7 @@ typedef double f64;
 typedef int b32;
 
 /** @brief 8-bit boolean type */
-typedef char b8;
+typedef _Bool b8; //AAA
 
 /** @brief A range, typically of memory */
 typedef struct range {
@@ -182,4 +182,15 @@ STATIC_ASSERT(sizeof(f64) == 8, "Expected f64 to be 8 bytes.");
 /** @brief Import/export qualifier */
 #define KAPI
 #endif
+#endif
+
+#define KCLAMP(value,min,max) (value<=min)?min:(value>=max)?max:value;
+
+//Inlining
+#ifdef _MSC_VER
+#define KINLINE __forceinline
+#define KNOINLINE __declspec(noinline)
+#else
+#define KINLINE static inline
+#define KNOINLINE
 #endif

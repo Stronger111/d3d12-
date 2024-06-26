@@ -1,14 +1,9 @@
 #pragma once
 #include "defines.h"
-//平台状态
-typedef struct platform_state
-{
-    /* data */
-    void* internal_state;
-}platform_state;
- 
-b8 platform_startup(
-    platform_state* plat_state,
+
+b8 platform_system_startup(
+    u64* memory_requirement,
+    void* state,
     const char* application_name,
     i32 x,
     i32 y,
@@ -16,9 +11,9 @@ b8 platform_startup(
     i32 height
 );
 
-void platform_shutdown(platform_state* plat_state);
+void platform_system_shutdown(void* plat_state);
 
-b8 platform_pump_messages(platform_state* plat_state);
+b8 platform_pump_messages();
 //aligned 内存对齐 b8 8bit
 void* platform_allocate(u64 size,b8 aligned);
 void platform_free(void* block,b8 aligned);

@@ -31,8 +31,16 @@ typedef enum log_level
     LOG_LEVEL_TRACE = 5
 }log_level;
 
-b8 initialize_logging();
-void shutdown_logging();
+/*
+* @brief Initializes logging subsystem. Call twice; once with state = 0 to get required memeory size.
+* then a second time passing allocated memory to state.
+*
+* @param memory_requirement A pointer to hold the required memory size of internal state.
+* @param state 0 if just requesting memory requirement,otherwise  allocated block of memory.
+* @return b8 True if successful, false otherwise.
+*/
+b8 initialize_logging(u64* memory_requirement,void* state);
+void shutdown_logging(void* state);
 //可变参数同样是char* 
 KAPI void log_output(log_level level,const char* message,...);
 //## 当前面可变参数为0 

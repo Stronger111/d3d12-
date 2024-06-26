@@ -6,12 +6,40 @@
 #include<string.h>
 #include<stdarg.h>
 
-b8 initialize_logging()
+typedef struct logger_system_state
 {
+    b8 initialized;
+}logger_system_state;
+
+static logger_system_state* state_ptr;
+
+b8 initialize_logging(u64* memory_requirement,void* state)
+{
+    *memory_requirement=sizeof(logger_system_state);
+    if(state==0)
+    {
+        return true;
+    }
+
+    state_ptr=state;
+    state_ptr->initialized=true;
+
+    //TODO: Remove this
+   KFATAL("Test Message:%f",3.14f);
+   KERROR("Test Message:%f",3.14f);
+   KWARN("Test Message:%f",3.14f);
+   KINFO("Test Message:%f",3.14f);
+   KDEBUG("Test Message:%f",3.14f);
+   KTRACE("Test Message:%f",3.14f);
+
+    //TODO: create log file
    return true;
 }
-void shutdown_logging()
+
+void shutdown_logging(void* state)
 {
+    state_ptr=0;
+    //TODO: cleanup logging/write queued entries
 
 }
 
