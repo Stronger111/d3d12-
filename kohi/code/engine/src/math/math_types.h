@@ -53,7 +53,7 @@ typedef struct vec3_u
     };
 }vec3;
 
-typedef struct vec4_u
+typedef union vec4_u
 {
 //    #if defined(KUSE_SIMD)
 //       //Used for SIMD operations
@@ -95,9 +95,10 @@ typedef vec4 quat;
 typedef union mat4_u
 {
     f32 data[16];
-    //alignas(16) 
-    // #if defined(KUSE_SIMD)
-    //     //Used for SIMD operations
-    //     alignas(16) vec4 rows[4];
-    // #endif
 }mat4;
+
+typedef struct vertex_3d
+{
+    vec3 position;
+    vec2 texcoord;
+}vertex_3d;

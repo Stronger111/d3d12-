@@ -2,6 +2,7 @@
 
 #include "defines.h"
 #include "core/asserts.h"
+#include "renderer/renderer_types.inl"
 
 #include<vulkan/vulkan.h>
 
@@ -10,6 +11,17 @@
 {\
   KASSERT(expr==VK_SUCCESS) \
 }
+
+typedef struct vulkan_buffer
+{
+    u64 total_size;
+    VkBuffer handle;
+    VkBufferUsageFlagBits usage;
+    b8 is_locked;
+    VkDeviceMemory memory;
+    u32 memory_index;
+    u32 memory_property_flags;
+}vulkan_buffer;
 
 typedef struct vulkan_swapchain_support_info
 {
@@ -28,6 +40,7 @@ typedef struct vulkan_device
     i32 graphics_queue_index;
     i32 present_queue_index;
     i32 transfer_queue_index;
+    b8 supports_device_local_host_visible;
 
     VkQueue graphics_queue;
     VkQueue present_queue;
@@ -134,18 +147,86 @@ typedef struct vulkan_pipeline
 }vulkan_pipeline;
 
 //Shader stages Vertex Fragment
-#define OBJECT_SHADER_STAGE_COUNT 2
+#define MATERIAL_SHADER_STAGE_COUNT 2
 
-typedef struct vulkan_object_shader
+typedef struct vulkan_descriptor_state
+{
+   //One per frame
+   u32 generations[3]; //描述符是否需要更新 或者不需要更新
+   u32 ids[3];
+}vulkan_descriptor_state;
+
+#define VULKAN_MATERIAL_SHADER_DESCRIPTOR_COUNT 2
+#define VULKAN_MATERIAL_SHADER_SAMPLER_COUNT 1
+
+typedef struct vulkan_material_shader_instance_state
+{
+   //Per frame
+   VkDescriptorSet descriptor_sets[3];
+
+   //Per descriptor
+   vulkan_descriptor_state descriptor_states[VULKAN_MATERIAL_SHADER_DESCRIPTOR_COUNT];
+}vulkan_material_shader_instance_state;
+
+//Max number of material instance
+//TODO:make configurable
+#define VULKAN_MAX_MATERIAL_COUNT 1024
+
+//Max number of simultaneously uploaded geometries
+//TODO:make configurable
+#define VULKAN_MAX_GEOMETRY_COUNT 4096
+
+/**
+ * @brief Internal buffer data for geometry.
+ */
+typedef struct vulkan_geometry_data
+{
+   u32 id;
+   u32 generation;
+   u32 vertex_count;
+   u32 vertex_size;
+   u32 vertex_buffer_offset;
+   u32 index_count;
+   u32 index_size;
+   u32 index_buffer_offset;
+}vulkan_geometry_data;
+
+typedef struct vulkan_material_shader
 {
    //Vertex,Fragment
-   vulkan_shader_stage stages[OBJECT_SHADER_STAGE_COUNT];  
+   vulkan_shader_stage stages[MATERIAL_SHADER_STAGE_COUNT];  
+
+   VkDescriptorPool global_descriptor_pool;
+   VkDescriptorSetLayout global_descriptor_set_layout;
+
+   //One descriptor set per frame - max 3 for  triple -buffering
+   VkDescriptorSet global_descriptor_sets[3];
+
+   //Global uniform object
+   global_uniform_object global_ubo;
+   //Global uniform buffer
+   vulkan_buffer global_uniform_buffer;
+
+   VkDescriptorPool object_descriptor_pool;
+   VkDescriptorSetLayout object_descriptor_set_layout;
+   //Object uniform buffers
+   vulkan_buffer object_uniform_buffer;
+   //TODO: manager a free list of some kind here instead
+   u32 object_uniform_buffer_index;
+
+   texture_use sampler_uses[VULKAN_MATERIAL_SHADER_SAMPLER_COUNT];
+
+   //TODO:make dynamic
+   vulkan_material_shader_instance_state instance_states[VULKAN_MAX_MATERIAL_COUNT];
 
    vulkan_pipeline pipeline;
-}vulkan_object_shader;
+
+}vulkan_material_shader;
 
 typedef struct vulkan_context
 {
+    f32 frame_delta_time;
+
     //The framebuffer current width.
     u32 framebuffer_width;
 
@@ -172,6 +253,9 @@ typedef struct vulkan_context
     vulkan_swapchain swapchain;
     vulkan_renderpass main_renderpass;
 
+    vulkan_buffer object_vertex_buffer;
+    vulkan_buffer object_index_buffer;
+
     //darray
     vulkan_command_buffer* graphics_command_buffers;
 
@@ -192,8 +276,20 @@ typedef struct vulkan_context
 
     b8 recreating_swapchain;
 
-    vulkan_object_shader object_shader;
+    vulkan_material_shader material_shader;
+
+    u64 geometry_vertex_offset;
+    u64 geometry_index_offset;
+
+    //TODO: make dynamic
+    vulkan_geometry_data geometries[VULKAN_MAX_GEOMETRY_COUNT];
 
     i32 (*find_memory_index)(u32 type_filter, u32 property_flags);
    
 }vulkan_context;
+
+typedef struct vulkan_texture_data
+{
+    vulkan_image image;
+    VkSampler sampler;
+}vulkan_texture_data;

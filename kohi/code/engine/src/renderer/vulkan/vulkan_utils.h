@@ -7,7 +7,7 @@
   get_extended Indicates whether to also returen an extended result.
   The error code and/or extended error message in string form.Defaults to success for unknow result types
 */
-const char* vulkan_result_string(VkResult result, b8 get_extended);
+const char* vulkan_result_to_string(VkResult result, b8 get_extended);
 
 /*
   Inticates if the passed result is a success or an error as defined by the vulkan spec.

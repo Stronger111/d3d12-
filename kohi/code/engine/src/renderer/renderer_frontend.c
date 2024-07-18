@@ -4,10 +4,24 @@
 
 #include "core/logger.h"
 #include "core/kmemory.h"
+#include "math/kmath.h"
+
+#include "resources/resource_types.h"
+#include "systems/texture_system.h"
+#include "systems/material_system.h"
+
+// TODO: temporary
+#include "core/kstring.h"
+#include "core/event.h"
+// TODO: end temporary
 
 typedef struct render_system_state {
     // Backend render context
     renderer_backend backend;
+    mat4 projection;
+    mat4 view;
+    f32 near_clip;
+    f32 far_clip;
 } render_system_state;
 
 static render_system_state* state_ptr;
@@ -28,6 +42,13 @@ b8 renderer_system_initialize(u64* memory_requirement, void* state, char* applic
         return false;
     }
 
+    state_ptr->near_clip = 0.1f;
+    state_ptr->far_clip = 1000.0f;
+    state_ptr->projection = mat4_perspective(deg_to_rad(45.0f), 1280 / 720.0f, state_ptr->near_clip, state_ptr->far_clip);
+
+    state_ptr->view = mat4_translation((vec3){0.0f, 0.0f, -30.0f});
+    state_ptr->view = mat4_inverse(state_ptr->view);  // 逆矩阵 摄像机从原点移动到Z轴-30位置 然后物体在原点 在摄像机空间+30的位置
+
     return true;
 }
 
@@ -39,17 +60,15 @@ void renderer_system_shutdown(void* state) {
 }
 
 b8 renderer_begin_frame(f32 delta_time) {
-    if(!state_ptr)
-    {
-       return false;
+    if (!state_ptr) {
+        return false;
     }
     return state_ptr->backend.begin_frame(&state_ptr->backend, delta_time);
 }
 
 b8 renderer_end_frame(f32 delta_time) {
-    if(!state_ptr)
-    {
-       return false;
+    if (!state_ptr) {
+        return false;
     }
     b8 result = state_ptr->backend.end_frame(&state_ptr->backend, delta_time);
     state_ptr->backend.frame_number++;
@@ -58,6 +77,8 @@ b8 renderer_end_frame(f32 delta_time) {
 
 void renderer_on_resized(u16 width, u16 height) {
     if (state_ptr) {
+        // 矩阵重置
+        state_ptr->projection = mat4_perspective(deg_to_rad(45.0f), width / (f32)height, state_ptr->near_clip, state_ptr->far_clip);
         state_ptr->backend.resized(&state_ptr->backend, width, height);
     } else {
         KWARN("renderer backend does not exist to accept resize:%i %i", width, height);
@@ -67,6 +88,12 @@ void renderer_on_resized(u16 width, u16 height) {
 b8 renderer_draw_frame(render_packet* packet) {
     // If the begin frame returned successfully,mid-frame operations may continue
     if (renderer_begin_frame(packet->delta_time)) {
+        state_ptr->backend.update_global_state(state_ptr->projection, state_ptr->view, vec3_zero(), vec4_one(), 0);
+
+        u32 count = packet->geometry_count;
+        for (u32 i = 0; i < count; ++i) {
+            state_ptr->backend.draw_geometry(packet->geometries[i]);
+        }
         // End the frame. If this fails.it is likely unreconverable
         b8 result = renderer_end_frame(packet->delta_time);
 
@@ -77,4 +104,32 @@ b8 renderer_draw_frame(render_packet* packet) {
         return true;
     }
     return false;
+}
+
+void renderer_set_view(mat4 view) {
+    state_ptr->view = view;
+}
+
+void renderer_create_texture(const u8* pixels, struct texture* texture) {
+    state_ptr->backend.create_texture(pixels, texture);
+}
+
+void renderer_destroy_texture(texture* texture) {
+    state_ptr->backend.destroy_texture(texture);
+}
+
+b8 renderer_create_material(struct material* material) {
+    return state_ptr->backend.create_material(material);
+}
+
+void renderer_destroy_material(struct material* material) {
+    state_ptr->backend.destroy_material(material);
+}
+
+b8 renderer_create_geometry(geometry* geometry, u32 vertex_count, const vertex_3d* vertices, u32 index_count, const u32* indices) {
+     return state_ptr->backend.create_geometry(geometry, vertex_count, vertices, index_count, indices);
+}
+
+void renderer_destroy_geometry(geometry* geometry) {
+     state_ptr->backend.destroy_geometry(geometry);
 }

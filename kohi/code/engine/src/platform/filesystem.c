@@ -9,8 +9,13 @@
 
 // stat 获取文件状态
 b8 filesystem_exists(const char* path) {
+#ifdef _MSC_VER
+    struct _stat buffer;
+    return _stat(path, &buffer);
+#else
     struct stat buffer;
     return (stat(path, &buffer) == 0);
+#endif
 }
 
 b8 filesystem_open(const char* path, file_modes mode, b8 binary, file_handle* out_handle) {
@@ -25,66 +30,64 @@ b8 filesystem_open(const char* path, file_modes mode, b8 binary, file_handle* ou
     } else if ((mode & FILE_MODE_READ) == 0 && (mode & FILE_MODE_WRITE) != 0) {
         mode_str = binary ? "wb" : "w";
     } else {
-        KERROR("Invalid mode passed while trying to open file:'%s'",path);
+        KERROR("Invalid mode passed while trying to open file:'%s'", path);
         return false;
     }
 
-    //Attempt to open the file.
-    FILE* file=fopen(path,mode_str);
-    if(!file)
-    { 
-       KERROR("Error opening file: '%s'",path);
-    } 
+    // Attempt to open the file.
+    FILE* file = fopen(path, mode_str);
+    if (!file) {
+        KERROR("Error opening file: '%s'", path);
+    }
 
     out_handle->handle = file;
     out_handle->is_valid = true;
     return true;
 }
 
-void filesystem_close(file_handle* handle)
-{
-    if(handle->handle)
-    {
-       fclose((FILE*)handle->handle);
-       handle->handle = 0;
-       handle->is_valid = false;
+void filesystem_close(file_handle* handle) {
+    if (handle->handle) {
+        fclose((FILE*)handle->handle);
+        handle->handle = 0;
+        handle->is_valid = false;
     }
 }
 
-//Char** 字符串数组指针
-b8 filesystem_read_line(file_handle* handle, char** line_buf) 
-{
-   if(handle->handle)
-   {
-       //Since we are reading a single line,it should be safe to assume this is enough characters.
-       char buffer[32000];
-       if(fgets(buffer,32000, (FILE*)handle->handle)!=0)
-       {
-           u64 length=strlen(buffer);
-           *line_buf=kallocate((sizeof(char)*length)+1,MEMORY_TAG_STRING);
-           strcpy(*line_buf,buffer);
-           return true;
-       }
-   }
-   return false;
+KAPI b8 filesystem_size(file_handle* handle, u64* out_size) {
+    if (handle->handle) {
+        fseek((FILE*)handle->handle, 0, SEEK_END);
+        *out_size = ftell((FILE*)handle->handle);
+        rewind((FILE*)handle->handle);
+        return true;
+    }
+    return false;
 }
 
-KAPI b8 filesystem_write_line(file_handle* handle, const char* text) 
-{
-   if(handle->handle)
-   {
-      i32 result=fputs(text, (FILE*)handle->handle);
-      if(result!=EOF)
-      {
-         result=fputc('\n',(FILE*)handle->handle); //fputc 添加换行
-      }
+// Char** 字符串数组指针
+b8 filesystem_read_line(file_handle* handle, u64 max_length, char** line_buf, u64* out_line_length) {
+    if (handle->handle && out_line_length && max_length > 0) {
+        char* buf = *line_buf;
+        if (fgets(buf, max_length, (FILE*)handle->handle) != 0) {
+            *out_line_length = strlen(*line_buf);
+            return true;
+        }
+    }
+    return false;
+}
 
-      //Make sure flush the stream so it is written to the file immediately.
-      //This prevents data loss in the event of a crash.
-      fflush((FILE*)handle->handle);
-      return result!=EOF;   //EOF文件末尾
-   }
-   return false;
+KAPI b8 filesystem_write_line(file_handle* handle, const char* text) {
+    if (handle->handle) {
+        i32 result = fputs(text, (FILE*)handle->handle);
+        if (result != EOF) {
+            result = fputc('\n', (FILE*)handle->handle);  // fputc 添加换行
+        }
+
+        // Make sure flush the stream so it is written to the file immediately.
+        // This prevents data loss in the event of a crash.
+        fflush((FILE*)handle->handle);
+        return result != EOF;  // EOF文件末尾
+    }
+    return false;
 }
 
 b8 filesystem_read(file_handle* handle, u64 data_size, void* out_data, u64* out_bytes_read) {
@@ -98,19 +101,29 @@ b8 filesystem_read(file_handle* handle, u64 data_size, void* out_data, u64* out_
     return false;
 }
 
-b8 filesystem_read_all_bytes(file_handle* handle, u8** out_bytes, u64* out_bytes_read) {
-    if (handle->handle) {
+b8 filesystem_read_all_bytes(file_handle* handle, u8* out_bytes, u64* out_bytes_read) {
+    if (handle->handle && out_bytes && out_bytes_read) {
         // File size
-        fseek((FILE*)handle->handle, 0, SEEK_END);
-        u64 size = ftell((FILE*)handle->handle);
-        rewind((FILE*)handle->handle);
-
-        *out_bytes = kallocate(sizeof(u8) * size, MEMORY_TAG_STRING);
-        *out_bytes_read = fread(*out_bytes, 1, size, (FILE*)handle->handle);
-        if (*out_bytes_read != size) {
+        u64 size = 0;
+        if(!filesystem_size(handle, &size)) {
             return false;
         }
-        return true;
+        *out_bytes_read = fread(out_bytes, 1, size, (FILE*)handle->handle);
+        return *out_bytes_read == size;
+    }
+    return false;
+}
+
+b8 filesystem_read_all_text(file_handle* handle, char* out_text, u64* out_bytes_read) {
+    if (handle->handle && out_text && out_bytes_read) {
+        // File size
+        u64 size = 0;
+        if(!filesystem_size(handle, &size)) {
+            return false;
+        }
+
+        *out_bytes_read = fread(out_text, 1, size, (FILE*)handle->handle);
+        return *out_bytes_read == size;
     }
     return false;
 }

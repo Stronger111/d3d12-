@@ -145,7 +145,12 @@
         "test_manager.h": "c",
         "expect.h": "c",
         "stdio.h": "c",
-        "vulkan_object_shader.h": "c"
+        "vulkan_object_shader.h": "c",
+        "resource_types.h": "c",
+        "renderer_types.inl": "c",
+        "cctype": "c",
+        "math_types.h": "c",
+        "binary_loader.h": "c"
     },
     // File copyright documentation tag.  Array of strings will be converted to one line per element.  Can template {year}.
     "doxdocgen.file.copyrightTag": [
