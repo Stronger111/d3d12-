@@ -11,5 +11,12 @@
 3:快速编译 https://gnuwin32.sourceforge.net/packages/make.htm
 4:数学工具 paint.net  
 5:-Werror=vla 禁止可变数组 int[index_cout] 是不被允许
-6:从硬盘加载图片,纹理系统,材质系统,几何系统,资源系统
+6:从硬盘加载图片,纹理系统,材质系统,几何系统,资源系统  
 7:动画
+8:适配器模式适配库
+9:game/editor logic library (dll/.so) hot reload    -------- kvars(configurable 'global' settings)  --- engline configuration  ---- timeline system  --- skeletal animation sysytem 
+-
+
+Renderer:
+- renderable texture support
+- batch rendering

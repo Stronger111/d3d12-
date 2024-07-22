@@ -32,12 +32,6 @@
             "overviewRulerColor": "rgba(0,0,0,0)"
         },
         {
-            "text": "TODO(travis):",
-            "color": "red",
-            "backgroundColor": "rgba(0,0,0,0)",
-            "overviewRulerColor": "rgba(0,0,0,0)"
-        },
-        {
             "text": "HACK:",
             "color": "#ff6600",
             "backgroundColor": "rgba(0,0,0,0)",
@@ -150,7 +144,9 @@
         "renderer_types.inl": "c",
         "cctype": "c",
         "math_types.h": "c",
-        "binary_loader.h": "c"
+        "binary_loader.h": "c",
+        "resource_system.h": "c",
+        "material_system.h": "c"
     },
     // File copyright documentation tag.  Array of strings will be converted to one line per element.  Can template {year}.
     "doxdocgen.file.copyrightTag": [
@@ -172,5 +168,5 @@
         "empty",
         "custom"
     ],
-    "C_Cpp.errorSquiggles": "disabled",
+    //"C_Cpp.errorSquiggles": "disabled",
 }

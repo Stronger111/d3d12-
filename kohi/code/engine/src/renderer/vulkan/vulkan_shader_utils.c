@@ -37,6 +37,9 @@ b8 create_shader_module(vulkan_context* context,
     context->allocator, 
     &shader_stages[stage_index].handle));
 
+    //Release the resource.
+    resource_system_unload(&binary_resource);
+
     //Shader stage info
     kzero_memory(&shader_stages[stage_index].shader_stage_create_info,sizeof(VkPipelineShaderStageCreateInfo));
     shader_stages[stage_index].shader_stage_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;

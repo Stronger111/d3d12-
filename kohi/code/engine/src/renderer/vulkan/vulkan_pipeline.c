@@ -8,6 +8,7 @@
 
 b8 vulkan_graphics_pipeline_create(vulkan_context* context,
                                    vulkan_renderpass* renderpass,
+                                   u32 stride,
                                    u32 attribute_count,
                                    VkVertexInputAttributeDescription* attributes,
                                    u32 descriptor_set_layout_count,
@@ -17,6 +18,7 @@ b8 vulkan_graphics_pipeline_create(vulkan_context* context,
                                    VkViewport viewport,
                                    VkRect2D scissor,
                                    b8 is_wireframe,
+                                   b8 depth_test_enabled,
                                    vulkan_pipeline* out_pipeline) {
     // Viewport state
     VkPipelineViewportStateCreateInfo viewport_state = {VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO};
@@ -31,8 +33,8 @@ b8 vulkan_graphics_pipeline_create(vulkan_context* context,
     rasterizer_create_info.rasterizerDiscardEnable = VK_FALSE;
     rasterizer_create_info.polygonMode = is_wireframe ? VK_POLYGON_MODE_LINE : VK_POLYGON_MODE_FILL;
     rasterizer_create_info.lineWidth = 1.0f;
-    rasterizer_create_info.cullMode = VK_CULL_MODE_BACK_BIT;  //VK_FRONT_FACE_COUNTER_CLOCKWISE 逆时针
-    rasterizer_create_info.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE; // specifies that a triangle with positive area is considered front-facing.
+    rasterizer_create_info.cullMode = VK_CULL_MODE_BACK_BIT;             // VK_FRONT_FACE_COUNTER_CLOCKWISE 逆时针
+    rasterizer_create_info.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;  // specifies that a triangle with positive area is considered front-facing.
     rasterizer_create_info.depthBiasEnable = VK_FALSE;
     rasterizer_create_info.depthBiasConstantFactor = 0.0f;
     rasterizer_create_info.depthBiasClamp = 0.0f;
@@ -49,11 +51,13 @@ b8 vulkan_graphics_pipeline_create(vulkan_context* context,
 
     // Depth and stencil testing
     VkPipelineDepthStencilStateCreateInfo depth_stencil = {VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO};
-    depth_stencil.depthTestEnable = VK_TRUE;
-    depth_stencil.depthWriteEnable = VK_TRUE;
-    depth_stencil.depthCompareOp = VK_COMPARE_OP_LESS;
-    depth_stencil.depthBoundsTestEnable = VK_FALSE;
-    depth_stencil.stencilTestEnable = VK_FALSE;
+    if (depth_test_enabled) {
+        depth_stencil.depthTestEnable = VK_TRUE;
+        depth_stencil.depthWriteEnable = VK_TRUE;
+        depth_stencil.depthCompareOp = VK_COMPARE_OP_LESS;
+        depth_stencil.depthBoundsTestEnable = VK_FALSE;
+        depth_stencil.stencilTestEnable = VK_FALSE;
+    }
 
     VkPipelineColorBlendAttachmentState color_blend_attachment_state = {};
     kzero_memory(&color_blend_attachment_state, sizeof(VkPipelineColorBlendAttachmentState));
@@ -83,7 +87,7 @@ b8 vulkan_graphics_pipeline_create(vulkan_context* context,
     // Vertex input
     VkVertexInputBindingDescription binding_description;
     binding_description.binding = 0;  // Binding Index
-    binding_description.stride = sizeof(vertex_3d);
+    binding_description.stride = stride;
     binding_description.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;  // Move to next data entry for each vertex
 
     // Attributes
@@ -101,13 +105,13 @@ b8 vulkan_graphics_pipeline_create(vulkan_context* context,
     // Pipeline Layout
     VkPipelineLayoutCreateInfo pipeline_layout_create_info = {VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO};
 
-    //Push constants
+    // Push constants
     VkPushConstantRange push_constant;
-    push_constant.stageFlags=VK_SHADER_STAGE_VERTEX_BIT;
-    push_constant.offset=sizeof(mat4)*0;
-    push_constant.size=sizeof(mat4)*2;
-    pipeline_layout_create_info.pushConstantRangeCount=1;
-    pipeline_layout_create_info.pPushConstantRanges=&push_constant;
+    push_constant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    push_constant.offset = sizeof(mat4) * 0;
+    push_constant.size = sizeof(mat4) * 2;
+    pipeline_layout_create_info.pushConstantRangeCount = 1;
+    pipeline_layout_create_info.pPushConstantRanges = &push_constant;
 
     // Descriptor set layout
     pipeline_layout_create_info.setLayoutCount = descriptor_set_layout_count;
@@ -125,7 +129,7 @@ b8 vulkan_graphics_pipeline_create(vulkan_context* context,
     pipeline_create_info.pViewportState = &viewport_state;
     pipeline_create_info.pRasterizationState = &rasterizer_create_info;
     pipeline_create_info.pMultisampleState = &multisampling_create_info;
-    pipeline_create_info.pDepthStencilState = &depth_stencil;
+    pipeline_create_info.pDepthStencilState = depth_test_enabled ? &depth_stencil : 0;
     pipeline_create_info.pColorBlendState = &color_blend_state_create_info;
     pipeline_create_info.pDynamicState = &dynamic_state_create_info;
     pipeline_create_info.pTessellationState = 0;
@@ -144,7 +148,7 @@ b8 vulkan_graphics_pipeline_create(vulkan_context* context,
         return true;
     }
 
-    KERROR("vkCreateGraphicsPipeline failed with %s", vulkan_result_to_string(result, true));
+    KERROR("vkCreateGraphicsPipeline failed with %s", vulkan_result_string(result, true));
     return false;
 }
 
@@ -164,7 +168,6 @@ void vulkan_pipeline_destroy(vulkan_context* context, vulkan_pipeline* pipeline)
     }
 }
 
-void vulkan_pipeline_bind(vulkan_command_buffer* command_buffer, VkPipelineBindPoint bind_point, vulkan_pipeline* pipeline) 
-{
+void vulkan_pipeline_bind(vulkan_command_buffer* command_buffer, VkPipelineBindPoint bind_point, vulkan_pipeline* pipeline) {
     vkCmdBindPipeline(command_buffer->handle, bind_point, pipeline->handle);
 }
