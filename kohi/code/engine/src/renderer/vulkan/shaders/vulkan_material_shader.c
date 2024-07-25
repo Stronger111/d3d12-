@@ -176,7 +176,7 @@ b8 vulkan_material_shader_create(vulkan_context* context, vulkan_material_shader
 
     VkDescriptorSetAllocateInfo allocate_info = {VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO};
     allocate_info.descriptorPool = out_shader->global_descriptor_pool;
-    allocate_info.descriptorSetCount = 3;
+    allocate_info.descriptorSetCount = context->swapchain.image_count;
     allocate_info.pSetLayouts = global_layouts;
     VK_CHECK(vkAllocateDescriptorSets(context->device.logical_device, &allocate_info, out_shader->global_descriptor_sets));
 
@@ -395,7 +395,7 @@ b8 vulkan_material_shader_acquire_resources(vulkan_context* context, vulkan_mate
 
     VkDescriptorSetAllocateInfo alloc_info = {VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO};
     alloc_info.descriptorPool = shader->object_descriptor_pool;
-    alloc_info.descriptorSetCount = 3;  // one per frame
+    alloc_info.descriptorSetCount = context->swapchain.image_count;  // one per frame
     alloc_info.pSetLayouts = layouts;
     VkResult result = vkAllocateDescriptorSets(context->device.logical_device, &alloc_info, object_state->descriptor_sets);
     if (result != VK_SUCCESS) {
@@ -408,7 +408,7 @@ b8 vulkan_material_shader_acquire_resources(vulkan_context* context, vulkan_mate
 
 void vulkan_material_shader_release_resources(vulkan_context* context, vulkan_material_shader* shader, material* material) {
     vulkan_material_shader_instance_state* instance_state = &shader->instance_states[material->internal_id];
-    const u32 descriptor_set_count = 3;
+    const u32 descriptor_set_count = context->swapchain.image_count;
 
     // Wait for any pending operations using the descriptor set to finish
     vkDeviceWaitIdle(context->device.logical_device);

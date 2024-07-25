@@ -217,8 +217,7 @@ b8 select_physical_device(vulkan_context* context) {
         return false;
     }
 
-    const u32 max_device_count = 32;
-    VkPhysicalDevice physical_devices[max_device_count];
+    VkPhysicalDevice physical_devices[32];
     VK_CHECK(vkEnumeratePhysicalDevices(context->instance, &physical_device_count, physical_devices));
 
     for (u32 i = 0; i < physical_device_count; ++i) {
@@ -317,7 +316,7 @@ b8 select_physical_device(vulkan_context* context) {
             context->device.properties = properties;
             context->device.features = features;
             context->device.memory = memory;
-            context->device.supports_device_local_host_visible=supports_device_supports_host_visible;
+            context->device.supports_device_local_host_visible = supports_device_supports_host_visible;
             break;
         }
     }
@@ -361,9 +360,17 @@ b8 physical_device_meets_requirements(VkPhysicalDevice device, VkSurfaceKHR surf
     for (u32 i = 0; i < queue_family_count; ++i) {
         u8 current_transfer_score = 0;
         // Graphics queue?
-        if (queue_families[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+        if (out_queue_info->graphics_family_index == -1 && queue_families[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
             out_queue_info->graphics_family_index = i;
             ++current_transfer_score;
+
+            // If also a present queue, this prioritizes grouping of the 2
+            VkBool32 supports_present = VK_FALSE;
+            VK_CHECK(vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface, &supports_present));
+            if (supports_present) {
+                out_queue_info->present_family_index = i;
+                ++current_transfer_score;
+            }
         }
 
         // Compute queue?
@@ -381,12 +388,25 @@ b8 physical_device_meets_requirements(VkPhysicalDevice device, VkSurfaceKHR surf
                 out_queue_info->transfer_family_index = i;
             }
         }
+    }
+    
+    // If a present queue hasn't been found, iterate again and take the first one.
+    // This should only happen if there is a queue that supports graphics but NOT
+    // present.
+    if (out_queue_info->present_family_index == -1) {
+        for (u32 i = 0; i < queue_family_count; ++i) {
+            VkBool32 supports_present = VK_FALSE;
+            VK_CHECK(vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface, &supports_present));
+            if (supports_present) {
+                out_queue_info->present_family_index = i;
 
-        // Present queue?
-        VkBool32 supports_present = VK_FALSE;
-        VK_CHECK(vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface, &supports_present));
-        if (supports_present) {
-            out_queue_info->present_family_index = i;
+                // If they differ, bleat about it and move on. This is just here for troubleshooting
+                // purposes.
+                if (out_queue_info->present_family_index != out_queue_info->graphics_family_index) {
+                    KWARN("Warning: Different queue index used for present vs graphics: %u.", i);
+                }
+                break;
+            }
         }
     }
 

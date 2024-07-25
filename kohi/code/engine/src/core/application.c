@@ -35,9 +35,6 @@ typedef struct application_state {
     u64 event_system_memory_requirement;
     void* event_system_state;
 
-    u64 memory_system_memory_requirement;
-    void* memory_system_state;
-
     u64 logging_system_memory_requirement;
     void* logging_system_state;
 
@@ -111,25 +108,32 @@ b8 application_create(game* game_inst) {
         return false;
     }
 
+    // Memory system must be the first thing to be stood up.
+    memory_system_configuration memory_system_config = {};
+    memory_system_config.total_alloc_size = GIBIBYTES(1);  // 1G 大小
+    if (!memory_system_initialize(memory_system_config)) {
+        KERROR("Failed to initialize memory system; shutting down.");
+        return false;
+    }
+
+    // Allocate the game state.
+    game_inst->state = kallocate(game_inst->state_memory_requirement, MEMORY_TAG_GAME);
+
+    // Stand up the application state.
     game_inst->application_state = kallocate(sizeof(application_state), MEMORY_TAG_APPLICATION);
     app_state = game_inst->application_state;
     app_state->game_inst = game_inst;
     app_state->is_running = false;
     app_state->is_suspended = false;
-
+    // Create a linear allocator for all systems (except memory) to use.
     u64 systems_allocator_total_size = 64 * 1024 * 1024;  // 64 mb
     linear_allocator_create(systems_allocator_total_size, 0, &app_state->systems_allocator);
 
-    // Initialize subsystems logging_system_memory_requirement Logging 系统需要多少内存
+    // Initialize other subsystems.
     // Events
     event_system_initialize(&app_state->event_system_memory_requirement, 0);
     app_state->event_system_state = linear_allocator_allocate(&app_state->systems_allocator, app_state->event_system_memory_requirement);
     event_system_initialize(&app_state->event_system_memory_requirement, app_state->event_system_state);
-
-    // Memory
-    memory_system_initialize(&app_state->memory_system_memory_requirement, 0);
-    app_state->memory_system_state = linear_allocator_allocate(&app_state->systems_allocator, app_state->memory_system_memory_requirement);
-    memory_system_initialize(&app_state->memory_system_memory_requirement, app_state->memory_system_state);
 
     // Logging
     initialize_logging(&app_state->logging_system_memory_requirement, 0);
@@ -284,7 +288,7 @@ b8 application_run() {
     clock_start(&app_state->clock);
     clock_update(&app_state->clock);
     app_state->last_time = app_state->clock.elapsed;
-    f64 running_time = 0;
+    // f64 running_time = 0;
     u8 frame_count = 0;
     f64 target_frame_seconds = 1.0f / 60;
 
@@ -338,7 +342,7 @@ b8 application_run() {
             // Figure out how long the frame took and ,if below
             f64 frame_end_time = platform_get_absolute_time();
             f64 frame_elapsed_time = frame_end_time - frame_start_time;
-            running_time += frame_elapsed_time;
+            // running_time += frame_elapsed_time;
             f64 remaining_seconds = target_frame_seconds - frame_elapsed_time;
 
             if (remaining_seconds > 0) {
@@ -387,9 +391,9 @@ b8 application_run() {
 
     platform_system_shutdown(app_state->platform_system_state);
 
-    memory_system_shutdown(app_state->memory_system_state);
-
     event_system_shutdown(app_state->event_system_state);
+
+    memory_system_shutdown();
     return true;
 }
 

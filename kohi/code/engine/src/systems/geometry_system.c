@@ -79,7 +79,7 @@ geometry* geometry_system_acquire_by_id(u32 id) {
 }
 
 geometry* geometry_system_acquire_from_config(geometry_config config, b8 auto_release) {
-    geometry* g;
+    geometry* g=0;
     for (u32 i = 0; i < state_ptr->config.max_geometry_count; ++i) {
         if (state_ptr->registered_geometries[i].geometry.id == INVALID_ID) {
             // Fount empty slot
@@ -109,7 +109,7 @@ void geometry_system_release(geometry* geometry) {
 
         // Take a copy of the id;
         u32 id = geometry->id;
-        if (ref->geometry.id == geometry->id) {
+        if (ref->geometry.id ==id) {
             if (ref->reference_count > 0) {
                 ref->reference_count--;
             }

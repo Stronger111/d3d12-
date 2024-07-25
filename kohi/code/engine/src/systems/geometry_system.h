@@ -67,8 +67,6 @@ geometry* geometry_system_get_default();
 geometry* geometry_system_get_default_2d();
 
 /**
- 
-/**
  * @brief Generates configuration for plane geometries given the provided parameters.
  * NOTE: vertex and index arrays are dynamically allocated and should be freed upon object disposal.
  * Thus, this should not be considered production code.
