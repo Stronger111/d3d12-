@@ -78,8 +78,9 @@
         "loader_utils.h": "c",
         "kmath.h": "c",
         "random": "c",
-        "shader_system.h": "c",
-        "renderer_types.inl": "c"
+        "string_view": "c",
+        "limits": "c",
+        "sstream": "c"
     },
     // File copyright documentation tag.  Array of strings will be converted to one line per element.  Can template {year}.
     "doxdocgen.file.copyrightTag": [

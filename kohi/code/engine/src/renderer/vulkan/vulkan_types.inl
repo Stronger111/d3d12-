@@ -201,7 +201,7 @@ typedef struct vulkan_geometry_data {
 
 
 /** @brief The maximum number of bindings per descriptor set. */
-#define VULKAN_SHADER_MAX_BINDINGS 32
+#define VULKAN_SHADER_MAX_BINDINGS 2
 /** @brief The maximum number of push constant ranges for a shader. */
 #define VULKAN_SHADER_MAX_PUSH_CONST_RANGES 32
 
