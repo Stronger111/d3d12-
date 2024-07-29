@@ -97,9 +97,14 @@ typedef union mat4_u
     f32 data[16];
 }mat4;
 
+/**
+ * @brief Represents a single vertex in 3D space.
+ */
 typedef struct vertex_3d
 {
     vec3 position;
+    /** @brief The normal of the vertex. */
+    vec3 normal;
     vec2 texcoord;
 }vertex_3d;
 

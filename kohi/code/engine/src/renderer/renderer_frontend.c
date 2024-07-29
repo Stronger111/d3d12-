@@ -22,6 +22,7 @@ typedef struct render_system_state {
     renderer_backend backend;
     mat4 projection;
     mat4 view;
+    vec4 ambient_colour;
     mat4 ui_projection;
     mat4 ui_view;
     f32 near_clip;
@@ -82,6 +83,8 @@ b8 renderer_system_initialize(u64* memory_requirement, void* state, char* applic
     // TODO: configurable camera starting position
     state_ptr->view = mat4_translation((vec3){0.0f, 0.0f, -30.0f});
     state_ptr->view = mat4_inverse(state_ptr->view);  // 逆矩阵 摄像机从原点移动到Z轴-30位置 然后物体在原点 在摄像机空间+30的位置
+     // TODO: Obtain from scene
+    state_ptr->ambient_colour = (vec4){0.25f, 0.25f, 0.25f, 1.0f};
 
     // UI projection/view
     state_ptr->ui_projection = mat4_orthographic(0.0f, 1280.0f, 720.0f, 0.0f, -100.0f, 100.0f);  // Intentionally flipped on y axis.
@@ -123,7 +126,7 @@ b8 renderer_draw_frame(render_packet* packet) {
     }
 
     // Apply globals
-    if (!material_system_apply_global(state_ptr->material_shader_id, &state_ptr->projection, &state_ptr->view)) {
+    if (!material_system_apply_global(state_ptr->material_shader_id, &state_ptr->projection, &state_ptr->view,&state_ptr->ambient_colour)) {
         KERROR("Failed to use apply globals for material shader. Render frame failed.");
         return false;
     }
@@ -170,7 +173,7 @@ b8 renderer_draw_frame(render_packet* packet) {
         }
 
         // Apply globals
-        if(!material_system_apply_global(state_ptr->ui_shader_id, &state_ptr->ui_projection, &state_ptr->ui_view)) {
+        if(!material_system_apply_global(state_ptr->ui_shader_id, &state_ptr->ui_projection, &state_ptr->ui_view,0)) {
             KERROR("Failed to use apply globals for UI shader. Render frame failed.");
             return false;
         }
@@ -192,7 +195,7 @@ b8 renderer_draw_frame(render_packet* packet) {
             }
 
             // Apply the locals
-            material_system_apply_local(m, &packet->geometries[i].model);
+            material_system_apply_local(m, &packet->ui_geometries[i].model);
 
             // Draw it.
         state_ptr->backend.draw_geometry(packet->ui_geometries[i]);
