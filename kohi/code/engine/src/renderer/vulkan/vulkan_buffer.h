@@ -1,13 +1,25 @@
 #pragma once
 
 #include "vulkan_types.inl"
-
+/**
+ * @brief Creates a new Vulkan buffer.
+ * 
+ * @param context A pointer to the Vulkan context.
+ * @param size The size of the buffer in bytes.
+ * @param usage The buffer usage flags (VkBufferUsageFlagBits)
+ * @param memory_property_flags The memory property flags.
+ * @param bind_on_create Indicates if this buffer should bind on creation.
+ * @param use_freelist Indicates if a freelist should be used. If not, allocate/free functions should also not be used.
+ * @param out_buffer A pointer to hold the newly-created buffer.
+ * @return True on success; otherwise false.
+ */
 b8 vulkan_buffer_create(
     vulkan_context* context,
     u64 size,
     VkBufferUsageFlagBits usage,
     u32 memory_property_flags,
     b8 bind_on_create,
+    b8 use_freelist,
     vulkan_buffer* out_buffer
 );
 
