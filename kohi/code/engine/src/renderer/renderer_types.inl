@@ -27,6 +27,12 @@ typedef enum builtin_renderpass {
     BUILTIN_RENDERPASS_UI = 0x02,
 } builtin_renderpass;
 
+typedef enum renderer_debug_view_mode {
+    RENDERER_VIEW_MODE_DEFAULT = 0,
+    RENDERER_VIEW_MODE_LIGHTING = 1,
+    RENDERER_VIEW_MODE_NORMALS = 2
+} renderer_debug_view_mode;
+
 typedef struct renderer_backend {
     // struct platform_state* plat_state;
     u64 frame_number;
@@ -41,8 +47,8 @@ typedef struct renderer_backend {
 
     b8 (*end_frame)(struct renderer_backend* backend, f32 delta_time);
 
-    b8 (*begin_renderpass)(struct renderer_backend* backend,u8 renderpass_id);
-    b8 (*end_renderpass)(struct renderer_backend* backend,u8 renderpass_id);
+    b8 (*begin_renderpass)(struct renderer_backend* backend, u8 renderpass_id);
+    b8 (*end_renderpass)(struct renderer_backend* backend, u8 renderpass_id);
 
     void (*draw_geometry)(geometry_render_data data);
 
@@ -51,11 +57,11 @@ typedef struct renderer_backend {
         struct texture* texture);
     void (*destroy_texture)(struct texture* texture);
 
-    b8 (*create_geometry)(geometry* geometry, u32 vertex_size,u32 vertex_count, const void* vertices,u32 index_size, u32 index_count, const void* indices);
+    b8 (*create_geometry)(geometry* geometry, u32 vertex_size, u32 vertex_count, const void* vertices, u32 index_size, u32 index_count, const void* indices);
     void (*destroy_geometry)(geometry* geometry);
-        /**
+    /**
      * @brief Creates internal shader resources using the provided parameters.
-     * 
+     *
      * @param s A pointer to the shader.
      * @param renderpass_id The identifier of the renderpass to be associated with the shader.
      * @param stage_count The total number of stages.
@@ -64,7 +70,7 @@ typedef struct renderer_backend {
      * @return b8 True on success; otherwise false.
      */
     b8 (*shader_create)(struct shader* s, u8 renderpass_id, u8 stage_count, const char** stage_filenames, shader_stage* stages);
-    
+
     /**
      * @brief Destroys the given shader and releases any resources held by it.
      * @param s A pointer to the shader to be destroyed.
@@ -79,7 +85,7 @@ typedef struct renderer_backend {
      */
     b8 (*shader_initialize)(struct shader* shader);
 
-      /**
+    /**
      * @brief Uses the given shader, activating it for updates to attributes, uniforms and such,
      * and for use in draw calls.
      *
@@ -88,7 +94,7 @@ typedef struct renderer_backend {
      */
     b8 (*shader_use)(struct shader* shader);
 
-       /**
+    /**
      * @brief Binds global resources for use and updating.
      *
      * @param s A pointer to the shader whose globals are to be bound.
@@ -96,7 +102,7 @@ typedef struct renderer_backend {
      */
     b8 (*shader_bind_globals)(struct shader* s);
 
-      /**
+    /**
      * @brief Binds instance resources for use and updating.
      *
      * @param s A pointer to the shader whose instance resources are to be bound.
@@ -113,7 +119,7 @@ typedef struct renderer_backend {
      */
     b8 (*shader_apply_globals)(struct shader* s);
 
-      /**
+    /**
      * @brief Applies data for the currently bound instance.
      *
      * @param s A pointer to the shader to apply the instance data for.
@@ -121,7 +127,7 @@ typedef struct renderer_backend {
      */
     b8 (*shader_apply_instance)(struct shader* s);
 
-       /**
+    /**
      * @brief Acquires internal instance-level resources and provides an instance id.
      *
      * @param s A pointer to the shader to acquire resources from.
@@ -130,7 +136,7 @@ typedef struct renderer_backend {
      */
     b8 (*shader_acquire_instance_resources)(struct shader* s, u32* out_instance_id);
 
-       /**
+    /**
      * @brief Releases internal instance-level resources for the given instance id.
      *
      * @param s A pointer to the shader to release resources from.
@@ -138,16 +144,16 @@ typedef struct renderer_backend {
      * @return True on success; otherwise false.
      */
     b8 (*shader_release_instance_resources)(struct shader* s, u32 instance_id);
-    
+
     /**
      * @brief Sets the uniform of the given shader to the provided value.
-     * 
+     *
      * @param s A ponter to the shader.
      * @param uniform A constant pointer to the uniform.
      * @param value A pointer to the value to be set.
      * @return b8 True on success; otherwise false.
      */
-    b8 (*shader_set_uniform)(struct shader* frontend_shader,struct shader_uniform* uniform, const void* value);
+    b8 (*shader_set_uniform)(struct shader* frontend_shader, struct shader_uniform* uniform, const void* value);
 
 } renderer_backend;
 
