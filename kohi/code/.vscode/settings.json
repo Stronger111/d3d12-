@@ -80,7 +80,9 @@
         "random": "c",
         "string_view": "c",
         "limits": "c",
-        "sstream": "c"
+        "sstream": "c",
+        "filesystem.h": "c",
+        "mesh_loader.h": "c"
     },
     // File copyright documentation tag.  Array of strings will be converted to one line per element.  Can template {year}.
     "doxdocgen.file.copyrightTag": [

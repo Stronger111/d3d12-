@@ -7,11 +7,11 @@
 #include <string.h>
 #include <sys/stat.h>
 
-// stat 获取文件状态
+// stat 获取文件状态 0表示存在 1表示不存在
 b8 filesystem_exists(const char* path) {
 #ifdef _MSC_VER
     struct _stat buffer;
-    return _stat(path, &buffer);
+    return _stat(path, &buffer)==0;
 #else
     struct stat buffer;
     return (stat(path, &buffer) == 0);

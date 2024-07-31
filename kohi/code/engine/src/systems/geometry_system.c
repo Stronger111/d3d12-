@@ -79,7 +79,7 @@ geometry* geometry_system_acquire_by_id(u32 id) {
 }
 
 geometry* geometry_system_acquire_from_config(geometry_config config, b8 auto_release) {
-    geometry* g=0;
+    geometry* g = 0;
     for (u32 i = 0; i < state_ptr->config.max_geometry_count; ++i) {
         if (state_ptr->registered_geometries[i].geometry.id == INVALID_ID) {
             // Fount empty slot
@@ -103,13 +103,25 @@ geometry* geometry_system_acquire_from_config(geometry_config config, b8 auto_re
     return g;
 }
 
+void geometry_system_config_dispose(geometry_config* config) {
+    if (config) {
+        if (config->vertices) {
+            kfree(config->vertices, config->vertex_size * config->vertex_count, MEMORY_TAG_ARRAY);
+        }
+        if (config->vertices) {
+            kfree(config->indices, config->index_size * config->index_count, MEMORY_TAG_ARRAY);
+        }
+        kzero_memory(config, sizeof(geometry_config));
+    }
+}
+
 void geometry_system_release(geometry* geometry) {
     if (geometry && geometry->id != INVALID_ID) {
         geometry_reference* ref = &state_ptr->registered_geometries[geometry->id];
 
         // Take a copy of the id;
         u32 id = geometry->id;
-        if (ref->geometry.id ==id) {
+        if (ref->geometry.id == id) {
             if (ref->reference_count > 0) {
                 ref->reference_count--;
             }
@@ -251,7 +263,7 @@ geometry_config geometry_system_generate_plane_config(f32 width, f32 height, u32
 }
 
 geometry_config geometry_system_generate_cube_config(f32 width, f32 height, f32 depth, f32 tile_x, f32 tile_y, const char* name, const char* material_name) {
-     if (width == 0) {
+    if (width == 0) {
         KWARN("Width must be nonzero. Defaulting to one.");
         width = 1.0f;
     }
@@ -294,7 +306,6 @@ geometry_config geometry_system_generate_cube_config(f32 width, f32 height, f32 
     f32 max_uvx = tile_x;
     f32 max_uvy = tile_y;
 
-   
     vertex_3d verts[24];
 
     // Front face
@@ -486,7 +497,7 @@ b8 create_default_geometries(geometry_system_state* state) {
 
 b8 create_geometry(geometry_system_state* state, geometry_config config, geometry* g) {
     // Send the geometry off to the renderer to be uploaded to the GPU.
-    if (!renderer_create_geometry(g,config.vertex_size, config.vertex_count, config.vertices,config.index_size, config.index_count, config.indices)) {
+    if (!renderer_create_geometry(g, config.vertex_size, config.vertex_count, config.vertices, config.index_size, config.index_count, config.indices)) {
         // Invalidate the entry.
         state->registered_geometries[g->id].reference_count = 0;
         state->registered_geometries[g->id].auto_release = false;

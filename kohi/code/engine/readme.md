@@ -15,7 +15,7 @@
 7:动画
 8:适配器模式适配库
 9:game/editor logic library (dll/.so) hot reload    -------- kvars(configurable 'global' settings)  --- engline configuration  ---- timeline system  --- skeletal animation sysytem 
--
+-KSM 文件格式从Obj转换  和引擎数据格式高度吻合
 
 Renderer:
 - renderable texture support
