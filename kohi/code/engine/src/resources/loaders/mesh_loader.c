@@ -47,7 +47,7 @@ void process_subobject(vec3* positions, vec3* normals, vec2* tex_coords, mesh_fa
 b8 import_obj_material_library_file(const char* mtl_file_path);
 
 b8 load_ksm_file(file_handle* ksm_file, geometry_config** out_geometries_darray);
-b8 write_ksm_file(const char* path, const char* name, u32 geometry_count, geometry_config** geometries);
+b8 write_ksm_file(const char* path, const char* name, u32 geometry_count, geometry_config* geometries);
 b8 write_kmt_file(const char* mtl_file_path, material_config* config);
 
 b8 mesh_loader_load(struct resource_loader* self, const char* name, resource* out_resource) {
@@ -72,7 +72,7 @@ b8 mesh_loader_load(struct resource_loader* self, const char* name, resource* ou
     mesh_file_type type = MESH_FILE_TYPE_NOT_FOUND;
     // Try each supported extension.
     for (u32 i = 0; i < SUPPORTED_FILETYPE_COUNT; ++i) {
-        string_format(full_file_path, format_str, resource_system_base_path(), self->type_path, name, supported_filetypes[i].extension); 
+        string_format(full_file_path, format_str, resource_system_base_path(), self->type_path, name, supported_filetypes[i].extension);
         // If the file exists, open it and stop looking.
         if (filesystem_exists(full_file_path)) {
             if (filesystem_open(full_file_path, FILE_MODE_READ, supported_filetypes[i].is_binary, &f)) {
@@ -104,6 +104,7 @@ b8 mesh_loader_load(struct resource_loader* self, const char* name, resource* ou
         case MESH_FILE_TYPE_KSM:
             result = load_ksm_file(&f, &resource_data);
             break;
+        default:
         case MESH_FILE_TYPE_NOT_FOUND:
             KERROR("Unable to find mesh of supported type called '%s'.", name);
             result = false;
@@ -168,11 +169,10 @@ b8 import_obj_file(file_handle* obj_file, const char* out_ksm_filename, geometry
     // Normals
     vec2* tex_coords = darray_reserve(vec2, 16384);
 
-    // Faces
+    //  Groups
     mesh_group_data* groups = darray_reserve(mesh_group_data, 4);
 
     char material_file_name[512] = "";
-    // b8 hit_name = false;
 
     char name[512];
     u8 current_mat_name_count = 0;
@@ -248,7 +248,6 @@ b8 import_obj_file(file_handle* obj_file, const char* out_ksm_filename, geometry
                     } break;
                 }
             } break;
-            // case 'g':
             case 's': {
             } break;
             case 'f': {
@@ -303,10 +302,20 @@ b8 import_obj_file(file_handle* obj_file, const char* out_ksm_filename, geometry
                     // TODO: verification
                 }
             } break;
+            case 'u': {
+                // Any time there is a usemtl, assume a new group.
+                // New named group or smoothing group, all faces coming after should be added to it.
+                mesh_group_data new_group;
+                new_group.faces = darray_reserve(mesh_face_data, 16384);
+                darray_push(groups, new_group);
+
+                // usemtl
+                // Read the material name.
+                char t[8];
+                sscanf(line_buf, "%s %s", t, material_names[current_mat_name_count]);
+                current_mat_name_count++;
+            } break;
             case 'g': {
-                // case 'o': {
-                //  New object. process the previous object first if we previously read anything in. This will only be true after the first object..
-                // if (hit_name) {
                 u64 group_count = darray_length(groups);
 
                 // Process each group as a subobject.
@@ -333,28 +342,10 @@ b8 import_obj_file(file_handle* obj_file, const char* out_ksm_filename, geometry
                 current_mat_name_count = 0;
                 darray_clear(groups);
                 kzero_memory(name, 512);
-                //}
-
-                // hit_name = true;
 
                 // Read the name
                 char t[2];
                 sscanf(line_buf, "%s %s", t, name);
-
-            } break;
-            case 'u': {
-                // Any time there is a usemtl, assume a new group.
-                // New named group or smoothing group, all faces coming after should be added to it.
-                mesh_group_data new_group;
-                new_group.faces = darray_reserve(mesh_face_data, 16384);
-                darray_push(groups, new_group);
-
-                // usemtl
-                // Read the material name.
-                char t[8];
-                sscanf(line_buf, "%s %s", t, material_names[current_mat_name_count]);
-                current_mat_name_count++;
-
             } break;
         }
         prev_first_chars[1] = prev_first_chars[0];
@@ -426,10 +417,13 @@ b8 import_obj_file(file_handle* obj_file, const char* out_ksm_filename, geometry
         darray_destroy(g->indices);
         // Replace with the non-darray version.
         g->indices = indices;
+        
+        // Also generate tangents here, this way tangents are also stored in the output file.
+        geometry_generate_tangents(g->vertex_count, g->vertices, g->index_count, g->indices);
     }
 
     // Output a ksm file, which will be loaded in the future.
-    return write_ksm_file(out_ksm_filename, name, count, out_geometries_darray);
+    return write_ksm_file(out_ksm_filename, name, count, *out_geometries_darray);
 }
 
 void process_subobject(vec3* positions, vec3* normals, vec2* tex_coords, mesh_face_data* faces, geometry_config* out_data) {
@@ -491,7 +485,7 @@ void process_subobject(vec3* positions, vec3* normals, vec2* tex_coords, mesh_fa
             extent_set = true;
 
             if (skip_normals) {
-                vert.normal = vec3_create(0,0,1);
+                vert.normal = vec3_create(0, 0, 1);
             } else {
                 vert.normal = normals[index_data.normal_index - 1];
             }
@@ -513,9 +507,6 @@ void process_subobject(vec3* positions, vec3* normals, vec2* tex_coords, mesh_fa
     for (u8 i = 0; i < 3; ++i) {
         out_data->center.elements[i] = (out_data->min_extents.elements[i] + out_data->max_extents.elements[i]) / 2.0f;
     }
-
-    // Calculate tangents.
-    geometry_generate_tangents(out_data->vertex_count, out_data->vertices, out_data->index_count, out_data->indices);
 }
 
 // TODO: Load the material library file, and create material definitions from it.
@@ -711,13 +702,124 @@ b8 import_obj_material_library_file(const char* mtl_file_path) {
 }
 
 b8 load_ksm_file(file_handle* ksm_file, geometry_config** out_geometries_darray) {
-     // TODO: Read ksm file...
+    // Version
+    u64 bytes_read = 0;
+    u16 version = 0;
+    filesystem_read(ksm_file, sizeof(u16), &version, &bytes_read);
+
+    // Name length
+    u32 name_length = 0;
+    filesystem_read(ksm_file, sizeof(u32), &name_length, &bytes_read);
+    // Name + terminator
+    char name[256];
+    filesystem_read(ksm_file, sizeof(char) * name_length, name, &bytes_read);
+
+    // Geometry count
+    u32 geometry_count = 0;
+    filesystem_read(ksm_file, sizeof(u32), &geometry_count, &bytes_read);
+
+    // Each geometry
+    for (u32 i = 0; i < geometry_count; ++i) {
+        geometry_config g = {};
+
+        // Vertices (size/count/array)
+        filesystem_read(ksm_file, sizeof(u32), &g.vertex_size, &bytes_read);
+        filesystem_read(ksm_file, sizeof(u32), &g.vertex_count, &bytes_read);
+        g.vertices = kallocate(g.vertex_size * g.vertex_count, MEMORY_TAG_ARRAY);
+        filesystem_read(ksm_file, g.vertex_size * g.vertex_count, g.vertices, &bytes_read);
+
+        // Indices (size/count/array)
+        filesystem_read(ksm_file, sizeof(u32), &g.index_size, &bytes_read);
+        filesystem_read(ksm_file, sizeof(u32), &g.index_count, &bytes_read);
+        g.indices = kallocate(g.index_size * g.index_count, MEMORY_TAG_ARRAY);
+        filesystem_read(ksm_file, g.index_size * g.index_count, g.indices, &bytes_read);
+
+        // Name
+        u32 g_name_length = 0;
+        filesystem_read(ksm_file, sizeof(u32), &g_name_length, &bytes_read);
+        filesystem_read(ksm_file, sizeof(char) * g_name_length, g.name, &bytes_read);
+
+        // Material Name
+        u32 m_name_length = 0;
+        filesystem_read(ksm_file, sizeof(u32), &m_name_length, &bytes_read);
+        filesystem_read(ksm_file, sizeof(char) * m_name_length, g.material_name, &bytes_read);
+
+        // Center
+        filesystem_read(ksm_file, sizeof(vec3), &g.center, &bytes_read);
+
+        // Extents (min/max)
+        filesystem_read(ksm_file, sizeof(vec3), &g.min_extents, &bytes_read);
+        filesystem_read(ksm_file, sizeof(vec3), &g.max_extents, &bytes_read);
+
+        // Add to the output array.
+        darray_push(*out_geometries_darray, g);
+    }
+
+    filesystem_close(ksm_file);
+
     return true;
 }
 
-b8 write_ksm_file(const char* path, const char* name, u32 geometry_count, geometry_config** geometries) {
-     // TODO: Write out ksm binary file...
-    return true;;
+b8 write_ksm_file(const char* path, const char* name, u32 geometry_count, geometry_config* geometries) {
+    if (filesystem_exists(path)) {
+        KINFO("File '%s' already exists and will be overwritten.", path);
+    }
+
+    file_handle f;
+    if (!filesystem_open(path, FILE_MODE_WRITE, true, &f)) {
+        KERROR("Unable to open file '%s' for writing. KSM write failed.", path);
+        return false;
+    }
+
+    // Version
+    u64 written = 0;
+    u16 version = 0x0001U;
+    filesystem_write(&f, sizeof(u16), &version, &written);
+
+    // Name length
+    u32 name_length = string_length(name) + 1;
+    filesystem_write(&f, sizeof(u32), &name_length, &written);
+    // Name + terminator
+    filesystem_write(&f, sizeof(char) * name_length, name, &written);
+
+    // Geometry count
+    filesystem_write(&f, sizeof(u32), &geometry_count, &written);
+
+    // Each geometry
+    for (u32 i = 0; i < geometry_count; ++i) {
+        geometry_config* g = &geometries[i];
+
+        // Vertices (size/count/array)
+        filesystem_write(&f, sizeof(u32), &g->vertex_size, &written);
+        filesystem_write(&f, sizeof(u32), &g->vertex_count, &written);
+        filesystem_write(&f, g->vertex_size * g->vertex_count, g->vertices, &written);
+
+        // Indices (size/count/array)
+        filesystem_write(&f, sizeof(u32), &g->index_size, &written);
+        filesystem_write(&f, sizeof(u32), &g->index_count, &written);
+        filesystem_write(&f, g->index_size * g->index_count, g->indices, &written);
+
+        // Name
+        u32 g_name_length = string_length(g->name) + 1;
+        filesystem_write(&f, sizeof(u32), &g_name_length, &written);
+        filesystem_write(&f, sizeof(char) * g_name_length, g->name, &written);
+
+        // Material Name
+        u32 m_name_length = string_length(g->material_name) + 1;
+        filesystem_write(&f, sizeof(u32), &m_name_length, &written);
+        filesystem_write(&f, sizeof(char) * m_name_length, g->material_name, &written);
+
+        // Center
+        filesystem_write(&f, sizeof(vec3), &g->center, &written);
+
+        // Extents (min/max)
+        filesystem_write(&f, sizeof(vec3), &g->min_extents, &written);
+        filesystem_write(&f, sizeof(vec3), &g->max_extents, &written);
+    }
+
+    filesystem_close(&f);
+    return true;
+    ;
 }
 
 /**

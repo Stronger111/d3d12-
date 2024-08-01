@@ -35,7 +35,7 @@ b8 image_loader_load(struct resource_loader* self, const char* name, resource* o
     }
 
     if (!found) {
-        KERROR("Image resource loader failed find file '%s'.", full_file_path);
+        KERROR("Image resource loader failed find file '%s' or with any supported extension.", full_file_path);
         return false;
     }
 

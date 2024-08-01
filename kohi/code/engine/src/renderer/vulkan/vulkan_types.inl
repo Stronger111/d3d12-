@@ -284,14 +284,14 @@ typedef struct vulkan_shader_instance_state {
     /** @brief  A state for the descriptor set. */
     vulkan_shader_descriptor_set_state descriptor_set_state;
     /**
-     * @brief Instance texture pointers, which are used during rendering. These
+     * @brief Instance texture map  pointers, which are used during rendering. These
      * are set by calls to set_sampler.
      */
-    struct texture** instance_textures;
+    struct texture_map** instance_texture_maps;
 
 } vulkan_shader_instance_state;
 
-/**
+ /**
  * @brief Represents a generic Vulkan shader. This uses a set of inputs
  * and parameters, as well as the shader programs contained in SPIR-V
  * files to construct a shader for use in rendering.
@@ -390,5 +390,4 @@ typedef struct vulkan_context {
  */
 typedef struct vulkan_texture_data {
     vulkan_image image;
-    VkSampler sampler;
 } vulkan_texture_data;

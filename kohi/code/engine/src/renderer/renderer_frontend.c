@@ -175,10 +175,8 @@ b8 renderer_draw_frame(render_packet* packet) {
             m = material_system_get_default();
         }
 
-        // Update the material if it hasn't already been this frame. This keeps the
-        // same material from being updated multiple times. It still needs to be bound
-        // either way, so this check result gets passed to the backend which either
-        // updates the internal shader bindings and binds them, or only binds them.
+        // Apply the material if it hasn't already been this frame. This keeps the
+        // same material from being updated multiple times.
         b8 needs_update = m->render_frame_number != state_ptr->backend.frame_number;
         if (!material_system_apply_instance(m, needs_update)) {
             KWARN("Failed to apply material '%s'. Skipping draw.", m->name);
@@ -229,10 +227,7 @@ b8 renderer_draw_frame(render_packet* packet) {
             m = material_system_get_default();
         }
 
-        // Update the material if it hasn't already been this frame. This keeps the
-        // same material from being updated multiple times. It still needs to be bound
-        // either way, so this check result gets passed to the backend which either
-        // updates the internal shader bindings and binds them, or only binds them.
+       // Apply the material
         b8 needs_update = m->render_frame_number != state_ptr->backend.frame_number;
         if (!material_system_apply_instance(m, needs_update)) {
             KWARN("Failed to apply UI material '%s'. Skipping draw.", m->name);
@@ -335,10 +330,18 @@ b8 renderer_shader_apply_instance(shader* s, b8 needs_update) {
     return state_ptr->backend.shader_apply_instance(s, needs_update);
 }
 
-b8 renderer_shader_acquire_instance_resources(shader* s, u32* out_instance_id) {
-    return state_ptr->backend.shader_acquire_instance_resources(s, out_instance_id);
+b8 renderer_shader_acquire_instance_resources(shader* s,texture_map** maps, u32* out_instance_id) {
+    return state_ptr->backend.shader_acquire_instance_resources(s,maps,out_instance_id);
 }
 
 b8 renderer_shader_release_instance_resources(shader* s, u32 instance_id) {
     return state_ptr->backend.shader_release_instance_resources(s, instance_id);
+}
+
+b8 renderer_texture_map_acquire_resources(texture_map* map) {
+    return state_ptr->backend.texture_map_acquire_resources(map);
+}
+
+void renderer_texture_map_release_resources(texture_map* map) {
+    return state_ptr->backend.texture_map_release_resources(map);
 }

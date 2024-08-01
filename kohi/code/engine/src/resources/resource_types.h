@@ -8,13 +8,11 @@ typedef enum resource_type {
     RESOURCE_TYPE_BINARY,
     RESOURCE_TYPE_IMAGE,
     RESOURCE_TYPE_MATERIAL,
-    /** @brief Static mesh resource type. */
-    RESOURCE_TYPE_STATIC_MESH,
     /** @brief Shader resource type (or more accurately shader config). */
     RESOURCE_TYPE_SHADER,
     /** @brief Mesh resource type (collection of geometry configs). */
     RESOURCE_TYPE_MESH,
-      /** @brief Custom resource type. Used by loaders outside the core engine. */
+    /** @brief Custom resource type. Used by loaders outside the core engine. */
     RESOURCE_TYPE_CUSTOM
 } resource_type;
 
@@ -41,6 +39,8 @@ typedef struct texture {
     u32 height;
     u8 channel_count;
     b8 has_transparency;
+    /** @brief Indicates if the texture can be written (rendered) to. */
+    b8 is_writeable;
     u32 generation;
     char name[TEXTURE_NAME_MAX_LENGTH];
     void* internal_data;
@@ -56,13 +56,44 @@ typedef enum texture_use {
     TEXTURE_USE_MAP_NORMAL = 0x03
 } texture_use;
 
+/** @brief Represents supported the texture filtering modes. */
+typedef enum texture_filter {
+    /** @brief Nearest-neighbor filtering. */
+    TEXTURE_FILTER_MODE_NEAREST = 0x0,
+    /** @brief Linear (i.e. bilinear) filtering.*/
+    TEXTURE_FILTER_MODE_LINEAR = 0x1,
+} texture_filter;
+
+typedef enum texture_repeat {
+    TEXTURE_REPEAT_REPEAT = 0x1,
+    TEXTURE_REPEAT_MIRRORED_REPEAT = 0x2,
+    TEXTURE_REPEAT_CLAMP_TO_EDGE = 0x3,
+    TEXTURE_REPEAT_CLAMP_TO_BORDER = 0x4,
+} texture_repeat;
+
 typedef struct texture_map {
     texture* texture;
     texture_use use;
+    /** @brief Texture filtering mode for minification. */
+    texture_filter filter_minify;
+    /** @brief Texture filtering mode for magnification. */
+    texture_filter filter_magnify;
+    /** @brief The repeat mode on the U axis (or X, or S) */
+    texture_repeat repeat_u;
+    /** @brief The repeat mode on the V axis (or Y, or T) */
+    texture_repeat repeat_v;
+    /** @brief The repeat mode on the W axis (or Z, or R) */
+    texture_repeat repeat_w;
+    /** @brief A pointer to internal, render API-specific data. Typically the internal sampler. */
+    void* internal_data;
 } texture_map;
 
 #define MATERIAL_NAME_MAX_LENGTH 256
 
+/**
+ * @brief Material configuration typically loaded from
+ * a file or created in code to load a material from.
+ */
 typedef enum material_type {
     MATERIAL_TYPE_WORLD,
     MATERIAL_TYPE_UI

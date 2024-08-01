@@ -119,7 +119,7 @@ KAPI b8 shader_system_create(const shader_config* config) {
     out_shader->attribute_stride = 0;
 
     // Setup arrays
-    out_shader->global_textures = darray_create(texture*);
+    out_shader->global_texture_maps = darray_create(texture_map*);
     out_shader->uniforms = darray_create(shader_uniform);
     out_shader->attributes = darray_create(shader_attribute);
 
@@ -127,7 +127,7 @@ KAPI b8 shader_system_create(const shader_config* config) {
     // 'uniforms' array stored in the shader for quick lookups by name.
     u64 element_size = sizeof(u16);  // Indexes are stored as u16s.
     u64 element_count = 1024;        // This is more uniforms than we will ever need, but a bigger table reduces collision chance.
-    out_shader->hashtable_block=kallocate(element_size*element_count,MEMORY_TAG_UNKNOWN);
+    out_shader->hashtable_block = kallocate(element_size * element_count, MEMORY_TAG_UNKNOWN);
     hashtable_create(element_size, element_count, out_shader->hashtable_block, false, &out_shader->uniform_lookup);
 
     // Invalidate all spots in the hashtable.
@@ -289,7 +289,7 @@ KAPI b8 shader_system_apply_global() {
 }
 
 KAPI b8 shader_system_apply_instance(b8 needs_update) {
-    return renderer_shader_apply_instance(&state_ptr->shaders[state_ptr->current_shader_id],needs_update);
+    return renderer_shader_apply_instance(&state_ptr->shaders[state_ptr->current_shader_id], needs_update);
 }
 
 KAPI b8 shader_system_bind_instance(u32 instance_id) {
@@ -303,6 +303,12 @@ void shader_destroy(shader* s) {
 
     // Set it to be unusable right away.
     s->state = SHADER_STATE_NOT_CREATED;
+
+    u32 sampler_count = darray_length(s->global_texture_maps);
+    for (u32 i = 0; i < sampler_count; i++) {
+        kfree(s->global_texture_maps[i], sizeof(texture_map), MEMORY_TAG_RENDERER);
+    }
+    darray_destroy(s->global_texture_maps);
 
     // Free the name
     if (s->name) {
@@ -386,14 +392,30 @@ b8 add_sampler(shader* shader, const shader_uniform_config* config) {
     // If global, push into the global list.
     u32 location = 0;
     if (config->scope == SHADER_SCOPE_GLOBAL) {
-        u32 global_texture_count = darray_length(shader->global_textures);
+        u32 global_texture_count = darray_length(shader->global_texture_maps);
         if (global_texture_count + 1 > state_ptr->config.max_global_textures) {
             KERROR("Shader global texture count %i exceeds max of %i", global_texture_count, state_ptr->config.max_global_textures);
             return false;
         }
 
         location = global_texture_count;
-        darray_push(shader->global_textures, texture_system_get_default_texture());
+        // NOTE:creating a default texture map to be used here. Can always be updated later.
+        texture_map default_map = {};
+        default_map.filter_magnify = TEXTURE_FILTER_MODE_LINEAR;
+        default_map.filter_minify = TEXTURE_FILTER_MODE_LINEAR;
+        default_map.repeat_u = default_map.repeat_v = default_map.repeat_w = TEXTURE_REPEAT_REPEAT;
+        default_map.use = TEXTURE_USE_UNKNOWN;
+        if (!renderer_texture_map_acquire_resources(&default_map)) {
+            KERROR("Failed to acquire resources for global texture map during shader creation.");
+            return false;
+        }
+
+        // Allocate a pointer assign the texture, and push into global texture maps.
+        // NOTE: This allocation is only done for global texture maps.
+        texture_map* map = kallocate(sizeof(texture_map), MEMORY_TAG_RENDERER);
+        *map = default_map;
+        map->texture = texture_system_get_default_texture();
+        darray_push(shader->global_texture_maps, map);
     } else {
         // Otherwise, it's instance-level, so keep count of how many need to be added during the resource acquisition.
         if (shader->instance_texture_count + 1 > state_ptr->config.max_instance_textures) {
@@ -464,25 +486,24 @@ b8 uniform_add(shader* shader, const char* uniform_name, u32 size, shader_unifor
         entry.offset = is_sampler ? 0 : is_global ? shader->global_ubo_size
                                                   : shader->ubo_size;
         entry.size = is_sampler ? 0 : size;
-    }else
-    {
-         if (entry.scope == SHADER_SCOPE_LOCAL && !shader->use_locals) {
+    } else {
+        if (entry.scope == SHADER_SCOPE_LOCAL && !shader->use_locals) {
             KERROR("Cannot add a locally-scoped uniform for a shader that does not support locals.");
             return false;
         }
         // Push a new aligned range (align to 4, as required by Vulkan spec)
-        entry.set_index=INVALID_ID_U8;
-        range r=get_aligned_range(shader->push_constant_size,size,4);
+        entry.set_index = INVALID_ID_U8;
+        range r = get_aligned_range(shader->push_constant_size, size, 4);
         // utilize the aligned offset/range
-        entry.offset=r.offset;
-        entry.size=r.size;
+        entry.offset = r.offset;
+        entry.size = r.size;
 
-        //Track in configuration for use in initialization.
-        shader->push_constant_ranges[shader->push_constant_range_count]=r;
+        // Track in configuration for use in initialization.
+        shader->push_constant_ranges[shader->push_constant_range_count] = r;
         shader->push_constant_range_count++;
 
         // Increase the push constant's size by the total value.
-        shader->push_constant_size+=r.size;
+        shader->push_constant_size += r.size;
     }
     if (!hashtable_set(&shader->uniform_lookup, uniform_name, &entry.index)) {
         KERROR("Failed to add uniform.");
