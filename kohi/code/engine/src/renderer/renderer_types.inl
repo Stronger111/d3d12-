@@ -51,11 +51,53 @@ typedef struct renderer_backend {
     b8 (*end_renderpass)(struct renderer_backend* backend, u8 renderpass_id);
 
     void (*draw_geometry)(geometry_render_data data);
-
-    void (*create_texture)(
+    /**
+     * @brief Creates a Vulkan-specific texture, acquiring internal resources as needed.
+     *
+     * @param pixels The raw image data used for the texture.
+     * @param texture A pointer to the texture to hold the resources.
+     */
+    void (*texture_create)(
         const u8* pixels,
         struct texture* texture);
-    void (*destroy_texture)(struct texture* texture);
+
+    /**
+     * @brief Destroys the given texture, releasing internal resources.
+     *
+     * @param texture A pointer to the texture to be destroyed.
+     */
+    void (*texture_destroy)(struct texture* texture);
+
+     /**
+     * @brief Creates a new writeable texture with no data written to it.
+     *
+     * @param t A pointer to the texture to hold the resources.
+     */
+    void (*texture_create_writeable)(texture* t);
+
+    /**
+     * @brief Resizes a texture. There is no check at this level to see if the
+     * texture is writeable. Internal resources are destroyed and re-created at
+     * the new resolution. Data is lost and would need to be reloaded.
+     *
+     * @param t A pointer to the texture to be resized.
+     * @param new_width The new width in pixels.
+     * @param new_height The new height in pixels.
+     */
+    void (*texture_resize)(texture* t, u32 new_width, u32 new_height);
+
+    /**
+     * @brief Writes the given data to the provided texture.
+     * NOTE: At this level, this can either be a writeable or non-writeable texture because
+     * this also handles the initial texture load. The texture system itself should be
+     * responsible for blocking write requests to non-writeable textures.
+     *
+     * @param t A pointer to the texture to be written to.
+     * @param offset The offset in bytes from the beginning of the data to be written.
+     * @param size The number of bytes to be written.
+     * @param pixels The raw image data to be written.
+     */
+    void (*texture_write_data)(texture* t, u32 offset, u32 size, const u8* pixels);
 
     b8 (*create_geometry)(geometry* geometry, u32 vertex_size, u32 vertex_count, const void* vertices, u32 index_size, u32 index_count, const void* indices);
     void (*destroy_geometry)(geometry* geometry);
@@ -126,7 +168,7 @@ typedef struct renderer_backend {
      * @param needs_update Indicates if the shader uniforms need to be updated or just bound.
      * @return True on success; otherwise false.
      */
-    b8 (*shader_apply_instance)(struct shader* s,b8 needs_update);
+    b8 (*shader_apply_instance)(struct shader* s, b8 needs_update);
 
     /**
      * @brief Acquires internal instance-level resources and provides an instance id.
@@ -136,7 +178,7 @@ typedef struct renderer_backend {
      * @param out_instance_id A pointer to hold the new instance identifier.
      * @return True on success; otherwise false.
      */
-    b8 (*shader_acquire_instance_resources)(struct shader* s,texture_map** maps, u32* out_instance_id);
+    b8 (*shader_acquire_instance_resources)(struct shader* s, texture_map** maps, u32* out_instance_id);
 
     /**
      * @brief Releases internal instance-level resources for the given instance id.
@@ -157,9 +199,9 @@ typedef struct renderer_backend {
      */
     b8 (*shader_set_uniform)(struct shader* frontend_shader, struct shader_uniform* uniform, const void* value);
 
-      /**
+    /**
      * @brief Acquires internal resources for the given texture map.
-     * 
+     *
      * @param map A pointer to the texture map to obtain resources for.
      * @return True on success; otherwise false.
      */
@@ -167,7 +209,7 @@ typedef struct renderer_backend {
 
     /**
      * @brief Releases internal resources for the given texture map.
-     * 
+     *
      * @param map A pointer to the texture map to release resources from.
      */
     void (*texture_map_release_resources)(struct texture_map* map);

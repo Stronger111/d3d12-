@@ -82,7 +82,8 @@
         "limits": "c",
         "sstream": "c",
         "filesystem.h": "c",
-        "mesh_loader.h": "c"
+        "mesh_loader.h": "c",
+        "xmemory": "c"
     },
     // File copyright documentation tag.  Array of strings will be converted to one line per element.  Can template {year}.
     "doxdocgen.file.copyrightTag": [
