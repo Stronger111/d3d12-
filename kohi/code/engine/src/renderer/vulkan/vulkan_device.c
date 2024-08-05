@@ -193,6 +193,10 @@ b8 vulkan_device_detect_depth_format(vulkan_device* device) {
         VK_FORMAT_D32_SFLOAT,
         VK_FORMAT_D32_SFLOAT_S8_UINT,
         VK_FORMAT_D24_UNORM_S8_UINT};
+
+    u8 sizes[3] =
+        {
+            4, 4, 3};
     u32 flags = VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT;
     for (u64 i = 0; i < candidata_count; ++i) {
         VkFormatProperties properties;
@@ -200,9 +204,11 @@ b8 vulkan_device_detect_depth_format(vulkan_device* device) {
 
         if ((properties.linearTilingFeatures & flags) == flags) {
             device->depth_format = candidates[i];
+            device->depth_channel_count = sizes[i];
             return true;
         } else if ((properties.optimalTilingFeatures & flags) == flags) {
             device->depth_format = candidates[i];
+            device->depth_channel_count = sizes[i];
             return true;
         }
     }
@@ -389,7 +395,7 @@ b8 physical_device_meets_requirements(VkPhysicalDevice device, VkSurfaceKHR surf
             }
         }
     }
-    
+
     // If a present queue hasn't been found, iterate again and take the first one.
     // This should only happen if there is a queue that supports graphics but NOT
     // present.

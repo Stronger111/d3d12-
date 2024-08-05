@@ -54,7 +54,7 @@ typedef struct texture {
     texture_flag_bits flags;
     u32 generation;
     char name[TEXTURE_NAME_MAX_LENGTH];
-     /** @brief The raw texture data (pixels). */
+     /** @brief The raw texture data (pixels).---->Vulkan_image */
     void* internal_data;
 } texture;
 
