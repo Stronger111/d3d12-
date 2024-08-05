@@ -18,6 +18,7 @@
 #include "systems/geometry_system.h"
 #include "systems/resource_system.h"
 #include "systems/shader_system.h"
+#include "systems/camera_system.h"
 
 // TODO: temp
 #include "math/kmath.h"
@@ -65,6 +66,9 @@ typedef struct application_state {
 
     u64 geometry_system_memory_requirement;
     void* geometry_system_state;
+
+    u64 camera_system_memory_requirement;
+    void* camera_system_state;
 
     // TODO: temp
     // darray
@@ -242,6 +246,16 @@ b8 application_create(game* game_inst) {
         return false;
     }
 
+    // Camera
+    camera_system_config camera_sys_config;
+    camera_sys_config.max_camera_count = 61;
+    camera_system_initialize(&app_state->camera_system_memory_requirement, 0, camera_sys_config);
+    app_state->camera_system_state = linear_allocator_allocate(&app_state->systems_allocator, app_state->camera_system_memory_requirement);
+    if (!camera_system_initialize(&app_state->camera_system_memory_requirement, app_state->camera_system_state, camera_sys_config)) {
+        KFATAL("Failed to initialize camera system. Application cannot continue.");
+        return false;
+    }
+
     // TODO: temp
     app_state->mesh_count = 0;
 
@@ -303,7 +317,7 @@ b8 application_create(game* game_inst) {
     mesh* sponza_mesh = &app_state->meshes[app_state->mesh_count];
     resource sponza_mesh_resource = {};
     if (!resource_system_load("sponza", RESOURCE_TYPE_MESH, &sponza_mesh_resource)) {
-         KERROR("Failed to load sponza mesh!");
+        KERROR("Failed to load sponza mesh!");
     } else {
         geometry_config* sponza_configs = (geometry_config*)sponza_mesh_resource.data;
         sponza_mesh->geometry_count = sponza_mesh_resource.data_size;

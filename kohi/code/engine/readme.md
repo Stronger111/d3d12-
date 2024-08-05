@@ -21,3 +21,7 @@
 Renderer:
 - renderable texture support
 - batch rendering
+
+
+-bug
+-"Vulkan buffer creation failed for object shader  out_error_local_memory  windows ？？ TODO  重启解决问题 后面需要查一下

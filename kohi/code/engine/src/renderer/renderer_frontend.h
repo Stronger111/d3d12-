@@ -24,15 +24,6 @@ void renderer_system_shutdown(void* state);
 void renderer_on_resized(u16 width,u16 height);
 
 b8 renderer_draw_frame(render_packet* packet);
-     
-/**
- * @brief Sets the view matrix in the renderer. NOTE: exposed to public API.
- *
- * @deprecated HACK: this should not be exposed outside the engine.
- * @param view The view matrix to be set.
- * @param view_position The view position to be set.
- */
-KAPI void renderer_set_view(mat4 view,vec3 view_position);
 
 /**
  * @brief Creates a new texture.
