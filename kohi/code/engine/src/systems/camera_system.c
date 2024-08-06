@@ -52,7 +52,7 @@ b8 camera_system_initialize(u64* memory_requirement, void* state, camera_system_
     // Create a hashtable for camera lookups.
     hashtable_create(sizeof(u16), config.max_camera_count, hashtable_block, false, &state_ptr->lookup);
 
-        // Fill the hashtable with invalid references to use as a default.
+    // Fill the hashtable with invalid references to use as a default.
     u16 invalid_id = INVALID_ID_U16;
     hashtable_fill(&state_ptr->lookup, &invalid_id);
 
@@ -99,7 +99,7 @@ camera* camera_system_acquire(const char* name) {
         if (id == INVALID_ID_U16) {
             // Find free slot
             for (u16 i = 0; i < state_ptr->config.max_camera_count; ++i) {
-                if (state_ptr->cameras[i].id == INVALID_ID_U16) {
+                if (i == INVALID_ID_U16) {
                     id = i;
                     break;
                 }
