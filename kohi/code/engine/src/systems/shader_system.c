@@ -70,7 +70,7 @@ b8 shader_system_initialize(u64* memory_requirement, void* memory, shader_system
     // Invalidate all shader ids.
     for (u32 i = 0; i < config.max_shader_count; ++i) {
         state_ptr->shaders[i].id = new_shader_id();
-        state_ptr->shaders[i].render_frame_number=INVALID_ID_U64;
+        state_ptr->shaders[i].render_frame_number = INVALID_ID_U64;
     }
     // Fill the table with invalid ids.
     u32 invalid_fill_id = INVALID_ID;
@@ -112,8 +112,6 @@ KAPI b8 shader_system_create(const shader_config* config) {
     }
     out_shader->state = SHADER_STATE_NOT_CREATED;
     out_shader->name = string_duplicate(config->name);
-    out_shader->use_instances = config->use_instances;
-    out_shader->use_locals = config->use_local;
     out_shader->push_constant_range_count = 0;
     kzero_memory(out_shader->push_constant_ranges, sizeof(range) * 32);
     out_shader->bound_instance_id = INVALID_ID;
@@ -152,7 +150,7 @@ KAPI b8 shader_system_create(const shader_config* config) {
         return false;
     }
 
-    if (!renderer_shader_create(out_shader, pass, config->stage_count, (const char**)config->stage_filenames, config->stages)) {
+    if (!renderer_shader_create(out_shader,config, pass, config->stage_count, (const char**)config->stage_filenames, config->stages)) {
         KERROR("Error creating shader.");
         return false;
     }
@@ -374,11 +372,6 @@ b8 add_attribute(shader* shader, const shader_attribute_config* config) {
 }
 
 b8 add_sampler(shader* shader, const shader_uniform_config* config) {
-    if (config->scope == SHADER_SCOPE_INSTANCE && !shader->use_instances) {
-        KERROR("add_sampler cannot add an instance sampler for a shader that does not use instances.");
-        return false;
-    }
-
     // Samples can't be used for push constants.
     if (config->scope == SHADER_SCOPE_LOCAL) {
         KERROR("add_sampler cannot add a sampler at local scope.");
@@ -488,10 +481,6 @@ b8 uniform_add(shader* shader, const char* uniform_name, u32 size, shader_unifor
                                                   : shader->ubo_size;
         entry.size = is_sampler ? 0 : size;
     } else {
-        if (entry.scope == SHADER_SCOPE_LOCAL && !shader->use_locals) {
-            KERROR("Cannot add a locally-scoped uniform for a shader that does not support locals.");
-            return false;
-        }
         // Push a new aligned range (align to 4, as required by Vulkan spec)
         entry.set_index = INVALID_ID_U8;
         range r = get_aligned_range(shader->push_constant_size, size, 4);

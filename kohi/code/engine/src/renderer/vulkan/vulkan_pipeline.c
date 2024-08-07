@@ -17,6 +17,7 @@ b8 vulkan_graphics_pipeline_create(vulkan_context* context,
                                    VkPipelineShaderStageCreateInfo* stages,
                                    VkViewport viewport,
                                    VkRect2D scissor,
+                                   face_cull_mode cull_mode,
                                    b8 is_wireframe,
                                    b8 depth_test_enabled,
                                    u32 push_constant_range_count,
@@ -35,7 +36,22 @@ b8 vulkan_graphics_pipeline_create(vulkan_context* context,
     rasterizer_create_info.rasterizerDiscardEnable = VK_FALSE;
     rasterizer_create_info.polygonMode = is_wireframe ? VK_POLYGON_MODE_LINE : VK_POLYGON_MODE_FILL;
     rasterizer_create_info.lineWidth = 1.0f;
-    rasterizer_create_info.cullMode = VK_CULL_MODE_BACK_BIT;             // VK_FRONT_FACE_COUNTER_CLOCKWISE 逆时针
+     // VK_FRONT_FACE_COUNTER_CLOCKWISE 逆时针
+    switch (cull_mode) {
+        case FACE_CULL_MODE_NONE:
+            rasterizer_create_info.cullMode = VK_CULL_MODE_NONE;
+            break;
+        case FACE_CULL_MODE_FRONT:
+            rasterizer_create_info.cullMode = VK_CULL_MODE_FRONT_BIT;
+            break;
+        default:
+        case FACE_CULL_MODE_BACK:
+            rasterizer_create_info.cullMode = VK_CULL_MODE_BACK_BIT;
+            break;
+        case FACE_CULL_MODE_FRONT_AND_BACK:
+            rasterizer_create_info.cullMode = VK_CULL_MODE_FRONT_AND_BACK;
+            break;
+    }
     rasterizer_create_info.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;  // specifies that a triangle with positive area is considered front-facing.
     rasterizer_create_info.depthBiasEnable = VK_FALSE;
     rasterizer_create_info.depthBiasConstantFactor = 0.0f;
