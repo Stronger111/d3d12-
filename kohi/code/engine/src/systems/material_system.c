@@ -313,7 +313,7 @@ b8 create_default_material(material_system_state* state) {
     texture_map* maps[3] = {&state->default_material.diffuse_map, &state->default_material.specular_map, &state->default_material.normal_map};
 
     shader* s = shader_system_get(BUILTIN_SHADER_NAME_MATERIAL);
-    if (!renderer_shader_acquire_instance_resources(s,maps, &state->default_material.internal_id)) {
+    if (!renderer_shader_acquire_instance_resources(s, maps, &state->default_material.internal_id)) {
         KFATAL("Failed to acquire renderer resources for default material. Application cannot continue.");
         return false;
     }
@@ -338,7 +338,17 @@ material* material_system_get_default() {
         return false;                                 \
     }
 
-b8 material_system_apply_global(u32 shader_id, const mat4* projection, const mat4* view, const vec4* ambient_colour, const vec3* view_position, u32 render_mode) {
+b8 material_system_apply_global(u32 shader_id, u64 renderer_frame_number, const mat4* projection, const mat4* view, const vec4* ambient_colour, const vec3* view_position, u32 render_mode) {
+    shader* s=shader_system_get_by_id(shader_id);
+    if(!s)
+    {
+         return false;
+    }
+    if(s->render_frame_number==renderer_frame_number)
+    {
+       return true;
+    }
+
     if (shader_id == state_ptr->material_shader_id) {
         MATERIAL_APPLY_OR_FAIL(shader_system_uniform_set_by_index(state_ptr->material_locations.projection, projection));
         MATERIAL_APPLY_OR_FAIL(shader_system_uniform_set_by_index(state_ptr->material_locations.view, view));
@@ -353,6 +363,9 @@ b8 material_system_apply_global(u32 shader_id, const mat4* projection, const mat
         return false;
     }
     MATERIAL_APPLY_OR_FAIL(shader_system_apply_global());
+
+    //Sync the frame number
+    s->render_frame_number=renderer_frame_number;
     return true;
 }
 
@@ -481,7 +494,7 @@ b8 load_material(material_config config, material* m) {
     // Gather a list of pointers to texture maps
     texture_map* maps[3] = {&m->diffuse_map, &m->specular_map, &m->normal_map};
 
-    if (!renderer_shader_acquire_instance_resources(s,maps, &m->internal_id)) {
+    if (!renderer_shader_acquire_instance_resources(s, maps, &m->internal_id)) {
         KERROR("Failed to acquire renderer resources for material '%s'.", m->name);
         return false;
     }
@@ -503,7 +516,7 @@ void destroy_material(material* m) {
         texture_system_release(m->normal_map.texture->name);
     }
 
-     // Release texture map resources.
+    // Release texture map resources.
     renderer_texture_map_release_resources(&m->diffuse_map);
     renderer_texture_map_release_resources(&m->specular_map);
     renderer_texture_map_release_resources(&m->normal_map);

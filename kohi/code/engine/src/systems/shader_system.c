@@ -70,6 +70,7 @@ b8 shader_system_initialize(u64* memory_requirement, void* memory, shader_system
     // Invalidate all shader ids.
     for (u32 i = 0; i < config.max_shader_count; ++i) {
         state_ptr->shaders[i].id = new_shader_id();
+        state_ptr->shaders[i].render_frame_number=INVALID_ID_U64;
     }
     // Fill the table with invalid ids.
     u32 invalid_fill_id = INVALID_ID;

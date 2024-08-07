@@ -151,7 +151,7 @@ typedef struct renderer_backend {
     renderpass* (*renderpass_get)(const char* name);
     /**
      * @brief Draws the given geometry. Should only be called inside a renderpass, within a frame.
-     *
+     * geometry_render_data* 不是指针的话就是变量的副本
      * @param data A pointer to the render data of the geometry to be drawn.
      */
     void (*draw_geometry)(geometry_render_data* data);

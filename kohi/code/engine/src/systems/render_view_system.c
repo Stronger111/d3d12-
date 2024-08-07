@@ -3,6 +3,7 @@
 #include "containers/hashtable.h"
 #include "core/logger.h"
 #include "core/kmemory.h"
+#include "core/kstring.h"
 #include "renderer/renderer_frontend.h"
 
 // TODO: temporary - make factory and register instead.
@@ -68,6 +69,11 @@ b8 render_view_system_create(const render_view_config* config) {
         return false;
     }
 
+    if (!config->name || string_length(config->name) < 1) {
+        KERROR("render_view_system_create: name is required");
+        return false;
+    }
+
     if (config->pass_count < 1) {
         KERROR("render_view_system_create - Config must have at least one renderpass.");
         return false;
@@ -98,6 +104,8 @@ b8 render_view_system_create(const render_view_config* config) {
     render_view* view = &state_ptr->registered_views[id];
     view->id = id;
     view->type = config->type;
+    // TODO: Leaking the name, create a destroy method and kill this.
+    view->name=string_duplicate(config->name);
     view->custom_shader_name = config->custom_shader_name;
     view->renderpass_count = config->pass_count;
     view->passes = kallocate(sizeof(renderpass*) * view->renderpass_count, MEMORY_TAG_ARRAY);
@@ -112,7 +120,7 @@ b8 render_view_system_create(const render_view_config* config) {
 
     // TODO: Assign these function pointers to known functions based on the view type.
     // TODO: Factory pattern (with register, etc. for each type)?
-     if (config->type == RENDERER_VIEW_KNOWN_TYPE_WORLD) {
+    if (config->type == RENDERER_VIEW_KNOWN_TYPE_WORLD) {
         view->on_build_packet = render_view_world_on_build_packet;  // For building the packet
         view->on_render = render_view_world_on_render;              // For rendering the packet
         view->on_create = render_view_world_on_create;
@@ -160,7 +168,7 @@ render_view* render_view_system_get(const char* name) {
     return 0;
 }
 
-b8 render_view_system_build_packet(const render_view* view, void* data, struct render_view_packet* out_packet){
+b8 render_view_system_build_packet(const render_view* view, void* data, struct render_view_packet* out_packet) {
     if (view && out_packet) {
         return view->on_build_packet(view, data, out_packet);
     }
