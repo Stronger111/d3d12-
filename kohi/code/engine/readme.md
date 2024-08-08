@@ -17,6 +17,8 @@
 9:game/editor logic library (dll/.so) hot reload    -------- kvars(configurable 'global' settings)  --- engline configuration  ---- timeline system  --- skeletal animation sysytem 
 -KSM 文件格式从Obj转换  和引擎数据格式高度吻合
 -可写纹理不会自动释放 引用计数为0 不会释放
+-批处理
+ PUSHD 更换当前目录
 
 Renderer:
 - renderable texture support

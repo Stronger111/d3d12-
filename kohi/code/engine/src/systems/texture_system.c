@@ -296,6 +296,7 @@ b8 create_default_textures(texture_system_state* state) {
     state->default_texture.channel_count = 4;
     state->default_texture.generation = INVALID_ID;
     state->default_texture.flags = 0;
+    state->default_texture.type=TEXTURE_TYPE_2D;
     renderer_texture_create(pixels, &state->default_texture);
     // Manually set the texture generation to invalid since this is a default texture.
     state->default_texture.generation = INVALID_ID;
@@ -311,6 +312,7 @@ b8 create_default_textures(texture_system_state* state) {
     state->default_diffuse_texture.channel_count = 4;
     state->default_diffuse_texture.generation = INVALID_ID;
     state->default_diffuse_texture.flags = 0;
+    state->default_diffuse_texture.type=TEXTURE_TYPE_2D;
     renderer_texture_create(diff_pixels, &state->default_diffuse_texture);
     // Manually set the texture generation to invalid since this is a default texture.
     state->default_diffuse_texture.generation = INVALID_ID;
@@ -326,6 +328,7 @@ b8 create_default_textures(texture_system_state* state) {
     state->default_specular_texture.channel_count = 4;
     state->default_specular_texture.generation = INVALID_ID;
     state->default_specular_texture.flags = 0;
+    state->default_specular_texture.type=TEXTURE_TYPE_2D;
     renderer_texture_create(spec_pixels, &state->default_specular_texture);
     // Manually set the texture generation to invalid since this is a default texture.
     state->default_specular_texture.generation = INVALID_ID;
@@ -354,6 +357,7 @@ b8 create_default_textures(texture_system_state* state) {
     state->default_normal_texture.channel_count = 4;
     state->default_normal_texture.generation = INVALID_ID;
     state->default_normal_texture.flags = 0;
+    state->default_normal_texture.type=TEXTURE_TYPE_2D;
     renderer_texture_create(normal_pixels, &state->default_normal_texture);
     // Manually set the texture generation to invalid since this is a default texture.
     state->default_normal_texture.generation = INVALID_ID;
