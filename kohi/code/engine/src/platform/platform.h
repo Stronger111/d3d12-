@@ -27,3 +27,10 @@ void platform_console_write_error(const char* message,u8 colour);
 f64 platform_get_absolute_time();
 
 void platform_sleep(u64 ms);
+
+/**
+ * @brief Obtains the number of logical processor cores.
+ *
+ * @return The number of logical processor cores.
+ */
+i32 platform_get_processor_count();

@@ -79,8 +79,8 @@ b8 vulkan_renderer_backend_initialize(struct renderer_backend* backend, const re
     // Just set some default values for the framebuffer for now.
     // It doesn't really matyer what these are because they will be
     // overridden, but are needed for swapchain creation.
-    context.framebuffer_width = 1280;
-    context.framebuffer_height = 720;
+    context.framebuffer_width = 800;
+    context.framebuffer_height = 600;
 
     // Setup Vulkan instance
     VkApplicationInfo app_info = {VK_STRUCTURE_TYPE_APPLICATION_INFO};
