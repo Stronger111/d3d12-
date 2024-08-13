@@ -377,6 +377,11 @@ typedef struct renderer_backend {
      */
     u8 (*window_attachment_index_get)();
 
+     /**
+     * @brief Indicates if the renderer is capable of multi-threading.
+     */
+    b8 (*is_multithreaded)();
+
 } renderer_backend;
 
 /** @brief Known render view types, which have logic associated with them. */
@@ -538,7 +543,7 @@ typedef struct render_view_packet {
 
 typedef struct mesh_packet_data {
     u32 mesh_count;
-    mesh* meshes;
+    mesh** meshes;
 } mesh_packet_data;
 
 typedef struct skybox_packet_data {

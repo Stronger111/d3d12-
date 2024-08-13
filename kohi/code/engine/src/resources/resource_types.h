@@ -196,6 +196,7 @@ typedef struct geometry {
 } geometry;
 
 typedef struct mesh {
+    u8 generation;
     u16 geometry_count;
     geometry** geometries;
     transform transform;

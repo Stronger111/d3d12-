@@ -147,6 +147,10 @@ b8 vulkan_renderer_backend_initialize(struct renderer_backend* backend, const re
             KFATAL("Required validation layer is missing:%s", required_validation_layer_names[i]);
         }
     }
+
+    // Clean up.
+    darray_destroy(available_layers);
+
     KINFO("All required validation layers are present.");
 #endif
     create_info.enabledLayerCount = required_validation_layer_count;
@@ -154,6 +158,11 @@ b8 vulkan_renderer_backend_initialize(struct renderer_backend* backend, const re
 
     VK_CHECK(vkCreateInstance(&create_info, context.allocator, &context.instance));
     KINFO("Vulkan Instance created.");
+
+    // Clean up
+    darray_destroy(required_validation_layer_names);
+    // TODO: implement multi-threading  darray_destroy(required_validation_layer_names);
+    context.multithreading_enabled = false;
 
 // Debugger
 #if defined(_DEBUG)
@@ -477,7 +486,11 @@ b8 vulkan_renderer_backend_end_frame(renderer_backend* backend, f32 delta_time) 
     // End queue submission
 
     // Give the image back to the swapchain
-    vulkan_swapchain_present(&context, &context.swapchain, context.device.graphics_queue, context.device.present_queue, context.queue_complete_semaphores[context.current_frame], context.image_index);
+    vulkan_swapchain_present(&context,
+                             &context.swapchain,
+                             context.device.present_queue,
+                             context.queue_complete_semaphores[context.current_frame],
+                             context.image_index);
 
     return true;
 }
@@ -1342,13 +1355,14 @@ b8 vulkan_renderer_shader_apply_instance(shader* s, b8 needs_update) {
         u32 descriptor_count = 0;
         u32 descriptor_index = 0;
 
+        VkDescriptorBufferInfo buffer_info;
+
         // Descriptor 0 - Uniform buffer
         if (internal->instance_uniform_count > 0) {
             // Only do this if the descriptor has not yet been updated.
             u8* instance_ubo_generation = &(object_state->descriptor_set_state.descriptor_states[descriptor_index].generations[image_index]);
             // TODO: determine if update is required.
             if (*instance_ubo_generation == INVALID_ID_U8 /*|| *global_ubo_generation != material->generation*/) {
-                VkDescriptorBufferInfo buffer_info;
                 buffer_info.buffer = internal->uniform_buffer.handle;
                 buffer_info.offset = object_state->offset;
                 buffer_info.range = s->ubo_stride;
@@ -1379,6 +1393,26 @@ b8 vulkan_renderer_shader_apply_instance(shader* s, b8 needs_update) {
                 // TODO: only update in the list if actually needing an update.
                 texture_map* map = internal->instance_states[s->bound_instance_id].instance_texture_maps[i];
                 texture* t = map->texture;
+
+                // Ensure the texture is valid.
+                if (t->generation == INVALID_ID) {
+                    switch (map->use) {
+                        case TEXTURE_USE_MAP_DIFFUSE:
+                            t = texture_system_get_default_diffuse_texture();
+                            break;
+                        case TEXTURE_USE_MAP_SPECULAR:
+                            t = texture_system_get_default_specular_texture();
+                            break;
+                        case TEXTURE_USE_MAP_NORMAL:
+                            t = texture_system_get_default_normal_texture();
+                            break;
+                        default:
+                            KWARN("Undefined texture use %d", map->use);
+                            t = texture_system_get_default_texture();
+                            break;
+                    }
+                }
+
                 vulkan_image* image = (vulkan_image*)t->internal_data;
                 image_infos[i].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
                 image_infos[i].imageView = image->view;
@@ -1954,4 +1988,8 @@ texture* vulkan_renderer_depth_attachment_get() {
 
 u8 vulkan_renderer_window_attachment_index_get() {
     return (u8)context.image_index;
+}
+
+b8 vulkan_renderer_is_multithreaded() {
+    return context.multithreading_enabled;
 }

@@ -50,7 +50,7 @@ b8 load_ksm_file(file_handle* ksm_file, geometry_config** out_geometries_darray)
 b8 write_ksm_file(const char* path, const char* name, u32 geometry_count, geometry_config* geometries);
 b8 write_kmt_file(const char* mtl_file_path, material_config* config);
 
-b8 mesh_loader_load(struct resource_loader* self, const char* name,void* params, resource* out_resource) {
+b8 mesh_loader_load(struct resource_loader* self, const char* name, void* params, resource* out_resource) {
     if (!self || !name || !out_resource) {
         return false;
     }
@@ -175,6 +175,7 @@ b8 import_obj_file(file_handle* obj_file, const char* out_ksm_filename, geometry
     char material_file_name[512] = "";
 
     char name[512];
+    kzero_memory(name, sizeof(char) * 512);
     u8 current_mat_name_count = 0;
     char material_names[32][64];
 
@@ -384,6 +385,7 @@ b8 import_obj_file(file_handle* obj_file, const char* out_ksm_filename, geometry
     if (string_length(material_file_name) > 0) {
         // Load up the material file
         char full_mtl_path[512];
+        kzero_memory(full_mtl_path, sizeof(char) * 512);
         string_directory_from_path(full_mtl_path, out_ksm_filename);
         string_append_string(full_mtl_path, full_mtl_path, material_file_name);
 
@@ -417,7 +419,7 @@ b8 import_obj_file(file_handle* obj_file, const char* out_ksm_filename, geometry
         darray_destroy(g->indices);
         // Replace with the non-darray version.
         g->indices = indices;
-        
+
         // Also generate tangents here, this way tangents are also stored in the output file.
         geometry_generate_tangents(g->vertex_count, g->vertices, g->index_count, g->indices);
     }

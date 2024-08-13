@@ -43,7 +43,7 @@ b8 vulkan_swapchain_acquire_next_image_index(vulkan_context* context, vulkan_swa
     return true;
 }
 
-void vulkan_swapchain_present(vulkan_context* context, vulkan_swapchain* swapchain, VkQueue graphics_queue, VkQueue present_queue, VkSemaphore render_complete_semaphore, u32 present_image_index) {
+void vulkan_swapchain_present(vulkan_context* context, vulkan_swapchain* swapchain, VkQueue present_queue, VkSemaphore render_complete_semaphore, u32 present_image_index) {
     // Return the image to the swapchain for presentation
     VkPresentInfoKHR present_info = {VK_STRUCTURE_TYPE_PRESENT_INFO_KHR};
     present_info.waitSemaphoreCount = 1;

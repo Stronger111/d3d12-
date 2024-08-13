@@ -5,6 +5,7 @@
 #include "core/logger.h"
 #include "core/kmemory.h"
 #include "math/kmath.h"
+#include "platform/platform.h"
 
 #include "resources/resource_types.h"
 #include "systems/resource_system.h"
@@ -224,6 +225,8 @@ b8 renderer_draw_frame(render_packet* packet) {
             state_ptr->resizing = false;
         } else {
             // Skip rendering the frame and try again next time.
+            // NOTE: Simulate a frame being "drawn" at 60 FPS.
+            platform_sleep(16);
             return true;
         }
     }
@@ -362,6 +365,10 @@ void renderer_renderpass_destroy(renderpass* pass) {
     state_ptr->backend.renderpass_destroy(pass);
 }
 
+b8 renderer_is_multithreaded() {
+    return state_ptr->backend.is_multithreaded();
+}
+
 void regenerate_render_targets() {
     // Create render targets for each. TODO: Should be configurable.
     for (u8 i = 0; i < state_ptr->window_render_target_count; ++i) {
@@ -382,7 +389,7 @@ void regenerate_render_targets() {
             state_ptr->framebuffer_width,
             state_ptr->framebuffer_height,
             &state_ptr->skybox_renderpass->targets[i]);
-            
+
         // World render targets.
         texture* attachments[2] = {window_target_texture, depth_target_texture};
         state_ptr->backend.render_target_create(
