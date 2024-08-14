@@ -33,6 +33,8 @@ typedef struct vulkan_buffer {
     VkBufferUsageFlagBits usage;
     b8 is_locked;
     VkDeviceMemory memory;
+    /** @brief The memory requirements for this buffer. */
+    VkMemoryRequirements memory_requirements;
     u32 memory_index;
     u32 memory_property_flags;
     /** @brief The amount of memory required for the freelist. */
@@ -80,6 +82,10 @@ typedef struct vulkan_image {
     VkImage handle;
     VkDeviceMemory memory;
     VkImageView view;
+    /** @brief The GPU memory requirements for this image. */
+    VkMemoryRequirements memory_requirements;
+    /** @brief Memory property flags */
+    VkMemoryPropertyFlags memory_flags;
     u32 width;
     u32 height;
 } vulkan_image;
@@ -410,7 +416,7 @@ typedef struct vulkan_context {
 
     /** @brief Indicates if multi-threading is supported by this device. */
     b8 multithreading_enabled;
-    
+
     i32 (*find_memory_index)(u32 type_filter, u32 property_flags);
 
     /**

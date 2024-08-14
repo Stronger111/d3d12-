@@ -25,7 +25,7 @@ void vulkan_image_create(
     VkFormat format,
     VkImageTiling tiling,
     VkImageUsageFlags usage,
-    VkMemoryPropertyFlags properties,
+    VkMemoryPropertyFlags memory_flags,
     b8 create_view,
     VkImageAspectFlags view_aspect_flags,
     vulkan_image* out_image);
