@@ -430,7 +430,7 @@ b8 application_create(game* game_inst) {
     cube_mesh->geometries[0] = geometry_system_acquire_from_config(g_config, true);
     cube_mesh->transform = transform_create();
     mesh_count++;
-    cube_mesh->generation=0;
+    cube_mesh->generation = 0;
     // Clean up the allocations for the geometry config.
     geometry_system_config_dispose(&g_config);
 
@@ -644,6 +644,9 @@ b8 application_run() {
 
             // TODO: temp
             // Cleanup the packet.
+            for (u32 i = 0; i < packet.view_count; ++i) {
+                packet.views[i].view->on_destroy_packet(packet.views[i].view,&packet.views[i]);
+            }
 
             // Figure out how long the frame took and ,if below
             f64 frame_end_time = platform_get_absolute_time();

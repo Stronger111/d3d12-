@@ -109,7 +109,7 @@ b8 vulkan_renderer_backend_initialize(struct renderer_backend* backend, const re
 
     create_info.enabledExtensionCount = darray_length(required_extensions);
     create_info.ppEnabledExtensionNames = required_extensions;
-
+  
     // validation layers
     const char** required_validation_layer_names = 0;
     u32 required_validation_layer_count = 0;

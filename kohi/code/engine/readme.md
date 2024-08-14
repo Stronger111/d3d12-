@@ -24,7 +24,7 @@ Renderer:
 - renderable texture support
 - batch rendering
 - JobSystem
-
+-光追 pso 多线程 hism
 
 -bug
 -"Vulkan buffer creation failed for object shader  out_error_local_memory  windows ？？ TODO  重启解决问题 后面需要查一下
@@ -33,4 +33,5 @@ Renderer:
 -JobSystem
  --Ring queue 循环队列 -> CPU调度工作
 -空闲列表
- --内存管理
+ --内存管理 
+ --内存地址对齐 Memory Alignment Allocator updates

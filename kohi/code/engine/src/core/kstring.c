@@ -22,6 +22,19 @@ char* string_duplicate(const char* str) {
     copy[length] = 0;
     return copy;
 }
+KAPI void string_free(char* str) {
+    if (str) {
+        u64 size = 0;
+        u16 alignment = 0;
+        if (kmemory_get_size_alignment(str, &size, &alignment)) {
+            kfree_aligned(str, size, alignment, MEMORY_TAG_STRING);
+        } else {
+            // TODO: report failure?
+        }
+    } else {
+        // TODO: report null ptr?
+    }
+}
 b8 strings_equal(const char* str0, const char* str1) {
     return strcmp(str0, str1) == 0;
 }
