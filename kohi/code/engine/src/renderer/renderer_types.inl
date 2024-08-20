@@ -517,9 +517,9 @@ typedef struct renderer_backend {
      * @param size The size of the data in bytes to be copied.
      * @returns True on success; otherwise false.
      */
-    b8 (*renderbuffer_copy_range)(renderbuffer* source,u64 source_offset,renderbuffer* dest,u64 dest_offset,u64 size);
+    b8 (*renderbuffer_copy_range)(renderbuffer* source, u64 source_offset, renderbuffer* dest, u64 dest_offset, u64 size);
 
-      /**
+    /**
      * @brief Attempts to draw the contents of the provided buffer at the given offset
      * and element count. Only meant for use with vertex and index buffers.
      *
@@ -529,7 +529,7 @@ typedef struct renderer_backend {
      * @param bind_only Only binds the buffer, but does not call draw.
      * @return True on success; otherwise false.
      */
-    b8 (*renderbuffer_draw)(renderbuffer* buffer,u64 offset,u32 element_count,b8 bind_only);
+    b8 (*renderbuffer_draw)(renderbuffer* buffer, u64 offset, u32 element_count, b8 bind_only);
 
 } renderer_backend;
 
@@ -701,6 +701,14 @@ typedef struct mesh_packet_data {
     u32 mesh_count;
     mesh** meshes;
 } mesh_packet_data;
+
+struct ui_text;
+typedef struct ui_packet_data {
+    mesh_packet_data mesh_data;
+    // TODO: temp
+    u32 text_count;
+    struct ui_text** texts;
+} ui_packet_data;
 
 typedef struct skybox_packet_data {
     skybox* sb;

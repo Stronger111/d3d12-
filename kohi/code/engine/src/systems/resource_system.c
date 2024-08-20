@@ -10,10 +10,11 @@
 #include "resources/loaders/material_loader.h"
 #include "resources/loaders/shader_loader.h"
 #include "resources/loaders/mesh_loader.h"
+#include "resources/loaders/bitmap_font_loader.h"
 
 typedef struct resource_system_state {
     resource_system_config config;
-    resource_loader* registered_loaders;
+    resource_loader* registered_loaders; //数组
 } resource_system_state;
 
 static resource_system_state* state_ptr = 0;
@@ -26,7 +27,7 @@ b8 resource_system_initialize(u64* memory_requirement, void* state, resource_sys
         return false;
     }
 
-    *memory_requirement = sizeof(resource_system_state) + (sizeof(resource_loader*) * config.max_loader_count);
+    *memory_requirement = sizeof(resource_system_state) + (sizeof(resource_loader) * config.max_loader_count);
 
     if (!state) {
         return true;
@@ -50,6 +51,7 @@ b8 resource_system_initialize(u64* memory_requirement, void* state, resource_sys
     resource_system_register_loader(material_resource_loader_create());
     resource_system_register_loader(shader_resource_loader_create());
     resource_system_register_loader(mesh_resource_loader_create());
+    resource_system_register_loader(bitmap_font_resource_loader_create());
 
     // NOTE: Auto-register loader types here
     KINFO("Resource system initialized with base path '%s'.", config.asset_base_path);
@@ -62,7 +64,7 @@ void resource_system_shutdown(void* state) {
     }
 }
 
-KAPI b8 resource_system_register_loader(resource_loader loader) {
+b8 resource_system_register_loader(resource_loader loader) {
     if (state_ptr) {
         u32 count = state_ptr->config.max_loader_count;
         // Ensure no loaders for the given type already exist

@@ -24,10 +24,12 @@ Renderer:
 - renderable texture support
 - batch rendering
 - JobSystem
--光追 pso 多线程 hism
+- 字体渲染 字库->图集  代码点->codePoint 1 2 3 4 字节 
+- 光追 pso 多线程 hism
 
 -bug
 -"Vulkan buffer creation failed for object shader  out_error_local_memory  windows ？？ TODO  重启解决问题 后面需要查一下
+- 赋值内存错误,内存空间开辟不足和内存不正确
 
 -Feature
 -JobSystem

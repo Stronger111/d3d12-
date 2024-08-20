@@ -89,9 +89,7 @@
         "ostream": "c",
         "camera_system.h": "c",
         "render_view_skybox.h": "c",
-        "renderer_types.inl": "c",
-        "vulkan_buffer.h": "c",
-        "xmemory": "c"
+        "darray.h": "c",
     },
     // File copyright documentation tag.  Array of strings will be converted to one line per element.  Can template {year}.
     "doxdocgen.file.copyrightTag": [
