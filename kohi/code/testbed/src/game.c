@@ -60,8 +60,6 @@ b8 game_update(game* game_inst, f32 delta_time) {
 
     static const f32 temp_move_speed = 50.0f;
 
-    vec3 velocity = vec3_zero();
-
     if (input_is_key_down('W')) {
         camera_move_forward(state->world_camera, temp_move_speed * delta_time);
     }

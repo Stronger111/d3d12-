@@ -107,7 +107,7 @@ KAPI b8 freelist_allocate_block(freelist* list, u64 size, u64* out_offset) {
         node = node->next;
     }
     u64 free_space = freelist_free_space(list);
-    KWARN("freelist_find_block, no block with enough free space found (requested: %lluB, available: %lluB).", size, free_space);
+    KFATAL("freelist_find_block, no block with enough free space found (requested: %lluB, available: %lluB).", size, free_space);
     return false;
 }
 

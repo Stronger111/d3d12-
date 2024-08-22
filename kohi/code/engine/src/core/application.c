@@ -1,8 +1,11 @@
 #include "application.h"
 #include "game_types.h"
-#include "logger.h"
+
+#include "version.h"
+
 #include "platform/platform.h"
 #include "core/kmemory.h"
+#include "core/logger.h"
 #include "core/event.h"
 #include "core/input.h"
 #include "core/clock.h"
@@ -95,6 +98,7 @@ typedef struct application_state {
 
     mesh ui_meshes[10];
     ui_text test_text;
+    ui_text test_sys_text;
     // TODO: end temp
 } application_state;
 
@@ -155,6 +159,9 @@ b8 application_create(game* game_inst) {
         KERROR("application_create called more than once.");
         return false;
     }
+
+    // Report engine version
+    KINFO("Kohi Engine v.%s",KVERSION);
 
     // Memory system must be the first thing to be stood up.
     memory_system_configuration memory_system_config = {};
@@ -343,8 +350,14 @@ b8 application_create(game* game_inst) {
     bmp_font_config.size = 21;
     font_sys_config.bitmap_font_configs = &bmp_font_config;
 
-    font_sys_config.default_system_font_count = 0;
-    font_sys_config.system_font_configs = 0;
+    system_font_config sys_font_config;
+    sys_font_config.default_size = 20;
+    sys_font_config.name = "Noto Sans";
+    sys_font_config.resource_name = "NotoSansCJK";
+
+    font_sys_config.default_system_font_count = 1;
+    font_sys_config.system_font_configs = &sys_font_config;
+
     font_sys_config.max_bitmap_font_count = 101;
     font_sys_config.max_system_font_count = 101;
     font_system_initialize(&app_state->font_system_memory_requirement, 0, &font_sys_config);
@@ -427,6 +440,12 @@ b8 application_create(game* game_inst) {
         return false;
     }
     ui_text_set_position(&app_state->test_text, vec3_create(50, 100, 0));
+
+    if (!ui_text_create(UI_TEXT_TYPE_SYSTEM, "Noto Sans CJK JP", 31, "Some system text 1234, \n\tyo!\n\n\tMade In 中国", &app_state->test_sys_text)) {
+        KERROR("Failed to load basic ui system text.");
+        return false;
+    }
+    ui_text_set_position(&app_state->test_sys_text, vec3_create(50, 200, 0));
 
     // Skybox
     texture_map* cube_map = &app_state->sb.cubemap;
@@ -685,9 +704,10 @@ b8 application_run() {
 
             ui_packet.mesh_data.mesh_count = ui_mesh_count;
             ui_packet.mesh_data.meshes = ui_meshes;
-            ui_packet.text_count = 1;
-            ui_text* texts[1];
+            ui_packet.text_count = 2;
+            ui_text* texts[2];
             texts[0] = &app_state->test_text;
+            texts[1] = &app_state->test_sys_text;
             ui_packet.texts = texts;
 
             if (!render_view_system_build_packet(render_view_system_get("ui"), &ui_packet, &packet.views[2])) {
@@ -737,6 +757,7 @@ b8 application_run() {
     renderer_texture_map_release_resources(&app_state->sb.cubemap);
     // Destroy ui texts
     ui_text_destroy(&app_state->test_text);
+    ui_text_destroy(&app_state->test_sys_text);
     // TODO: end temp
     // Shutdown event system
     event_unregister(EVENT_CODE_APPLICATION_QUIT, 0, application_on_event);
@@ -803,7 +824,7 @@ b8 application_on_key(u16 code, void* sender, void* listener_inst, event_context
             // Example on checking for a key
             KDEBUG("Explicit - A key pressed!");
         } else {
-            KDEBUG("'%c' key pressed in window.", key_code);
+            KDEBUG("'%s' key pressed in window.", input_keycode_str(key_code));
         }
     } else if (code == EVENT_CODE_KEY_RELEASED) {
         u16 key_code = context.data.u16[0];
@@ -811,7 +832,7 @@ b8 application_on_key(u16 code, void* sender, void* listener_inst, event_context
             // Example on checking for a key
             KDEBUG("Explicit - B key pressed!");
         } else {
-            KDEBUG("'%c' key released in window.", key_code);
+             KDEBUG("'%s' key released in window.", input_keycode_str(key_code));
         }
     }
     return false;

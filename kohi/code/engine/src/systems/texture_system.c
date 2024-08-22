@@ -248,6 +248,16 @@ b8 texture_system_resize(texture* t, u32 width, u32 height, b8 regenerate_intern
     return false;
 }
 
+b8 texture_system_write_data(texture* t,u32 offset,u32 size,void* data)
+{
+    if(t)
+    {
+        renderer_texture_write_data(t,offset,size,data);
+        return true;
+    }
+    return false;
+}
+
 #define RETURN_TEXT_PTR_OR_NULL(texture, func_name)                                              \
     if (state_ptr) {                                                                             \
         return &texture;                                                                         \
@@ -620,7 +630,7 @@ b8 process_texture_reference(const char* name, texture_type type, i8 reference_d
                         t->type = type;
                         // Create new texture.
                         if (skip_load) {
-                            KTRACE("Load skipped for texture '%s'. This is expected behaviour.");
+                           // KTRACE("Load skipped for texture '%s'. This is expected behaviour.");
                         } else {
                             if (type == TEXTURE_TYPE_CUBE) {
                                 char texture_names[6][TEXTURE_NAME_MAX_LENGTH];

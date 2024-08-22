@@ -117,7 +117,7 @@ b8 texture_system_resize(texture* t, u32 width, u32 height, b8 regenerate_intern
  * @param data A pointer to the data to be written.
  * @return True on success; otherwise false.
  */
-b8 texture_system_write_data(texture* t, u64 offset, u64 size, void* data);
+b8 texture_system_write_data(texture* t, u32 offset, u32 size, void* data);
 
 /**
  * @brief Gets a pointer to the default texture. No reference counting is

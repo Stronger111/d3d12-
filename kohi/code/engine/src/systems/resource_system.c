@@ -11,10 +11,11 @@
 #include "resources/loaders/shader_loader.h"
 #include "resources/loaders/mesh_loader.h"
 #include "resources/loaders/bitmap_font_loader.h"
+#include "resources/loaders/system_font_loader.h"
 
 typedef struct resource_system_state {
     resource_system_config config;
-    resource_loader* registered_loaders; //数组
+    resource_loader* registered_loaders;  // 数组
 } resource_system_state;
 
 static resource_system_state* state_ptr = 0;
@@ -52,6 +53,7 @@ b8 resource_system_initialize(u64* memory_requirement, void* state, resource_sys
     resource_system_register_loader(shader_resource_loader_create());
     resource_system_register_loader(mesh_resource_loader_create());
     resource_system_register_loader(bitmap_font_resource_loader_create());
+    resource_system_register_loader(system_font_resource_loader_create());
 
     // NOTE: Auto-register loader types here
     KINFO("Resource system initialized with base path '%s'.", config.asset_base_path);
@@ -156,5 +158,5 @@ b8 load(const char* name, resource_loader* loader, void* params, resource* out_r
     }
 
     out_resource->loader_id = loader->id;
-    return loader->load(loader, name,params, out_resource);
+    return loader->load(loader, name, params, out_resource);
 }
