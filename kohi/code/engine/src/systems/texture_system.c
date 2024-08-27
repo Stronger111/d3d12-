@@ -186,7 +186,7 @@ void texture_system_release(const char* name) {
     }
 }
 
-texture* texture_system_wrap_internal(const char* name, u32 width, u32 height, u8 channel_count, b8 has_transparency, b8 is_writeable, b8 register_texture, void* internal_data) {
+void texture_system_wrap_internal(const char* name, u32 width, u32 height, u8 channel_count, b8 has_transparency, b8 is_writeable, b8 register_texture, void* internal_data, texture* out_texture) {
     u32 id = INVALID_ID;
     texture* t = 0;
     if (register_texture) {
@@ -194,12 +194,16 @@ texture* texture_system_wrap_internal(const char* name, u32 width, u32 height, u
         // resources are created and managed somewhere within the renderer internals.
         if (!process_texture_reference(name, TEXTURE_TYPE_2D, 1, false, true, &id)) {
             KERROR("texture_system_wrap_internal failed to obtain a new texture id.");
-            return 0;
+            return;
         }
         t = &state_ptr->registered_textures[id];
     } else {
-        t = kallocate(sizeof(texture), MEMORY_TAG_TEXTURE);
-        KTRACE("texture_system_wrap_internal created texture '%s', but not registering, resulting in an allocation. It is up to the caller to free this memory.", name);
+        if (out_texture) {
+            t = out_texture;
+        } else {
+            t = kallocate(sizeof(texture), MEMORY_TAG_TEXTURE);
+            //KTRACE("texture_system_wrap_internal created texture '%s', but not registering, resulting in an allocation. It is up to the caller to free this memory.", name);
+        }
     }
 
     t->id = id;
@@ -213,7 +217,6 @@ texture* texture_system_wrap_internal(const char* name, u32 width, u32 height, u
     t->flags |= is_writeable ? TEXTURE_FLAG_IS_WRITEABLE : 0;
     t->flags |= TEXTURE_FLAG_IS_WRAPPED;
     t->internal_data = internal_data;
-    return t;
 }
 
 b8 texture_system_set_internal(texture* t, void* internal_data) {
@@ -248,11 +251,9 @@ b8 texture_system_resize(texture* t, u32 width, u32 height, b8 regenerate_intern
     return false;
 }
 
-b8 texture_system_write_data(texture* t,u32 offset,u32 size,void* data)
-{
-    if(t)
-    {
-        renderer_texture_write_data(t,offset,size,data);
+b8 texture_system_write_data(texture* t, u32 offset, u32 size, void* data) {
+    if (t) {
+        renderer_texture_write_data(t, offset, size, data);
         return true;
     }
     return false;
@@ -284,7 +285,7 @@ texture* texture_system_get_default_normal_texture() {
 b8 create_default_textures(texture_system_state* state) {
     // NOTE: Create default texture, a 256x256 blue/white checkerboard pattern.
     // This is done in code to eliminate asset dependencies.
-    //KTRACE("Creating default texture...");
+    // KTRACE("Creating default texture...");
     const u32 tex_dimension = 256;
     const u32 channels = 4;
     const u32 pixel_count = tex_dimension * tex_dimension;
@@ -322,7 +323,7 @@ b8 create_default_textures(texture_system_state* state) {
     state->default_texture.generation = INVALID_ID;
 
     // Diffuse texture.
-    //KTRACE("Creating default diffuse texture...");
+    // KTRACE("Creating default diffuse texture...");
     u8 diff_pixels[16 * 16 * 4];
     // Default diffuse map is all white.
     kset_memory(diff_pixels, 255, sizeof(u8) * 16 * 16 * 4);
@@ -338,7 +339,7 @@ b8 create_default_textures(texture_system_state* state) {
     state->default_diffuse_texture.generation = INVALID_ID;
 
     // Specular texture.
-    //KTRACE("Creating default specular texture...");
+    // KTRACE("Creating default specular texture...");
     u8 spec_pixels[16 * 16 * 4];
     // Default spec map is black (no specular)
     kset_memory(spec_pixels, 0, sizeof(u8) * 16 * 16 * 4);
@@ -354,7 +355,7 @@ b8 create_default_textures(texture_system_state* state) {
     state->default_specular_texture.generation = INVALID_ID;
 
     // Normal texture.
-    //KTRACE("Creating default normal texture...");
+    // KTRACE("Creating default normal texture...");
     u8 normal_pixels[16 * 16 * 4];  // w * h * channels
     kset_memory(normal_pixels, 0, sizeof(u8) * 16 * 16 * 4);
 
@@ -393,7 +394,6 @@ void destroy_default_textures(texture_system_state* state) {
         destroy_texture(&state->default_normal_texture);
     }
 }
-
 
 b8 load_cube_textures(const char* name, const char texture_names[6][TEXTURE_NAME_MAX_LENGTH], texture* t) {
     u8* pixels = 0;
@@ -630,7 +630,7 @@ b8 process_texture_reference(const char* name, texture_type type, i8 reference_d
                         t->type = type;
                         // Create new texture.
                         if (skip_load) {
-                           // KTRACE("Load skipped for texture '%s'. This is expected behaviour.");
+                            // KTRACE("Load skipped for texture '%s'. This is expected behaviour.");
                         } else {
                             if (type == TEXTURE_TYPE_CUBE) {
                                 char texture_names[6][TEXTURE_NAME_MAX_LENGTH];

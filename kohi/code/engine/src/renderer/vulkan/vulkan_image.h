@@ -4,7 +4,7 @@
 
 /**
  * @brief Creates a new Vulkan image.
- * 
+ *
  * @param context A pointer to the Vulkan context.
  * @param type The type of texture. Provides hints to creation.
  * @param width The width of the image. For cubemaps, this is for each side of the cube.
@@ -32,7 +32,7 @@ void vulkan_image_create(
 
 /**
  * @brief Creates a view for the given image.
- * 
+ *
  * @param context A pointer to the Vulkan context.
  * @param type The type of texture. Provides hints to creation.
  * @param format The image format.
@@ -48,7 +48,7 @@ void vulkan_image_view_create(
 
 /**
  * @brief Transitions the provided image from old_layout to new_layout.
- * 
+ *
  * @param context A pointer to the Vulkan context.
  * @param type The type of texture. Provides hints to creation.
  * @param command_buffer A pointer to the command buffer to be used.
@@ -78,8 +78,43 @@ void vulkan_image_copy_from_buffer(
     texture_type type,
     vulkan_image* image,
     VkBuffer buffer,
-    vulkan_command_buffer* command_buffer
-    );
+    vulkan_command_buffer* command_buffer);
+
+/**
+ * @brief Copies data in the provided image to the given buffer.
+ *
+ * @param context The Vulkan context.
+ * @param type The type of texture. Provides hints to layer count.
+ * @param image The image to copy the image's data from.
+ * @param buffer The buffer to copy to.
+ * @param command_buffer The command buffer to be used for the copy.
+ */
+void vulkan_image_copy_to_buffer(
+    vulkan_context* context,
+    texture_type type,
+    vulkan_image* image,
+    VkBuffer buffer,
+    vulkan_command_buffer* command_buffer);
+
+/**
+ * @brief Copies a single pixel's data from the given image to the provided buffer.
+ *
+ * @param context The Vulkan context.
+ * @param type The type of texture. Provides hints to layer count.
+ * @param image The image to copy the image's data from.
+ * @param buffer The buffer to copy to.
+ * @param x The x-coordinate of the pixel to copy.
+ * @param y The y-coordinate of the pixel to copy.
+ * @param command_buffer The command buffer to be used for the copy.
+ */
+void vulkan_image_copy_pixel_to_buffer(
+    vulkan_context* context,
+    texture_type type,
+    vulkan_image* image,
+    VkBuffer buffer,
+    u32 x,
+    u32 y,
+    vulkan_command_buffer* command_buffer);
 
 void vulkan_image_destroy(
     vulkan_context* context,

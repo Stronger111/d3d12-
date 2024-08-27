@@ -45,7 +45,7 @@ b8 ui_text_create(ui_text_type type, const char* font_name, u16 font_size, const
     }
 
     // Acquire resources for font texture map.
-    shader* ui_shader = shader_system_get(BUILTIN_SHADER_NAME_UI);  // TODO: text shader.
+    shader* ui_shader = shader_system_get("Shader.Builtin.UI");  // TODO: text shader.
     texture_map* font_maps[1] = {&out_text->data->atlas};           // 字体图集
     if (!renderer_shader_acquire_instance_resources(ui_shader, font_maps, &out_text->instance_id)) {
         KFATAL("Unable to acquire shader resources for font texture map.");
@@ -99,7 +99,7 @@ void ui_text_destroy(ui_text* text) {
         renderer_renderbuffer_destroy(&text->index_buffer);
 
         // Release resources for font texture map.
-        shader* ui_shader = shader_system_get(BUILTIN_SHADER_NAME_UI);  // TODO: text shader.
+        shader* ui_shader = shader_system_get("Shader.Builtin.UI");  // TODO: text shader.
         if (!renderer_shader_release_instance_resources(ui_shader, text->instance_id)) {
             KFATAL("Unable to release shader resources for font texture map.");
         }

@@ -81,7 +81,9 @@ void* dynamic_allocator_allocate_aligned(dynamic_allocator* allocator, u64 size,
         dynamic_allocator_state* state = allocator->memory;
         // The size required is based on the requested size, plus the alignment, header and a u32 to hold
         // the size for quick/easy lookups.
-        u64 required_size = alignment + sizeof(alloc_header) + KSIZE_STORAGE + size;
+        u64 header_size = sizeof(alloc_header);
+        u64 storage_size=KSIZE_STORAGE;
+        u64 required_size=alignment+header_size+storage_size+size;
         KASSERT_MSG(required_size < 4294967295U, "dynamic_allocator_allocate_aligned called with required size > 4 GiB. Don't do that.");
         u64 base_offset = 0;
         if (freelist_allocate_block(&state->list, required_size, &base_offset)) {
@@ -96,7 +98,7 @@ void* dynamic_allocator_allocate_aligned(dynamic_allocator* allocator, u64 size,
             void* ptr = (void*)((u64)state->memory_block + base_offset);
             // Start the alignment after enough space to hold a u32. This allows for the u32 to be stored
             // immediately before the user block, while maintaining alignment on said user block.
-            u64 aligned_block_offset = get_aligned((u64)ptr + base_offset + KSIZE_STORAGE, alignment);
+            u64 aligned_block_offset = get_aligned((u64)ptr + KSIZE_STORAGE, alignment);
             // Store the size just before the user data block
             u32* block_size = (u32*)(aligned_block_offset - KSIZE_STORAGE);  // 指针
             *block_size = (u32)size;                                         // 地址的值
@@ -165,3 +167,7 @@ u64 dynamic_allocator_total_space(dynamic_allocator* allocator) {
     return state->total_size;
 }
 
+KAPI u64 dynamic_allocator_header_size() {
+    // Enough space for a header and size storage.
+    return sizeof(alloc_header) + KSIZE_STORAGE;
+}

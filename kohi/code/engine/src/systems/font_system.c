@@ -557,7 +557,7 @@ b8 rebuild_system_font_variant_atlas(system_font_lookup* lookup, font_data* vari
         g->y = pc->y0;
         g->width = pc->x1 - pc->x0;
         g->height = pc->y1 - pc->y0;
-        g->x_advance = pc->xadvance;
+        g->x_advance = pc->xadvance;//步进
     }
 
     // Regenerate kernings

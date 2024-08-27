@@ -79,6 +79,8 @@ typedef enum texture_flag {
     TEXTURE_FLAG_IS_WRITEABLE = 0x2,
     /** @brief Indicates if the texture was created via wrapping vs traditional creation. */
     TEXTURE_FLAG_IS_WRAPPED = 0x4,
+    /** @brief Indicates the texture is a depth texture. */
+    TEXTURE_FLAG_DEPTH = 0x8
 } texture_flag;
 
 /** @brief Holds bit flags for textures.. */
@@ -205,18 +207,16 @@ typedef struct bitmap_font_resource_data {
     bitmap_font_page* pages;
 } bitmap_font_resource_data;
 
-typedef struct system_font_face
-{
-   char name[256];
-}system_font_face;
+typedef struct system_font_face {
+    char name[256];
+} system_font_face;
 
-typedef struct system_font_resource_data
-{
-   //darray
-   system_font_face* fonts;
-   u64 binary_size;
-   void* font_binary;
-}system_font_resource_data;
+typedef struct system_font_resource_data {
+    // darray
+    system_font_face* fonts;
+    u64 binary_size;
+    void* font_binary;
+} system_font_resource_data;
 
 #define MATERIAL_NAME_MAX_LENGTH 256
 
@@ -282,6 +282,7 @@ typedef struct geometry {
 } geometry;
 
 typedef struct mesh {
+    u32 unique_id;
     u8 generation;
     u16 geometry_count;
     geometry** geometries;
@@ -395,8 +396,6 @@ typedef struct shader_config {
     u8 uniform_count;
     /** @brief The collection of uniforms. Darray. */
     shader_uniform_config* uniforms;
-    /** @brief The name of the renderpass used by this shader. */
-    char* renderpass_name;
     /** @brief The number of stages present in the shader. */
     u8 stage_count;
     /** @brief The collection of stages. Darray. */
@@ -405,4 +404,13 @@ typedef struct shader_config {
     char** stage_names;
     /** @brief The collection of stage file names to be loaded (one per stage). Must align with stages array. Darray. */
     char** stage_filenames;
+
+    // TODO: Convert these bools to flags.
+    /** @brief Indicates if depth testing should be done. */
+    b8 depth_test;
+    /**
+     * @brief Indicates if the results of depth testing should be written to the depth buffer.
+     * NOTE: This is ignored if depth_test is false.
+     */
+    b8 depth_write;
 } shader_config;
