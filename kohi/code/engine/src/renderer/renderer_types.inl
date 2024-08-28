@@ -199,20 +199,20 @@ typedef struct renderer_backend {
      */
     void (*viewport_set)(vec4 rect);
 
-      /**
+    /**
      * @brief Resets the viewport to the default, which matches the application window.
      * Must be done within a renderpass.
      */
     void (*viewport_reset)();
 
-      /**
+    /**
      * @brief Sets the renderer scissor to the given rectangle. Must be done within a renderpass.
      *
      * @param rect The scissor rectangle to be set.
      */
     void (*scissor_set)(vec4 rect);
 
-     /**
+    /**
      * @brief Resets the scissor to the default, which matches the application window.
      * Must be done within a renderpass.
      */
@@ -297,9 +297,9 @@ typedef struct renderer_backend {
      * @param size The number of bytes to be read.
      * @param out_memory A pointer to a block of memory to write the read data to.
      */
-    void (*texture_read_data)(texture* t,u32 offset,u32 size,void** out_memory);
+    void (*texture_read_data)(texture* t, u32 offset, u32 size, void** out_memory);
 
-     /**
+    /**
      * @brief Reads a pixel from the provided texture at the given x/y coordinate.
      *
      * @param t A pointer to the texture to be read from.
@@ -307,7 +307,7 @@ typedef struct renderer_backend {
      * @param y The pixel y-coordinate.
      * @param out_rgba A pointer to an array of u8s to hold the pixel data (should be sizeof(u8) * 4)
      */
-    void (*texture_read_pixel)(texture* t,u32 x,u32 y,u8** out_rgba);
+    void (*texture_read_pixel)(texture* t, u32 x, u32 y, u8** out_rgba);
 
     b8 (*create_geometry)(geometry* geometry, u32 vertex_size, u32 vertex_count, const void* vertices, u32 index_size, u32 index_count, const void* indices);
     void (*destroy_geometry)(geometry* geometry);
@@ -445,7 +445,6 @@ typedef struct renderer_backend {
      */
     void (*render_target_destroy)(render_target* target, b8 free_internal_memory);
 
- 
     /**
      * @brief Creates a new renderpass.
      *
@@ -469,7 +468,6 @@ typedef struct renderer_backend {
      */
     texture* (*window_attachment_get)(u8 index);
 
-  
     /**
      * @brief Returns a pointer to the main depth texture target.
      * @param index The index of the attachment to get. Must be within the range of window render target count.
@@ -482,7 +480,7 @@ typedef struct renderer_backend {
      */
     u8 (*window_attachment_index_get)();
 
-     /**
+    /**
      * @brief Returns the number of attachments required for window-based render targets.
      */
     u8 (*window_attachment_count_get)();
@@ -618,6 +616,8 @@ typedef enum render_view_known_type {
     RENDERER_VIEW_KNOWN_TYPE_UI = 0x02,
     /** @brief A view which only renders skybox objects. */
     RENDERER_VIEW_KNOWN_TYPE_SKYBOX = 0x03,
+    /** @brief A view which only renders ui and world objects to be picked. */
+    RENDERER_VIEW_KNOWN_TYPE_PICK = 0x04
 } render_view_known_type;
 
 /** @brief Known view matrix sources. */
@@ -743,15 +743,15 @@ typedef struct render_view {
      */
     b8 (*on_render)(const struct render_view* self, const struct render_view_packet* packet, u64 frame_number, u64 render_target_index);
 
-       /**
+    /**
      * @brief Regenerates the resources for the given attachment at the provided pass index.
-     * 
+     *
      * @param self A pointer to the view to use.
      * @param pass_index The index of the renderpass to generate for.
      * @param attachment A pointer to the attachment whose resources are to be regenerated.
      * @return True on success; otherwise false.
      */
-    b8 (*regenerate_attachment_target)(struct render_view* self,u32 pass_index,struct render_target_attachment* attachment);
+    b8 (*regenerate_attachment_target)(struct render_view* self, u32 pass_index, struct render_target_attachment* attachment);
 } render_view;
 
 /**
@@ -791,6 +791,16 @@ typedef struct ui_packet_data {
     u32 text_count;
     struct ui_text** texts;
 } ui_packet_data;
+
+typedef struct pick_packet_data {
+    mesh_packet_data world_mesh_data;
+    u32 world_geometry_count;
+    mesh_packet_data ui_mesh_data;
+    u32 ui_geometry_count;
+    // TODO: temp
+    u32 text_count;
+    struct ui_text** texts;
+} pick_packet_data;
 
 typedef struct skybox_packet_data {
     skybox* sb;

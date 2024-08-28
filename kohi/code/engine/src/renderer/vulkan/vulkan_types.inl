@@ -112,7 +112,7 @@ typedef struct vulkan_swapchain {
     u32 image_count;
     /** @brief An array of to render targets, which contain swapchain images. */
     texture* render_textures;
-    /** @brief An array of depth textures, one per frame. */
+    /** @brief An array of depth textures, one per frame. 深度纹理数组  */ 
     texture* depth_textures;
 
     /**

@@ -2030,7 +2030,7 @@ b8 recreate_swapchain(renderer_backend* backend) {
         vulkan_command_buffer_free(&context, context.device.graphics_command_pool, &context.graphics_command_buffers[i]);
     }
 
-    // Indicate to listeners that a render target refresh is required.
+    // Indicate to listeners that a render target refresh is required. 监听交换链的都会进行刷新目标
     event_context event_context = {0};
     event_fire(EVENT_CODE_DEFAULT_RENDERTARGET_REFRESH_REQUIRED, 0, event_context);
 

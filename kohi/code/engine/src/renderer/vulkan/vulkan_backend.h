@@ -22,7 +22,6 @@ void vulkan_renderer_scissor_reset();
 
 b8 vulkan_renderer_renderpass_begin(renderpass* pass,render_target* target);
 b8 vulkan_renderer_renderpass_end(renderpass* pass);
-renderpass* vulkan_renderer_renderpass_get(const char* name);
 
 void vulkan_renderer_draw_geometry(geometry_render_data* data);
 

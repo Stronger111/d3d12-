@@ -3,6 +3,7 @@
 #include "core/logger.h"
 #include "core/kmemory.h"
 #include "core/kstring.h"
+#include "core/identifier.h"
 #include "math/kmath.h"
 #include "math/transform.h"
 #include "renderer/renderer_types.inl"
@@ -46,7 +47,7 @@ b8 ui_text_create(ui_text_type type, const char* font_name, u16 font_size, const
 
     // Acquire resources for font texture map.
     shader* ui_shader = shader_system_get("Shader.Builtin.UI");  // TODO: text shader.
-    texture_map* font_maps[1] = {&out_text->data->atlas};           // 字体图集
+    texture_map* font_maps[1] = {&out_text->data->atlas};        // 字体图集
     if (!renderer_shader_acquire_instance_resources(ui_shader, font_maps, &out_text->instance_id)) {
         KFATAL("Unable to acquire shader resources for font texture map.");
         return false;
@@ -82,12 +83,17 @@ b8 ui_text_create(ui_text_type type, const char* font_name, u16 font_size, const
 
     // Generate geometry.
     regenerate_geometry(out_text);
+    // Get a unique identifier for the text object
+    out_text->unique_id = identifier_aquire_new_id(out_text);
 
     return true;
 }
 
 void ui_text_destroy(ui_text* text) {
     if (text) {
+        // Release the unique identifier.
+        identifier_release_id(text->unique_id);
+        
         if (text->text) {
             u32 text_length = string_length(text->text);
             kfree(text->text, sizeof(char) * text_length, MEMORY_TAG_STRING);

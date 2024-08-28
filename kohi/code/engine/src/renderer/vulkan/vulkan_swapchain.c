@@ -155,7 +155,7 @@ void create(vulkan_context* context, u32 width, u32 height, vulkan_swapchain* sw
     swapchain->image_count = 0;
     VK_CHECK(vkGetSwapchainImagesKHR(context->device.logical_device, swapchain->handle, &swapchain->image_count, 0));
     if (!swapchain->render_textures) {
-        swapchain->render_textures = (texture*)kallocate(sizeof(texture) * swapchain->image_count, MEMORY_TAG_RENDERER);
+        swapchain->render_textures = (texture*)kallocate(sizeof(texture) * swapchain->image_count, MEMORY_TAG_RENDERER); //指针只有8个字节
         // If creating the array, then the internal texture objects aren't created yet either.
         for (u32 i = 0; i < swapchain->image_count; ++i) {
             void* internal_data = kallocate(sizeof(vulkan_image), MEMORY_TAG_TEXTURE);
@@ -217,7 +217,8 @@ void create(vulkan_context* context, u32 width, u32 height, vulkan_swapchain* sw
         context->device.depth_format = VK_FORMAT_UNDEFINED;
         KFATAL("Failed to find a supported format!");
     }
-
+    
+    //Allocate 深度RT
     if (!swapchain->depth_textures) {
         swapchain->depth_textures = (texture*)kallocate(sizeof(texture) * swapchain->image_count, MEMORY_TAG_RENDERER);
     }
