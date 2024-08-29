@@ -2,24 +2,26 @@
 #include <entry.h>
 #include "core/kmemory.h"
 
-//Define the function to create a game
-b8 create_game(game* out_game)
-{
-    //application configuration
-    out_game->app_config.start_pos_x=100;
-    out_game->app_config.start_pos_Y=100;
-    out_game->app_config.start_width=1280;
-    out_game->app_config.start_height=720;
-    out_game->app_config.name="Kohi Engine Test";
-    out_game->update=game_update;
-    out_game->render=game_render;
-    out_game->initialize=game_initialize;
-    out_game->on_resize=game_on_resize;
+// Define the function to create a game
+b8 create_game(game* out_game) {
+    // application configuration
+    out_game->app_config.start_pos_x = 100;
+    out_game->app_config.start_pos_Y = 100;
+    out_game->app_config.start_width = 1280;
+    out_game->app_config.start_height = 720;
+    out_game->app_config.name = "Kohi Engine Test";
+    out_game->boot = game_boot;
+    out_game->initialize = game_initialize;
+    out_game->update = game_update;
+    out_game->render = game_render;
 
-    //Create the game state
-    out_game->state_memory_requirement=sizeof(game_state);
-    out_game->state=0;
+    out_game->on_resize = game_on_resize;
+    out_game->shutdown = game_shutdown;
 
-    out_game->application_state=0;
+    // Create the game state
+    out_game->state_memory_requirement = sizeof(game_state);
+    out_game->state = 0;
+
+    out_game->application_state = 0;
     return true;
 }

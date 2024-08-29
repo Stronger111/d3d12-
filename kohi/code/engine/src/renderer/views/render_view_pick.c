@@ -7,6 +7,7 @@
 #include "core/uuid.h"
 #include "math/kmath.h"
 #include "math/transform.h"
+#include "memory/linear_allocator.h"
 #include "containers/darray.h"
 #include "systems/resource_system.h"
 #include "systems/shader_system.h"
@@ -242,7 +243,7 @@ void render_view_pick_on_resize(render_view* self, u32 width, u32 height) {
     }
 }
 
-b8 render_view_pick_on_build_packet(const render_view* self, void* data, render_view_packet* out_packet) {
+b8 render_view_pick_on_build_packet(const render_view* self,struct linear_allocator* frame_allocator,void* data, render_view_packet* out_packet) {
     if (!self || !data || !out_packet) {
         KWARN("render_view_pick_on_build_packet requires valid pointer to view, packet, and data.");
         return false;
@@ -261,7 +262,7 @@ b8 render_view_pick_on_build_packet(const render_view* self, void* data, render_
     // Set the pick packet data to extended data.
     packet_data->world_geometry_count = 0;
     packet_data->ui_geometry_count = 0;
-    out_packet->extended_data = data;
+    out_packet->extended_data = linear_allocator_allocate(frame_allocator,sizeof(pick_packet_data));
 
     i32 highest_instance_id = 0;
     for (u32 i = 0; i < packet_data->world_mesh_data.mesh_count; ++i) {
@@ -316,6 +317,8 @@ b8 render_view_pick_on_build_packet(const render_view* self, void* data, render_
             acquire_shader_instances(self);
         }
     }
+      // Copy over the packet data.
+    kcopy_memory(out_packet->extended_data, packet_data, sizeof(pick_packet_data));
     return true;
 }
 
@@ -420,6 +423,7 @@ b8 render_view_pick_on_render(const render_view* self, const render_view_packet*
         shader_system_apply_global();
 
         // Draw geometries. Start off where world geometries left off.
+        
         for (u32 i = packet_data->world_geometry_count; i < packet->geometry_count; ++i) {
             geometry_render_data* geo = &packet->geometries[i];
             current_instance_id = geo->unique_id;

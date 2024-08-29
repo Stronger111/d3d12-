@@ -19,7 +19,7 @@
  * @param owner The owner of the identifier.
  * @return The new identifier.
  */
-u32 identifier_aquire_new_id(void* owner);
+KAPI u32 identifier_aquire_new_id(void* owner);
 
 /**
  * @brief Releases the given identifier, which can then be used

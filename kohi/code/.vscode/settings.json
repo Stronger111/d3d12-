@@ -91,7 +91,13 @@
         "render_view_skybox.h": "c",
         "darray.h": "c",
         "stb_truetype.h": "c",
-         "vulkan_pipeline.h": "c"
+        "vulkan_pipeline.h": "c",
+        "resource_types.h": "c",
+        "texture_system.h": "c",
+        "shader_system.h": "c",
+        "renderer_types.inl": "c",
+        "linear_allocator.h": "c",
+        "metrics.h": "c"
     },
     // File copyright documentation tag.  Array of strings will be converted to one line per element.  Can template {year}.
     "doxdocgen.file.copyrightTag": [

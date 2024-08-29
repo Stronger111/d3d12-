@@ -49,14 +49,14 @@ geometry* geometry_system_acquire_by_id(u32 id);
  * @param auto_release Indicates if the acquired geometry should be unloaded when its reference count reaches 0.
  * @return A pointer to the acquired geometry or nullptr if failed. 
  */
-geometry* geometry_system_acquire_from_config(geometry_config config, b8 auto_release);
+KAPI geometry* geometry_system_acquire_from_config(geometry_config config, b8 auto_release);
 
 /**
  * @brief Frees resources held by the provided configuration.
  *
  * @param config A pointer to the configuration to be disposed.
  */
-void geometry_system_config_dispose(geometry_config* config);
+KAPI void geometry_system_config_dispose(geometry_config* config);
 
 /**
  * @brief Releases a reference to the provided geometry.
@@ -108,4 +108,4 @@ geometry_config geometry_system_generate_plane_config(f32 width,f32 height,u32 x
  * @param material_name 
  * @return geometry_config 
  */
-geometry_config geometry_system_generate_cube_config(f32 width, f32 height, f32 depth, f32 tile_x, f32 tile_y, const char* name, const char* material_name);
+KAPI geometry_config geometry_system_generate_cube_config(f32 width, f32 height, f32 depth, f32 tile_x, f32 tile_y, const char* name, const char* material_name);

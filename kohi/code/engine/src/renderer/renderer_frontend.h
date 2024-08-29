@@ -301,7 +301,7 @@ u8 renderer_window_attachment_index_get();
 /**
  * @brief Returns the number of attachments required for window-based render targets.
  */
-u8 renderer_window_attachment_count_get();
+KAPI u8 renderer_window_attachment_count_get();
 
 /**
  * @brief Creates a new renderpass.

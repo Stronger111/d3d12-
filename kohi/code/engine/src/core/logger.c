@@ -41,15 +41,6 @@ b8 initialize_logging(u64* memory_requirement, void* state) {
         return false;
     }
 
-    // TODO: Remove this
-    KFATAL("Test Message:%f", 3.14f);
-    KERROR("Test Message:%f", 3.14f);
-    KWARN("Test Message:%f", 3.14f);
-    KINFO("Test Message:%f", 3.14f);
-    KDEBUG("Test Message:%f", 3.14f);
-    KTRACE("Test Message:%f", 3.14f);
-
-    // TODO: create log file
     return true;
 }
 

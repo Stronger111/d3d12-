@@ -1,11 +1,12 @@
 #pragma once
 
 #include "defines.h"
+#include "systems/font_system.h"
+#include "renderer/renderer_types.inl"
 
-struct  game;
+struct game;
 
-typedef struct application_config
-{
+typedef struct application_config {
     i16 start_pos_x;
     i16 start_pos_Y;
 
@@ -13,7 +14,12 @@ typedef struct application_config
     i16 start_height;
 
     char* name;
-}application_config;
+    /** @brief Configuration for the font system. */
+    font_system_config font_config;
+
+    /** @brief A darray of render view configurations. */
+   render_view_config* render_views;
+} application_config;
 
 KAPI b8 application_create(struct game* game_inst);
 

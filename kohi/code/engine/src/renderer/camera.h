@@ -65,7 +65,7 @@ void camera_reset(camera* c);
  * @param c A constant pointer to a camera.
  * @return A copy of the camera's position.
  */
-vec3 camera_position_get(const camera* c);
+KAPI vec3 camera_position_get(const camera* c);
 
 /**
  * @brief Sets the provided camera's position.
@@ -81,7 +81,7 @@ KAPI void camera_position_set(camera* c, vec3 position);
  * @param c A constant pointer to a camera.
  * @return A copy of the camera's rotation in Euler angles.
  */
-vec3 camera_rotation_euler_get(const camera* c);
+KAPI vec3 camera_rotation_euler_get(const camera* c);
 
 /**
  * @brief Sets the provided camera's rotation in Euler angles.

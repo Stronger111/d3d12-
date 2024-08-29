@@ -62,17 +62,18 @@ void render_view_system_on_window_resize(u32 width, u32 height);
  * @param name The name of the view.
  * @return A pointer to a view if found; otherwise 0.
  */
-render_view* render_view_system_get(const char* name);
+KAPI render_view* render_view_system_get(const char* name);
 
 /**
  * @brief Builds a render view packet using the provided view and meshes.
  *
  * @param view A pointer to the view to use.
+ * @param frame_allocator An allocator used this frame to build a packet.
  * @param data Freeform data used to build the packet.
  * @param out_packet A pointer to hold the generated packet.
  * @return True on success; otherwise false.
  */
-b8 render_view_system_build_packet(const render_view* view, void* data, struct render_view_packet* out_packet);
+KAPI b8 render_view_system_build_packet(const render_view* view, struct linear_allocator* frame_allocator,void* data, struct render_view_packet* out_packet);
 
 /**
  * @brief Uses the given view and packet to render the contents therein.
