@@ -164,13 +164,13 @@ void render_view_world_on_resize(struct render_view* self, u32 width, u32 height
     }
 }
 
-b8 render_view_world_on_build_packet(const struct render_view* self,struct linear_allocator* frame_allocator,void* data, struct render_view_packet* out_packet) {
+b8 render_view_world_on_build_packet(const struct render_view* self, struct linear_allocator* frame_allocator, void* data, struct render_view_packet* out_packet) {
     if (!self || !data || !out_packet) {
         KWARN("render_view_world_on_build_packet requires valid pointer to view, packet, and data.");
         return false;
     }
 
-    mesh_packet_data* mesh_data = (mesh_packet_data*)data;
+    geometry_render_data* geometry_data = (geometry_render_data*)data;
     render_view_world_internal_data* internal_data = (render_view_world_internal_data*)self->internal_data;
 
     out_packet->geometries = darray_create(geometry_render_data);
@@ -184,32 +184,31 @@ b8 render_view_world_on_build_packet(const struct render_view* self,struct linea
 
     // Obtain all geometries from the current scene.
     geometry_distance* geometry_distances = darray_create(geometry_distance);
-    for (u32 i = 0; i < mesh_data->mesh_count; ++i) {
-        mesh* m = mesh_data->meshes[i];
-        mat4 model = transform_get_world(&m->transform);
 
-        for (u32 j = 0; j < m->geometry_count; ++j) {
-            geometry_render_data render_data;
-            render_data.geometry = m->geometries[j];
-            render_data.model = model;
+    u32 geometry_data_count = darray_length(geometry_data);
+    for (u32 i = 0; i < geometry_data_count; ++i) {
+        geometry_render_data* g_data = &geometry_data[i];
+        if (!g_data->geometry) {
+            continue;
+        }
+        // TODO: Add something to material to check for transparency.
+        if ((g_data->geometry->material->diffuse_map.texture->flags & TEXTURE_FLAG_HAS_TRANSPARENCY) == 0) {
             // Only add meshes with _no_ transparency.
-            if ((m->geometries[j]->material->diffuse_map.texture->flags & TEXTURE_FLAG_HAS_TRANSPARENCY) == 0) {
-                darray_push(out_packet->geometries, render_data);
-                out_packet->geometry_count++;
-            } else {
-                // For meshes _with_ transparency, add them to a separate list to be sorted by distance later.
-                // Get the center, extract the global position from the model matrix and add it to the center,
-                // then calculate the distance between it and the camera, and finally save it to a list to be sorted.
-                // NOTE: This isn't perfect for translucent meshes that intersect, but is enough for our purposes now.
-                vec3 center = vec3_transform(render_data.geometry->center, model);
-                f32 distance = vec3_distance(center, internal_data->world_camera->position);
+            darray_push(out_packet->geometries, geometry_data[i]);
+            out_packet->geometry_count++;
+        } else {
+            // For meshes _with_ transparency, add them to a separate list to be sorted by distance later.
+            // Get the center, extract the global position from the model matrix and add it to the center,
+            // then calculate the distance between it and the camera, and finally save it to a list to be sorted.
+            // NOTE: This isn't perfect for translucent meshes that intersect, but is enough for our purposes now.
+            vec3 center = vec3_transform(g_data->geometry->center, g_data->model);
+            f32 distance = vec3_distance(center, internal_data->world_camera->position);
 
-                geometry_distance gdist;
-                gdist.distance = kabs(distance);
-                gdist.g = render_data;
+            geometry_distance gdist;
+            gdist.distance = kabs(distance);
+            gdist.g = geometry_data[i];
 
-                darray_push(geometry_distances, gdist);
-            }
+            darray_push(geometry_distances, gdist);
         }
     }
 

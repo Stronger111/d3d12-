@@ -725,7 +725,7 @@ typedef struct render_view {
      * @param out_packet A pointer to hold the generated packet.
      * @return True on success; otherwise false.
      */
-    b8 (*on_build_packet)(const struct render_view* self,struct linear_allocator* frame_allocator, void* data, struct render_view_packet* out_packet);
+    b8 (*on_build_packet)(const struct render_view* self, struct linear_allocator* frame_allocator, void* data, struct render_view_packet* out_packet);
 
     /**
      * @param self A pointer to the view to use.
@@ -794,8 +794,8 @@ typedef struct ui_packet_data {
 } ui_packet_data;
 
 typedef struct pick_packet_data {
-    mesh_packet_data world_mesh_data;
-    u32 world_geometry_count;
+    // Copy of frame data darray ptr
+    geometry_render_data* world_mesh_data;
     mesh_packet_data ui_mesh_data;
     u32 ui_geometry_count;
     // TODO: temp

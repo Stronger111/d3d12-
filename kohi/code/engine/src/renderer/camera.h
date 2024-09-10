@@ -106,7 +106,7 @@ mat4 camera_view_get(camera* c);
  * @param c A pointer to a camera.
  * @return A copy of the camera's forward vector.
  */
-vec3 camera_forward(camera* c);
+KAPI vec3 camera_forward(camera* c);
 
 /**
  * @brief Returns a copy of the camera's backward vector.
@@ -130,8 +130,15 @@ vec3 camera_left(camera* c);
  * @param c A pointer to a camera.
  * @return A copy of the camera's right vector.
  */
-vec3 camera_right(camera* c);
+KAPI vec3 camera_right(camera* c);
 
+/**
+ * @brief Returns a copy of the camera's up vector.
+ *
+ * @param c A pointer to a camera.
+ * @return A copy of the camera's up vector.
+ */
+KAPI vec3 camera_up(camera* c);
 
 /**
  * @brief Moves the camera forward by the given amount.

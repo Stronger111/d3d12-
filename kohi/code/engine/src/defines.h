@@ -186,7 +186,7 @@ STATIC_ASSERT(sizeof(f64) == 8, "Expected f64 to be 8 bytes.");
 #endif
 
 #define KCLAMP(value, min, max) ((value <= min) ? min : (value >= max) ? max \
-                                                                      : value);
+                                                                       : value);
 
 // Inlining
 #ifdef _MSC_VER
@@ -213,8 +213,8 @@ STATIC_ASSERT(sizeof(f64) == 8, "Expected f64 to be 8 bytes.");
 
 /// @brief 将operand向上舍入到最接近granularity的倍数
 /// @param operand 操作数
-/// @param granularity 
-/// @return 
+/// @param granularity
+/// @return
 KINLINE u64 get_aligned(u64 operand, u64 granularity) {
     return ((operand + (granularity - 1)) & ~(granularity - 1));
 }
@@ -222,3 +222,6 @@ KINLINE u64 get_aligned(u64 operand, u64 granularity) {
 KINLINE range get_aligned_range(offset, size, granularity) {
     return (range){get_aligned(offset, granularity), get_aligned(size, granularity)};
 }
+
+#define KMIN(x, y) (x < y ? x : y)
+#define KMAX(x, y) (x > y ? x : y)

@@ -1134,6 +1134,64 @@ KINLINE vec3 mat4_right(mat4 matrix) {
     return left;
 }
 
+/**
+ * @brief Performs m * v
+ *
+ * @param m The matrix to be multiplied.
+ * @param v The vector to multiply by.
+ * @return The transformed vector.
+ */
+KINLINE vec3 mat4_mul_vec3(mat4 m, vec3 v) {
+    return (vec3){
+        v.x * m.data[0] + v.y * m.data[1] + v.z * m.data[2] + m.data[3],
+        v.x * m.data[4] + v.y * m.data[5] + v.z * m.data[6] + m.data[7],
+        v.x * m.data[8] + v.y * m.data[9] + v.z * m.data[10] + m.data[11]};
+}
+
+/**
+ * @brief Performs v * m
+ *
+ * @param v The vector to bemultiplied.
+ * @param m The matrix to be multiply by.
+ * @return The transformed vector.
+ */
+KINLINE vec3 vec3_mul_mat4(vec3 v, mat4 m) {
+    return (vec3){
+        v.x * m.data[0] + v.y * m.data[4] + v.z * m.data[8] + m.data[12],
+        v.x * m.data[1] + v.y * m.data[5] + v.z * m.data[9] + m.data[13],
+        v.x * m.data[2] + v.y * m.data[6] + v.z * m.data[10] + m.data[14]};
+}
+
+/**
+ * @brief Performs m * v
+ *
+ * @param m The matrix to be multiplied.
+ * @param v The vector to multiply by.
+ * @return The transformed vector.
+ */
+KINLINE vec4 mat4_mul_vec4(mat4 m, vec4 v) {
+    return (vec4){
+        v.x * m.data[0] + v.y * m.data[1] + v.z * m.data[2] + v.w * m.data[3],
+        v.x * m.data[4] + v.y * m.data[5] + v.z * m.data[6] + v.w * m.data[7],
+        v.x * m.data[8] + v.y * m.data[9] + v.z * m.data[10] + v.w * m.data[11],
+        v.x * m.data[12] + v.y * m.data[13] + v.z * m.data[14] + v.w * m.data[15]};
+}
+
+/**
+ * @brief Performs v * m
+ *
+ * @param v The vector to bemultiplied.
+ * @param m The matrix to be multiply by.
+ * @return The transformed vector.
+ */
+KINLINE vec4 vec4_mul_mat4(vec4 v, mat4 m) {
+    return (vec4){
+        v.x * m.data[0] + v.y * m.data[4] + v.z * m.data[8] + v.w * m.data[12],
+        v.x * m.data[1] + v.y * m.data[5] + v.z * m.data[9] + v.w * m.data[13],
+        v.x * m.data[2] + v.y * m.data[6] + v.z * m.data[10] + v.w * m.data[14],
+        v.x * m.data[3] + v.y * m.data[7] + v.z * m.data[11] + v.w * m.data[15]};
+}
+
 // ------------------------------------------
 // Quaternion
 // ------------------------------------------
@@ -1353,7 +1411,7 @@ KINLINE f32 range_convert_f32(f32 value, f32 old_min, f32 old_max, f32 new_min, 
 
 /**
  * @brief Converts rgb int values [0-255] to a single 32-bit integer.
- * 
+ *
  * @param r The red value [0-255].
  * @param g The green value [0-255].
  * @param b The blue value [0-255].
@@ -1365,7 +1423,7 @@ KINLINE void rgbu_to_u32(u32 r, u32 g, u32 b, u32* out_u32) {
 
 /**
  * @brief Converts the given 32-bit integer to rgb values [0-255].
- * 
+ *
  * @param rgbu The integer holding a rgb value.
  * @param out_r A pointer to hold the red value.
  * @param out_g A pointer to hold the green value.
@@ -1374,12 +1432,12 @@ KINLINE void rgbu_to_u32(u32 r, u32 g, u32 b, u32* out_u32) {
 KINLINE void u32_to_rgb(u32 rgbu, u32* out_r, u32* out_g, u32* out_b) {
     *out_r = (rgbu >> 16) & 0x0FF;
     *out_g = (rgbu >> 8) & 0x0FF;
-    *out_b = (rgbu)&0x0FF;
+    *out_b = (rgbu) & 0x0FF;
 }
 
 /**
  * @brief Converts rgb integer values [0-255] to a vec3 of floating-point values [0.0-1.0]
- * 
+ *
  * @param r The red value [0-255].
  * @param g The green value [0-255].
  * @param b The blue value [0-255].
@@ -1393,7 +1451,7 @@ KINLINE void rgb_u32_to_vec3(u32 r, u32 g, u32 b, vec3* out_v) {
 
 /**
  * @brief Converts a vec3 of rgbvalues [0.0-1.0] to integer rgb values [0-255].
- * 
+ *
  * @param v The vector of rgb values [0.0-1.0] to be converted.
  * @param out_r A pointer to hold the red value.
  * @param out_g A pointer to hold the green value.
@@ -1405,3 +1463,69 @@ KINLINE void vec3_to_rgb_u32(vec3 v, u32* out_r, u32* out_g, u32* out_b) {
     *out_b = v.b * 255;
 }
 
+KAPI plane_3d plane_3d_create(vec3 p1,vec3 norm);
+
+/**
+ * @brief Creates and returns a frustum based on the provided position, direction vectors, aspect, field of view,
+ * and near/far clipping planes (typically obtained from a camera). This is typically used for frustum culling.
+ *
+ * @param position A constant pointer to the position to be used.
+ * @param forward A constant pointer to the forward vector to be used.
+ * @param right A constant pointer to the right vector to be used.
+ * @param up A constant pointer to the up vector to be used.
+ * @param aspect The aspect ratio.
+ * @param fov The vertical field of view.
+ * @param near The near clipping plane distance.
+ * @param far The far clipping plane distance.
+ * @return A shiny new frustum.
+ */
+KAPI frustum frustum_create(const vec3* position, const vec3* forward, const vec3* right, const vec3* up, f32 aspect, f32 fov, f32 near, f32 far);
+
+/**
+ * @brief Obtains the signed distance between the plane p and the provided postion.
+ *
+ * @param p A constant pointer to a plane.
+ * @param position A constant pointer to a position.
+ * @return The signed distance from the point to the plane.
+ */
+KAPI f32 plane_signed_distance(const plane_3d* p, const vec3* position);
+
+/**
+ * @brief Indicates if plane p intersects a sphere constructed via center and radius.
+ *
+ * @param p A constant pointer to a plane.
+ * @param center A constant pointer to a position representing the center of a sphere.
+ * @param radius The radius of the sphere.
+ * @return True if the sphere intersects the plane; otherwise false.
+ */
+KAPI b8 plane_intersects_sphere(const plane_3d* p, const vec3* center, f32 radius);
+
+/**
+ * @brief Indicates if the frustum intersects (or contains) a sphere constructed via center and radius.
+ *
+ * @param f A constant pointer to a frustum.
+ * @param center A constant pointer to a position representing the center of a sphere.
+ * @param radius The radius of the sphere.
+ * @return True if the sphere is intersected by or contained within the frustum f; otherwise false.
+ */
+KAPI b8 frustum_intersects_sphere(const frustum* f, const vec3* center, f32 radius);
+
+/**
+ * @brief Indicates if plane p intersects an axis-aligned bounding box constructed via center and extents.
+ * 
+ * @param p A constant pointer to a plane.
+ * @param center A constant pointer to a position representing the center of an axis-aligned bounding box.
+ * @param extents The half-extents of an axis-aligned bounding box.
+ * @return True if the axis-aligned bounding box intersects the plane; otherwise false. 
+ */
+KAPI b8 plane_intersects_aabb(const plane_3d* p, const vec3* center, const vec3* extents);
+
+/**
+ * @brief Indicates if frustum f intersects an axis-aligned bounding box constructed via center and extents.
+ * 
+ * @param f A constant pointer to a frustum.
+ * @param center A constant pointer to a position representing the center of an axis-aligned bounding box.
+ * @param extents The half-extents of an axis-aligned bounding box.
+ * @return True if the axis-aligned bounding box is intersected by or contained within the frustum f; otherwise false.  
+ */
+KAPI b8 frustum_intersects_aabb(const frustum* f, const vec3* center, const vec3* extents);
