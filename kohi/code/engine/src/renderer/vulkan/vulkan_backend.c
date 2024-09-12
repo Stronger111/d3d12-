@@ -395,7 +395,7 @@ b8 vulkan_renderer_backend_initialize(struct renderer_backend* backend, const re
     }
 
     // Swapchain
-    vulkan_swapchain_create(&context, context.framebuffer_width, context.framebuffer_height, &context.swapchain);
+    vulkan_swapchain_create(&context, context.framebuffer_width, context.framebuffer_height, config->flags, &context.swapchain);
     // Save off the number of images we have as the number of render targets needed.
     *out_window_render_target_count = context.swapchain.image_count;
 
@@ -2368,6 +2368,15 @@ u8 vulkan_renderer_window_attachment_count_get() {
 
 b8 vulkan_renderer_is_multithreaded() {
     return context.multithreading_enabled;
+}
+
+b8 vulkan_renderer_flag_enabled(renderer_config_flags flag) {
+    return (context.swapchain.flags & flag);
+}
+
+void vulkan_renderer_flag_set_enabled(renderer_config_flags flag, b8 enabled) {
+    context.swapchain.flags = (enabled ? (context.swapchain.flags | flag) : (context.swapchain.flags & ~flag));
+    context.render_flag_changed = true;
 }
 
 // NOTE: Begin vulkan buffer.

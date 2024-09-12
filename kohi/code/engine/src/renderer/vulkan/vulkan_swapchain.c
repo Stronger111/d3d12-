@@ -7,18 +7,18 @@
 
 #include "systems/texture_system.h"
 
-void create(vulkan_context* context, u32 width, u32 height, vulkan_swapchain* swapchain);
+void create(vulkan_context* context, u32 width, u32 height, renderer_config_flags flags, vulkan_swapchain* swapchain);
 void destroy(vulkan_context* context, vulkan_swapchain* swapchain);
 
-void vulkan_swapchain_create(vulkan_context* context, u32 width, u32 height, vulkan_swapchain* out_swapchain) {
+void vulkan_swapchain_create(vulkan_context* context, u32 width, u32 height, renderer_config_flags flags, vulkan_swapchain* out_swapchain) {
     // Simple create a new one
-    create(context, width, height, out_swapchain);
+    create(context, width, height, flags, out_swapchain);
 }
 
 void vulkan_swapchain_recreate(vulkan_context* context, u32 width, u32 height, vulkan_swapchain* swapchain) {
     // Destroy the old and create a new one
     destroy(context, swapchain);
-    create(context, width, height, swapchain);
+    create(context, width, height, swapchain->flags, swapchain);
 }
 
 void vulkan_swapchain_destroy(vulkan_context* context, vulkan_swapchain* swapchain) {
@@ -63,7 +63,7 @@ void vulkan_swapchain_present(vulkan_context* context, vulkan_swapchain* swapcha
     context->current_frame = (context->current_frame + 1) % swapchain->max_frames_in_flight;
 }
 
-void create(vulkan_context* context, u32 width, u32 height, vulkan_swapchain* swapchain) {
+void create(vulkan_context* context, u32 width, u32 height, renderer_config_flags flags, vulkan_swapchain* swapchain) {
     VkExtent2D swapchain_extent = {width, height};
 
     // Choose a swap surface format.
@@ -82,14 +82,25 @@ void create(vulkan_context* context, u32 width, u32 height, vulkan_swapchain* sw
     if (!found) {
         swapchain->image_format = context->device.swapchain_support.formats[0];
     }
-
-    VkPresentModeKHR present_mode = VK_PRESENT_MODE_FIFO_KHR;
-    for (u32 i = 0; i < context->device.swapchain_support.present_mode_count; ++i) {
-        VkPresentModeKHR mode = context->device.swapchain_support.present_modes[i];
-        if (mode == VK_PRESENT_MODE_MAILBOX_KHR) {
-            present_mode = mode;
-            break;
+    // FIFO and MAILBOX support vsync, IMMEDIATE does not.
+    // TODO: vsync seems to hold up the game update for some reason.
+    // It theoretically should be post-update and pre-render where that happens.
+    swapchain->flags = flags;
+    VkPresentModeKHR present_mode;
+    if (flags & RENDERER_CONFIG_FLAG_VSYNC_ENABLED_BIT) {
+        present_mode = VK_PRESENT_MODE_FIFO_KHR;
+        // Only try for mailbox mode if not in power-saving mode.
+        if ((flags & RENDERER_CONFIG_FLAG_POWER_SAVING_BIT) == 0) {
+            for (u32 i = 0; i < context->device.swapchain_support.present_mode_count; ++i) {
+                VkPresentModeKHR mode = context->device.swapchain_support.present_modes[i];
+                if (mode == VK_PRESENT_MODE_MAILBOX_KHR) {
+                    present_mode = mode;
+                    break;
+                }
+            }
         }
+    } else {
+        present_mode = VK_PRESENT_MODE_IMMEDIATE_KHR;
     }
 
     // Requery swapchain support.
@@ -155,7 +166,7 @@ void create(vulkan_context* context, u32 width, u32 height, vulkan_swapchain* sw
     swapchain->image_count = 0;
     VK_CHECK(vkGetSwapchainImagesKHR(context->device.logical_device, swapchain->handle, &swapchain->image_count, 0));
     if (!swapchain->render_textures) {
-        swapchain->render_textures = (texture*)kallocate(sizeof(texture) * swapchain->image_count, MEMORY_TAG_RENDERER); //指针只有8个字节
+        swapchain->render_textures = (texture*)kallocate(sizeof(texture) * swapchain->image_count, MEMORY_TAG_RENDERER);  // 指针只有8个字节
         // If creating the array, then the internal texture objects aren't created yet either.
         for (u32 i = 0; i < swapchain->image_count; ++i) {
             void* internal_data = kallocate(sizeof(vulkan_image), MEMORY_TAG_TEXTURE);
@@ -217,8 +228,8 @@ void create(vulkan_context* context, u32 width, u32 height, vulkan_swapchain* sw
         context->device.depth_format = VK_FORMAT_UNDEFINED;
         KFATAL("Failed to find a supported format!");
     }
-    
-    //Allocate 深度RT
+
+    // Allocate 深度RT
     if (!swapchain->depth_textures) {
         swapchain->depth_textures = (texture*)kallocate(sizeof(texture) * swapchain->image_count, MEMORY_TAG_RENDERER);
     }

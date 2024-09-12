@@ -93,7 +93,7 @@ void ui_text_destroy(ui_text* text) {
     if (text) {
         // Release the unique identifier.
         identifier_release_id(text->unique_id);
-        
+
         if (text->text) {
             u32 text_length = string_length(text->text);
             kfree(text->text, sizeof(char) * text_length, MEMORY_TAG_STRING);
@@ -140,9 +140,11 @@ void ui_text_set_text(ui_text* u_text, const char* text) {
 void ui_text_draw(ui_text* u_text) {
     // TODO: utf8 length
     u32 text_length = string_length(u_text->text);
-    static const u64 quad_vert_count = 4;
-    if (!renderer_renderbuffer_draw(&u_text->vertex_buffer, 0, text_length * quad_vert_count, true)) {
-        KERROR("Failed to draw ui font vertex buffer.");
+    if (text_length > 0) {
+        static const u64 quad_vert_count = 4;
+        if (!renderer_renderbuffer_draw(&u_text->vertex_buffer, 0, text_length * quad_vert_count, true)) {
+            KERROR("Failed to draw ui font vertex buffer.");
+        }
     }
 
     static const u8 quad_index_count = 6;
@@ -156,6 +158,11 @@ void regenerate_geometry(ui_text* text) {
     u32 text_length_utf8 = string_utf8_length(text->text);
     // Also get the length in characters.
     u32 char_length = string_length(text->text);
+
+    // 没有任何字体 不进行生成
+    if (text_length_utf8 < 1) {
+        return;
+    }
 
     // Calculate buffer sizes.
     static const u64 verts_per_quad = 4;

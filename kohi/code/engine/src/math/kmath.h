@@ -18,7 +18,10 @@
 #define K_DEG2RAD_MULTIPLIER K_PI / 180.0f
 #define K_RAD2DEG_MULTIPLIER 180.0f / K_PI
 
-// The multiplier to convert seconds to milliseconds.
+/** @brief 秒转换为微秒 */
+#define K_SEC_TO_US_MULTIPLIER (1000.0f * 1000.0f)
+
+// The multiplier to convert seconds to milliseconds. 毫秒
 #define K_SEC_TO_MS_MULTIPLIER 1000.0f
 
 // The multiplier to convert milliseconds to seconds.
@@ -1463,7 +1466,7 @@ KINLINE void vec3_to_rgb_u32(vec3 v, u32* out_r, u32* out_g, u32* out_b) {
     *out_b = v.b * 255;
 }
 
-KAPI plane_3d plane_3d_create(vec3 p1,vec3 norm);
+KAPI plane_3d plane_3d_create(vec3 p1, vec3 norm);
 
 /**
  * @brief Creates and returns a frustum based on the provided position, direction vectors, aspect, field of view,
@@ -1512,20 +1515,20 @@ KAPI b8 frustum_intersects_sphere(const frustum* f, const vec3* center, f32 radi
 
 /**
  * @brief Indicates if plane p intersects an axis-aligned bounding box constructed via center and extents.
- * 
+ *
  * @param p A constant pointer to a plane.
  * @param center A constant pointer to a position representing the center of an axis-aligned bounding box.
  * @param extents The half-extents of an axis-aligned bounding box.
- * @return True if the axis-aligned bounding box intersects the plane; otherwise false. 
+ * @return True if the axis-aligned bounding box intersects the plane; otherwise false.
  */
 KAPI b8 plane_intersects_aabb(const plane_3d* p, const vec3* center, const vec3* extents);
 
 /**
  * @brief Indicates if frustum f intersects an axis-aligned bounding box constructed via center and extents.
- * 
+ *
  * @param f A constant pointer to a frustum.
  * @param center A constant pointer to a position representing the center of an axis-aligned bounding box.
  * @param extents The half-extents of an axis-aligned bounding box.
- * @return True if the axis-aligned bounding box is intersected by or contained within the frustum f; otherwise false.  
+ * @return True if the axis-aligned bounding box is intersected by or contained within the frustum f; otherwise false.
  */
 KAPI b8 frustum_intersects_aabb(const frustum* f, const vec3* center, const vec3* extents);

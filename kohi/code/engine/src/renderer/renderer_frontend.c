@@ -59,6 +59,8 @@ b8 renderer_system_initialize(u64* memory_requirement, void* state, char* applic
     // Initialize the backend.
     renderer_backend_config renderer_config = {};
     renderer_config.application_name = application_name;
+    // TODO: expose this to the application to configure.
+    renderer_config.flags = RENDERER_CONFIG_FLAG_VSYNC_ENABLED_BIT | RENDERER_CONFIG_FLAG_POWER_SAVING_BIT;
 
     // Initialize the backend.
     if (!state_ptr->backend.initialize(&state_ptr->backend, &renderer_config, &state_ptr->window_render_target_count)) {
@@ -321,7 +323,7 @@ b8 renderer_renderpass_create(const renderpass_config* config, renderpass* out_r
 }
 
 void renderer_renderpass_destroy(renderpass* pass) {
-    //Destroy its rendertargets
+    // Destroy its rendertargets
     for (u32 i = 0; i < pass->render_target_count; ++i) {
         render_target* target = &pass->targets[i];
         renderer_render_target_destroy(target, true);
@@ -331,6 +333,14 @@ void renderer_renderpass_destroy(renderpass* pass) {
 
 b8 renderer_is_multithreaded() {
     return state_ptr->backend.is_multithreaded();
+}
+
+b8 renderer_flag_enabled(renderer_config_flags flag) {
+    return state_ptr->backend.flag_enabled(flag);
+}
+
+void renderer_flag_set_enabled(renderer_config_flags flag, b8 enabled) {
+    state_ptr->backend.flag_set_enabled(flag, enabled);
 }
 
 b8 renderer_renderbuffer_create(renderbuffer_type type, u64 total_size, b8 use_freelist, renderbuffer* out_buffer) {
@@ -475,4 +485,3 @@ b8 renderer_renderbuffer_copy_range(renderbuffer* source, u64 source_offset, ren
 b8 renderer_renderbuffer_draw(renderbuffer* buffer, u64 offset, u32 element_count, b8 bind_only) {
     return state_ptr->backend.renderbuffer_draw(buffer, offset, element_count, bind_only);
 }
-

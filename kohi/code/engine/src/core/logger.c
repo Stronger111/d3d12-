@@ -4,6 +4,7 @@
 #include "platform/filesystem.h"
 #include "core/kstring.h"
 #include "core/kmemory.h"
+#include "console.h"
 
 #include <stdarg.h>
 
@@ -72,6 +73,10 @@ KAPI void log_output(log_level level, const char* message, ...) {
 
     // Prepend log level to message.
     string_format(out_message, "%s%s\n", level_strings[level], out_message);
+    
+    //传递到控制台消费者
+    console_write_line(level, out_message);
+
     // Print accordingly
     if (is_error) {
         platform_console_write_error(out_message, level);

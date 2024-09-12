@@ -108,11 +108,13 @@ typedef struct vulkan_renderpass {
 typedef struct vulkan_swapchain {
     VkSurfaceFormatKHR image_format;
     u8 max_frames_in_flight;
+    /** @brief Indicates various flags used for swapchain instantiation. */
+    renderer_config_flags flags;
     VkSwapchainKHR handle;
     u32 image_count;
     /** @brief An array of to render targets, which contain swapchain images. */
     texture* render_textures;
-    /** @brief An array of depth textures, one per frame. 深度纹理数组  */ 
+    /** @brief An array of depth textures, one per frame. 深度纹理数组  */
     texture* depth_textures;
 
     /**
@@ -430,6 +432,8 @@ typedef struct vulkan_context {
     u32 current_frame;
 
     b8 recreating_swapchain;
+
+    b8 render_flag_changed;
 
     /** @brief The A collection of loaded geometries. @todo TODO: make dynamic */
     vulkan_geometry_data geometries[VULKAN_MAX_GEOMETRY_COUNT];
