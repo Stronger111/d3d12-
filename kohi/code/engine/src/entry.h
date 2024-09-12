@@ -1,39 +1,53 @@
 
+/**
+ * @file entry.h
+ * @author Travis Vroman (travis@kohiengine.com)
+ * @brief This file contains the main entry point to the application.
+ * It also contains a reference to an externally defined create_application
+ * method, which should create and set a custom application object to the
+ * location pointed to by out_app. This would be provided by the
+ * consuming application, which is then hooked into the engine itself
+ * during the bootstrapping phase.
+ * @version 1.0
+ * @date 2022-01-10
+ *
+ * @copyright Kohi Game Engine is Copyright (c) Travis Vroman 2021-2022
+ *
+ */
 #pragma once
-#include "core/application.h"
+#include "core/engine.h"
 #include "core/logger.h"
 #include "core/kmemory.h"
-#include "game_types.h"
+#include "application_types.h"
 
-//Externally -defiened function to create a game
-extern b8 create_game(game* out_game);
+/** @brief Externally-defined function to create a application, provided by the consumer
+ * of this library.
+ * @param out_app A pointer which holds the created application object as provided by the consumer.
+ * @returns True on successful creation; otherwise false.
+ */
+extern b8 create_application(application* out_app);
 
-int main(void)
-{
-    //Request the game instance from the application
-    game game_inst;
-    if(!create_game(&game_inst))
-    {
-        KFATAL("Could not create game!");
+int main(void) {
+    // Request the application instance from the application
+    application app_inst;
+    if (!create_application(&app_inst)) {
+        KFATAL("Could not create application!");
         return -1;
     }
-    //Ensure the function pointer exist
-    if(!game_inst.render||!game_inst.update||!game_inst.initialize||!game_inst.on_resize)
-    {
-        KFATAL("The games function pointers must be assigned!");
+    // Ensure the function pointer exist
+    if (!app_inst.render || !app_inst.update || !app_inst.initialize || !app_inst.on_resize) {
+        KFATAL("The application function pointers must be assigned!");
         return -2;
     }
 
-    if(!application_create(&game_inst)) 
-    {
-       KINFO("Application filed to create!\n");
-       return 1;
+    if (!engine_create(&app_inst)) {
+        KINFO("Application filed to create!\n");
+        return 1;
     }
-    //Begin the game loop.
-    if(!application_run())
-    {
-       KINFO("Application did not shutdown gracefully\n");
-       return 2;
+    // Begin the engine loop.
+    if (!engine_run()) {
+        KINFO("Application did not shutdown gracefully\n");
+        return 2;
     }
-   return 0;
+    return 0;
 }
