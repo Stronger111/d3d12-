@@ -66,18 +66,19 @@ b8 verify_system_font_size_variant(system_font_lookup* lookup, font_data* varian
 
 static font_system_state* state_ptr;
 
-b8 font_system_initialize(u64* memory_requirement, void* memory, font_system_config* config) {
-    if (config->max_bitmap_font_count == 0 || config->max_system_font_count == 0) {
+b8 font_system_initialize(u64* memory_requirement, void* memory, void* config) {
+    font_system_config* typed_config = (font_system_config*)config;
+    if (typed_config->max_bitmap_font_count == 0 || typed_config->max_system_font_count == 0) {
         KFATAL("font_system_initialize - config.max_bitmap_font_count and config.max_system_font_count must be > 0.");
         return false;
     }
 
     // Block of memory will contain state structure, then blocks for arrays, then blocks for hashtables.
     u64 struct_requirement = sizeof(font_system_state);
-    u64 bmp_array_requirement = sizeof(bitmap_font_lookup) * config->max_bitmap_font_count;
-    u64 sys_array_requirement = sizeof(system_font_lookup) * config->max_system_font_count;
-    u64 bmp_hashtable_requirement = sizeof(u16) * config->max_bitmap_font_count;
-    u64 sys_hashtable_requirement = sizeof(u16) * config->max_system_font_count;
+    u64 bmp_array_requirement = sizeof(bitmap_font_lookup) * typed_config->max_bitmap_font_count;
+    u64 sys_array_requirement = sizeof(system_font_lookup) * typed_config->max_system_font_count;
+    u64 bmp_hashtable_requirement = sizeof(u16) * typed_config->max_bitmap_font_count;
+    u64 sys_hashtable_requirement = sizeof(u16) * typed_config->max_system_font_count;
     *memory_requirement = struct_requirement + bmp_array_requirement + sys_array_requirement + bmp_hashtable_requirement + sys_hashtable_requirement;
 
     if (!memory) {
@@ -85,7 +86,7 @@ b8 font_system_initialize(u64* memory_requirement, void* memory, font_system_con
     }
 
     state_ptr = (font_system_state*)memory;
-    state_ptr->config = *config;
+    state_ptr->config = *typed_config;
 
     // The array blocks are after the state. Already allocated, so just set the pointer.
     void* bmp_array_block = (void*)(((u8*)memory) + struct_requirement);
@@ -557,7 +558,7 @@ b8 rebuild_system_font_variant_atlas(system_font_lookup* lookup, font_data* vari
         g->y = pc->y0;
         g->width = pc->x1 - pc->x0;
         g->height = pc->y1 - pc->y0;
-        g->x_advance = pc->xadvance;//步进
+        g->x_advance = pc->xadvance;  // 步进
     }
 
     // Regenerate kernings

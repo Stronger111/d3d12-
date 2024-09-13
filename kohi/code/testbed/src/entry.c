@@ -6,7 +6,7 @@
 b8 create_application(application* out_game) {
     // application configuration
     out_game->app_config.start_pos_x = 100;
-    out_game->app_config.start_pos_Y = 100;
+    out_game->app_config.start_pos_y = 100;
     out_game->app_config.start_width = 1280;
     out_game->app_config.start_height = 720;
     out_game->app_config.name = "Kohi Engine Test";

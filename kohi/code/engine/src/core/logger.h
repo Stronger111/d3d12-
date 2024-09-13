@@ -15,9 +15,8 @@
 #define LOG_TRACE_ENABLED 1
 #endif
 
-typedef enum log_level
-{
-      /** @brief Fatal log level, should be used to stop the application when hit. */
+typedef enum log_level {
+    /** @brief Fatal log level, should be used to stop the application when hit. */
     LOG_LEVEL_FATAL = 0,
     /** @brief Error log level, should be used to indicate critical runtime problems that cause the application to run improperly or not at all. */
     LOG_LEVEL_ERROR = 1,
@@ -29,22 +28,23 @@ typedef enum log_level
     LOG_LEVEL_DEBUG = 4,
     /** @brief Trace log level, should be used for verbose debugging purposes. */
     LOG_LEVEL_TRACE = 5
-}log_level;
+} log_level;
 
 /*
-* @brief Initializes logging subsystem. Call twice; once with state = 0 to get required memeory size.
-* then a second time passing allocated memory to state.
-*
-* @param memory_requirement A pointer to hold the required memory size of internal state.
-* @param state 0 if just requesting memory requirement,otherwise  allocated block of memory.
-* @return b8 True if successful, false otherwise.
-*/
-b8 initialize_logging(u64* memory_requirement,void* state);
-void shutdown_logging(void* state);
-//可变参数同样是char* 
-KAPI void log_output(log_level level,const char* message,...);
-//## 当前面可变参数为0 
-#define KFATAL(message,...) log_output(LOG_LEVEL_FATAL,message,  ##__VA_ARGS__);
+ * @brief Initializes logging subsystem. Call twice; once with state = 0 to get required memeory size.
+ * then a second time passing allocated memory to state.
+ *
+ * @param memory_requirement A pointer to hold the required memory size of internal state.
+ * @param state 0 if just requesting memory requirement,otherwise  allocated block of memory.
+ * @param config Ignored.
+ * @return b8 True if successful, false otherwise.
+ */
+b8 logging_initialize(u64* memory_requirement, void* state,void* config);
+void logging_shutdown(void* state);
+// 可变参数同样是char*
+KAPI void log_output(log_level level, const char* message, ...);
+// ## 当前面可变参数为0
+#define KFATAL(message, ...) log_output(LOG_LEVEL_FATAL, message, ##__VA_ARGS__);
 #ifndef KERROR
 /**
  * @brief Logs an error-level message. Should be used to indicate critical runtime problems

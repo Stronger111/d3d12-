@@ -26,8 +26,12 @@ typedef struct event_context {
 // Should return true if handled. 函数指针
 typedef b8 (*PFN_on_event)(u16 code, void* sender, void* listener_inst, event_context data);
 
-void event_system_initialize(u64* memory_requirement, void* state);
-void event_system_shutdown();
+b8 event_system_initialize(u64* memory_requirement,void* state,void* config);
+
+/**
+ * @brief Shuts the event system down.
+ */
+void event_system_shutdown(void* state);
 
 KAPI b8 event_register(u16 code, void* listener, PFN_on_event on_event);
 

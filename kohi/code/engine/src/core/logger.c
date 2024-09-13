@@ -28,7 +28,7 @@ void append_to_log_file(const char* message) {
     }
 }
 
-b8 initialize_logging(u64* memory_requirement, void* state) {
+b8 logging_initialize(u64* memory_requirement, void* state,void* config) {
     *memory_requirement = sizeof(logger_system_state);
     if (state == 0) {
         return true;
@@ -45,7 +45,7 @@ b8 initialize_logging(u64* memory_requirement, void* state) {
     return true;
 }
 
-void shutdown_logging(void* state) {
+void logging_shutdown(void* state) {
     state_ptr = 0;
     // TODO: cleanup logging/write queued entries
 }

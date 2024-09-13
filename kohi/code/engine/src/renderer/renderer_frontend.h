@@ -18,10 +18,24 @@
 struct shader;
 struct shader_uniform;
 
-b8 renderer_system_initialize(u64* memory_requirement,void* state, char* application_name);
+typedef struct renderer_system_config {
+    char* application_name;
+} renderer_system_config;
+
+/**
+ * @brief Initializes the renderer frontend/system. Should be called twice - once
+ * to obtain the memory requirement (passing state=0), and a second time passing
+ * allocated memory to state.
+ *
+ * @param memory_requirement A pointer to hold the memory requirement for this system.
+ * @param state A block of memory to hold state data, or 0 if obtaining memory requirement.
+ * @param config The configuration (renderer_system_config) for the renderer.
+ * @return True on success; otherwise false.
+ */
+b8 renderer_system_initialize(u64* memory_requirement, void* state, void* config);
 void renderer_system_shutdown(void* state);
 
-void renderer_on_resized(u16 width,u16 height);
+void renderer_on_resized(u16 width, u16 height);
 
 b8 renderer_draw_frame(render_packet* packet);
 
@@ -57,7 +71,7 @@ void renderer_scissor_reset();
  * @param pixels The raw image data to be uploaded to the GPU.
  * @param texture A pointer to the texture to be loaded.
  */
-void renderer_texture_create(const u8* pixels,struct texture* texture);
+void renderer_texture_create(const u8* pixels, struct texture* texture);
 
 /**
  * @brief Destroys the given texture, releasing internal resources from the GPU.
@@ -77,7 +91,7 @@ void renderer_texture_create_writeable(texture* t);
  * @brief Resizes a texture. There is no check at this level to see if the
  * texture is writeable. Internal resources are destroyed and re-created at
  * the new resolution. Data is lost and would need to be reloaded.
- * 
+ *
  * @param t A pointer to the texture to be resized.
  * @param new_width The new width in pixels.
  * @param new_height The new height in pixels.
@@ -106,14 +120,13 @@ void renderer_texture_read_data(texture* t, u32 offset, u32 size, void** out_mem
 
 /**
  * @brief Reads a pixel from the provided texture at the given x/y coordinate.
- * 
+ *
  * @param t A pointer to the texture to be read from.
  * @param x The pixel x-coordinate.
  * @param y The pixel y-coordinate.
  * @param out_rgba A pointer to an array of u8s to hold the pixel data (should be sizeof(u8) * 4)
  */
 void renderer_texture_read_pixel(texture* t, u32 x, u32 y, u8** out_rgba);
-
 
 b8 renderer_create_geometry(geometry* geometry, u32 vertex_size, u32 vertex_count, const void* vertices, u32 index_size, u32 index_count, const void* indices);
 void renderer_destroy_geometry(geometry* geometry);
@@ -144,7 +157,7 @@ b8 renderer_renderpass_end(renderpass* pass);
 
 /**
  * @brief Creates internal shader resources using the provided parameters.
- * 
+ *
  * @param s A pointer to the shader.
  * @param config A constant pointer to the shader config.
  * @param pass A pointer to the renderpass to be associated with the shader.
@@ -153,7 +166,7 @@ b8 renderer_renderpass_end(renderpass* pass);
  * @param stages A array of shader_stages indicating what render stages (vertex, fragment, etc.) used in this shader.
  * @return b8 True on success; otherwise false.
  */
-b8 renderer_shader_create(struct shader* s,const shader_config* config,renderpass* pass,u8 stage_count,const char** stage_filenames,shader_stage* stages);
+b8 renderer_shader_create(struct shader* s, const shader_config* config, renderpass* pass, u8 stage_count, const char** stage_filenames, shader_stage* stages);
 
 /**
  * @brief Destroys the given shader and releases any resources held by it.
@@ -194,11 +207,11 @@ b8 renderer_shader_bind_globals(struct shader* s);
  * @param instance_id The identifier of the instance to be bound.
  * @return True on success; otherwise false.
  */
-b8 renderer_shader_bind_instance(struct shader* s,u32 instance_id);
+b8 renderer_shader_bind_instance(struct shader* s, u32 instance_id);
 
 /**
  * @brief Sets the uniform of the given shader to the provided value.
- * 
+ *
  * @param s A ponter to the shader.
  * @param uniform A constant pointer to the uniform.
  * @param value A pointer to the value to be set.
@@ -221,7 +234,7 @@ b8 renderer_shader_apply_globals(struct shader* s);
  * @param needs_update Indicates if shader internals need an update, or if they should just be bound.
  * @return True on success; otherwise false.
  */
-b8 renderer_shader_apply_instance(struct shader* s,b8 needs_update);
+b8 renderer_shader_apply_instance(struct shader* s, b8 needs_update);
 
 /**
  * @brief Acquires internal instance-level resources and provides an instance id.
@@ -231,7 +244,7 @@ b8 renderer_shader_apply_instance(struct shader* s,b8 needs_update);
  * @param out_instance_id A pointer to hold the new instance identifier.
  * @return True on success; otherwise false.
  */
-b8 renderer_shader_acquire_instance_resources(struct shader* s,texture_map** maps, u32* out_instance_id);
+b8 renderer_shader_acquire_instance_resources(struct shader* s, texture_map** maps, u32* out_instance_id);
 
 /**
  * @brief Releases internal instance-level resources for the given instance id.
@@ -287,7 +300,7 @@ texture* renderer_window_attachment_get(u8 index);
 
 /**
  * @brief Returns a pointer to the main depth texture target.
- * 
+ *
  * @param index The index of the attachment to get. Must be within the range of window render target count.
  * @return A pointer to a texture attachment if successful; otherwise 0.
  */
@@ -350,7 +363,7 @@ KAPI void renderer_flag_set_enabled(renderer_config_flags flag, b8 enabled);
  * @param out_buffer A pointer to hold the newly created buffer.
  * @return True on success; otherwise false.
  */
-b8 renderer_renderbuffer_create(renderbuffer_type type,u64 total_size,b8 use_freelist,renderbuffer* out_buffer);
+b8 renderer_renderbuffer_create(renderbuffer_type type, u64 total_size, b8 use_freelist, renderbuffer* out_buffer);
 
 /**
  * @brief Destroys the given renderbuffer.
@@ -384,7 +397,7 @@ b8 renderer_renderbuffer_unbind(renderbuffer* buffer);
  * @param size The amount of memory in the buffer to map.
  * @returns A mapped block of memory. Freed and invalid once unmapped.
  */
-void* renderer_renderbuffer_map_memory(renderbuffer* buffer,u64 offset,u64 size);
+void* renderer_renderbuffer_map_memory(renderbuffer* buffer, u64 offset, u64 size);
 
 /**
  * @brief Unmaps memory from the given buffer in the provided range to a block of memory.
@@ -412,7 +425,7 @@ b8 renderer_renderbuffer_flush(renderbuffer* buffer, u64 offset, u64 size);
  * @param out_memory A pointer to a block of memory to read to. Must be of appropriate size.
  * @returns True on success; otherwise false.
  */
-b8 renderer_renderbuffer_read(renderbuffer* buffer,u64 offset,u64 size,void** out_memory);
+b8 renderer_renderbuffer_read(renderbuffer* buffer, u64 offset, u64 size, void** out_memory);
 
 /**
  * @brief Resizes the given buffer to new_total_size. new_total_size must be
@@ -434,7 +447,7 @@ b8 renderer_renderbuffer_resize(renderbuffer* buffer, u64 new_total_size);
  * @param out_offset A pointer to hold the offset in bytes of the allocation from the beginning of the buffer.
  * @return True on success; otherwise false.
  */
-b8 renderer_renderbuffer_allocate(renderbuffer* buffer,u64 size,u64* out_offset);
+b8 renderer_renderbuffer_allocate(renderbuffer* buffer, u64 size, u64* out_offset);
 
 /**
  * @brief Frees memory from the given buffer.
@@ -444,7 +457,7 @@ b8 renderer_renderbuffer_allocate(renderbuffer* buffer,u64 size,u64* out_offset)
  * @param offset The offset in bytes from the beginning of the buffer to free.
  * @return True on success; otherwise false.
  */
-b8 renderer_renderbuffer_free(renderbuffer* buffer,u64 size,u64 offset);
+b8 renderer_renderbuffer_free(renderbuffer* buffer, u64 size, u64 offset);
 
 /**
  * @brief Loads provided data into the specified rage of the given buffer.
@@ -467,16 +480,16 @@ b8 renderer_renderbuffer_load_range(renderbuffer* buffer, u64 offset, u64 size, 
  * @param size The size of the data in bytes to be copied.
  * @returns True on success; otherwise false.
  */
-b8 renderer_renderbuffer_copy_range(renderbuffer* source,u64 source_offset,renderbuffer* dest,u64 dest_offset,u64 size);
+b8 renderer_renderbuffer_copy_range(renderbuffer* source, u64 source_offset, renderbuffer* dest, u64 dest_offset, u64 size);
 
 /**
  * @brief Attempts to draw the contents of the provided buffer at the given offset
  * and element count. Only meant to be used with vertex and index buffers.
- * 
+ *
  * @param buffer A pointer to the buffer to be drawn.
  * @param offset The offset in bytes from the beginning of the buffer.
  * @param element_count The number of elements to be drawn.
  * @param bind_only Only bind the buffer, but don't draw.
  * @return True on success; otherwise false.
  */
-b8 renderer_renderbuffer_draw(renderbuffer* buffer,u64 offset,u32 element_count,b8 bind_only);
+b8 renderer_renderbuffer_draw(renderbuffer* buffer, u64 offset, u32 element_count, b8 bind_only);

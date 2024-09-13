@@ -29,14 +29,15 @@ b8 create_default_geometries(geometry_system_state* state);
 b8 create_geometry(geometry_system_state* state, geometry_config config, geometry* g);
 void destroy_geometry(geometry_system_state* state, geometry* g);
 
-b8 geometry_system_initialize(u64* memory_requirement, void* state, geometry_system_config config) {
-    if (config.max_geometry_count == 0) {
+b8 geometry_system_initialize(u64* memory_requirement, void* state, void* config) {
+    geometry_system_config* typed_config = (geometry_system_config*)config;
+    if (typed_config->max_geometry_count == 0) {
         KFATAL("geometry_system_initialize - config.max_geometry_count must be > 0.");
         return false;
     }
     // Block of memory will contain state structure, then block for array, then block for hashtable.
     u64 struct_requirement = sizeof(geometry_system_state);
-    u64 array_requirement = sizeof(geometry_reference) * config.max_geometry_count;
+    u64 array_requirement = sizeof(geometry_reference) * typed_config->max_geometry_count;
     *memory_requirement = struct_requirement + array_requirement;
 
     if (!state) {
@@ -44,7 +45,7 @@ b8 geometry_system_initialize(u64* memory_requirement, void* state, geometry_sys
     }
 
     state_ptr = state;
-    state_ptr->config = config;
+    state_ptr->config = *typed_config;
 
     // The array block is after the state. Already allocated, so just set the pointer.
     void* array_block = state + struct_requirement;
@@ -464,7 +465,7 @@ b8 create_default_geometries(geometry_system_state* state) {
     u32 indices[6] = {0, 1, 2, 0, 3, 1};
 
     // Send the geometry off to the renderer to be uploaded to the GPU.
-    state_ptr->default_geometry.internal_id=INVALID_ID;
+    state_ptr->default_geometry.internal_id = INVALID_ID;
     if (!renderer_create_geometry(&state->default_geometry, sizeof(vertex_3d), 4, verts, sizeof(u32), 6, indices)) {
         KFATAL("Failed to create default geometry. Application cannot continue.");
         return false;

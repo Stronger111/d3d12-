@@ -45,11 +45,11 @@ typedef struct memory_system_configuration {
  * @brief Initializes the memory system.
  * @param config The configuration for this system.
  */
-KAPI b8 memory_system_initialize(memory_system_configuration config);
+b8 memory_system_initialize(memory_system_configuration config);
 /**
  * @brief Shuts down the memory system.
  */
-KAPI void memory_system_shutdown();
+void memory_system_shutdown(void* state);
 
 KAPI void* kallocate(u64 size, memory_tag tag);
 

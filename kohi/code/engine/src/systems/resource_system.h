@@ -25,7 +25,17 @@ typedef struct resource_loader {
     void (*unload)(struct resource_loader* self, resource* resource);
 } resource_loader;
 
-b8 resource_system_initialize(u64* memory_requirement, void* state, resource_system_config config);
+/**
+ * @brief Initializes this system.
+ * Should be called twice; once to get the memory requirement (passing state=0), and a second
+ * time passing an allocated block of memory to actually initialize the system.
+ * 
+ * @param memory_requirement A pointer to hold the memory requirement as it is calculated.
+ * @param state A block of memory to hold the state or, if gathering the memory requirement, 0.
+ * @param config The configuration (resource_system_config) for this system.
+ * @return True on success; otherwise false.
+ */
+b8 resource_system_initialize(u64* memory_requirement, void* state, void* config);
 void resource_system_shutdown(void* state);
 
 KAPI b8 resource_system_register_loader(resource_loader loader);

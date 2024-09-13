@@ -109,7 +109,9 @@
         "xmemory": "c",
         "game_types.h": "c",
         "input.h": "c",
-        "application_types.h": "c"
+        "application_types.h": "c",
+        "render_view_system.h": "c",
+        "systems_manager.h": "c"
     },
     // File copyright documentation tag.  Array of strings will be converted to one line per element.  Can template {year}.
     "doxdocgen.file.copyrightTag": [

@@ -6,12 +6,21 @@
 
 #define DEFAULT_MATERIAL_NAME "default"
 
-typedef struct material_system_config
-{
+typedef struct material_system_config {
     u32 max_material_count;
-}material_system_config;
+} material_system_config;
 
-b8 material_system_initialize(u64* memory_requirement, void* state, material_system_config config);
+/**
+ * @brief Initializes the material system.
+ * Should be called twice; once to get the memory requirement (passing state=0), and a second
+ * time passing an allocated block of memory to actually initialize the system.
+ *
+ * @param memory_requirement A pointer to hold the memory requirement as it is calculated.
+ * @param state A block of memory to hold the state or, if gathering the memory requirement, 0.
+ * @param config The configuration (material_system_config) for this system.
+ * @return True on success; otherwise false.
+ */
+b8 material_system_initialize(u64* memory_requirement, void* state, void* config);
 void material_system_shutdown(void* state);
 
 KAPI material* material_system_acquire(const char* name);
@@ -22,7 +31,7 @@ KAPI material* material_system_get_default();
 
 /**
  * @brief Applies global-level data for the material shader id.
- * 
+ *
  * @param shader_id The identifier of the shader to apply globals for.
  * @param renderer_frame_number The renderer's current frame number.
  * @param projection A constant pointer to a projection matrix.
@@ -31,7 +40,7 @@ KAPI material* material_system_get_default();
  * @param render_mode The render mode.
  * @return True on success; otherwise false.
  */
-b8 material_system_apply_global(u32 shader_id,u64 renderer_frame_number,const mat4* projection, const mat4* view,const vec4* ambient_colour,const vec3* view_position,u32 render_mode);
+b8 material_system_apply_global(u32 shader_id, u64 renderer_frame_number, const mat4* projection, const mat4* view, const vec4* ambient_colour, const vec3* view_position, u32 render_mode);
 
 /**
  * @brief Applies instance-level material data for the given material.
@@ -40,7 +49,7 @@ b8 material_system_apply_global(u32 shader_id,u64 renderer_frame_number,const ma
  * @param needs_update Indicates if material internals require updating, or if they should just be bound.
  * @return True on success; otherwise false.
  */
-b8 material_system_apply_instance(material* m,b8 needs_update);
+b8 material_system_apply_instance(material* m, b8 needs_update);
 
 /**
  * @brief Applies local-level material data (typically just model matrix).

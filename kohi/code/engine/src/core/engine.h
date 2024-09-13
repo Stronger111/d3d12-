@@ -24,7 +24,7 @@ struct application;
  */
 typedef struct application_config {
     i16 start_pos_x;
-    i16 start_pos_Y;
+    i16 start_pos_y;
 
     i16 start_width;
     i16 start_height;
@@ -50,4 +50,6 @@ KAPI b8 engine_create(struct application* game_inst);
  * @returns True on success; otherwise false.
  */
 KAPI b8 engine_run();
+
+void engine_on_event_system_initialized();
 

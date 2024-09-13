@@ -55,4 +55,9 @@ typedef struct systems_manager_state
 struct application_config;
 
 b8 systems_manager_initialize(systems_manager_state* state, struct application_config* app_config);
-//b8 system
+b8 systems_manager_post_boot_initialize(systems_manager_state* state,struct application_config* app_config);
+void systems_manager_shutdown(systems_manager_state* state);
+
+b8 systems_manager_update(systems_manager_state* state,u32 delta_time);
+
+b8 systems_manager_register(systems_manager_state* state,u16 type,PFN_system_initialize initialize,PFN_system_shutdown shutdown,PFN_system_update update,void* config);
