@@ -50,7 +50,7 @@ KAPI b8 bytes_to_codepoint(const char* bytes, u32 offset, i32* out_codepoint, u8
     if (codepoint >= 0 && codepoint < 0x7F) {
         // Normal single-byte ascii character.
         *out_advance = 1;
-        *out_codepoint = codepoint; //字符位置指针
+        *out_codepoint = codepoint;  // 字符位置指针
         return true;
     } else if ((codepoint & 0xE0) == 0xC0) {
         // Double-byte character
@@ -223,7 +223,7 @@ KAPI i32 string_index_of(const char* str, char c) {
     return -1;
 }
 
-KAPI b8 string_to_vec4(char* str, vec4* out_vector) {
+KAPI b8 string_to_vec4(const char* str, vec4* out_vector) {
     if (!str) {
         return false;
     }
@@ -233,7 +233,7 @@ KAPI b8 string_to_vec4(char* str, vec4* out_vector) {
     return result != -1;
 }
 
-b8 string_to_vec3(char* str, vec3* out_vector) {
+b8 string_to_vec3(const char* str, vec3* out_vector) {
     if (!str) {
         return false;
     }
@@ -243,7 +243,7 @@ b8 string_to_vec3(char* str, vec3* out_vector) {
     return result != -1;
 }
 
-b8 string_to_vec2(char* str, vec2* out_vector) {
+b8 string_to_vec2(const char* str, vec2* out_vector) {
     if (!str) {
         return false;
     }
@@ -253,7 +253,7 @@ b8 string_to_vec2(char* str, vec2* out_vector) {
     return result != -1;
 }
 
-b8 string_to_f32(char* str, f32* f) {
+b8 string_to_f32(const char* str, f32* f) {
     if (!str) {
         return false;
     }
@@ -263,7 +263,7 @@ b8 string_to_f32(char* str, f32* f) {
     return result != -1;
 }
 
-b8 string_to_f64(char* str, f64* f) {
+b8 string_to_f64(const char* str, f64* f) {
     if (!str) {
         return false;
     }
@@ -273,7 +273,7 @@ b8 string_to_f64(char* str, f64* f) {
     return result != -1;
 }
 
-b8 string_to_i8(char* str, i8* i) {
+b8 string_to_i8(const char* str, i8* i) {
     if (!str) {
         return false;
     }
@@ -283,7 +283,7 @@ b8 string_to_i8(char* str, i8* i) {
     return result != -1;
 }
 
-b8 string_to_i16(char* str, i16* i) {
+b8 string_to_i16(const char* str, i16* i) {
     if (!str) {
         return false;
     }
@@ -293,7 +293,7 @@ b8 string_to_i16(char* str, i16* i) {
     return result != -1;
 }
 
-b8 string_to_i32(char* str, i32* i) {
+b8 string_to_i32(const char* str, i32* i) {
     if (!str) {
         return false;
     }
@@ -303,7 +303,7 @@ b8 string_to_i32(char* str, i32* i) {
     return result != -1;
 }
 
-b8 string_to_i64(char* str, i64* i) {
+b8 string_to_i64(const char* str, i64* i) {
     if (!str) {
         return false;
     }
@@ -313,7 +313,7 @@ b8 string_to_i64(char* str, i64* i) {
     return result != -1;
 }
 
-b8 string_to_u8(char* str, u8* u) {
+b8 string_to_u8(const char* str, u8* u) {
     if (!str) {
         return false;
     }
@@ -323,7 +323,7 @@ b8 string_to_u8(char* str, u8* u) {
     return result != -1;
 }
 
-b8 string_to_u16(char* str, u16* u) {
+b8 string_to_u16(const char* str, u16* u) {
     if (!str) {
         return false;
     }
@@ -333,7 +333,7 @@ b8 string_to_u16(char* str, u16* u) {
     return result != -1;
 }
 
-b8 string_to_u32(char* str, u32* u) {
+b8 string_to_u32(const char* str, u32* u) {
     if (!str) {
         return false;
     }
@@ -343,7 +343,7 @@ b8 string_to_u32(char* str, u32* u) {
     return result != -1;
 }
 
-b8 string_to_u64(char* str, u64* u) {
+b8 string_to_u64(const char* str, u64* u) {
     if (!str) {
         return false;
     }
@@ -353,7 +353,7 @@ b8 string_to_u64(char* str, u64* u) {
     return result != -1;
 }
 
-KAPI b8 string_to_bool(char* str, b8* b) {
+KAPI b8 string_to_bool(const char* str, b8* b) {
     if (!str)
         return false;
 
@@ -370,7 +370,7 @@ KAPI u32 string_split(const char* str, char delimiter, char*** str_darray, b8 tr
     u32 trimmed_length = 0;
     u32 entry_count = 0;
     u32 length = string_length(str);
-    char buffer[16384];  // If a single entry goes beyond this, well... just don't do that.
+    char buffer[16384] = {0};  // If a single entry goes beyond this, well... just don't do that.
     u32 current_length = 0;
     // Iterate each character until a delimiter is reached.
     for (u32 i = 0; i < length; ++i) {
@@ -601,4 +601,3 @@ void kstring_append_kstring(kstring* string, const kstring* other) {
         string->length = string->length + other->length;
     }
 }
-

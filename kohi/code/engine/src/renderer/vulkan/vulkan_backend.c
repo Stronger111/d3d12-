@@ -349,16 +349,26 @@ b8 vulkan_renderer_backend_initialize(struct renderer_backend* backend, const re
     create_info.enabledLayerCount = required_validation_layer_count;
     create_info.ppEnabledLayerNames = required_validation_layer_names;
 
+#if KPLATFORM_APPLE == 1
+    create_info.flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
+#endif
+
     VkResult instance_result = vkCreateInstance(&create_info, context.allocator, &context.instance);
     if (!vulkan_result_is_success(instance_result)) {
         const char* result_string = vulkan_result_string(instance_result, true);
         KFATAL("Vulkan instance creation failed with result: '%s'", result_string);
         return false;
     }
+
+    darray_destroy(required_extensions);
+
     KINFO("Vulkan Instance created.");
 
     // Clean up
-    darray_destroy(required_validation_layer_names);
+    if (required_validation_layer_names) {
+        darray_destroy(required_validation_layer_names);
+    }
+
     // TODO: implement multi-threading  darray_destroy(required_validation_layer_names);
     context.multithreading_enabled = false;
 

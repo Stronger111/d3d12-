@@ -49,7 +49,7 @@ KAPI b8 stack_push(stack* s, void* element_data) {
 }
 
 KAPI b8 stack_pop(stack* s, void* out_element_data) {
-    if (!s || out_element_data) {
+    if (!s || !out_element_data) {
         KERROR("stack_pop requires a pointer to a valid stack and to hold element data output.");
         return false;
     }

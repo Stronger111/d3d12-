@@ -21,3 +21,6 @@ void debug_console_move_down();
 void debug_console_move_to_top();
 void debug_console_move_to_bottom();
 
+void debug_console_history_back();
+void debug_console_history_forward();
+

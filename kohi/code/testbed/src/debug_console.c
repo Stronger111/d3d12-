@@ -8,6 +8,10 @@
 #include <core/event.h>
 #include <core/input.h>
 
+typedef struct command_history_entry {
+    const char* command;
+} command_history_entry;
+
 // TODO(travis): statically-defined state for now.
 typedef struct debug_console_state {
     // 一次显示的行数
@@ -16,6 +20,10 @@ typedef struct debug_console_state {
     i32 line_offset;
     // 列表
     char** lines;
+
+    // 命令历史
+    command_history_entry* history;
+    i32 history_offset;
 
     b8 dirty;
     b8 visible;
@@ -34,7 +42,7 @@ b8 debug_console_consumer_write(void* inst, log_level level, const char* message
         // 在这里，因为字符串需要继续存在，这样它们才能
         // 可以通过该调试控制台访问。一般情况下是清理
         // 通过 string_cleanup_split_array 是有道理的。
-        char** split_message = darray_create(split_message);
+        char** split_message = darray_create(char*);
         u32 count = string_split(message, '\n', &split_message, true, false);
         // 把每一个新行放入数组中
         for (u32 i = 0; i < count; ++i) {
@@ -60,6 +68,11 @@ static b8 debug_console_on_key(u16 code, void* sender, void* listener_inst, even
         if (key_code == KEY_ENTER) {
             u32 len = string_length(state_ptr->entry_control.text);
             if (len > 0) {
+                // 保存命令历史列表
+                command_history_entry entry;
+                entry.command = string_duplicate(state_ptr->entry_control.text);
+                darray_push(state_ptr->history, entry);
+
                 // 执行命令并且清理文本
                 if (!console_execute_command(state_ptr->entry_control.text)) {
                     // TODO:处理错误？
@@ -125,6 +138,12 @@ static b8 debug_console_on_key(u16 code, void* sender, void* listener_inst, even
                     case KEY_SPACE:
                         char_code = key_code;
                         break;
+                    case KEY_MINUS:
+                        char_code = shift_held ? '_' : '-';
+                        break;
+                    case KEY_EQUAL:
+                        char_code = shift_held ? '+' : '=';
+                        break;
                     default:
                         // Not valid for entry, use 0
                         char_code = 0;
@@ -151,6 +170,8 @@ void debug_console_create() {
         state_ptr->line_offset = 0;
         state_ptr->lines = darray_create(char*);
         state_ptr->visible = false;
+        state_ptr->history = darray_create(command_history_entry);
+        state_ptr->history_offset = 0;
 
         // NOTE:根据要显示的行数更新文本 并且距底部偏移的行数,UI Text 对象目前用于显示
         // 可以在分开的通道中糟糕的颜色。 不考虑自动换行
@@ -188,10 +209,8 @@ b8 debug_console_load() {
     return true;
 }
 
-void debug_console_unload()
-{
-    if(state_ptr)
-    {
+void debug_console_unload() {
+    if (state_ptr) {
         ui_text_destroy(&state_ptr->text_control);
         ui_text_destroy(&state_ptr->entry_control);
     }
@@ -307,5 +326,25 @@ void debug_console_move_to_bottom() {
     if (state_ptr) {
         state_ptr->dirty = true;
         state_ptr->line_offset = 0;
+    }
+}
+
+void debug_console_history_back() {
+    if (state_ptr) {
+        u32 length = darray_length(state_ptr->history);
+        if (length > 0) {
+            state_ptr->history_offset = KMIN(state_ptr->history_offset++, length - 1);
+            ui_text_set_text(&state_ptr->entry_control, state_ptr->history[length - state_ptr->history_offset - 1].command);
+        }
+    }
+}
+
+void debug_console_history_forward() {
+    if (state_ptr) {
+        u32 length = darray_length(state_ptr->history);
+        if (length > 0) {
+            state_ptr->history_offset = KMAX(state_ptr->history_offset--, 0);
+            ui_text_set_text(&state_ptr->entry_control, state_ptr->history[length - state_ptr->history_offset - 1].command);
+        }
     }
 }
