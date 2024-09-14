@@ -26,7 +26,7 @@ typedef struct event_context {
 // Should return true if handled. 函数指针
 typedef b8 (*PFN_on_event)(u16 code, void* sender, void* listener_inst, event_context data);
 
-b8 event_system_initialize(u64* memory_requirement,void* state,void* config);
+b8 event_system_initialize(u64* memory_requirement, void* state, void* config);
 
 /**
  * @brief Shuts the event system down.
@@ -108,7 +108,12 @@ typedef enum system_event_code {
      * @brief An event fired by the renderer backend to indicate when any render targets
      * associated with the default window resources need to be refreshed (i.e. a window resize)
      */
-    EVENT_CODE_DEFAULT_RENDERTARGET_REFRESH_REQUIRED=0x16,
-    
+    EVENT_CODE_DEFAULT_RENDERTARGET_REFRESH_REQUIRED = 0x16,
+
+    /**
+    * @brief An event fired by the kvar system when a kvar has been updated.
+    */
+    EVENT_CODE_KVAR_CHANGED = 0x17,
+
     MAX_EVENT_CODE = 0xFF
 } system_event_code;

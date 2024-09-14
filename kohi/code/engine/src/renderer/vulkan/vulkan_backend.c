@@ -234,6 +234,7 @@ b8 create_vulkan_allocator(VkAllocationCallbacks* callbacks) {
 b8 vulkan_renderer_backend_initialize(struct renderer_backend* backend, const renderer_backend_config* config, u8* out_window_render_target_count) {
     // Function pointers
     context.find_memory_index = find_memory_index;
+    context.render_flag_changed=false;
 // NOTE: Custom allocator.
 #if KVULKAN_USE_CUSTOM_ALLOCATOR == 1
     context.allocator = kallocate(sizeof(VkAllocationCallbacks), MEMORY_TAG_RENDERER);
@@ -550,11 +551,17 @@ b8 vulkan_renderer_backend_begin_frame(renderer_backend* backend, f32 delta_time
     }
 
     // Check if the framebuffer has been resized, if so ,a new swapchain must be created.
-    if (context.framebuffer_size_generation != context.framebuffer_size_last_generation) {
+    // Also include a vsync changed check.
+    if (context.framebuffer_size_generation != context.framebuffer_size_last_generation || context.render_flag_changed) {
         VkResult result = vkDeviceWaitIdle(device->logical_device);
         if (!vulkan_result_is_success(result)) {
             KERROR("vulkan_renderer_backend_begin_frame vkDeviceWaitIdle(1) failed:'%s'", vulkan_result_string(result, true));
             return false;
+        }
+
+        if(context.render_flag_changed)
+        {
+            context.render_flag_changed=false;
         }
 
         // If the swapchain recreation failed (because, for example,the window was minimized)

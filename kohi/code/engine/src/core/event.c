@@ -40,7 +40,7 @@ b8 event_system_initialize(u64* memory_requirement, void* state,void* config) {
     return true;
 }
 
-void event_system_shutdown() {
+void event_system_shutdown(void* state) {
     if (state_ptr) {
         // Free the events arrays.And Objects points to should be destroyed on their own
         for (u16 i = 0; i < MAX_MESSAGE_CODES; ++i) {

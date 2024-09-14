@@ -84,7 +84,7 @@ b8 systems_manager_register(systems_manager_state* state, u16 type, PFN_system_i
 }
 
 b8 register_known_systems_pre_boot(systems_manager_state* state, application_config* app_config) {
-    // 控制台
+    // Memory
     if (!systems_manager_register(state, K_SYSTEM_TYPE_MEMORY, 0, memory_system_shutdown, 0, 0)) {
         KERROR("Failed to register memory system.");
         return false;
