@@ -1,19 +1,19 @@
 #pragma once 
 
-#include "renderer/renderer_backend.h"
+#include "vulkan_renderer_plugin_main.h"
 #include "resources/resource_types.h"
 
 struct shader;
 struct shader_uniform;
 
-b8 vulkan_renderer_backend_initialize(struct renderer_backend* backend,const renderer_backend_config* config,u8* out_window_render_target_count);
-void vulkan_renderer_backend_shutdown(struct renderer_backend* backend);
+b8 vulkan_renderer_backend_initialize(renderer_plugin* backend,const renderer_backend_config* config,u8* out_window_render_target_count);
+void vulkan_renderer_backend_shutdown(renderer_plugin* backend);
 
-void vulkan_renderer_backend_on_resized(struct renderer_backend* backend,u16 width,u16 height);
+void vulkan_renderer_backend_on_resized(renderer_plugin* backend,u16 width,u16 height);
 
-b8 vulkan_renderer_backend_begin_frame(struct renderer_backend* backend,f32 delta_time);
+b8 vulkan_renderer_backend_begin_frame(renderer_plugin* backend,f32 delta_time);
 
-b8 vulkan_renderer_backend_end_frame(struct renderer_backend* backend,f32 delta_time);
+b8 vulkan_renderer_backend_end_frame(renderer_plugin* backend,f32 delta_time);
 
 void vulkan_renderer_viewport_set(vec4 rect);
 void vulkan_renderer_viewport_reset();

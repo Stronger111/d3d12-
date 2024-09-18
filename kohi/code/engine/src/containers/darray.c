@@ -1,7 +1,6 @@
 #include "containers/darray.h"
 #include "core/kmemory.h"
 #include "core/logger.h"
-#include "darray.h"
 
 void* _darray_create(u64 length, u64 stride) {
     u64 header_size = DARRAY_FIELD_LENGTH * sizeof(u64);

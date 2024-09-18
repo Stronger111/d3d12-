@@ -37,3 +37,4 @@ Renderer:
 -空闲列表
  --内存管理 
  --内存地址对齐 Memory Alignment Allocator updates
+-即时模式和保留模式 GUI

@@ -2,14 +2,14 @@
  * @file engine.h
  * @author Travis Vroman (travis@kohiengine.com)
  * @brief This file contains structures and logic pertaining to the
- * overall engine itself. 
+ * overall engine itself.
  * The engine is responsible for managing both the platform layers
  * as well as all systems within the engine.
  * @version 1.0
  * @date 2022-01-10
- * 
+ *
  * @copyright Kohi Game Engine is Copyright (c) Travis Vroman 2021-2022
- * 
+ *
  */
 #pragma once
 
@@ -18,7 +18,7 @@
 #include "renderer/renderer_types.inl"
 
 struct application;
-/** 
+/**
  * @brief Represents configuration for the application. The application config
  * is fed to the engine on creation, so it knows how to configure itself internally.
  */
@@ -34,7 +34,9 @@ typedef struct application_config {
     font_system_config font_config;
 
     /** @brief A darray of render view configurations. */
-   render_view_config* render_views;
+    render_view_config* render_views;
+
+    renderer_plugin renderer_plugin;
 } application_config;
 
 /**
@@ -57,4 +59,3 @@ KAPI b8 engine_run();
  * required for initialization.
  */
 void engine_on_event_system_initialized();
-

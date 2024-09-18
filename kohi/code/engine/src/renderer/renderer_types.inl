@@ -8,12 +8,6 @@
 struct shader;
 struct shader_uniform;
 
-typedef enum renderer_backend_type {
-    RENDER_BACKEND_TYPE_VULKAN,
-    RENDER_BACKEND_TYPE_OPENGL,
-    RENDER_BACKEND_TYPE_DIRECTX
-} renderer_backend_type;
-
 typedef struct geometry_render_data {
     mat4 model;          // 模型矩阵
     geometry* geometry;  // 几何体
@@ -181,7 +175,14 @@ typedef struct renderer_backend_config {
     renderer_config_flags flags;
 } renderer_backend_config;
 
-typedef struct renderer_backend {
+/**
+ * @brief A generic "interface" for the renderer plugin. The renderer backend
+ * is what is responsible for making calls to the graphics API such as
+ * Vulkan, OpenGL or DirectX. Each of these should implement this interface.
+ * The frontend only interacts via this structure and has no knowledge of
+ * the way things actually work on the backend.
+ */
+typedef struct renderer_plugin {
     // struct platform_state* plat_state;
     u64 frame_number;
 
@@ -193,15 +194,15 @@ typedef struct renderer_backend {
      * @param out_window_render_target_count A pointer to hold how many render targets are needed for renderpasses targeting the window.
      * @return True if initialized successfully; otherwise false.
      */
-    b8 (*initialize)(struct renderer_backend* backend, const renderer_backend_config* config, u8* out_window_render_target_count);
+    b8 (*initialize)(struct renderer_plugin* backend, const renderer_backend_config* config, u8* out_window_render_target_count);
 
-    void (*shutdown)(struct renderer_backend* backend);
+    void (*shutdown)(struct renderer_plugin* backend);
 
-    void (*resized)(struct renderer_backend* backend, u16 width, u16 height);
+    void (*resized)(struct renderer_plugin* backend, u16 width, u16 height);
 
-    b8 (*begin_frame)(struct renderer_backend* backend, f32 delta_time);
+    b8 (*begin_frame)(struct renderer_plugin* backend, f32 delta_time);
 
-    b8 (*end_frame)(struct renderer_backend* backend, f32 delta_time);
+    b8 (*end_frame)(struct renderer_plugin* backend, f32 delta_time);
 
     /**
      * @brief Sets the renderer viewport to the given rectangle. Must be done within a renderpass.
@@ -634,7 +635,7 @@ typedef struct renderer_backend {
      */
     b8 (*renderbuffer_draw)(renderbuffer* buffer, u64 offset, u32 element_count, b8 bind_only);
 
-} renderer_backend;
+} renderer_plugin;
 
 /** @brief Known render view types, which have logic associated with them. */
 typedef enum render_view_known_type {

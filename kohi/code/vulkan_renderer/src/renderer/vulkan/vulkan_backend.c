@@ -1,7 +1,7 @@
 #include "vulkan_backend.h"
 
 #include "vulkan_types.inl"
-#include "vulkan_platform.h"
+#include "platform/vulkan_platform.h"
 #include "vulkan_device.h"
 #include "vulkan_swapchain.h"
 #include "vulkan_command_buffer.h"
@@ -45,8 +45,8 @@ VKAPI_ATTR VkBool32 VKAPI_CALL vk_debug_callback(VkDebugUtilsMessageSeverityFlag
 
 i32 find_memory_index(u32 type_filter, u32 property_flags);
 
-void create_command_buffers(renderer_backend* backend);
-b8 recreate_swapchain(renderer_backend* backend);
+void create_command_buffers(renderer_plugin* backend);
+b8 recreate_swapchain(renderer_plugin* backend);
 b8 create_module(vulkan_shader* shader, vulkan_shader_stage_config config, vulkan_shader_stage* shader_stage);
 b8 vulkan_buffer_copy_range_internal(VkBuffer source, u64 source_offset, VkBuffer dest, u64 dest_offset, u64 size);
 
@@ -231,7 +231,7 @@ b8 create_vulkan_allocator(VkAllocationCallbacks* callbacks) {
 }
 #endif  // KVULKAN_USE_CUSTOM_ALLOCATOR == 1
 
-b8 vulkan_renderer_backend_initialize(struct renderer_backend* backend, const renderer_backend_config* config, u8* out_window_render_target_count) {
+b8 vulkan_renderer_backend_initialize(renderer_plugin* backend, const renderer_backend_config* config, u8* out_window_render_target_count) {
     // Function pointers
     context.find_memory_index = find_memory_index;
     context.render_flag_changed=false;
@@ -462,7 +462,7 @@ b8 vulkan_renderer_backend_initialize(struct renderer_backend* backend, const re
     return true;
 }
 
-void vulkan_renderer_backend_shutdown(renderer_backend* backend) {
+void vulkan_renderer_backend_shutdown(renderer_plugin* backend) {
     vkDeviceWaitIdle(context.device.logical_device);
     // Destroy in the opposite order of creation
     // Destroy Buffers
@@ -527,7 +527,7 @@ void vulkan_renderer_backend_shutdown(renderer_backend* backend) {
     }
 }
 
-void vulkan_renderer_backend_on_resized(renderer_backend* backend, u16 width, u16 height) {
+void vulkan_renderer_backend_on_resized(renderer_plugin* backend, u16 width, u16 height) {
     // Update the "framebuffer size generation", a counter which indicates when the
     // framebuffer size has been updated
     context.framebuffer_width = width;
@@ -537,7 +537,7 @@ void vulkan_renderer_backend_on_resized(renderer_backend* backend, u16 width, u1
     KINFO("vulkan renderer backends->resized:w/h/gen:%i/%i/%llu", width, height, context.framebuffer_size_generation);
 }
 
-b8 vulkan_renderer_backend_begin_frame(renderer_backend* backend, f32 delta_time) {
+b8 vulkan_renderer_backend_begin_frame(renderer_plugin* backend, f32 delta_time) {
     context.frame_delta_time = delta_time;
     vulkan_device* device = &context.device;
 
@@ -603,7 +603,7 @@ b8 vulkan_renderer_backend_begin_frame(renderer_backend* backend, f32 delta_time
     return true;
 }
 
-b8 vulkan_renderer_backend_end_frame(renderer_backend* backend, f32 delta_time) {
+b8 vulkan_renderer_backend_end_frame(renderer_plugin* backend, f32 delta_time) {
     vulkan_command_buffer* command_buffer = &context.graphics_command_buffers[context.image_index];
 
     vulkan_command_buffer_end(command_buffer);
@@ -1989,7 +1989,7 @@ i32 find_memory_index(u32 type_filter, u32 property_flags) {
     return -1;
 }
 
-void create_command_buffers(renderer_backend* backend) {
+void create_command_buffers(renderer_plugin* backend) {
     if (!context.graphics_command_buffers) {
         context.graphics_command_buffers = darray_reserve(vulkan_command_buffer, context.swapchain.image_count);
         for (u32 i = 0; i < context.swapchain.image_count; ++i) {
@@ -2008,7 +2008,7 @@ void create_command_buffers(renderer_backend* backend) {
     KDEBUG("Vulkan command buffers created.");
 }
 
-b8 recreate_swapchain(renderer_backend* backend) {
+b8 recreate_swapchain(renderer_plugin* backend) {
     // If already being recreated, do not try again.
     if (context.recreating_swapchain) {
         KDEBUG("recreate_swapchain called when already recreating.Booting.");

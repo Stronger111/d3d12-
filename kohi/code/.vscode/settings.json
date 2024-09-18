@@ -111,7 +111,11 @@
         "input.h": "c",
         "application_types.h": "c",
         "render_view_system.h": "c",
-        "systems_manager.h": "c"
+        "systems_manager.h": "c",
+        "vulkan_backend.h": "c",
+        "vulkan_win32.h": "c",
+        "windows.h": "c",
+        "vulkan_device.h": "c"
     },
     // File copyright documentation tag.  Array of strings will be converted to one line per element.  Can template {year}.
     "doxdocgen.file.copyrightTag": [

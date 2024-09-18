@@ -8,23 +8,24 @@
 #include "core/event.h"
 #include "core/kthread.h"
 #include "core/kmutex.h"
+#include "core/kmemory.h"
 
 #include "containers/darray.h"
 
+#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <windowsx.h>  //param input extraction
 #include <stdlib.h>
 
-// For surface creation
-#include <vulkan/vulkan.h>
-#include <vulkan/vulkan_win32.h>
-#include "renderer/vulkan/vulkan_types.inl"
-
-typedef struct platform_state {
+typedef struct win32_handle_info {
     HINSTANCE h_instance;
     HWND hwnd;
-    VkSurfaceKHR surface;
-} platform_state;
+} win32_handle_info;
+
+typedef struct platform_state
+{
+    win32_handle_info handle;
+}platform_state;
 
 static platform_state *state_ptr;
 
@@ -51,16 +52,16 @@ b8 platform_system_startup(
     }
     state_ptr = state;
 
-    state_ptr->h_instance = GetModuleHandleA(0);
+    state_ptr->handle.h_instance = GetModuleHandleA(0);
     // setup and register window class
-    HICON icon = LoadIcon(state_ptr->h_instance, IDI_APPLICATION);
+    HICON icon = LoadIcon(state_ptr->handle.h_instance, IDI_APPLICATION);
     WNDCLASSA wc;
     memset(&wc, 0, sizeof(wc));
     wc.style = CS_DBLCLKS;
     wc.lpfnWndProc = win32_process_message;
     wc.cbClsExtra = 0;
     wc.cbWndExtra = 0;
-    wc.hInstance = state_ptr->h_instance;
+    wc.hInstance = state_ptr->handle.h_instance;
     wc.hIcon = icon;
     wc.hCursor = LoadCursor(NULL, IDC_ARROW);
     wc.hbrBackground = NULL;
@@ -103,20 +104,20 @@ b8 platform_system_startup(
 
     HWND handle = CreateWindowExA(window_ex_style, "kohi_window_class",
                                   typed_config->application_name, window_style, window_x, window_y, window_width, window_height,
-                                  0, 0, state_ptr->h_instance, 0);
+                                  0, 0, state_ptr->handle.h_instance, 0);
 
     if (handle == 0) {
         MessageBoxA(0, "window creation failed!", "Error!", MB_ICONEXCLAMATION | MB_OK);
         KFATAL("window creation failed!");
         return FALSE;
     } else {
-        state_ptr->hwnd = handle;
+        state_ptr->handle.hwnd = handle;
     }
 
     // show the window
     b32 should_activate = 1;
     i32 show_window_command_flags = should_activate ? SW_SHOW : SW_SHOWNOACTIVATE;
-    ShowWindow(state_ptr->hwnd, show_window_command_flags);
+    ShowWindow(state_ptr->handle.hwnd, show_window_command_flags);
 
     // Clock setup
     clock_setup();
@@ -124,9 +125,9 @@ b8 platform_system_startup(
 }
 
 void platform_system_shutdown(void *plat_state) {
-    if (state_ptr && state_ptr->hwnd) {
-        DestroyWindow(state_ptr->hwnd);
-        state_ptr->hwnd = 0;
+    if (state_ptr && state_ptr->handle.hwnd) {
+        DestroyWindow(state_ptr->handle.hwnd);
+        state_ptr->handle.hwnd = 0;
     }
 }
 
@@ -203,6 +204,15 @@ i32 platform_get_processor_count() {
     GetSystemInfo(&sysinfo);
     KINFO("%i processor cores detected.", sysinfo.dwNumberOfProcessors);
     return sysinfo.dwNumberOfProcessors;
+}
+void platform_get_handle_info(u64 *out_size, void *memory) {
+    *out_size=sizeof(win32_handle_info);
+    if(!memory)
+    {
+        return;
+    }
+    
+    kcopy_memory(memory,&state_ptr->handle,*out_size);
 }
 
 // NOTE: Begin threads
@@ -329,29 +339,6 @@ b8 kmutex_unlock(kmutex *mutex) {
     return result != 0;  // 0 is a failure
 }
 // NOTE: End mutexes.
-
-void platform_get_required_extension_names(const char ***names_darray) {
-    darray_push(*names_darray, &"VK_KHR_win32_surface");
-}
-
-// Surface creation for Vulkan
-b8 platform_create_vulkan_surface(vulkan_context *context) {
-    if (!state_ptr) {
-        return false;
-    }
-
-    VkWin32SurfaceCreateInfoKHR create_Info = {VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR};
-    create_Info.hinstance = state_ptr->h_instance;
-    create_Info.hwnd = state_ptr->hwnd;
-
-    VkResult result = vkCreateWin32SurfaceKHR(context->instance, &create_Info, context->allocator, &state_ptr->surface);
-    if (result != VK_SUCCESS) {
-        KFATAL("Vulkan surface creation failed.");
-        return false;
-    }
-    context->surface = state_ptr->surface;
-    return true;
-}
 
 LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARAM l_param) {
     switch (msg) {

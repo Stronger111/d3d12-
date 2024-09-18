@@ -47,6 +47,7 @@
             "name": "Win32",
             "includePath": [
                 "${workspaceFolder}/engine/src/**",
+                "${workspaceFolder}/vulkan_renderer/src/**",
                  "D:/SoftWare/VulkanSDK/1.2.198.1/include"
             ],
             "defines": [
