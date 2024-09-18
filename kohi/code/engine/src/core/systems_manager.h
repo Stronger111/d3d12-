@@ -60,4 +60,6 @@ void systems_manager_shutdown(systems_manager_state* state);
 
 b8 systems_manager_update(systems_manager_state* state,u32 delta_time);
 
-b8 systems_manager_register(systems_manager_state* state,u16 type,PFN_system_initialize initialize,PFN_system_shutdown shutdown,PFN_system_update update,void* config);
+KAPI b8 systems_manager_register(systems_manager_state* state,u16 type,PFN_system_initialize initialize,PFN_system_shutdown shutdown,PFN_system_update update,void* config);
+
+KAPI void* systems_manager_get_state(u16 type);

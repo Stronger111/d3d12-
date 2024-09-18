@@ -1,10 +1,13 @@
+#include <platform/platform.h>
+
+// Windows platform layer.
+#if defined(KPLATFORM_WINDOWS)  
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 #include <vulkan/vulkan.h>
 #include <vulkan/vulkan_win32.h>
-
 #include <containers/darray.h>
-#include <platform/platform.h>
+
 #include <core/kmemory.h>
 #include <core/logger.h>
 
@@ -25,14 +28,13 @@ b8 platform_create_vulkan_surface(vulkan_context *context) {
     u64 size = 0;
     platform_get_handle_info(&size, 0);
     void *block = kallocate(size, MEMORY_TAG_RENDERER);
-    platform_get_handle_info(&size,block);
-    
-    win32_handle_info *handle=(win32_handle_info*)block;
-    if(!handle)
-    {
-       return false;
+    platform_get_handle_info(&size, block);
+
+    win32_handle_info *handle = (win32_handle_info *)block;
+    if (!handle) {
+        return false;
     }
-    
+
     VkWin32SurfaceCreateInfoKHR create_info = {VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR};
     create_info.hinstance = handle->h_instance;
     create_info.hwnd = handle->hwnd;
@@ -45,3 +47,4 @@ b8 platform_create_vulkan_surface(vulkan_context *context) {
 
     return true;
 }
+#endif

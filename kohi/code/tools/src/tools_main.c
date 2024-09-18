@@ -8,10 +8,10 @@
 void print_help();
 i32 process_shaders(i32 argc, char** argv);
 
-/// @brief 
+/// @brief
 /// @param argc 参数个数
 /// @param argv 参数列表
-/// @return 
+/// @return
 i32 main(i32 argc, char** argv) {
     // The first arg is always the program itself.
     if (argc < 2) {
@@ -51,17 +51,24 @@ void print_help() {
 }
 
 i32 process_shaders(i32 argc, char** argv) {
-      if (argc < 3) {
+    if (argc < 3) {
         KERROR("Build shaders mode requires at least one additional argument.");
         return -3;
     }
     // Starting at third argument. One argument = 1 shader.
     for (u32 i = 2; i < argc; ++i) {
+#if KPLATFORM_APPLE != 1
         char* sdk_path = getenv("VULKAN_SDK");
         if (!sdk_path) {
             KERROR("Environment variable VULKAN_SDK not found. Check your Vulkan installation.");
             return -4;
         }
+        const char* bin_folder = "/bin/";
+#else
+        // Not needed on macos since it lives in /usr/local
+        const char* sdk_path = "";
+        const char* bin_folder = "";
+#endif
 
         char end_path[10];
         i32 length = string_length(argv[i]);
@@ -91,7 +98,7 @@ i32 process_shaders(i32 argc, char** argv) {
 
         // Construct the command and execute it.
         char command[4096];
-        string_format(command, "%s/bin/glslc -fshader-stage=%s %s -o %s", sdk_path, stage, argv[i], out_filename);
+        string_format(command, "%s%sglslc -g --target-env=vulkan1.2 -fshader-stage=%s %s -o %s", sdk_path, bin_folder, stage, argv[i], out_filename);
         // Vulkan shader compilation
         i32 retcode = system(command);
         if (retcode != 0) {

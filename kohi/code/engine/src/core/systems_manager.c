@@ -25,10 +25,13 @@ static b8 register_known_systems_pre_boot(systems_manager_state* state, applicat
 static b8 register_known_systems_post_boot(systems_manager_state* state, application_config* app_config);
 static void shutdown_known_systems(systems_manager_state* state);
 
+// TODO: Find a way to have this not be static.
+static systems_manager_state* g_state;
+
 b8 systems_manager_initialize(systems_manager_state* state, application_config* app_config) {
     // 创建一个线性分配器给所有的系统 64M
     linear_allocator_create(MEBIBYTES(64), 0, &state->systems_allocator);
-
+    g_state = state;
     // 注册已知系统
     return register_known_systems_pre_boot(state, app_config);
 }
@@ -54,22 +57,20 @@ b8 systems_manager_update(systems_manager_state* state, u32 delta_time) {
 }
 
 b8 systems_manager_register(systems_manager_state* state, u16 type, PFN_system_initialize initialize, PFN_system_shutdown shutdown, PFN_system_update update, void* config) {
-    k_system sys;
-    sys.initialize = initialize;
-    sys.shutdown = shutdown;
-    sys.update = update;
-
+    k_system* sys = &state->systems[type];
     // 调用初始化,开辟内存,调用初始化开始 w 已开辟内存块
-    if (sys.initialize) {
-        if (!sys.initialize(&sys.state_size, 0, config)) {
+    if (initialize) {
+        sys->initialize = initialize;
+        if (!sys->initialize(&sys->state_size, 0, config)) {
             KERROR("Failed to register system - initialize call failed.");
             return false;
         }
 
-        sys.state = linear_allocator_allocate(&state->systems_allocator, sys.state_size);
+        sys->state = linear_allocator_allocate(&state->systems_allocator, sys->state_size);
 
-        if (!sys.initialize(&sys.state_size, sys.state, config)) {
+        if (!sys->initialize(&sys->state_size, sys->state, config)) {
             KERROR("Failed to register system - initialize call failed.");
+            kzero_memory(sys, sizeof(k_system));
             return false;
         }
     } else {
@@ -79,8 +80,17 @@ b8 systems_manager_register(systems_manager_state* state, u16 type, PFN_system_i
         }
     }
 
-    state->systems[type] = sys;
+    sys->shutdown = shutdown;
+    sys->update = update;
     return true;
+}
+
+void* systems_manager_get_state(u16 type) {
+    if (g_state) {
+        return g_state->systems[type].state;
+    }
+
+    return 0;
 }
 
 b8 register_known_systems_pre_boot(systems_manager_state* state, application_config* app_config) {
@@ -155,8 +165,8 @@ b8 register_known_systems_pre_boot(systems_manager_state* state, application_con
     // Renderer system
     renderer_system_config renderer_sys_config = {0};
     renderer_sys_config.application_name = app_config->name;
-    renderer_sys_config.plugin=app_config->renderer_plugin;
-    //renderer_sys_config
+    renderer_sys_config.plugin = app_config->renderer_plugin;
+    // renderer_sys_config
     if (!systems_manager_register(state, K_SYSTEM_TYPE_RENDERER, renderer_system_initialize, renderer_system_shutdown, 0, &renderer_sys_config)) {
         KERROR("Failed to register renderer system.");
         return false;
