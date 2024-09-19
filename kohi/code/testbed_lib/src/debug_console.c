@@ -4,38 +4,12 @@
 #include <core/kmemory.h>
 #include <core/kstring.h>
 #include <containers/darray.h>
-#include <resources/ui_text.h>
 #include <core/event.h>
 #include <core/input.h>
 
-typedef struct command_history_entry {
-    const char* command;
-} command_history_entry;
-
-// TODO(travis): statically-defined state for now.
-typedef struct debug_console_state {
-    // 一次显示的行数
-    i32 line_display_count;
-    // 距列表底部的行数
-    i32 line_offset;
-    // 列表
-    char** lines;
-
-    // 命令历史
-    command_history_entry* history;
-    i32 history_offset;
-
-    b8 dirty;
-    b8 visible;
-
-    ui_text text_control;
-    ui_text entry_control;
-} debug_console_state;
-
-static debug_console_state* state_ptr;
-
 b8 debug_console_consumer_write(void* inst, log_level level, const char* message) {
-    if (state_ptr) {
+    debug_console_state* state = (debug_console_state*)inst;
+    if (state) {
         // 创建一个字符串的新副本,然后进行拆分
         // 通过换行符使每个行都算作新行
         // 注意：故意缺少清理字符串操作
@@ -46,18 +20,19 @@ b8 debug_console_consumer_write(void* inst, log_level level, const char* message
         u32 count = string_split(message, '\n', &split_message, true, false);
         // 把每一个新行放入数组中
         for (u32 i = 0; i < count; ++i) {
-            darray_push(state_ptr->lines, split_message[i]);
+            darray_push(state->lines, split_message[i]);
         }
 
         // 清理临时数组
         darray_destroy(split_message);
-        state_ptr->dirty = true;
+        state->dirty = true;
     }
     return true;
 }
 
 static b8 debug_console_on_key(u16 code, void* sender, void* listener_inst, event_context context) {
-    if (!state_ptr->visible) {
+    debug_console_state* state = (debug_console_state*)listener_inst;
+    if (!state->visible) {
         return false;
     }
     if (code == EVENT_CODE_KEY_PRESSED) {
@@ -66,26 +41,26 @@ static b8 debug_console_on_key(u16 code, void* sender, void* listener_inst, even
 
         // 判断敲入参数
         if (key_code == KEY_ENTER) {
-            u32 len = string_length(state_ptr->entry_control.text);
+            u32 len = string_length(state->entry_control.text);
             if (len > 0) {
                 // 保存命令历史列表
                 command_history_entry entry;
-                entry.command = string_duplicate(state_ptr->entry_control.text);
-                darray_push(state_ptr->history, entry);
+                entry.command = string_duplicate(state->entry_control.text);
+                darray_push(state->history, entry);
 
                 // 执行命令并且清理文本
-                if (!console_execute_command(state_ptr->entry_control.text)) {
+                if (!console_execute_command(state->entry_control.text)) {
                     // TODO:处理错误？
                 }
                 // 清理文本
-                ui_text_set_text(&state_ptr->entry_control, "");
+                ui_text_set_text(&state->entry_control, "");
             }
         } else if (key_code == KEY_BACKSPACE) {
-            u32 len = string_length(state_ptr->entry_control.text);
+            u32 len = string_length(state->entry_control.text);
             if (len > 0) {
-                char* str = string_duplicate(state_ptr->entry_control.text);
+                char* str = string_duplicate(state->entry_control.text);
                 str[len - 1] = 0;
-                ui_text_set_text(&state_ptr->entry_control, str);
+                ui_text_set_text(&state->entry_control, str);
                 kfree(str, len + 1, MEMORY_TAG_STRING);
             }
         } else {
@@ -151,10 +126,10 @@ static b8 debug_console_on_key(u16 code, void* sender, void* listener_inst, even
                 }
             }
             if (char_code != 0) {
-                u32 len = string_length(state_ptr->entry_control.text);
+                u32 len = string_length(state->entry_control.text);
                 char* new_text = kallocate(len + 2, MEMORY_TAG_STRING);
-                string_format(new_text, "%s%c", state_ptr->entry_control.text, char_code);
-                ui_text_set_text(&state_ptr->entry_control, new_text);
+                string_format(new_text, "%s%c", state->entry_control.text, char_code);
+                ui_text_set_text(&state->entry_control, new_text);
                 kfree(new_text, len + 1, MEMORY_TAG_STRING);
             }
         }
@@ -163,66 +138,67 @@ static b8 debug_console_on_key(u16 code, void* sender, void* listener_inst, even
     return false;
 }
 
-void debug_console_create() {
-    if (!state_ptr) {
-        state_ptr = kallocate(sizeof(debug_console_state), MEMORY_TAG_GAME);
-        state_ptr->line_display_count = 10;
-        state_ptr->line_offset = 0;
-        state_ptr->lines = darray_create(char*);
-        state_ptr->visible = false;
-        state_ptr->history = darray_create(command_history_entry);
-        state_ptr->history_offset = 0;
+void debug_console_create(debug_console_state* out_console_state) {
+    if (!out_console_state) {
+        out_console_state = kallocate(sizeof(debug_console_state), MEMORY_TAG_GAME);
+        out_console_state->line_display_count = 10;
+        out_console_state->line_offset = 0;
+        out_console_state->lines = darray_create(char*);
+        out_console_state->visible = false;
+        out_console_state->history = darray_create(command_history_entry);
+        out_console_state->history_offset = 0;
 
         // NOTE:根据要显示的行数更新文本 并且距底部偏移的行数,UI Text 对象目前用于显示
         // 可以在分开的通道中糟糕的颜色。 不考虑自动换行
         // NOTE:另外应该考虑裁切矩形和新行
 
         // 注册一个控制台消费者
-        console_register_consumer(0, debug_console_consumer_write);
+        console_register_consumer(out_console_state, debug_console_consumer_write, &out_console_state->console_consumer_id);
+        // Register for key events.
+        event_register(EVENT_CODE_KEY_PRESSED, out_console_state, debug_console_on_key);
+        event_register(EVENT_CODE_KEY_RELEASED, out_console_state, debug_console_on_key);
     }
 }
 
-b8 debug_console_load() {
-    if (!state_ptr) {
+b8 debug_console_load(debug_console_state* state) {
+    if (!state) {
         KFATAL("debug_console_load() called before console was initialized!");
         return false;
     }
 
     // Create a ui text control for rendering.
-    if (!ui_text_create(UI_TEXT_TYPE_SYSTEM, "Noto Sans CJK JP", 31, "", &state_ptr->text_control)) {
+    if (!ui_text_create(UI_TEXT_TYPE_SYSTEM, "Noto Sans CJK JP", 31, "", &state->text_control)) {
         KFATAL("Unable to create text control for debug console.");
         return false;
     }
 
-    ui_text_set_position(&state_ptr->text_control, (vec3){3.0f, 30.0f, 0.0f});
+    ui_text_set_position(&state->text_control, (vec3){3.0f, 30.0f, 0.0f});
 
     // Create another ui text control for rendering typed text.
-    if (!ui_text_create(UI_TEXT_TYPE_SYSTEM, "Noto Sans CJK JP", 31, "", &state_ptr->entry_control)) {
+    if (!ui_text_create(UI_TEXT_TYPE_SYSTEM, "Noto Sans CJK JP", 31, "", &state->entry_control)) {
         KFATAL("Unable to create entry text control for debug console.");
         return false;
     }
 
-    ui_text_set_position(&state_ptr->entry_control, (vec3){3.0f, 30.0f + (31.0f * state_ptr->line_display_count), 0.0f});
+    ui_text_set_position(&state->entry_control, (vec3){3.0f, 30.0f + (31.0f * state->line_display_count), 0.0f});
 
-    event_register(EVENT_CODE_KEY_PRESSED, 0, debug_console_on_key);
-    event_register(EVENT_CODE_KEY_RELEASED, 0, debug_console_on_key);
     return true;
 }
 
-void debug_console_unload() {
-    if (state_ptr) {
-        ui_text_destroy(&state_ptr->text_control);
-        ui_text_destroy(&state_ptr->entry_control);
+void debug_console_unload(debug_console_state* state) {
+    if (state) {
+        ui_text_destroy(&state->text_control);
+        ui_text_destroy(&state->entry_control);
     }
 }
 
-void debug_console_update() {
-    if (state_ptr && state_ptr->dirty) {
-        u32 line_count = darray_length(state_ptr->lines);
-        u32 max_lines = KMIN(state_ptr->line_display_count, KMAX(line_count, state_ptr->line_display_count));
+void debug_console_update(debug_console_state* state) {
+    if (state && state->dirty) {
+        u32 line_count = darray_length(state->lines);
+        u32 max_lines = KMIN(state->line_display_count, KMAX(line_count, state->line_display_count));
 
         // 首先计算最小的行,还要考虑行偏移
-        u32 min_line = KMAX(line_count - max_lines - state_ptr->line_offset, 0);
+        u32 min_line = KMAX(line_count - max_lines - state->line_offset, 0);
         u32 max_line = min_line + max_lines - 1;
 
         // 希望足够大来处理更多的事情
@@ -232,7 +208,7 @@ void debug_console_update() {
         for (u32 i = min_line; i <= max_line; ++i) {
             // TODO:对于消息类型插入颜色代码
 
-            const char* line = state_ptr->lines[i];
+            const char* line = state->lines[i];
             u32 line_length = string_length(line);
             for (u32 c = 0; c < line_length; c++, buffer_pos++) {
                 buffer[buffer_pos] = line[c];
@@ -246,105 +222,120 @@ void debug_console_update() {
         buffer[buffer_pos] = '\0';
 
         // 构建字符串后,设置文本
-        ui_text_set_text(&state_ptr->text_control, buffer);
-        state_ptr->dirty = false;
+        ui_text_set_text(&state->text_control, buffer);
+        state->dirty = false;
     }
 }
 
-ui_text* debug_console_get_text() {
-    if (state_ptr) {
-        return &state_ptr->text_control;
+void debug_console_on_lib_load(debug_console_state* state, b8 update_consumer) {
+    if (update_consumer) {
+        event_register(EVENT_CODE_KEY_PRESSED, state, debug_console_on_key);
+        event_register(EVENT_CODE_KEY_RELEASED, state, debug_console_on_key);
+        console_update_consumer(state->console_consumer_id, state, debug_console_consumer_write);
+    }
+}
+
+
+void debug_console_on_lib_unload(debug_console_state* state) {
+    event_unregister(EVENT_CODE_KEY_PRESSED, state, debug_console_on_key);
+    event_unregister(EVENT_CODE_KEY_RELEASED, state, debug_console_on_key);
+    console_update_consumer(state->console_consumer_id, 0, 0);
+}
+
+ui_text* debug_console_get_text(debug_console_state* state) {
+    if (state) {
+        return &state->text_control;
     }
     return 0;
 }
 
-ui_text* debug_console_get_entry_text() {
-    if (state_ptr) {
-        return &state_ptr->entry_control;
+ui_text* debug_console_get_entry_text(debug_console_state* state) {
+    if (state) {
+        return &state->entry_control;
     }
     return 0;
 }
 
-b8 debug_console_visible() {
-    if (!state_ptr) {
+b8 debug_console_visible(debug_console_state* state) {
+    if (!state) {
         return false;
     }
 
-    return state_ptr->visible;
+    return state->visible;
 }
 
-void debug_console_visible_set(b8 visible) {
-    if (state_ptr) {
-        state_ptr->visible = visible;
+void debug_console_visible_set(debug_console_state* state,b8 visible) {
+    if (state) {
+        state->visible = visible;
     }
 }
 
-void debug_console_move_up() {
-    if (state_ptr) {
-        state_ptr->dirty = true;
-        u32 line_count = darray_length(state_ptr->lines);
+void debug_console_move_up(debug_console_state* state) {
+    if (state) {
+        state->dirty = true;
+        u32 line_count = darray_length(state->lines);
         // 不需要尝试偏移,只需要重置并且启动
-        if (line_count <= state_ptr->line_display_count) {
-            state_ptr->line_offset = 0;
+        if (line_count <= state->line_display_count) {
+            state->line_offset = 0;
             return;
         }
-        state_ptr->line_offset++;
-        state_ptr->line_offset = KMIN(state_ptr->line_offset, line_count - state_ptr->line_display_count);
+        state->line_offset++;
+        state->line_offset = KMIN(state->line_offset, line_count - state->line_display_count);
     }
 }
 
-void debug_console_move_down() {
-    if (state_ptr) {
-        state_ptr->dirty = true;
-        u32 line_count = darray_length(state_ptr->lines);
+void debug_console_move_down(debug_console_state* state) {
+    if (state) {
+        state->dirty = true;
+        u32 line_count = darray_length(state->lines);
         // Don't bother with trying an offset, just reset and boot out.
-        if (line_count <= state_ptr->line_display_count) {
-            state_ptr->line_offset = 0;
+        if (line_count <= state->line_display_count) {
+            state->line_offset = 0;
             return;
         }
 
-        state_ptr->line_offset--;
-        state_ptr->line_offset = KMAX(state_ptr->line_offset, 0);
+        state->line_offset--;
+        state->line_offset = KMAX(state->line_offset, 0);
     }
 }
 
-void debug_console_move_to_top() {
-    if (state_ptr) {
-        state_ptr->dirty = true;
-        u32 line_count = darray_length(state_ptr->lines);
+void debug_console_move_to_top(debug_console_state* state) {
+    if (state) {
+        state->dirty = true;
+        u32 line_count = darray_length(state->lines);
         // Don't bother with trying an offset, just reset and boot out.
-        if (line_count <= state_ptr->line_display_count) {
-            state_ptr->line_offset = 0;
+        if (line_count <= state->line_display_count) {
+            state->line_offset = 0;
             return;
         }
 
-        state_ptr->line_offset = line_count - state_ptr->line_display_count;
+        state->line_offset = line_count - state->line_display_count;
     }
 }
 
-void debug_console_move_to_bottom() {
-    if (state_ptr) {
-        state_ptr->dirty = true;
-        state_ptr->line_offset = 0;
+void debug_console_move_to_bottom(debug_console_state* state) {
+    if (state) {
+        state->dirty = true;
+        state->line_offset = 0;
     }
 }
 
-void debug_console_history_back() {
-    if (state_ptr) {
-        u32 length = darray_length(state_ptr->history);
+void debug_console_history_back(debug_console_state* state) {
+    if (state) {
+        u32 length = darray_length(state->history);
         if (length > 0) {
-            state_ptr->history_offset = KMIN(state_ptr->history_offset++, length - 1);
-            ui_text_set_text(&state_ptr->entry_control, state_ptr->history[length - state_ptr->history_offset - 1].command);
+            state->history_offset = KMIN(state->history_offset++, length - 1);
+            ui_text_set_text(&state->entry_control, state->history[length - state->history_offset - 1].command);
         }
     }
 }
 
-void debug_console_history_forward() {
-    if (state_ptr) {
-        u32 length = darray_length(state_ptr->history);
+void debug_console_history_forward(debug_console_state* state) {
+    if (state) {
+        u32 length = darray_length(state->history);
         if (length > 0) {
-            state_ptr->history_offset = KMAX(state_ptr->history_offset--, 0);
-            ui_text_set_text(&state_ptr->entry_control, state_ptr->history[length - state_ptr->history_offset - 1].command);
+            state->history_offset = KMAX(state->history_offset--, 0);
+            ui_text_set_text(&state->entry_control, state->history[length - state->history_offset - 1].command);
         }
     }
 }

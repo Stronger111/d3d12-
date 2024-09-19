@@ -53,6 +53,12 @@ KAPI keymap keymap_create();
 
 KAPI void keymap_binding_add(keymap* map,keys key,keymap_entry_bind_type type,keymap_modifier modifiers,void* user_data,PFN_keybind_callback callback);
 KAPI void keymap_binding_remove(keymap* map,keys key,keymap_entry_bind_type type,keymap_modifier modifiers,PFN_keybind_callback callback);
+/**
+ * @brief Clears all bindings from the given keymap.
+ * 
+ * @param map A pointer to the map to be cleared.
+ */
+KAPI void keymap_clear(keymap* map);
 
 //TODO(travis): 键盘映射将取代现有的
 //检查按键状态，因为它们会改为调用回调进行替换

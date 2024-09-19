@@ -32,7 +32,7 @@ static input_state* state_ptr;
 // modifier修饰
 b8 check_modifiers(keymap_modifier modifiers);
 
-b8 input_system_initialize(u64* memory_requirement, void* state,void* config) {
+b8 input_system_initialize(u64* memory_requirement, void* state, void* config) {
     *memory_requirement = sizeof(input_state);
     if (state == 0) {
         return true;
@@ -586,13 +586,11 @@ void input_keymap_push(const keymap* map) {
     }
 }
 
-void input_keymap_pop() {
+b8 input_keymap_pop() {
     if (state_ptr) {
         // Pop the keymap from the stack, then re-apply the stack.
         keymap popped;
-        if (!stack_pop(&state_ptr->keymap_stack, &popped)) {
-            KERROR("Failed to pop keymap!");
-            return;
-        }
+        return stack_pop(&state_ptr->keymap_stack, &popped);
     }
+     return false;
 }

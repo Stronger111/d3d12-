@@ -259,4 +259,4 @@ void input_process_mouse_wheel(i8 z_delta);
 KAPI const char* input_keycode_str(keys key);
 
 KAPI void input_keymap_push(const struct keymap* map);
-KAPI void input_keymap_pop();
+KAPI b8 input_keymap_pop();
