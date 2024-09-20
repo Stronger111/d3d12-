@@ -38,3 +38,5 @@ Renderer:
  --内存管理 
  --内存地址对齐 Memory Alignment Allocator updates
 -即时模式和保留模式 GUI
+-场景管理
+ -深度优先遍历物体

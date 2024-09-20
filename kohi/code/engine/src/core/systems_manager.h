@@ -36,6 +36,7 @@ typedef enum k_system_type {
     K_SYSTEM_TYPE_RENDER_VIEW,
     K_SYSTEM_TYPE_MATERIAL,
     K_SYSTEM_TYPE_GEOMETRY,
+    K_SYSTEM_TYPE_LIGHT,
 
     // NOTE: Anything beyond this is in user space.
     K_SYSTEM_TYPE_KNOWN_MAX = 255,
@@ -46,20 +47,19 @@ typedef enum k_system_type {
     K_SYSTEM_TYPE_MAX = K_SYSTEM_TYPE_USER_MAX
 } k_system_type;
 
-typedef struct systems_manager_state
-{
+typedef struct systems_manager_state {
     linear_allocator systems_allocator;
     k_system systems[K_SYSTEM_TYPE_MAX_COUNT];
-}systems_manager_state;
+} systems_manager_state;
 
 struct application_config;
 
 b8 systems_manager_initialize(systems_manager_state* state, struct application_config* app_config);
-b8 systems_manager_post_boot_initialize(systems_manager_state* state,struct application_config* app_config);
+b8 systems_manager_post_boot_initialize(systems_manager_state* state, struct application_config* app_config);
 void systems_manager_shutdown(systems_manager_state* state);
 
-b8 systems_manager_update(systems_manager_state* state,u32 delta_time);
+b8 systems_manager_update(systems_manager_state* state, u32 delta_time);
 
-KAPI b8 systems_manager_register(systems_manager_state* state,u16 type,PFN_system_initialize initialize,PFN_system_shutdown shutdown,PFN_system_update update,void* config);
+KAPI b8 systems_manager_register(systems_manager_state* state, u16 type, PFN_system_initialize initialize, PFN_system_shutdown shutdown, PFN_system_update update, void* config);
 
 KAPI void* systems_manager_get_state(u16 type);

@@ -87,7 +87,13 @@ KAPI char* string_copy(char* dest, const char* source);
 KAPI char* string_ncopy(char* dest, const char* source, i64 length);
 //删除头尾空字符串
 KAPI char* string_trim(char* str);
-//获取子字符串
+/**
+ * @brief Gets a substring of the source string between start and length or to the end of the string.
+ * If length is negative, goes to the end of the string.
+ *
+ * Done by placing zeroes in the string at relevant points.
+ * @param str The string to be trimmed.
+ */
 KAPI void string_mid(char* dest,const char* source,i32 start, i32 length);
 /**
  * @brief Returns the index of the first occurance of c in str; otherwise -1.
