@@ -746,12 +746,17 @@ b8 load_ksm_file(file_handle* ksm_file, geometry_config** out_geometries_darray)
         filesystem_read(ksm_file, sizeof(u32), &m_name_length, &bytes_read);
         filesystem_read(ksm_file, sizeof(char) * m_name_length, g.material_name, &bytes_read);
 
+        // Handles backward compatability for https://github.com/travisvroman/kohi/issues/130
+        u64 extent_size = sizeof(vec3);
+        if (version == 0x0001U) {
+            extent_size = sizeof(vertex_3d);
+        }
         // Center
-        filesystem_read(ksm_file, sizeof(vec3), &g.center, &bytes_read);
+        filesystem_read(ksm_file, sizeof(extent_size), &g.center, &bytes_read);
 
         // Extents (min/max)
-        filesystem_read(ksm_file, sizeof(vec3), &g.min_extents, &bytes_read);
-        filesystem_read(ksm_file, sizeof(vec3), &g.max_extents, &bytes_read);
+        filesystem_read(ksm_file, sizeof(extent_size), &g.min_extents, &bytes_read);
+        filesystem_read(ksm_file, sizeof(extent_size), &g.max_extents, &bytes_read);
 
         // Add to the output array.
         darray_push(*out_geometries_darray, g);
@@ -775,7 +780,7 @@ b8 write_ksm_file(const char* path, const char* name, u32 geometry_count, geomet
 
     // Version
     u64 written = 0;
-    u16 version = 0x0001U;
+    u16 version = 0x0002U;
     filesystem_write(&f, sizeof(u16), &version, &written);
 
     // Name length

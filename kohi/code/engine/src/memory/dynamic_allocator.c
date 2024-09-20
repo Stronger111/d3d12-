@@ -134,7 +134,9 @@ b8 dynamic_allocator_free_aligned(dynamic_allocator* allocator, void* block) {
     dynamic_allocator_state* state = allocator->memory;
     if (block < state->memory_block || block > state->memory_block + state->total_size) {
         void* end_of_block = (void*)(state->memory_block + state->total_size);
-        KERROR("dynamic_allocator_free_aligned trying to release block (0x%p) outside of allocator range (0x%p)-(0x%p)", block, state->memory_block, end_of_block);
+        KWARN("dynamic_allocator_free_aligned trying to release block (0x%p) outside of allocator range (0x%p)-(0x%p)", block, state->memory_block, end_of_block);
+        //TODO: Report UnUse Var.
+        end_of_block=0;
         return false;
     }
     u32* block_size = (u32*)((u64)block - KSIZE_STORAGE);

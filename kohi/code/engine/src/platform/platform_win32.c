@@ -32,6 +32,8 @@ typedef struct win32_file_watch {
 
 typedef struct platform_state {
     win32_handle_info handle;
+    CONSOLE_SCREEN_BUFFER_INFO std_output_csbi;
+    CONSOLE_SCREEN_BUFFER_INFO err_output_csbi;
     // darray
     win32_file_watch *watches;
 } platform_state;
@@ -63,6 +65,9 @@ b8 platform_system_startup(
     state_ptr = state;
 
     state_ptr->handle.h_instance = GetModuleHandleA(0);
+
+    GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &state_ptr->std_output_csbi);
+    GetConsoleScreenBufferInfo(GetStdHandle(STD_ERROR_HANDLE), &state_ptr->err_output_csbi);
     // setup and register window class
     HICON icon = LoadIcon(state_ptr->handle.h_instance, IDI_APPLICATION);
     WNDCLASSA wc;
@@ -154,11 +159,13 @@ b8 platform_pump_messages() {
 }
 
 void *platform_allocate(u64 size, b8 aligned) {
-    return malloc(size);  // malloc 函数范围这块内存的首地址
+    // return malloc(size);  // malloc 函数范围这块内存的首地址
+    return (void *)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, size);
 }
 
 void platform_free(void *block, b8 aligned) {
-    free(block);
+    // free(block);
+    HeapFree(GetProcessHeap(), 0, block);
 }
 
 void *platform_zero_memory(void *block, u64 size) {
@@ -183,6 +190,14 @@ void platform_console_write(const char *message, u8 colour) {
     u64 length = strlen(message);
     DWORD number_written = 0;
     WriteConsoleA(GetStdHandle(STD_OUTPUT_HANDLE), message, (DWORD)length, &number_written, 0);
+
+    CONSOLE_SCREEN_BUFFER_INFO csbi;
+    if (state_ptr) {
+        csbi = state_ptr->std_output_csbi;
+    } else {
+        GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi);
+    }
+    SetConsoleTextAttribute(console_handle, csbi.wAttributes);
 }
 
 void platform_console_write_error(const char *message, u8 colour) {
@@ -195,6 +210,14 @@ void platform_console_write_error(const char *message, u8 colour) {
     u64 length = strlen(message);
     DWORD number_written = 0;
     WriteConsoleA(GetStdHandle(STD_ERROR_HANDLE), message, (DWORD)length, &number_written, 0);
+
+    CONSOLE_SCREEN_BUFFER_INFO csbi;
+    if (state_ptr) {
+        csbi = state_ptr->err_output_csbi;
+    } else {
+        GetConsoleScreenBufferInfo(GetStdHandle(STD_ERROR_HANDLE), &csbi);
+    }
+    SetConsoleTextAttribute(console_handle, csbi.wAttributes);
 }
 
 f64 platform_get_absolute_time() {
@@ -562,19 +585,19 @@ void platform_update_watches(u32 watch_id) {
                 unregister_watch(f->id);
                 continue;
             }
-            //result 返回值为0 表示失败
+            // result 返回值为0 表示失败
             BOOL result = FindClose(file_handle);
             if (result == 0) {
                 continue;
             }
 
             // Check the file time to see if it has been changed and update/notify if so.
-            if (CompareFileTime(&data.ftLastWriteTime,&f->last_write_time) != 0) {
-                f->last_write_time=data.ftLastWriteTime;
+            if (CompareFileTime(&data.ftLastWriteTime, &f->last_write_time) != 0) {
+                f->last_write_time = data.ftLastWriteTime;
                 // Notify listeners.
                 event_context context = {0};
-                context.data.u32[0]=f->id;
-                event_fire(EVENT_CODE_WATCHED_FILE_WRITTEN,0,context);
+                context.data.u32[0] = f->id;
+                event_fire(EVENT_CODE_WATCHED_FILE_WRITTEN, 0, context);
             }
         }
     }
