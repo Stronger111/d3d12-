@@ -549,7 +549,7 @@ void vulkan_renderer_backend_on_resized(renderer_plugin* plugin, u16 width, u16 
     KINFO("vulkan renderer backends->resized:w/h/gen:%i/%i/%llu", width, height, context->framebuffer_size_generation);
 }
 
-b8 vulkan_renderer_backend_begin_frame(renderer_plugin* plugin, const struct frame_data* p_frame_data){
+b8 vulkan_renderer_backend_begin_frame(renderer_plugin* plugin, const struct frame_data* p_frame_data) {
     // Cold-cast the context
     vulkan_context* context = (vulkan_context*)plugin->internal_context;
     vulkan_device* device = &context->device;
@@ -615,7 +615,7 @@ b8 vulkan_renderer_backend_begin_frame(renderer_plugin* plugin, const struct fra
     return true;
 }
 
-b8 vulkan_renderer_backend_end_frame(renderer_plugin* plugin,const struct frame_data* p_frame_data) {
+b8 vulkan_renderer_backend_end_frame(renderer_plugin* plugin, const struct frame_data* p_frame_data) {
     // Cold-cast the context
     vulkan_context* context = (vulkan_context*)plugin->internal_context;
     vulkan_command_buffer* command_buffer = &context->graphics_command_buffers[context->image_index];
@@ -1964,9 +1964,12 @@ b8 vulkan_renderer_shader_release_instance_resources(renderer_plugin* plugin, sh
         instance_state->instance_texture_maps = 0;
     }
 
-    if (!renderer_renderbuffer_free(&internal->uniform_buffer, s->ubo_stride, instance_state->offset)) {
-        KERROR("vulkan_renderer_shader_release_instance_resources failed to free range from renderbuffer.");
+    if (s->ubo_stride != 0) {
+        if (!renderer_renderbuffer_free(&internal->uniform_buffer, s->ubo_stride, instance_state->offset)) {
+            KERROR("vulkan_renderer_shader_release_instance_resources failed to free range from renderbuffer.");
+        }
     }
+
     instance_state->offset = INVALID_ID;
     instance_state->id = INVALID_ID;
 
@@ -2690,14 +2693,14 @@ void vulkan_buffer_unmap_memory(renderer_plugin* plugin, renderbuffer* buffer, u
 }
 
 b8 vulkan_buffer_flush(renderer_plugin* plugin, renderbuffer* buffer, u64 offset, u64 size) {
-     vulkan_context* context = (vulkan_context*)plugin->internal_context;
+    vulkan_context* context = (vulkan_context*)plugin->internal_context;
     if (!buffer || !buffer->internal_data) {
         KERROR("vulkan_buffer_flush requires a valid pointer to a buffer.");
         return false;
     }
     // NOTE: If not host-coherent, flush the mapped memory range.
     vulkan_buffer* internal_buffer = (vulkan_buffer*)buffer->internal_data;
-    if (!vulkan_buffer_is_host_coherent(plugin,internal_buffer)) {
+    if (!vulkan_buffer_is_host_coherent(plugin, internal_buffer)) {
         VkMappedMemoryRange range = {VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE};
         range.memory = internal_buffer->memory;
         range.offset = offset;
@@ -2709,14 +2712,14 @@ b8 vulkan_buffer_flush(renderer_plugin* plugin, renderbuffer* buffer, u64 offset
 }
 
 b8 vulkan_buffer_read(renderer_plugin* plugin, renderbuffer* buffer, u64 offset, u64 size, void** out_memory) {
-     vulkan_context* context = (vulkan_context*)plugin->internal_context;
+    vulkan_context* context = (vulkan_context*)plugin->internal_context;
     if (!buffer || !buffer->internal_data || !out_memory) {
         KERROR("vulkan_buffer_read requires a valid pointer to a buffer and out_memory, and the size must be nonzero.");
         return false;
     }
 
     vulkan_buffer* internal_buffer = (vulkan_buffer*)buffer->internal_data;
-    if (vulkan_buffer_is_device_local(plugin,internal_buffer) && !vulkan_buffer_is_host_visible(plugin,internal_buffer)) {
+    if (vulkan_buffer_is_device_local(plugin, internal_buffer) && !vulkan_buffer_is_host_visible(plugin, internal_buffer)) {
         // NOTE: If a read buffer is needed (i.e.) the target buffer's memory is not host visible but is device-local,
         // create the read buffer, copy data to it, then read from that buffer.
 
@@ -2730,7 +2733,7 @@ b8 vulkan_buffer_read(renderer_plugin* plugin, renderbuffer* buffer, u64 offset,
         vulkan_buffer* read_internal = (vulkan_buffer*)read.internal_data;
 
         // Perform the copy from device local to the read buffer.
-        vulkan_buffer_copy_range(plugin,buffer, offset, &read, 0, size);
+        vulkan_buffer_copy_range(plugin, buffer, offset, &read, 0, size);
 
         // Map/copy/unmap
         void* mapped_data;
@@ -2753,14 +2756,14 @@ b8 vulkan_buffer_read(renderer_plugin* plugin, renderbuffer* buffer, u64 offset,
 }
 
 b8 vulkan_buffer_load_range(renderer_plugin* plugin, renderbuffer* buffer, u64 offset, u64 size, const void* data) {
-     vulkan_context* context = (vulkan_context*)plugin->internal_context;
+    vulkan_context* context = (vulkan_context*)plugin->internal_context;
     if (!buffer || !buffer->internal_data || !size || !data) {
         KERROR("vulkan_buffer_load_range requires a valid pointer to a buffer, a nonzero size and a valid pointer to data.");
         return false;
     }
 
     vulkan_buffer* internal_buffer = (vulkan_buffer*)buffer->internal_data;
-    if (vulkan_buffer_is_device_local(plugin,internal_buffer) && !vulkan_buffer_is_host_visible(plugin,internal_buffer)) {
+    if (vulkan_buffer_is_device_local(plugin, internal_buffer) && !vulkan_buffer_is_host_visible(plugin, internal_buffer)) {
         // NOTE: If a staging buffer is needed (i.e.) the target buffer's memory is not host visible but is device-local,
         // create a staging buffer to load the data into first. Then copy from it to the target buffer.
 
@@ -2773,10 +2776,10 @@ b8 vulkan_buffer_load_range(renderer_plugin* plugin, renderbuffer* buffer, u64 o
         renderer_renderbuffer_bind(&staging, 0);
 
         // Load the data into the staging buffer.
-        vulkan_buffer_load_range(plugin,&staging, 0, size, data);
+        vulkan_buffer_load_range(plugin, &staging, 0, size, data);
 
         // Perform the copy from staging to the device local buffer.
-        vulkan_buffer_copy_range(plugin,&staging, 0, buffer, offset, size);
+        vulkan_buffer_copy_range(plugin, &staging, 0, buffer, offset, size);
 
         // Clean up the staging buffer.
         renderer_renderbuffer_unbind(&staging);
@@ -2814,7 +2817,7 @@ b8 vulkan_buffer_copy_range_internal(vulkan_context* context, VkBuffer source, u
 }
 
 b8 vulkan_buffer_copy_range(renderer_plugin* plugin, renderbuffer* source, u64 source_offset, renderbuffer* dest, u64 dest_offset, u64 size) {
-       vulkan_context* context = (vulkan_context*)plugin->internal_context;
+    vulkan_context* context = (vulkan_context*)plugin->internal_context;
     if (!source || !source->internal_data || !dest || !dest->internal_data || !size) {
         KERROR("vulkan_buffer_copy_range requires a valid pointers to source and destination buffers as well as a nonzero size.");
         return false;
@@ -2830,8 +2833,8 @@ b8 vulkan_buffer_copy_range(renderer_plugin* plugin, renderbuffer* source, u64 s
     return true;
 }
 
-b8 vulkan_buffer_draw(renderer_plugin* plugin,renderbuffer* buffer, u64 offset, u32 element_count, b8 bind_only) {
-      vulkan_context* context = (vulkan_context*)plugin->internal_context;
+b8 vulkan_buffer_draw(renderer_plugin* plugin, renderbuffer* buffer, u64 offset, u32 element_count, b8 bind_only) {
+    vulkan_context* context = (vulkan_context*)plugin->internal_context;
     vulkan_command_buffer* command_buffer = &context->graphics_command_buffers[context->image_index];
 
     if (buffer->type == RENDERBUFFER_TYPE_VERTEX) {
