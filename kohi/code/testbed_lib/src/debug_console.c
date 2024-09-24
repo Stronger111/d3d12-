@@ -139,8 +139,7 @@ static b8 debug_console_on_key(u16 code, void* sender, void* listener_inst, even
 }
 
 void debug_console_create(debug_console_state* out_console_state) {
-    if (!out_console_state) {
-        out_console_state = kallocate(sizeof(debug_console_state), MEMORY_TAG_GAME);
+    if (out_console_state) {
         out_console_state->line_display_count = 10;
         out_console_state->line_offset = 0;
         out_console_state->lines = darray_create(char*);

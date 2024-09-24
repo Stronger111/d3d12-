@@ -53,7 +53,7 @@ void input_system_shutdown(void* state) {
     state = 0;
 }
 
-void input_update(f64 delta_time) {
+void input_update(const struct frame_data* p_frame_data) {
     if (!state_ptr) {
         return;
     }

@@ -14,7 +14,7 @@
 
 #include "debug_console.h"
 
-typedef struct game_state {
+typedef struct testbed_game_state {
     f32 delta_time;
     camera* world_camera;
 
@@ -51,5 +51,10 @@ typedef struct game_state {
     u64 alloc_count;
     u64 prev_alloc_count;
     // TODO: end temp
-} game_state;
+} testbed_game_state;
 
+
+typedef struct testbed_application_frame_data
+{
+    geometry_render_data* world_geometries;
+}testbed_application_frame_data;

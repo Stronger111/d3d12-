@@ -3,6 +3,7 @@
 #include "defines.h"
 
 struct keymap;
+struct frame_data;
 
 typedef enum buttons {
     BUTTON_LEFT,
@@ -225,10 +226,10 @@ void input_system_shutdown(void* state);
 
 /**
  * @brief Updates the input system every frame.
- * @param delta_time The delta time in seconds since the last frame.
- * TODO(travis): refactor to use system manager update, with state, but must be called at end of frame.
+ * @param p_frame_data A constant pointer to the current frame's data.
+ * NOTE: Does not use system manager update because it must be called at end of a frame.
  */
-void input_update(f64 delta_time);
+void input_update(const struct frame_data* p_frame_data);
 
 // keyboard input
 KAPI b8 input_is_key_down(keys key);

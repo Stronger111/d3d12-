@@ -377,8 +377,6 @@ typedef struct vulkan_shader {
  * global renderer backend state, Vulkan instance, etc.
  */
 typedef struct vulkan_context {
-    f32 frame_delta_time;
-
     // The framebuffer current width.
     u32 framebuffer_width;
 
