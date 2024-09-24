@@ -1,3 +1,14 @@
+/**
+ * @file light_system.h
+ * @author Travis Vroman (travis@kohiengine.com)
+ * @brief This file contains the implementation of the light system, which
+ * manages all lighting objects within the engine.
+ * @version 1.0
+ * @date 2023-03-02
+ *
+ * @copyright Kohi Game Engine is Copyright (c) Travis Vroman 2021-2023
+ *
+ */
 #pragma once
 
 #include "defines.h"
@@ -30,7 +41,7 @@ KAPI b8 light_system_add_point(point_light* light);
 KAPI b8 light_system_remove_directional(directional_light* light);
 KAPI b8 light_system_remove_point(point_light* light);
 
-KAPI directional_light* light_system_directional_light_get();
+KAPI directional_light* light_system_directional_light_get(void);
 
-KAPI i32 light_system_point_light_count();  
+KAPI i32 light_system_point_light_count(void);  
 KAPI b8 light_system_point_lights_get(point_light* out_light);

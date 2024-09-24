@@ -5,7 +5,7 @@
 // For executing shell commands
 #include <stdlib.h>
 
-void print_help();
+void print_help(void);
 i32 process_shaders(i32 argc, char** argv);
 
 /// @brief

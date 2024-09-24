@@ -49,7 +49,7 @@ typedef struct camera {
  *
  * @return A copy of a newly-created camera.
  */
-camera camera_create();
+camera camera_create(void);
 
 /**
  * @brief Defaults the provided camera to default zero

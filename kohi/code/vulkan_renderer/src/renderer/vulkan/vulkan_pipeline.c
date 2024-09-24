@@ -111,6 +111,7 @@ b8 vulkan_graphics_pipeline_create(vulkan_context* context, const vulkan_pipelin
     VkPipelineLayoutCreateInfo pipeline_layout_create_info = {VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO};
 
     // Push constants
+    VkPushConstantRange ranges[32];
     if (config->push_constant_range_count > 0) {
         if (config->push_constant_range_count > 32) {
             KERROR("vulkan_graphics_pipeline_create: cannot have more than 32 push constant ranges. Passed count: %i", config->push_constant_range_count);
@@ -118,14 +119,13 @@ b8 vulkan_graphics_pipeline_create(vulkan_context* context, const vulkan_pipelin
         }
 
         // NOTE: 32 is the max number of ranges we can ever have, since spec only guarantees 128 bytes with 4-byte alignment.
-        VkPushConstantRange ranges[32];
         kzero_memory(ranges, sizeof(VkPushConstantRange) * 32);
         for (u32 i = 0; i < config->push_constant_range_count; ++i) {
             ranges[i].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
             ranges[i].offset = config->push_constant_ranges[i].offset;
             ranges[i].size = config->push_constant_ranges[i].size;
         }
-        pipeline_layout_create_info.pushConstantRangeCount =config->push_constant_range_count;
+        pipeline_layout_create_info.pushConstantRangeCount = config->push_constant_range_count;
         pipeline_layout_create_info.pPushConstantRanges = ranges;
     } else {
         pipeline_layout_create_info.pushConstantRangeCount = 0;
@@ -141,14 +141,14 @@ b8 vulkan_graphics_pipeline_create(vulkan_context* context, const vulkan_pipelin
     // Pipeline create
     VkGraphicsPipelineCreateInfo pipeline_create_info = {VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO};
     pipeline_create_info.stageCount = config->stage_count;
-    pipeline_create_info.pStages =config->stages;
+    pipeline_create_info.pStages = config->stages;
     pipeline_create_info.pVertexInputState = &vertex_input_info;
     pipeline_create_info.pInputAssemblyState = &input_assembly;
 
     pipeline_create_info.pViewportState = &viewport_state;
     pipeline_create_info.pRasterizationState = &rasterizer_create_info;
     pipeline_create_info.pMultisampleState = &multisampling_create_info;
-    pipeline_create_info.pDepthStencilState =(config->shader_flags & SHADER_FLAG_DEPTH_TEST) ? &depth_stencil : 0;
+    pipeline_create_info.pDepthStencilState = (config->shader_flags & SHADER_FLAG_DEPTH_TEST) ? &depth_stencil : 0;
     pipeline_create_info.pColorBlendState = &color_blend_state_create_info;
     pipeline_create_info.pDynamicState = &dynamic_state_create_info;
     pipeline_create_info.pTessellationState = 0;

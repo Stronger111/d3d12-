@@ -158,13 +158,15 @@ void game_on_console_scroll(keys key, keymap_entry_bind_type type, keymap_modifi
 }
 
 void game_on_console_history_back(keys key, keymap_entry_bind_type type, keymap_modifier modifiers, void* user_data) {
-    debug_console_state* state = (debug_console_state*)user_data;
-    debug_console_history_back(state);
+    application* game_inst = (application*)user_data;
+    testbed_game_state* state = (testbed_game_state*)game_inst->state;
+    debug_console_history_back(&state->debug_console);
 }
 
 void game_on_console_history_forward(keys key, keymap_entry_bind_type type, keymap_modifier modifiers, void* user_data) {
-    debug_console_state* state = (debug_console_state*)user_data;
-    debug_console_history_forward(state);
+    application* game_inst = (application*)user_data;
+    testbed_game_state* state = (testbed_game_state*)game_inst->state;
+    debug_console_history_forward(&state->debug_console);
 }
 
 void game_on_console_scroll_hold(keys key, keymap_entry_bind_type type, keymap_modifier modifiers, void* user_data) {
@@ -271,11 +273,11 @@ void game_setup_keymaps(application* game_inst) {
 
     keymap_binding_add(&state->console_keymap, KEY_PAGEUP, KEYMAP_BIND_TYPE_PRESS, KEYMAP_MODIFIER_NONE_BIT, game_inst, game_on_console_scroll);
     keymap_binding_add(&state->console_keymap, KEY_PAGEDOWN, KEYMAP_BIND_TYPE_PRESS, KEYMAP_MODIFIER_NONE_BIT, game_inst, game_on_console_scroll);
-    keymap_binding_add(&state->console_keymap, KEY_PAGEUP, KEYMAP_BIND_TYPE_HOLD, KEYMAP_MODIFIER_NONE_BIT,game_inst, game_on_console_scroll_hold);
-    keymap_binding_add(&state->console_keymap, KEY_PAGEDOWN, KEYMAP_BIND_TYPE_HOLD, KEYMAP_MODIFIER_NONE_BIT,game_inst, game_on_console_scroll_hold);
+    keymap_binding_add(&state->console_keymap, KEY_PAGEUP, KEYMAP_BIND_TYPE_HOLD, KEYMAP_MODIFIER_NONE_BIT, game_inst, game_on_console_scroll_hold);
+    keymap_binding_add(&state->console_keymap, KEY_PAGEDOWN, KEYMAP_BIND_TYPE_HOLD, KEYMAP_MODIFIER_NONE_BIT, game_inst, game_on_console_scroll_hold);
 
     keymap_binding_add(&state->console_keymap, KEY_UP, KEYMAP_BIND_TYPE_PRESS, KEYMAP_MODIFIER_NONE_BIT, game_inst, game_on_console_history_back);
-    keymap_binding_add(&state->console_keymap, KEY_DOWN, KEYMAP_BIND_TYPE_PRESS, KEYMAP_MODIFIER_NONE_BIT,game_inst, game_on_console_history_forward);
+    keymap_binding_add(&state->console_keymap, KEY_DOWN, KEYMAP_BIND_TYPE_PRESS, KEYMAP_MODIFIER_NONE_BIT, game_inst, game_on_console_history_forward);
 
     // If this was done with the console open, push its keymap.
     b8 console_visible = debug_console_visible(&state->debug_console);
@@ -289,7 +291,7 @@ void game_remove_keymaps(struct application* game_inst) {
     while (input_keymap_pop()) {
     }
 
-   testbed_game_state* state = ((testbed_game_state*)game_inst->state);
+    testbed_game_state* state = ((testbed_game_state*)game_inst->state);
 
     // Remove all bindings for the console keymap, since that's the only one we hold onto.
     keymap_clear(&state->console_keymap);

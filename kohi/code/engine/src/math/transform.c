@@ -2,7 +2,7 @@
 
 #include "kmath.h"
 
-KAPI transform transform_create() {
+KAPI transform transform_create(void) {
     transform t;
     transform_set_position_rotation_scale(&t, vec3_zero(), quat_identity(), vec3_one());
     t.local = mat4_identity();

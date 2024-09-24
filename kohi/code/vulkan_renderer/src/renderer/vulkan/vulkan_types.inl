@@ -34,7 +34,8 @@ typedef struct vulkan_buffer {
     VkDeviceMemory memory;
     /** @brief The memory requirements for this buffer. */
     VkMemoryRequirements memory_requirements;
-    u32 memory_index;
+    /** @brief The index of the memory used by the buffer. */
+    i32 memory_index;
     u32 memory_property_flags;
 } vulkan_buffer;
 
@@ -448,6 +449,6 @@ typedef struct vulkan_context {
      * @param property_flags The required properties which must be present.
      * @returns The index of the found memory type. Returns -1 if not found.
      */
-    i32 (*find_memory_index)(struct vulkan_context* context,u32 type_filter, u32 property_flags);
+    i32 (*find_memory_index)(struct vulkan_context* context, u32 type_filter, u32 property_flags);
 
 } vulkan_context;

@@ -1,7 +1,7 @@
 #include "keymap.h"
 #include "core/kmemory.h"
 
-KAPI keymap keymap_create() {
+KAPI keymap keymap_create(void) {
     keymap map;
     kzero_memory(&map, sizeof(keymap));
 

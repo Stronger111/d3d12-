@@ -139,7 +139,7 @@ void mesh_loader_unload(struct resource_loader* self, resource* resource) {
     resource->data_size = 0;
 }
 
-resource_loader mesh_resource_loader_create() {
+resource_loader mesh_resource_loader_create(void) {
     resource_loader loader;
     loader.type = RESOURCE_TYPE_MESH;
     loader.custom_type = 0;

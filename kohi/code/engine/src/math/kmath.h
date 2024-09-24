@@ -52,10 +52,10 @@ KINLINE b8 is_power_of_2(u64 value) {
     return (value != 0) && ((value & (value - 1)) == 0);
 }
 
-KAPI i32 krandom();
+KAPI i32 krandom(void);
 KAPI i32 krandom_in_range(i32 min, i32 max);
 
-KAPI f32 fkrandom();
+KAPI f32 fkrandom(void);
 KAPI f32 fkrandom_in_range(f32 min, f32 max);
 
 // ------------------------------------------
@@ -79,42 +79,42 @@ KINLINE vec2 vec2_create(f32 x, f32 y) {
 /**
  * @brief Creates and returns a 2-component vector with all components set to 0.0f.
  */
-KINLINE vec2 vec2_zero() {
+KINLINE vec2 vec2_zero(void) {
     return (vec2){0.0f, 0.0f};
 }
 
 /**
  * @brief Creates and returns a 2-component vector with all components set to 1.0f.
  */
-KINLINE vec2 vec2_one() {
+KINLINE vec2 vec2_one(void) {
     return (vec2){1.0f, 1.0f};
 }
 
 /**
  * @brief Creates and returns a 2-component vector pointing up (0, 1).
  */
-KINLINE vec2 vec2_up() {
+KINLINE vec2 vec2_up(void) {
     return (vec2){0.0f, 1.0f};
 }
 
 /**
  * @brief Creates and returns a 2-component vector pointing down (0, -1).
  */
-KINLINE vec2 vec2_down() {
+KINLINE vec2 vec2_down(void) {
     return (vec2){0.0f, -1.0f};
 }
 
 /**
  * @brief Creates and returns a 2-component vector pointing left (-1, 0).
  */
-KINLINE vec2 vec2_left() {
+KINLINE vec2 vec2_left(void) {
     return (vec2){-1.0f, 0.0f};
 }
 
 /**
  * @brief Creates and returns a 2-component vector pointing right (1, 0).
  */
-KINLINE vec2 vec2_right() {
+KINLINE vec2 vec2_right(void) {
     return (vec2){1.0f, 0.0f};
 }
 
@@ -490,7 +490,7 @@ KINLINE vec3 vec3_cross(vec3 vector_0, vec3 vector_1) {
  * @param tolerance The difference tolerance. Typically K_FLOAT_EPSILON or similar.
  * @return True if within tolerance; otherwise false.
  */
-KINLINE const b8 vec3_compare(vec3 vector_0, vec3 vector_1, f32 tolerance) {
+KINLINE b8 vec3_compare(vec3 vector_0, vec3 vector_1, f32 tolerance) {
     if (kabs(vector_0.x - vector_1.x) > tolerance) {
         return false;
     }
@@ -595,14 +595,14 @@ KINLINE vec4 vec4_from_vec3(vec3 vector, f32 w) {
 /**
  * @brief Creates and returns a 4-component vector with all components set to 0.0f.
  */
-KINLINE vec4 vec4_zero() {
+KINLINE vec4 vec4_zero(void) {
     return (vec4){0.0f, 0.0f, 0.0f, 0.0f};
 }
 
 /**
  * @brief Creates and returns a 4-component vector with all components set to 1.0f.
  */
-KINLINE vec4 vec4_one() {
+KINLINE vec4 vec4_one(void) {
     return (vec4){1.0f, 1.0f, 1.0f, 1.0f};
 }
 
@@ -731,7 +731,7 @@ KINLINE f32 vec4_dot_f32(
  * @param tolerance The difference tolerance. Typically K_FLOAT_EPSILON or similar.
  * @return True if within tolerance; otherwise false.
  */
-KINLINE const b8 vec4_compare(vec4 vector_0, vec4 vector_1, f32 tolerance) {
+KINLINE b8 vec4_compare(vec4 vector_0, vec4 vector_1, f32 tolerance) {
     if (kabs(vector_0.x - vector_1.x) > tolerance) {
         return false;
     }
@@ -763,7 +763,7 @@ KINLINE const b8 vec4_compare(vec4 vector_0, vec4 vector_1, f32 tolerance) {
  *
  * @return A new identity matrix
  */
-KINLINE mat4 mat4_identity() {
+KINLINE mat4 mat4_identity(void) {
     mat4 out_matrix;
     kzero_memory(out_matrix.data, sizeof(f32) * 16);
     out_matrix.data[0] = 1.0f;
@@ -1199,7 +1199,7 @@ KINLINE vec4 vec4_mul_mat4(vec4 v, mat4 m) {
 // Quaternion
 // ------------------------------------------
 
-KINLINE quat quat_identity() {
+KINLINE quat quat_identity(void) {
     return (quat){0, 0, 0, 1.0f};
 }
 

@@ -63,4 +63,4 @@ KAPI b8 resource_system_load_custom(const char* name, const char* custom_type,vo
 
 KAPI void resource_system_unload(resource* resource);
 
-KAPI const char* resource_system_base_path();
+KAPI const char* resource_system_base_path(void);

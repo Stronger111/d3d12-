@@ -156,7 +156,7 @@ typedef struct texture_map {
 } texture_map;
 
 typedef struct font_glyph {
-    u32 codepoint;
+    i32 codepoint;
     u16 x;
     u16 y;
     u16 width;

@@ -96,7 +96,7 @@ void ui_text_destroy(ui_text* text) {
 
         if (text->text) {
             u32 text_length = string_length(text->text);
-            kfree(text->text, sizeof(char) * text_length, MEMORY_TAG_STRING);
+            kfree(text->text, sizeof(char) * text_length+1, MEMORY_TAG_STRING);
             text->text = 0;
         }
 
@@ -125,7 +125,7 @@ void ui_text_set_text(ui_text* u_text, const char* text) {
         }
 
         u32 text_length = string_length(u_text->text);
-        kfree(u_text->text, sizeof(char) * text_length, MEMORY_TAG_STRING);
+        kfree(u_text->text, sizeof(char) * text_length+1, MEMORY_TAG_STRING);
         u_text->text = string_duplicate(text);
 
         // Verify atlas has the glyphs needed.

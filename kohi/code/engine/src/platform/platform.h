@@ -54,8 +54,13 @@ b8 platform_system_startup(
     void* config);
 
 void platform_system_shutdown(void* plat_state);
-
-b8 platform_pump_messages();
+/**
+ * @brief Performs any platform-specific message pumping that is required
+ * for windowing, etc.
+ *
+ * @return True on success; otherwise false.
+ */
+b8 platform_pump_messages(void);
 // aligned 内存对齐 b8 8bit
 void* platform_allocate(u64 size, b8 aligned);
 void platform_free(void* block, b8 aligned);
@@ -66,7 +71,7 @@ void* platform_set_memory(void* dest, i32 value, u64 size);
 void platform_console_write(const char* message, u8 colour);
 void platform_console_write_error(const char* message, u8 colour);
 
-f64 platform_get_absolute_time();
+f64 platform_get_absolute_time(void);
 
 KAPI void platform_sleep(u64 ms);
 
@@ -75,7 +80,7 @@ KAPI void platform_sleep(u64 ms);
  *
  * @return The number of logical processor cores.
  */
-i32 platform_get_processor_count();
+i32 platform_get_processor_count(void);
 
 /**
  * @brief Obtains the required memory amount for platform-specific handle data,
@@ -117,12 +122,12 @@ KAPI b8 platform_dynamic_library_load_function(const char* name, dynamic_library
 /**
  * @brief Returns the file extension for the current platform.
  */
-KAPI const char* platform_dynamic_library_extension();
+KAPI const char* platform_dynamic_library_extension(void);
 
 /**
  * @brief Returns a file prefix for libraries for the current platform.
  */
-KAPI const char* platform_dynamic_library_prefix();
+KAPI const char* platform_dynamic_library_prefix(void);
 
 
 /**

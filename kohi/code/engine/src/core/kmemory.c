@@ -245,7 +245,7 @@ const char* get_unit_for_size(u64 size_bytes, f32* out_amount) {
     }
 }
 
-KAPI char* get_memory_usage_str() {
+KAPI char* get_memory_usage_str(void) {
     // 内存使用打印
     char buffer[8000] = "System memory use (tagged):\n";
     u64 offset = strlen(buffer);
@@ -276,7 +276,7 @@ KAPI char* get_memory_usage_str() {
     return out_string;
 }
 
-u64 get_memory_alloc_count() {
+u64 get_memory_alloc_count(void) {
     if (state_ptr) {
         return state_ptr->alloc_count;
     }

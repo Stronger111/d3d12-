@@ -330,7 +330,7 @@ b8 create_default_material(material_system_state* state) {
     return true;
 }
 
-material* material_system_get_default() {
+material* material_system_get_default(void) {
     if (state_ptr) {
         return &state_ptr->default_material;
     }

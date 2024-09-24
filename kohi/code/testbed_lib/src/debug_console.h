@@ -12,15 +12,15 @@ typedef struct command_history_entry {
 typedef struct debug_console_state {
     u8 console_consumer_id;
     // 一次显示的行数
-    i32 line_display_count;
+    u32 line_display_count;
     // 距列表底部的行数
-    i32 line_offset;
+    u32 line_offset;
     // 列表
     char** lines;
 
     // 命令历史
     command_history_entry* history;
-    i32 history_offset;
+    u32 history_offset;
 
     b8 dirty;
     b8 visible;

@@ -169,7 +169,7 @@ u64 dynamic_allocator_total_space(dynamic_allocator* allocator) {
     return state->total_size;
 }
 
-KAPI u64 dynamic_allocator_header_size() {
+KAPI u64 dynamic_allocator_header_size(void) {
     // Enough space for a header and size storage.
     return sizeof(alloc_header) + KSIZE_STORAGE;
 }
