@@ -30,6 +30,7 @@ Renderer:
 -bug
 -"Vulkan buffer creation failed for object shader  out_error_local_memory  windows ？？ TODO  重启解决问题 后面需要查一下
 - 赋值内存错误,内存空间开辟不足和内存不正确
+- 更详细的Vulkan Debug信息
 
 -Feature
 -JobSystem
