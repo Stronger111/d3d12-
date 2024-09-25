@@ -6,17 +6,17 @@
 #include "core/kmemory.h"
 
 #define K_PI 3.14159265358979323846f
-#define K_PI_2 2.0f * K_PI
-#define K_HALF_PI 0.5f * K_PI
-#define K_QUARTER_PI 0.25f * K_PI
-#define K_ONE_OVER_PI 1.0f / K_PI
-#define K_ONE_OVER_TWO_PI 1.0f / K_PI_2
+#define K_2PI (2.0f * K_PI)
+#define K_HALF_PI (0.5f * K_PI)
+#define K_QUARTER_PI (0.25f * K_PI)
+#define K_ONE_OVER_PI (1.0f / K_PI)
+#define K_ONE_OVER_TWO_PI (1.0f / K_2PI)
 #define K_SQRT_TWO 1.41421356237309504880f
 #define K_SQRT_THREE 1.73205080756887729352f
 #define K_SQRT_ONE_OVER_TWO 0.70710678118654752440f
 #define K_SQRT_ONE_OVER_THREE 0.57735026918962576450f
-#define K_DEG2RAD_MULTIPLIER K_PI / 180.0f
-#define K_RAD2DEG_MULTIPLIER 180.0f / K_PI
+#define K_DEG2RAD_MULTIPLIER (K_PI / 180.0f)
+#define K_RAD2DEG_MULTIPLIER (180.0f / K_PI)
 
 /** @brief 秒转换为微秒 */
 #define K_SEC_TO_US_MULTIPLIER (1000.0f * 1000.0f)

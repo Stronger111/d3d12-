@@ -15,12 +15,23 @@
 
 #include "math/math_types.h"
 
-typedef struct directional_light {
+typedef struct directional_light_data {
+    /** @brief The light colour. */
     vec4 colour;
-    vec4 direction;  // ignore w
+    /** @brief The direction of the light. The w component is ignored.*/
+    vec4 direction;
+} directional_light_data;
+/**
+ * @brief A directional light, typically used to emulate sun/moon light.
+ */
+typedef struct directional_light {
+    /** @brief The name of the directional light. */
+    char* name;
+    /** @brief The directional light shader data. */
+    directional_light_data data;
 } directional_light;
 
-typedef struct point_light {
+typedef struct point_light_data {
     vec4 colour;
     vec4 position;  // ignore w
     // Usually 1, make sure denominator never gets smaller than 1
@@ -30,9 +41,20 @@ typedef struct point_light {
     // Makes the light fall off slower at longer distances.
     f32 quadratic;
     f32 padding;
+} point_light_data;
+
+/**
+ * @brief A point light, the most common light source, which radiates out from the
+ * given position.
+ */
+typedef struct point_light {
+    /** @brief The name of the light. */
+    char* name;
+    /** @brief The shader data for the point light. */
+    point_light_data data;
 } point_light;
 
-b8 light_system_initialize(u64* memory_requirement,void* memory,void* config);
+b8 light_system_initialize(u64* memory_requirement, void* memory, void* config);
 void light_system_shutdown(void* state);
 
 KAPI b8 light_system_add_directional(directional_light* light);
@@ -43,5 +65,5 @@ KAPI b8 light_system_remove_point(point_light* light);
 
 KAPI directional_light* light_system_directional_light_get(void);
 
-KAPI i32 light_system_point_light_count(void);  
+KAPI u32 light_system_point_light_count(void);
 KAPI b8 light_system_point_lights_get(point_light* out_light);

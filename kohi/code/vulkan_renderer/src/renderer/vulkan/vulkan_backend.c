@@ -17,6 +17,7 @@
 #include "containers/darray.h"
 
 #include "math/math_types.h"
+#include "math/kmath.h"
 
 #include "renderer/renderer_frontend.h"
 
