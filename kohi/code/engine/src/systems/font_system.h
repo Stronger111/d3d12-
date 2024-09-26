@@ -29,9 +29,20 @@ struct ui_text;
 
 b8 font_system_initialize(u64* memory_requirement, void* memory, void* config);
 void font_system_shutdown(void* memory);
-
-b8 font_system_load_system_font(system_font_config* config);
-b8 font_system_load_bitmap_font(bitmap_font_config* config);
+/**
+ * @brief Loads a system font from the following config.
+ * 
+ * @param config A pointer to the config to use for loading.
+ * @return True on success; otherwise false.
+ */
+b8 font_system_system_font_load(system_font_config* config);
+/**
+ * @brief Loads a bitmap font from the following config.
+ * 
+ * @param config A pointer to the config to use for loading.
+ * @return True on success; otherwise false.
+ */
+b8 font_system_bitmap_font_load(bitmap_font_config* config);
 
 /**
  * @brief Attempts to acquire a font of the given name and assign it to the given ui_text.

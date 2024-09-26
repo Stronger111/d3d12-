@@ -94,7 +94,7 @@ void* systems_manager_get_state(u16 type) {
     return 0;
 }
 
-b8 register_known_systems_pre_boot(systems_manager_state* state, application_config* app_config) {
+static b8 register_known_systems_pre_boot(systems_manager_state* state, application_config* app_config) {
     // Memory
     if (!systems_manager_register(state, K_SYSTEM_TYPE_MEMORY, 0, memory_system_shutdown, 0, 0)) {
         KERROR("Failed to register memory system.");
@@ -222,7 +222,7 @@ b8 register_known_systems_pre_boot(systems_manager_state* state, application_con
     return true;
 }
 
-b8 register_known_systems_post_boot(systems_manager_state* state, application_config* app_config) {
+static b8 register_known_systems_post_boot(systems_manager_state* state, application_config* app_config) {
     // Texture system.
     texture_system_config texture_sys_config;
     texture_sys_config.max_texture_count = 65536;

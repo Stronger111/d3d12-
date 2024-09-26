@@ -57,11 +57,18 @@ typedef struct point_light {
 b8 light_system_initialize(u64* memory_requirement, void* memory, void* config);
 void light_system_shutdown(void* state);
 
-KAPI b8 light_system_add_directional(directional_light* light);
-KAPI b8 light_system_add_point(point_light* light);
+/**
+ * @brief Attempts to add a directional light to the system. Only one may be present
+ * at once, and is overwritten when one is passed here.
+ *
+ * @param light A pointer to the light to be added.
+ * @return True on success; otherwise false.
+ */
+KAPI b8 light_system_directional_add(directional_light* light);
+KAPI b8 light_system_point_add(point_light* light);
 
-KAPI b8 light_system_remove_directional(directional_light* light);
-KAPI b8 light_system_remove_point(point_light* light);
+KAPI b8 light_system_directional_remove(directional_light* light);
+KAPI b8 light_system_point_remove(point_light* light);
 
 KAPI directional_light* light_system_directional_light_get(void);
 

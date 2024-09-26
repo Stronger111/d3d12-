@@ -212,13 +212,13 @@ b8 application_initialize(struct application* game_inst) {
         return false;
     }
     // Move debug text to new bottom of screen.
-    ui_text_set_position(&state->test_text, vec3_create(20, game_inst->app_config.start_height - 75, 0));
+    ui_text_position_set(&state->test_text, vec3_create(20, game_inst->app_config.start_height - 75, 0));
 
     if (!ui_text_create(UI_TEXT_TYPE_SYSTEM, "Noto Sans CJK JP", 31, "Some system text 123, \n\tyo!\n\n\tこんにちは 한", &state->test_sys_text)) {
         KERROR("Failed to load basic ui system text.");
         return false;
     }
-    ui_text_set_position(&state->test_sys_text, vec3_create(500, 550, 0));
+    ui_text_position_set(&state->test_sys_text, vec3_create(500, 550, 0));
 
     // Load up some test UI geometry.
     geometry_config ui_config;
@@ -338,7 +338,7 @@ b8 application_update(application* game_inst, struct frame_data* p_frame_data) {
     f64 fps, frame_time;
     metrics_frame(&fps, &frame_time);
 
-    char* vsync_text = renderer_flag_enabled(RENDERER_CONFIG_FLAG_VSYNC_ENABLED_BIT) ? "YES" : "NO";
+    char* vsync_text = renderer_flag_enabled_get(RENDERER_CONFIG_FLAG_VSYNC_ENABLED_BIT) ? "YES" : "NO";
     char text_buffer[2048];
     string_format(
         text_buffer,
@@ -361,7 +361,7 @@ VSync: %s Drawn: %-5u Hovered: %s%u",
         p_frame_data->drawn_mesh_count,
         state->hovered_object_id == INVALID_ID ? "none" : "",
         state->hovered_object_id == INVALID_ID ? 0 : state->hovered_object_id);
-    ui_text_set_text(&state->test_text, text_buffer);
+    ui_text_text_set(&state->test_text, text_buffer);
 
     debug_console_update(&((testbed_game_state*)game_inst->state)->debug_console);
 
@@ -426,7 +426,7 @@ b8 application_render(struct application* game_inst, struct render_packet* packe
         texts[3] = debug_console_get_entry_text(&state->debug_console);
     }
     ui_packet.texts = texts;
-    if (!render_view_system_build_packet(render_view_system_get("ui"), p_frame_data->frame_allocator, &ui_packet, &packet->views[2])) {
+    if (!render_view_system_packet_build(render_view_system_get("ui"), p_frame_data->frame_allocator, &ui_packet, &packet->views[2])) {
         KERROR("Failed to build packet for view 'ui'.");
         return false;
     }
@@ -438,7 +438,7 @@ b8 application_render(struct application* game_inst, struct render_packet* packe
     pick_packet.texts = ui_packet.texts;
     pick_packet.text_count = ui_packet.text_count;
 
-    if (!render_view_system_build_packet(render_view_system_get("pick"), p_frame_data->frame_allocator, &pick_packet, &packet->views[3])) {
+    if (!render_view_system_packet_build(render_view_system_get("pick"), p_frame_data->frame_allocator, &pick_packet, &packet->views[3])) {
         KERROR("Failed to build packet for view 'ui'.");
         return false;
     }
@@ -458,7 +458,7 @@ void application_on_resize(struct application* game_inst, u32 width, u32 height)
 
     // TODO: temp
     // Move debug text to new bottom of screen.
-    ui_text_set_position(&state->test_text, vec3_create(20, state->height - 75, 0));
+    ui_text_position_set(&state->test_text, vec3_create(20, state->height - 75, 0));
     // TODO: end temp
 }
 
@@ -498,9 +498,9 @@ void application_lib_on_load(struct application* game_inst) {
 }
 
 static void toggle_vsync(void) {
-    b8 vsync_enabled = renderer_flag_enabled(RENDERER_CONFIG_FLAG_VSYNC_ENABLED_BIT);
+    b8 vsync_enabled = renderer_flag_enabled_get(RENDERER_CONFIG_FLAG_VSYNC_ENABLED_BIT);
     vsync_enabled = !vsync_enabled;
-    renderer_flag_set_enabled(RENDERER_CONFIG_FLAG_VSYNC_ENABLED_BIT, vsync_enabled);
+    renderer_flag_enabled_set(RENDERER_CONFIG_FLAG_VSYNC_ENABLED_BIT, vsync_enabled);
 }
 
 static b8 game_on_kvar_changed(u16 code, void* sender, void* listener_inst, event_context data) {
@@ -764,7 +764,7 @@ static b8 load_main_scene(struct application* game_inst) {
     //     return false;
     // }
     // state->meshes[0].transform = transform_create();
-    // simple_scene_add_mesh(&state->main_scene, &state->meshes[0]);
+    // simple_scene_mesh_add(&state->main_scene, &state->meshes[0]);
 
     // // Second cube
     // mesh_config cube_1_config = {0};
@@ -779,7 +779,7 @@ static b8 load_main_scene(struct application* game_inst) {
     // state->meshes[1].transform = transform_from_position((vec3){10.0f, 0.0f, 1.0f});
     // transform_set_parent(&state->meshes[1].transform, &state->meshes[0].transform);
 
-    // simple_scene_add_mesh(&state->main_scene, &state->meshes[1]);
+    // simple_scene_mesh_add(&state->main_scene, &state->meshes[1]);
 
     // // Third cube!
     // mesh_config cube_2_config = {0};
@@ -794,7 +794,7 @@ static b8 load_main_scene(struct application* game_inst) {
     // state->meshes[2].transform = transform_from_position((vec3){5.0f, 0.0f, 1.0f});
     // transform_set_parent(&state->meshes[2].transform, &state->meshes[1].transform);
 
-    // simple_scene_add_mesh(&state->main_scene, &state->meshes[2]);
+    // simple_scene_mesh_add(&state->main_scene, &state->meshes[2]);
 
     // // Falcon
     // mesh_config falcon_config = {0};
@@ -802,7 +802,7 @@ static b8 load_main_scene(struct application* game_inst) {
     // if (!mesh_create(falcon_config, &state->meshes[3])) {
     //     KERROR("Failed to create falcon mesh.");
     // } else {
-    //     if (!simple_scene_add_mesh(&state->main_scene, &state->meshes[3])) {
+    //     if (!simple_scene_mesh_add(&state->main_scene, &state->meshes[3])) {
     //         KERROR("Failed to load falcon mesh.");
     //     }
 
@@ -815,7 +815,7 @@ static b8 load_main_scene(struct application* game_inst) {
     // if (!mesh_create(sponza_config, &state->meshes[4])) {
     //     KERROR("Failed to create sponza mesh.");
     // } else {
-    //     if (!simple_scene_add_mesh(&state->main_scene, &state->meshes[4])) {
+    //     if (!simple_scene_mesh_add(&state->main_scene, &state->meshes[4])) {
     //         KERROR("Failed to load sponza mesh.");
     //     }
     //     state->meshes[4].transform = transform_from_position_rotation_scale((vec3){15.0f, 0.0f, 1.0f}, quat_identity(), (vec3){0.05f, 0.05f, 0.05f});
@@ -826,7 +826,7 @@ static b8 load_main_scene(struct application* game_inst) {
     //     (vec4){0.4f, 0.4f, 0.2f, 1.0f},
     //     (vec4){-0.57735f, -0.57735f, -0.57735f, 0.0f}};
 
-    // if (!simple_scene_add_directional_light(&state->main_scene, &state->dir_light)) {
+    // if (!simple_scene_directional_light_add(&state->main_scene, &state->dir_light)) {
     //     KERROR("Failed to add directional light to main scene.");
     // }
 
@@ -836,7 +836,7 @@ static b8 load_main_scene(struct application* game_inst) {
     // state->p_lights[0].linear = 0.35f;
     // state->p_lights[0].quadratic = 0.44f;
     // state->p_lights[0].padding = 0;
-    // if (!simple_scene_add_point_light(&state->main_scene, &state->p_lights[0])) {
+    // if (!simple_scene_point_light_add(&state->main_scene, &state->p_lights[0])) {
     //     KERROR("Failed to add point light to main scene.");
     // }
 
@@ -846,7 +846,7 @@ static b8 load_main_scene(struct application* game_inst) {
     // state->p_lights[1].linear = 0.35f;
     // state->p_lights[1].quadratic = 0.44f;
     // state->p_lights[1].padding = 0;
-    // if (!simple_scene_add_point_light(&state->main_scene, &state->p_lights[1])) {
+    // if (!simple_scene_point_light_add(&state->main_scene, &state->p_lights[1])) {
     //     KERROR("Failed to add point light to main scene.");
     // }
 
@@ -856,7 +856,7 @@ static b8 load_main_scene(struct application* game_inst) {
     // state->p_lights[2].linear = 0.35f;
     // state->p_lights[2].quadratic = 0.44f;
     // state->p_lights[2].padding = 0;
-    // if (!simple_scene_add_point_light(&state->main_scene, &state->p_lights[2])) {
+    // if (!simple_scene_point_light_add(&state->main_scene, &state->p_lights[2])) {
     //     KERROR("Failed to add point light to main scene.");
     // }
 

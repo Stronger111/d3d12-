@@ -38,7 +38,7 @@ typedef struct resource_loader {
 b8 resource_system_initialize(u64* memory_requirement, void* state, void* config);
 void resource_system_shutdown(void* state);
 
-KAPI b8 resource_system_register_loader(resource_loader loader);
+KAPI b8 resource_system_loader_register(resource_loader loader);
 
 /**
  * @brief Loads a resource of the given name.
