@@ -799,8 +799,8 @@ b8 vulkan_renderer_renderpass_begin(renderer_plugin* plugin, renderpass* pass, r
     command_buffer->state = COMMAND_BUFFER_STATE_IN_RENDER_PASS;
 
     f32 r = krandom_in_range(0.0f, 1.0f);
-    f32 g = fkrandom_in_range(0.0f, 1.0f);
-    f32 b = fkrandom_in_range(0.0f, 1.0f);
+    f32 g = kfrandom_in_range(0.0f, 1.0f);
+    f32 b = kfrandom_in_range(0.0f, 1.0f);
     vec4 colour = (vec4){r, g, b, 1.0f};
     VK_BEGIN_DEBUG_LABEL(context, command_buffer->handle, pass->name, colour);
     return true;

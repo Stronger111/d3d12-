@@ -49,11 +49,11 @@ i32 krandom_in_range(i32 min, i32 max) {
     return (rand() % (max - min + 1)) + min;
 }
 
-f32 fkrandom(void) {
+f32 kfrandom(void) {
     return (float)krandom() / (f32)RAND_MAX;
 }
 
-f32 fkrandom_in_range(f32 min, f32 max) {
+f32 kfrandom_in_range(f32 min, f32 max) {
     return min + ((float)krandom() / ((f32)RAND_MAX / (max - min)));
 }
 

@@ -2,6 +2,8 @@
 
 #include "math/math_types.h"
 
+#define TERRAIN_MAX_MATERIAL_COUNT 4
+
 // Pre-defined resource types
 typedef enum resource_type {
     RESOURCE_TYPE_TEXT,
@@ -18,6 +20,8 @@ typedef enum resource_type {
     RESOURCE_TYPE_SYSTEM_FONT,
     /** @brief Simple scene resource type. */
     RESOURCE_TYPE_SIMPLE_SCENE,
+    /** @brief Terrain resource type. */
+    RESOURCE_TYPE_TERRAIN,
     /** @brief Custom resource type. Used by loaders outside the core engine. */
     RESOURCE_TYPE_CUSTOM
 } resource_type;
@@ -222,15 +226,6 @@ typedef struct system_font_resource_data {
 
 #define MATERIAL_NAME_MAX_LENGTH 256
 
-/**
- * @brief Material configuration typically loaded from
- * a file or created in code to load a material from.
- */
-typedef enum material_type {
-    MATERIAL_TYPE_WORLD,
-    MATERIAL_TYPE_UI
-} material_type;
-
 typedef struct material_config {
     char name[MATERIAL_NAME_MAX_LENGTH];
     char* shader_name;
@@ -421,36 +416,43 @@ typedef struct shader_config {
     b8 depth_write;
 } shader_config;
 
-typedef struct skybox_simple_scene_config
+typedef enum material_type 
 {
+    // Invalid
+    MATERIAL_TYPE_UNKNOWN = 0,
+    MATERIAL_TYPE_PHONG = 1,
+    MATERIAL_TYPE_PBR = 2,
+    MATERIAL_TYPE_UI = 3,
+    MATERIAL_TYPE_TERRAIN = 4,
+    MATERIAL_TYPE_CUSTOM = 99
+} material_type;
+
+typedef struct skybox_simple_scene_config {
     char* name;
     char* cubemap_name;
-}skybox_simple_scene_config;
+} skybox_simple_scene_config;
 
-typedef struct directional_light_simple_scene_config
-{
+typedef struct directional_light_simple_scene_config {
     char* name;
     vec4 colour;
     vec4 direction;
-}directional_light_simple_scene_config;
+} directional_light_simple_scene_config;
 
-typedef struct point_light_simple_scene_config
-{
-   char* name;
-   vec4 colour;
-   vec4 position;
-   f32 constant_f;
-   f32 linear;
-   f32 quadratic;
-}point_light_simple_scene_config;
+typedef struct point_light_simple_scene_config {
+    char* name;
+    vec4 colour;
+    vec4 position;
+    f32 constant_f;
+    f32 linear;
+    f32 quadratic;
+} point_light_simple_scene_config;
 
-typedef struct mesh_simple_scene_config
-{
+typedef struct mesh_simple_scene_config {
     char* name;
     char* resource_name;
     transform transform;
-    char* parent_name; // optional
-}mesh_simple_scene_config;
+    char* parent_name;  // optional
+} mesh_simple_scene_config;
 
 typedef struct simple_scene_config {
     char* name;
@@ -464,5 +466,3 @@ typedef struct simple_scene_config {
     // darray
     mesh_simple_scene_config* meshes;
 } simple_scene_config;
-
-

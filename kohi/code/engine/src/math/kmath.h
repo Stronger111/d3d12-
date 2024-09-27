@@ -1,12 +1,13 @@
 #pragma once
 
+#include "core/kmemory.h"
 #include "defines.h"
 #include "math_types.h"
 
-#include "core/kmemory.h"
-
 #define K_PI 3.14159265358979323846f
 #define K_2PI (2.0f * K_PI)
+/** @brief An approximate representation of PI multiplied by 4. */
+#define k_4PI (4.0f * K_PI)
 #define K_HALF_PI (0.5f * K_PI)
 #define K_QUARTER_PI (0.25f * K_PI)
 #define K_ONE_OVER_PI (1.0f / K_PI)
@@ -54,9 +55,34 @@ KINLINE b8 is_power_of_2(u64 value) {
 
 KAPI i32 krandom(void);
 KAPI i32 krandom_in_range(i32 min, i32 max);
+/**
+ * @brief Returns a random floating-point number.
+ *
+ * @return A random floating-point number.
+ */
+KAPI f32 kfrandom(void);
+/**
+ * @brief Returns a random floating-point number that is within the given range
+ * (inclusive).
+ *
+ * @param min The minimum of the range.
+ * @param max The maximum of the range.
+ * @return A random floating-point number.
+ */
+KAPI f32 kfrandom_in_range(f32 min, f32 max);
 
-KAPI f32 fkrandom(void);
-KAPI f32 fkrandom_in_range(f32 min, f32 max);
+/**
+ * @brief Perform Hermite interpolation between two values.
+ *
+ * @param edge_0 The lower edge of the Hermite function.
+ * @param edge_1 The upper edge of the Hermite function.
+ * @param x The value to interpolate.
+ * @return The interpolated value.
+ */
+KINLINE f32 ksmoothstep(f32 edge_0, f32 edge_1, f32 x) {
+    f32 t = KCLAMP((x - edge_0) / (edge_1 - edge_0), 0.0f, 1.0f);
+    return t * t * (3.0 - 2.0 * t);
+}
 
 // ------------------------------------------
 // Vector 2
