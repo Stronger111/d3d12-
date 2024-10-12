@@ -1,27 +1,28 @@
 #include "resource_system.h"
 
-#include "core/logger.h"
 #include "core/kstring.h"
+#include "core/logger.h"
 
 // Known resource loaders.
-#include "resources/loaders/text_loader.h"
 #include "resources/loaders/binary_loader.h"
+#include "resources/loaders/bitmap_font_loader.h"
 #include "resources/loaders/image_loader.h"
 #include "resources/loaders/material_loader.h"
-#include "resources/loaders/shader_loader.h"
 #include "resources/loaders/mesh_loader.h"
-#include "resources/loaders/bitmap_font_loader.h"
-#include "resources/loaders/system_font_loader.h"
+#include "resources/loaders/shader_loader.h"
 #include "resources/loaders/simple_scene_loader.h"
+#include "resources/loaders/system_font_loader.h"
+#include "resources/loaders/terrain_loader.h"
+#include "resources/loaders/text_loader.h"
 
 typedef struct resource_system_state {
     resource_system_config config;
-    resource_loader* registered_loaders;  // 数组
+    resource_loader *registered_loaders;  // 数组
 } resource_system_state;
 
-static resource_system_state* state_ptr = 0;
+static resource_system_state *state_ptr = 0;
 
-static b8 load(const char* name, resource_loader* loader, void* params, resource* out_resource);
+static b8 load(const char *name, resource_loader *loader, void *params, resource *out_resource);
 
 b8 resource_system_initialize(u64* memory_requirement, void* state, void* config) {
      resource_system_config* typed_config = (resource_system_config*)config;
@@ -57,13 +58,14 @@ b8 resource_system_initialize(u64* memory_requirement, void* state, void* config
     resource_system_loader_register(bitmap_font_resource_loader_create());
     resource_system_loader_register(system_font_resource_loader_create());
     resource_system_loader_register(simple_scene_resource_loader_create());
+    resource_system_loader_register(terrain_resource_loader_create());
 
     // NOTE: Auto-register loader types here
     KINFO("Resource system initialized with base path '%s'.", typed_config->asset_base_path);
     return true;
 }
 
-void resource_system_shutdown(void* state) {
+void resource_system_shutdown(void *state) {
     if (state_ptr) {
         state_ptr = 0;
     }
@@ -74,7 +76,7 @@ b8 resource_system_loader_register(resource_loader loader) {
         u32 count = state_ptr->config.max_loader_count;
         // Ensure no loaders for the given type already exist
         for (u32 i = 0; i < count; ++i) {
-            resource_loader* l = &state_ptr->registered_loaders[i];
+            resource_loader *l = &state_ptr->registered_loaders[i];
             if (l->id != INVALID_ID) {
                 if (l->type == loader.type) {
                     KERROR("resource_system_loader_register - Loader of type %d already exists and will not be registered.", loader.type);

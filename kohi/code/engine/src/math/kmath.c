@@ -1,8 +1,10 @@
 #include "kmath.h"
-#include "platform/platform.h"
+
 
 #include <math.h>
 #include <stdlib.h>
+
+#include "platform/platform.h"
 
 static b8 rand_seeded = false;
 /**

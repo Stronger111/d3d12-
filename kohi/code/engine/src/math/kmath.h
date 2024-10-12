@@ -7,7 +7,7 @@
 #define K_PI 3.14159265358979323846f
 #define K_2PI (2.0f * K_PI)
 /** @brief An approximate representation of PI multiplied by 4. */
-#define k_4PI (4.0f * K_PI)
+#define K_4PI (4.0f * K_PI)
 #define K_HALF_PI (0.5f * K_PI)
 #define K_QUARTER_PI (0.25f * K_PI)
 #define K_ONE_OVER_PI (1.0f / K_PI)

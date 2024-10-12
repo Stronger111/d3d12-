@@ -1,7 +1,8 @@
 #pragma once 
 
-#include "vulkan_renderer_plugin_main.h"
+#include "renderer/renderer_types.inl"
 #include "resources/resource_types.h"
+#include "vulkan_renderer_plugin_main.h"
 
 struct shader;
 struct shader_uniform;
@@ -43,7 +44,7 @@ b8 vulkan_renderer_shader_bind_globals(renderer_plugin* backend, struct shader* 
 b8 vulkan_renderer_shader_bind_instance(renderer_plugin* backend, struct shader* s, u32 instance_id);
 b8 vulkan_renderer_shader_apply_globals(renderer_plugin* backend, struct shader* s);
 b8 vulkan_renderer_shader_apply_instance(renderer_plugin* backend, struct shader* s, b8 needs_update);
-b8 vulkan_renderer_shader_instance_resources_acquire(renderer_plugin* backend, struct shader* s, texture_map** maps, u32* out_instance_id);
+b8 vulkan_renderer_shader_instance_resources_acquire(renderer_plugin* backend, struct shader* s,u32 texture_map_count, texture_map** maps, u32* out_instance_id);
 b8 vulkan_renderer_shader_instance_resources_release(renderer_plugin* backend, struct shader* s, u32 instance_id);
 b8 vulkan_renderer_uniform_set(renderer_plugin* backend, struct shader* frontend_shader, struct shader_uniform* uniform, const void* value);
 

@@ -214,7 +214,13 @@ KAPI void kfree_report(u64 size, memory_tag tag) {
 }
 
 KAPI b8 kmemory_get_size_alignment(void* block, u64* out_size, u16* out_alignment) {
-    return dynamic_allocator_get_size_alignment(block, out_size, out_alignment);
+    if (!kmutex_lock(&state_ptr->allocation_mutex)) {
+        KFATAL("Error obtaining mutex lock during kmemory_get_size_alignment.");
+        return false;
+    }
+    b8 result=dynamic_allocator_get_size_alignment(block, out_size, out_alignment);
+    kmutex_unlock(&state_ptr->allocation_mutex);
+    return result;
 }
 
 KAPI void* kzero_memory(void* block, u64 size) {

@@ -128,6 +128,7 @@ b8 engine_run(application* game_inst) {
     clock_update(&engine_state->clock);
     engine_state->last_time = engine_state->clock.elapsed;
     // f64 running_time = 0;
+    //TODO: frame rate lock
     //u8 frame_count = 0;
     f64 target_frame_seconds = 1.0f / 60;
     f64 frame_elapsed_time = 0;  // 帧过去的时间
@@ -194,6 +195,7 @@ b8 engine_run(application* game_inst) {
                 if (remaining_ms > 0 && limit_frames) {
                     platform_sleep(remaining_ms - 1);
                 }
+                // TODO: frame rate lock
                 //frame_count++;
             }
 

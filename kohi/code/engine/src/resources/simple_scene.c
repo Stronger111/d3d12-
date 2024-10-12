@@ -1,19 +1,21 @@
 #include "simple_scene.h"
 
-#include "core/logger.h"
-#include "core/kmemory.h"
-#include "core/frame_data.h"
-#include "core/kstring.h"
 #include "containers/darray.h"
+#include "core/frame_data.h"
+#include "core/kmemory.h"
+#include "core/kstring.h"
+#include "core/logger.h"
+#include "math/kmath.h"
 #include "math/transform.h"
+#include "renderer/camera.h"
+#include "renderer/renderer_types.inl"
+#include "resources/mesh.h"
 #include "resources/resource_types.h"
 #include "resources/skybox.h"
-#include "resources/mesh.h"
-#include "renderer/renderer_types.inl"
-#include "systems/render_view_system.h"
-#include "renderer/camera.h"
-#include "math/kmath.h"
+#include "resources/terrain.h"
 #include "systems/light_system.h"
+#include "systems/render_view_system.h"
+#include "systems/resource_system.h"
 
 static void simple_scene_actual_unload(simple_scene* scene);
 
@@ -37,12 +39,20 @@ b8 simple_scene_create(void* config, simple_scene* out_scene) {
     out_scene->dir_light = 0;
     out_scene->point_lights = darray_create(point_light);
     out_scene->meshes = darray_create(mesh);
+    out_scene->terrains = darray_create(terrain);
     out_scene->sb = 0;
 
     if (config) {
         out_scene->config = kallocate(sizeof(simple_scene_config), MEMORY_TAG_SCENE);
         kcopy_memory(out_scene->config, config, sizeof(simple_scene_config));
     }
+
+    // NOTE: Starting with a reasonably high number to avoid reallocs in the
+    // beginning.
+    out_scene->world_data.world_geometries =
+        darray_reserve(geometry_render_data, 512);
+    out_scene->world_data.terrain_geometries =
+        darray_create(geometry_render_data);
     return true;
 }
 
@@ -234,7 +244,11 @@ b8 simple_scene_update(simple_scene* scene, const struct frame_data* p_frame_dat
     return true;
 }
 
-b8 simple_scene_populate_render_packet(simple_scene* scene, struct camera* current_camera, f32 aspect, struct frame_data* p_frame_data, struct render_packet* packet) {
+b8 simple_scene_populate_render_packet(simple_scene* scene,
+                                       struct camera* current_camera,
+                                       f32 aspect,
+                                       struct frame_data* p_frame_data,
+                                       struct render_packet* packet) {
     if (!scene || !packet) {
         return false;
     }
@@ -261,16 +275,18 @@ b8 simple_scene_populate_render_packet(simple_scene* scene, struct camera* curre
         render_view_packet* view_packet = &packet->views[i];
         const render_view* view = view_packet->view;
         if (view->type == RENDERER_VIEW_KNOWN_TYPE_WORLD) {
+            // Make sure to clear the world geometry array.
+            darray_clear(scene->world_data.world_geometries);
+            darray_clear(scene->world_data.terrain_geometries);
+
             // Update the frustum
             vec3 forward = camera_forward(current_camera);
             vec3 right = camera_right(current_camera);
             vec3 up = camera_up(current_camera);
             // TODO: get camera fov, aspect, etc.
-            frustum f = frustum_create(&current_camera->position, &forward, &right, &up, aspect, deg_to_rad(45.0f), 0.1f, 1000.0f);
+            frustum f = frustum_create(&current_camera->position, &forward, &right,
+                                       &up, aspect, deg_to_rad(45.0f), 0.1f, 1000.0f);
 
-            // NOTE: starting at a reasonable default to avoid too many reallocs.
-            // TODO: Use frame allocator.
-            geometry_render_data* world_geometries = darray_reserve(geometry_render_data, 512);
             p_frame_data->drawn_mesh_count = 0;
 
             u32 mesh_count = darray_length(scene->meshes);
@@ -328,7 +344,7 @@ b8 simple_scene_populate_render_packet(simple_scene* scene, struct camera* curre
                                 data.model = model;
                                 data.geometry = g;
                                 data.unique_id = m->unique_id;
-                                darray_push(world_geometries, data);
+                                darray_push(scene->world_data.world_geometries, data);
 
                                 p_frame_data->drawn_mesh_count++;
                             }
@@ -337,14 +353,27 @@ b8 simple_scene_populate_render_packet(simple_scene* scene, struct camera* curre
                 }
             }
 
+            // TODO:Add Terrain(s)
+            u32 terrain_count = darray_length(scene->terrains);
+            for (u32 i = 0; i < terrain_count; ++i) {
+                // TODO: Check terrain generation
+                // TODO: Frustum culling
+                //
+                geometry_render_data data={0};
+                data.model=transform_world_get(&scene->terrains[i].xform);
+                data.geometry=&scene->terrains[i].geo;
+                data.unique_id=0; //TODO: Terrain unique_id for object picking
+                
+                darray_push(scene->world_data.terrain_geometries,data);
+
+                //TODO: Counter for terrain geometries
+                p_frame_data->drawn_mesh_count++;
+            }
             // World
-            if (!render_view_system_packet_build(render_view_system_get("world"), p_frame_data->frame_allocator, world_geometries, &packet->views[1])) {
+            if (!render_view_system_packet_build(render_view_system_get("world"), p_frame_data->frame_allocator, &scene->world_data, &packet->views[1])) {
                 KERROR("Failed to build packet for view 'world_opaque'.");
                 return false;
             }
-
-            // TODO: bad.....
-            darray_destroy(world_geometries);
         }
     }
 
@@ -464,12 +493,9 @@ b8 simple_scene_point_light_remove(simple_scene* scene, const char* name) {
     }
 
     u32 light_count = darray_length(scene->point_lights);
-    for (u32 i = 0; i < light_count; ++i) 
-    {
-        if (strings_equal(scene->point_lights[i].name, name))
-        {
-            if (!light_system_point_remove(&scene->point_lights[i])) 
-            {
+    for (u32 i = 0; i < light_count; ++i) {
+        if (strings_equal(scene->point_lights[i].name, name)) {
+            if (!light_system_point_remove(&scene->point_lights[i])) {
                 KERROR("Failed to remove point light from light system.");
                 return false;
             }

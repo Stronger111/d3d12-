@@ -1,32 +1,26 @@
 #include "vulkan_backend.h"
 
-#include "vulkan_types.inl"
+#include "containers/darray.h"
+#include "core/event.h"
+#include "core/kmemory.h"
+#include "core/kstring.h"
+#include "core/logger.h"
+#include "math/kmath.h"
+#include "math/math_types.h"
+#include "platform/platform.h"
 #include "platform/vulkan_platform.h"
-#include "vulkan_device.h"
-#include "vulkan_swapchain.h"
+#include "renderer/renderer_frontend.h"
+#include "systems/material_system.h"
+#include "systems/resource_system.h"
+#include "systems/shader_system.h"
+#include "systems/texture_system.h"
 #include "vulkan_command_buffer.h"
-#include "vulkan_utils.h"
+#include "vulkan_device.h"
 #include "vulkan_image.h"
 #include "vulkan_pipeline.h"
-
-#include "core/logger.h"
-#include "core/kstring.h"
-#include "core/kmemory.h"
-#include "core/event.h"
-
-#include "containers/darray.h"
-
-#include "math/math_types.h"
-#include "math/kmath.h"
-
-#include "renderer/renderer_frontend.h"
-
-#include "platform/platform.h"
-
-#include "systems/shader_system.h"
-#include "systems/material_system.h"
-#include "systems/texture_system.h"
-#include "systems/resource_system.h"
+#include "vulkan_swapchain.h"
+#include "vulkan_types.inl"
+#include "vulkan_utils.h"
 
 // NOTE: If wanting to trace allocations, uncomment this.
 // #ifndef KVULKAN_ALLOCATOR_TRACE
@@ -460,16 +454,23 @@ b8 vulkan_renderer_backend_initialize(renderer_plugin* plugin, const renderer_ba
 
     // Create buffers
     // Geometry vertex buffer
-    const u64 vertex_buffer_size = sizeof(vertex_3d) * 1024 * 1024;
-    if (!renderer_renderbuffer_create(RENDERBUFFER_TYPE_VERTEX, vertex_buffer_size, true, &context->object_vertex_buffer)) {
+    // TODO: make this configurable.
+    char bufname[256];
+    kzero_memory(bufname, 256);
+    string_format(bufname, "renderbuffer_vertexbuffer_globalgeometry");
+    const u64 vertex_buffer_size = sizeof(vertex_3d) * 10 * 1024 * 1024;
+    if (!renderer_renderbuffer_create(bufname, RENDERBUFFER_TYPE_VERTEX, vertex_buffer_size, true, &context->object_vertex_buffer)) {
         KERROR("Error creating vertex buffer.");
         return false;
     }
     renderer_renderbuffer_bind(&context->object_vertex_buffer, 0);
 
     // Geometry index buffer
-    const u64 index_buffer_size = sizeof(u32) * 1024 * 1024;
-    if (!renderer_renderbuffer_create(RENDERBUFFER_TYPE_INDEX, index_buffer_size, true, &context->object_index_buffer)) {
+    // TODO: Make this configurable.
+    kzero_memory(bufname, 256);
+    string_format(bufname, "renderbuffer_indexbuffer_globalgeometry");
+    const u64 index_buffer_size = sizeof(u32) * 100 * 1024 * 1024;
+    if (!renderer_renderbuffer_create(bufname, RENDERBUFFER_TYPE_INDEX, index_buffer_size, true, &context->object_index_buffer)) {
         KERROR("Error creating index buffer.");
         return false;
     }
@@ -966,7 +967,10 @@ void vulkan_renderer_texture_write_data(renderer_plugin* plugin, texture* t, u32
 
     // Create a staging buffer and load data into it.
     renderbuffer staging;
-    if (!renderer_renderbuffer_create(RENDERBUFFER_TYPE_STAGING, size, false, &staging)) {
+    char bufname[256];
+    kzero_memory(bufname, 256);
+    string_format(bufname, "renderbuffer_texture_write_staging");
+    if (!renderer_renderbuffer_create(bufname, RENDERBUFFER_TYPE_STAGING, size, false, &staging)) {
         KERROR("Failed to create staging buffer for texture write.");
         return;
     }
@@ -1018,7 +1022,10 @@ void vulkan_renderer_texture_read_data(renderer_plugin* plugin, texture* t, u32 
 
     // Create a staging buffer and load data into it.
     renderbuffer staging;
-    if (!renderer_renderbuffer_create(RENDERBUFFER_TYPE_READ, size, false, &staging)) {
+    char bufname[256];
+    kzero_memory(bufname, 256);
+    string_format(bufname, "renderbuffer_texture_read_staging");
+    if (!renderer_renderbuffer_create(bufname, RENDERBUFFER_TYPE_READ, size, false, &staging)) {
         KERROR("Failed to create staging buffer for texture read.");
         return;
     }
@@ -1074,7 +1081,10 @@ void vulkan_renderer_texture_read_pixel(renderer_plugin* plugin, texture* t, u32
 
     // Create a staging buffer and load data into it.
     renderbuffer staging;
-    if (!renderer_renderbuffer_create(RENDERBUFFER_TYPE_READ, sizeof(u8) * 4, false, &staging)) {
+    char bufname[256];
+    kzero_memory(bufname, 256);
+    string_format(bufname, "renderbuffer_texture_read_pixel_staging");
+    if (!renderer_renderbuffer_create(bufname, RENDERBUFFER_TYPE_READ, sizeof(u8) * 4, false, &staging)) {
         KERROR("Failed to create staging buffer for texture pixel read.");
         return;
     }
@@ -1601,8 +1611,12 @@ b8 vulkan_renderer_shader_initialize(renderer_plugin* plugin, shader* s) {
 
     // Uniform  buffer.
     // TODO: max count should be configurable, or perhaps long term support of buffer resizing.
+    // buffer resizing.
     u64 total_buffer_size = s->global_ubo_stride + (s->ubo_stride * VULKAN_MAX_MATERIAL_COUNT);  // global + (locals)
-    if (!renderer_renderbuffer_create(RENDERBUFFER_TYPE_UNIFORM, total_buffer_size, true, &internal_shader->uniform_buffer)) {
+    char bufname[256];
+    kzero_memory(bufname, 256);
+    string_format(bufname, "renderbuffer_global_uniform");
+    if (!renderer_renderbuffer_create(bufname, RENDERBUFFER_TYPE_UNIFORM, total_buffer_size, true, &internal_shader->uniform_buffer)) {
         KERROR("Vulkan buffer creation failed for object shader.");
         return false;
     }
@@ -1773,21 +1787,7 @@ b8 vulkan_renderer_shader_apply_instance(renderer_plugin* plugin, shader* s, b8 
 
                 // Ensure the texture is valid.
                 if (t->generation == INVALID_ID) {
-                    switch (map->use) {
-                        case TEXTURE_USE_MAP_DIFFUSE:
-                            t = texture_system_get_default_diffuse_texture();
-                            break;
-                        case TEXTURE_USE_MAP_SPECULAR:
-                            t = texture_system_get_default_specular_texture();
-                            break;
-                        case TEXTURE_USE_MAP_NORMAL:
-                            t = texture_system_get_default_normal_texture();
-                            break;
-                        default:
-                            KWARN("Undefined texture use %d", map->use);
-                            t = texture_system_get_default_texture();
-                            break;
-                    }
+                    t = texture_system_get_default_texture();
                 }
 
                 vulkan_image* image = (vulkan_image*)t->internal_data;
@@ -1899,7 +1899,7 @@ void vulkan_renderer_texture_map_resources_release(renderer_plugin* plugin, text
     }
 }
 
-b8 vulkan_renderer_shader_instance_resources_acquire(renderer_plugin* plugin, shader* s, texture_map** maps, u32* out_instance_id) {
+b8 vulkan_renderer_shader_instance_resources_acquire(renderer_plugin* plugin, shader* s, u32 texture_map_count, texture_map** maps, u32* out_instance_id) {
     vulkan_context* context = (vulkan_context*)plugin->internal_context;
     vulkan_shader* internal = s->internal_data;
     // TODO: dynamic
@@ -1918,16 +1918,16 @@ b8 vulkan_renderer_shader_instance_resources_acquire(renderer_plugin* plugin, sh
     }
 
     vulkan_shader_instance_state* instance_state = &internal->instance_states[*out_instance_id];
-    u8 sampler_binding_index = internal->config.descriptor_sets[DESC_SET_INDEX_INSTANCE].sampler_binding_index;
-    u32 instance_texture_count = internal->config.descriptor_sets[DESC_SET_INDEX_INSTANCE].bindings[sampler_binding_index].descriptorCount;
-    // Only setup if the shader actually requires it.
+    // u8 sampler_binding_index = internal->config.descriptor_sets[DESC_SET_INDEX_INSTANCE].sampler_binding_index;
+    // u32 instance_texture_count = internal->config.descriptor_sets[DESC_SET_INDEX_INSTANCE].bindings[sampler_binding_index].descriptorCount;
+    //  Only setup if the shader actually requires it.
     if (s->instance_texture_count > 0) {
         instance_state->instance_texture_maps = kallocate(sizeof(texture_map*) * s->instance_texture_count, MEMORY_TAG_ARRAY);
         texture* default_texture = texture_system_get_default_texture();
-        kcopy_memory(instance_state->instance_texture_maps, maps, sizeof(texture_map*) * s->instance_texture_count);
+        kcopy_memory(instance_state->instance_texture_maps, maps, sizeof(texture_map*) * texture_map_count);
         // Set unassigned texture pointers to default until assigned.
-        for (u32 i = 0; i < instance_texture_count; ++i) {
-            if (!maps[i]->texture) {
+        for (u32 i = 0; i < texture_map_count; ++i) {
+            if (maps[i] && !maps[i]->texture) {
                 instance_state->instance_texture_maps[i]->texture = default_texture;
             }
         }
@@ -2759,7 +2759,10 @@ b8 vulkan_buffer_read(renderer_plugin* plugin, renderbuffer* buffer, u64 offset,
 
         // Create a host-visible staging buffer to copy to. Mark it as the destination of the transfer.
         renderbuffer read;
-        if (!renderer_renderbuffer_create(RENDERBUFFER_TYPE_READ, size, false, &read)) {
+        char bufname[256];
+        kzero_memory(bufname, 256);
+        string_format(bufname, "renderbuffer_read");
+        if (!renderer_renderbuffer_create(bufname, RENDERBUFFER_TYPE_READ, size, false, &read)) {
             KERROR("vulkan_buffer_read() - Failed to create read buffer.");
             return false;
         }
@@ -2803,7 +2806,10 @@ b8 vulkan_buffer_load_range(renderer_plugin* plugin, renderbuffer* buffer, u64 o
 
         // Create a host-visible staging buffer to upload to. Mark it as the source of the transfer.
         renderbuffer staging;
-        if (!renderer_renderbuffer_create(RENDERBUFFER_TYPE_STAGING, size, false, &staging)) {
+        char bufname[256];
+        kzero_memory(bufname, 256);
+        string_format(bufname, "renderbuffer_loadrange_staging");
+        if (!renderer_renderbuffer_create(bufname,RENDERBUFFER_TYPE_STAGING, size, false, &staging)) {
             KERROR("vulkan_buffer_load_range() - Failed to create staging buffer.");
             return false;
         }

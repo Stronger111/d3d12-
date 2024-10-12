@@ -51,7 +51,7 @@ KAPI void renderer_on_resized(u16 width, u16 height);
  * @param p_frame_data A constant pointer to the current frame's data.
  * @return True on success; otherwise false.
  */
-KAPI b8 renderer_draw_frame(render_packet* packet,const struct frame_data* p_frame_data);
+KAPI b8 renderer_draw_frame(render_packet* packet, const struct frame_data* p_frame_data);
 
 /**
  * @brief Sets the renderer viewport to the given rectangle. Must be done within a renderpass.
@@ -259,11 +259,12 @@ KAPI b8 renderer_shader_apply_instance(struct shader* s, b8 needs_update);
  * @brief Acquires internal instance-level resources and provides an instance id.
  *
  * @param s A pointer to the shader to acquire resources from.
+ * @param texture_map_count The number of texture maps used.
  * @param maps An array of texture map pointers. Must be one per texture in the instance.
  * @param out_instance_id A pointer to hold the new instance identifier.
  * @return True on success; otherwise false.
  */
-KAPI b8 renderer_shader_instance_resources_acquire(struct shader* s, texture_map** maps, u32* out_instance_id);
+KAPI b8 renderer_shader_instance_resources_acquire(struct shader* s, u32 texture_map_count, texture_map** maps, u32* out_instance_id);
 
 /**
  * @brief Releases internal instance-level resources for the given instance id.
@@ -376,13 +377,14 @@ KAPI void renderer_flag_enabled_set(renderer_config_flags flag, b8 enabled);
  * @brief Creates a new renderbuffer to hold data for a given purpose/use. Backed by a
  * renderer-backend-specific buffer resource.
  *
+ * @param name The name of the renderbuffer, used for debugging purposes.
  * @param type The type of buffer, indicating it's use (i.e. vertex/index data, uniforms, etc.)
  * @param total_size The total size in bytes of the buffer.
  * @param use_freelist Indicates if the buffer should use a freelist to track allocations.
  * @param out_buffer A pointer to hold the newly created buffer.
  * @return True on success; otherwise false.
  */
-KAPI b8 renderer_renderbuffer_create(renderbuffer_type type, u64 total_size, b8 use_freelist, renderbuffer* out_buffer);
+KAPI b8 renderer_renderbuffer_create(const char* name, renderbuffer_type type, u64 total_size, b8 use_freelist, renderbuffer* out_buffer);
 
 /**
  * @brief Destroys the given renderbuffer.

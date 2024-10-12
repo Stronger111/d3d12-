@@ -10,6 +10,7 @@ typedef struct command_history_entry {
 
 // TODO(travis): statically-defined state for now.
 typedef struct debug_console_state {
+    b8 loaded;
     u8 console_consumer_id;
     // 一次显示的行数
     u32 line_display_count;
@@ -51,5 +52,3 @@ void debug_console_move_to_bottom(debug_console_state* state);
 
 void debug_console_history_back(debug_console_state* state);
 void debug_console_history_forward(debug_console_state* state);
-
-

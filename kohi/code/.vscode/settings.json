@@ -109,7 +109,23 @@
         "geometry_system.h": "c",
         "geometry_utils.h": "c",
         "resource_types.h": "c",
-        "math_types.h": "c"
+        "math_types.h": "c",
+        "material_system.h": "c",
+        "string.h": "c",
+        "text_loader.h": "c",
+        "binary_loader.h": "c",
+        "image_loader.h": "c",
+        "shader_loader.h": "c",
+        "material_loader.h": "c",
+        "system_font_loader.h": "c",
+        "mesh_loader.h": "c",
+        "simple_scene_loader.h": "c",
+        "resource_system.h": "c",
+        "shader_system.h": "c",
+        "font_system.h": "c",
+        "event.h": "c",
+        "frame_data.h": "c",
+        "render_view_world.h": "c"
     },
     // File copyright documentation tag.  Array of strings will be converted to one line per element.  Can template {year}.
     "doxdocgen.file.copyrightTag": [

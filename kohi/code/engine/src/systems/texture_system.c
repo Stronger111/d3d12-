@@ -49,7 +49,7 @@ static void destroy_texture(texture* t);
 static b8 process_texture_reference(const char* name, texture_type type, i8 reference_diff, b8 auto_release, b8 skip_load, u32* out_texture_id);
 
 b8 texture_system_initialize(u64* memory_requirement, void* state, void* config) {
-     texture_system_config* typed_config = (texture_system_config*)config;
+    texture_system_config* typed_config = (texture_system_config*)config;
     if (typed_config->max_texture_count == 0) {
         KFATAL("texture_system_initialize - config.max_texture_count must be > 0.");
         return false;
@@ -119,6 +119,21 @@ texture* texture_system_acquire(const char* name, b8 auto_release) {
     if (strings_equali(name, DEFAULT_TEXTURE_NAME)) {
         KWARN("texture_system_acquire called for default texture. Use texture_system_get_default_texture for texture 'default'.");
         return &state_ptr->default_texture;
+    }
+
+    if (strings_equali(name, DEFAULT_DIFFUSE_TEXTURE_NAME)) {
+        KWARN("texture_system_acquire called for default diffuse texture. Use texture_system_get_default_diffuse_texture for texture 'default_DIFF'.");
+        return &state_ptr->default_diffuse_texture;
+    }
+
+    if (strings_equali(name, DEFAULT_SPECULAR_TEXTURE_NAME)) {
+        KWARN("texture_system_acquire called for default texture. Use texture_system_get_default_specular_texture for texture 'default_SPEC'.");
+        return &state_ptr->default_specular_texture;
+    }
+
+    if (strings_equali(name, DEFAULT_NORMAL_TEXTURE_NAME)) {
+        KWARN("texture_system_acquire called for default texture. Use texture_system_get_default_normal_texture for texture 'default_NORM'.");
+        return &state_ptr->default_normal_texture;
     }
 
     u32 id = INVALID_ID;
@@ -203,7 +218,7 @@ void texture_system_wrap_internal(const char* name, u32 width, u32 height, u8 ch
             t = out_texture;
         } else {
             t = kallocate(sizeof(texture), MEMORY_TAG_TEXTURE);
-            //KTRACE("texture_system_wrap_internal created texture '%s', but not registering, resulting in an allocation. It is up to the caller to free this memory.", name);
+            // KTRACE("texture_system_wrap_internal created texture '%s', but not registering, resulting in an allocation. It is up to the caller to free this memory.", name);
         }
     }
 
@@ -657,11 +672,13 @@ static b8 process_texture_reference(const char* name, texture_type type, i8 refe
                             }
                             t->id = ref.handle;
                         }
-                        KTRACE("Texture '%s' does not yet exist. Created, and ref_count is now %i.", name, ref.reference_count);
+                        // Make sure to hold onto the texture name.
+                        string_ncopy(t->name, name, TEXTURE_NAME_MAX_LENGTH);
+                       //KTRACE("Texture '%s' does not yet exist. Created, and ref_count is now %i.", name, ref.reference_count);
                     }
                 } else {
                     *out_texture_id = ref.handle;
-                    KTRACE("Texture '%s' already exists, ref_count increased to %i.", name, ref.reference_count);
+                    //KTRACE("Texture '%s' already exists, ref_count increased to %i.", name, ref.reference_count);
                 }
             }
 

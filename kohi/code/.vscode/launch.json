@@ -62,7 +62,11 @@
                 "${workspaceFolder}/assets/shaders/Builtin.UIShader.vert.glsl",
                 "${workspaceFolder}/assets/shaders/Builtin.UIShader.frag.glsl",
                 "${workspaceFolder}/assets/shaders/Builtin.SkyboxShader.vert.glsl",
-                "${workspaceFolder}/assets/shaders/Builtin.SkyboxShader.frag.glsl"
+                "${workspaceFolder}/assets/shaders/Builtin.SkyboxShader.frag.glsl",
+                "${workspaceFolder}/assets/shaders/Builtin.UIPickShader.vert.glsl",
+                "${workspaceFolder}/assets/shaders/Builtin.UIPickShader.frag.glsl",
+                "${workspaceFolder}/assets/shaders/Builtin.WorldPickShader.vert.glsl",
+                "${workspaceFolder}/assets/shaders/Builtin.WorldPickShader.frag.glsl"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}/bin/",

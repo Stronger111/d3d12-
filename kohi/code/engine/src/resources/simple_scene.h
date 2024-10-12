@@ -2,6 +2,7 @@
 
 #include "defines.h"
 #include "math/math_types.h"
+#include "renderer/views/render_view_world.h"
 
 struct frame_data;
 struct render_packet;
@@ -12,6 +13,7 @@ struct skybox;
 struct geometry_config;
 struct camera;
 struct simple_scene_config;
+struct terrain;
 
 typedef enum simple_scene_state {
     /** @brief created, but nothing more. */
@@ -56,6 +58,9 @@ typedef struct simple_scene {
     // darray of meshes to be loaded.`
     struct mesh* meshes;
 
+    // darray of terrains.
+    struct terrain* terrains;
+
     // darray of meshes to be loaded.
     pending_mesh* pending_meshes;
 
@@ -64,6 +69,8 @@ typedef struct simple_scene {
 
     // A pointer to the scene configuration, if provided.
     struct simple_scene_config* config;
+
+    render_view_world_data world_data;
 } simple_scene;
 
 /**
@@ -101,7 +108,7 @@ KAPI b8 simple_scene_load(simple_scene* scene);
  * @param immediate Unload immediately instead of the next frame. NOTE: can have unintended side effects if used improperly.
  * @return True on success; otherwise false.
  */
-KAPI b8 simple_scene_unload(simple_scene* scene,b8 immediate);
+KAPI b8 simple_scene_unload(simple_scene* scene, b8 immediate);
 
 /**
  * @brief Performs any required scene updates for the given frame.
@@ -124,13 +131,15 @@ KAPI b8 simple_scene_update(simple_scene* scene, const struct frame_data* p_fram
  */
 KAPI b8 simple_scene_populate_render_packet(simple_scene* scene, struct camera* current_camera, f32 aspect, struct frame_data* p_frame_data, struct render_packet* packet);
 
-KAPI b8 simple_scene_directional_light_add(simple_scene* scene,const char* name, struct directional_light* light);
+KAPI b8 simple_scene_directional_light_add(simple_scene* scene, const char* name, struct directional_light* light);
 
-KAPI b8 simple_scene_point_light_add(simple_scene* scene,const char* name, struct point_light* light);
+KAPI b8 simple_scene_point_light_add(simple_scene* scene, const char* name, struct point_light* light);
 
 KAPI b8 simple_scene_mesh_add(simple_scene* scene, const char* name, struct mesh* m);
 
 KAPI b8 simple_scene_skybox_add(simple_scene* scene, const char* name, struct skybox* sb);
+
+KAPI b8 simple_scene_terrain_add(simple_scene* scene, const char* name, struct terrain* t);
 
 KAPI b8 simple_scene_directional_light_remove(simple_scene* scene, const char* name);
 
@@ -140,6 +149,8 @@ KAPI b8 simple_scene_mesh_remove(simple_scene* scene, const char* name);
 
 KAPI b8 simple_scene_skybox_remove(simple_scene* scene, const char* name);
 
+KAPI b8 simple_scene_terrain_remove(simple_scene* scene, const char* name);
+
 KAPI struct directional_light* simple_scene_directional_light_get(simple_scene* scene, const char* name);
 
 KAPI struct point_light* simple_scene_point_light_get(simple_scene* scene, const char* name);
@@ -147,3 +158,5 @@ KAPI struct point_light* simple_scene_point_light_get(simple_scene* scene, const
 KAPI struct mesh* simple_scene_mesh_get(simple_scene* scene, const char* name);
 
 KAPI struct skybox* simple_scene_skybox_get(simple_scene* scene, const char* name);
+
+KAPI struct terrain* simple_scene_terrain_get(simple_scene* scene, const char* name);

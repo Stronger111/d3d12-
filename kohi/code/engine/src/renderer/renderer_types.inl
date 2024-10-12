@@ -1,13 +1,14 @@
 #pragma once
 
+#include "containers/freelist.h"
 #include "defines.h"
 #include "math/math_types.h"
 #include "resources/resource_types.h"
-#include "containers/freelist.h"
 
 struct shader;
 struct shader_uniform;
 struct frame_data;
+struct terrain;
 
 typedef struct geometry_render_data {
     mat4 model;          // 模型矩阵
@@ -113,7 +114,7 @@ typedef struct renderpass_config {
 typedef struct renderpass {
     /** @brief The id of the renderpass */
     u16 id;
-    
+
     char* name;
     /** @brief The current render area of the renderpass. */
     vec4 render_area;
@@ -147,6 +148,8 @@ typedef enum renderbuffer_type {
 } renderbuffer_type;
 
 typedef struct renderbuffer {
+    /** @brief The name of the buffer, used for debugging purposes. */
+    char* name;
     /** @brief The type of buffer, which typically determines its use. */
     renderbuffer_type type;
     /** @brief The total size of the buffer in bytes. */
@@ -226,10 +229,10 @@ typedef struct renderer_plugin {
      * that it should be attempted again on the next loop. End frame does not need to (and
      * should not) be called if this is the case.
      * @param plugin A pointer to the renderer plugin interface.
-    * @param p_frame_data A constant pointer to the current frame's data.
+     * @param p_frame_data A constant pointer to the current frame's data.
      * @return True if successful; otherwise false.
      */
-    b8 (*frame_begin)(struct renderer_plugin* plugin,const struct frame_data* p_frame_data);
+    b8 (*frame_begin)(struct renderer_plugin* plugin, const struct frame_data* p_frame_data);
 
     /**
      * @brief Performs routines required to draw a frame, such as presentation. Should only be called
@@ -479,11 +482,12 @@ typedef struct renderer_plugin {
      *
      * @param plugin A pointer to the renderer plugin interface.
      * @param s A pointer to the shader to acquire resources from.
+     * @param texture_map_count The number of texture maps used.
      * @param maps An array of pointers to texture maps. Must be one map per instance texture.
      * @param out_instance_id A pointer to hold the new instance identifier.
      * @return True on success; otherwise false.
      */
-    b8 (*shader_instance_resources_acquire)(struct renderer_plugin* plugin, struct shader* s, texture_map** maps, u32* out_instance_id);
+    b8 (*shader_instance_resources_acquire)(struct renderer_plugin* plugin, struct shader* s, u32 texture_map_count, texture_map** maps, u32* out_instance_id);
 
     /**
      * @brief Releases internal instance-level resources for the given instance id.
@@ -724,7 +728,7 @@ typedef struct renderer_plugin {
      * @param data The data to be loaded.
      * @returns True on success; otherwise false.
      */
-    b8 (*renderbuffer_load_range)(struct renderer_plugin* plugin,renderbuffer* buffer, u64 offset, u64 size, const void* data);
+    b8 (*renderbuffer_load_range)(struct renderer_plugin* plugin, renderbuffer* buffer, u64 offset, u64 size, const void* data);
 
     /**
      * @brief Copies data in the specified rage fron the source to the destination buffer.
@@ -737,7 +741,7 @@ typedef struct renderer_plugin {
      * @param size The size of the data in bytes to be copied.
      * @returns True on success; otherwise false.
      */
-    b8 (*renderbuffer_copy_range)(struct renderer_plugin* plugin,renderbuffer* source, u64 source_offset, renderbuffer* dest, u64 dest_offset, u64 size);
+    b8 (*renderbuffer_copy_range)(struct renderer_plugin* plugin, renderbuffer* source, u64 source_offset, renderbuffer* dest, u64 dest_offset, u64 size);
 
     /**
      * @brief Attempts to draw the contents of the provided buffer at the given offset
@@ -750,7 +754,7 @@ typedef struct renderer_plugin {
      * @param bind_only Only binds the buffer, but does not call draw.
      * @return True on success; otherwise false.
      */
-    b8 (*renderbuffer_draw)(struct renderer_plugin* plugin,renderbuffer* buffer, u64 offset, u32 element_count, b8 bind_only);
+    b8 (*renderbuffer_draw)(struct renderer_plugin* plugin, renderbuffer* buffer, u64 offset, u32 element_count, b8 bind_only);
 
 } renderer_plugin;
 
@@ -888,7 +892,7 @@ typedef struct render_view {
      * @param render_target_index The current render target index for renderers that use multiple render targets at once (i.e. Vulkan).
      * @return True on success; otherwise false.
      */
-    b8 (*on_render)(const struct render_view* self, const struct render_view_packet* packet, u64 frame_number, u64 render_target_index);
+    b8 (*on_render)(const struct render_view* self, const struct render_view_packet* packet, u64 frame_number, u64 render_target_index, const struct frame_data* p_frame_data);
 
     /**
      * @brief Regenerates the resources for the given attachment at the provided pass index.
@@ -920,6 +924,12 @@ typedef struct render_view_packet {
     u32 geometry_count;
     /** @brief The geometries to be drawn. */
     geometry_render_data* geometries;
+    /** @brief The number of terrain geometries to be drawn. */
+    u32 terrain_geometry_count;
+    /** @brief The terrain geometries to be drawn. */
+    geometry_render_data* terrain_geometries;
+
+    struct terrain** terrains;
     /** @brief The name of the custom shader to use, if applicable. Otherwise 0. */
     const char* custom_shader_name;
     /** @brief Holds a pointer to freeform data, typically understood both by the object and consuming view. */

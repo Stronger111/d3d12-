@@ -117,18 +117,6 @@ typedef struct texture {
     void* internal_data;
 } texture;
 
-typedef enum texture_use {
-    TEXTURE_USE_UNKNOWN = 0x00,
-    /** @brief The texture is used as a diffuse map. */
-    TEXTURE_USE_MAP_DIFFUSE = 0x01,
-    /** @brief The texture is used as a specular map. */
-    TEXTURE_USE_MAP_SPECULAR = 0x02,
-    /** @brief The texture is used as a normal map. */
-    TEXTURE_USE_MAP_NORMAL = 0x03,
-    /** @brief The texture is used as a cube map. */
-    TEXTURE_USE_MAP_CUBEMAP = 0x04,
-} texture_use;
-
 /** @brief Represents supported the texture filtering modes. */
 typedef enum texture_filter {
     /** @brief Nearest-neighbor filtering. */
@@ -146,7 +134,6 @@ typedef enum texture_repeat {
 
 typedef struct texture_map {
     texture* texture;
-    texture_use use;
     /** @brief Texture filtering mode for minification. */
     texture_filter filter_minify;
     /** @brief Texture filtering mode for magnification. */
@@ -226,37 +213,7 @@ typedef struct system_font_resource_data {
 
 #define MATERIAL_NAME_MAX_LENGTH 256
 
-typedef struct material_config {
-    char name[MATERIAL_NAME_MAX_LENGTH];
-    char* shader_name;
-    b8 auto_release;
-    vec4 diffuse_colour;
-    /** @brief The shininess of the material. */
-    f32 shininess;
-    char diffuse_map_name[TEXTURE_NAME_MAX_LENGTH];
-    /** @brief The specular map name. */
-    char specular_map_name[TEXTURE_NAME_MAX_LENGTH];
-    /** @brief The normal map name. */
-    char normal_map_name[TEXTURE_NAME_MAX_LENGTH];
-} material_config;
-
-typedef struct material {
-    u32 id;
-    u32 generation;
-    u32 internal_id;
-    char name[MATERIAL_NAME_MAX_LENGTH];
-    vec4 diffuse_colour;
-    texture_map diffuse_map;
-    /** @brief The specular texture map. */
-    texture_map specular_map;
-    /** @brief The normal texture map. */
-    texture_map normal_map;
-    /** @brief The material shininess, determines how concentrated the specular lighting is. */
-    f32 shininess;
-    u32 shader_id;
-    /** @brief Synced to the renderer's current frame number when the material has been applied that frame. */
-    u32 render_frame_number;
-} material;
+struct material;
 
 #define GEOMETRY_NAME_MAX_LENGTH 256
 
@@ -275,7 +232,8 @@ typedef struct geometry {
     extents_3d extents;
 
     char name[GEOMETRY_NAME_MAX_LENGTH];
-    material* material;
+    /** @brief A pointer to the material associated with this geometry.. */
+    struct material* material;
 } geometry;
 
 struct geometry_config;
@@ -416,8 +374,7 @@ typedef struct shader_config {
     b8 depth_write;
 } shader_config;
 
-typedef enum material_type 
-{
+typedef enum material_type {
     // Invalid
     MATERIAL_TYPE_UNKNOWN = 0,
     MATERIAL_TYPE_PHONG = 1,
@@ -426,6 +383,113 @@ typedef enum material_type
     MATERIAL_TYPE_TERRAIN = 4,
     MATERIAL_TYPE_CUSTOM = 99
 } material_type;
+
+typedef struct material_config_prop {
+    char* name;
+    shader_uniform_type type;
+    u32 size;
+    // FIXME: This seems like a colossal waste of memory... perhaps a union or
+    // something better?
+    vec4 value_v4;
+    vec3 value_v3;
+    vec2 value_v2;
+    f32 value_f32;
+    u32 value_u32;
+    u16 value_u16;
+    u8 value_u8;
+    i32 value_i32;
+    i16 value_i16;
+    i8 value_i8;
+    mat4 value_mat4;
+} material_config_prop;
+
+typedef struct material_map {
+    char* name;
+    char* texture_name;
+    texture_filter filter_min;
+    texture_filter filter_mag;
+    texture_repeat repeat_u;
+    texture_repeat repeat_v;
+    texture_repeat repeat_w;
+} material_map;
+
+typedef struct material_config {
+    u8 version;
+    char* name;
+    material_type type;
+    char* shader_name;
+    // darray
+    material_config_prop* properties;
+    // darray
+    material_map* maps;
+    /** @brief Indicates if the material should be automatically released when no
+     * references to it remain. */
+    b8 auto_release;
+} material_config;
+
+typedef struct material_phong_properties {
+    /** @brief The diffuse colour. */
+    vec4 diffuse_colour;
+    vec3 padding;
+    /** @brief The material shininess, determines how concentrated the specular
+     * lighting is. */
+    f32 shininess;
+} material_phong_properties;
+
+typedef struct material_ui_properties {
+    /** @brief The diffuse colour. */
+    vec4 diffuse_colour;
+} material_ui_properties;
+
+typedef struct material_terrain_properties {
+   material_phong_properties materials[4];
+   vec3 padding;
+   i32 num_materials;
+   vec4 padding2;
+} material_terrain_properties;
+
+/**
+ * @brief A material, which represents various properties
+ * of a surface in the world such as texture, colour,
+ * bumpiness, shininess and more.
+ */
+typedef struct material {
+    /** @brief The material id. */
+    u32 id;
+    /** @brief The material type. */
+    material_type type;
+    /** @brief The material generation. Incremented every time the material is
+     * changed. */
+    u32 generation;
+    /** @brief The internal material id. Used by the renderer backend to map to
+     * internal resources. */
+    u32 internal_id;
+    /** @brief The material name. */
+    char name[MATERIAL_NAME_MAX_LENGTH];
+
+    /** @brief An array of texture maps. */
+    texture_map *maps;
+
+    /** @brief property structure size. */
+    u32 property_struct_size;
+
+    /** @brief array of material property structures, which varies based on material type. e.g. material_phong_properties */
+    void *properties;
+
+    // /** @brief The diffuse colour. */
+    // vec4 diffuse_colour;
+
+    // /** @brief The material shininess, determines how concentrated the specular
+    //  * lighting is. */
+    // f32 shininess;
+
+    u32 shader_id;
+
+    /** @brief Synced to the renderer's current frame number when the material has
+     * been applied that frame. */
+    u32 render_frame_number;
+} material;
+
 
 typedef struct skybox_simple_scene_config {
     char* name;
@@ -454,15 +518,25 @@ typedef struct mesh_simple_scene_config {
     char* parent_name;  // optional
 } mesh_simple_scene_config;
 
+typedef struct terrain_simple_scene_config
+{
+    char *name;
+    char *resource_name;
+    transform xform;
+}terrain_simple_scene_config;
+
 typedef struct simple_scene_config {
-    char* name;
-    char* description;
+    char *name;
+    char *description;
     skybox_simple_scene_config skybox_config;
     directional_light_simple_scene_config directional_light_config;
 
     // darray
-    point_light_simple_scene_config* point_lights;
+    point_light_simple_scene_config *point_lights;
 
     // darray
-    mesh_simple_scene_config* meshes;
+    mesh_simple_scene_config *meshes;
+
+    //darray
+    terrain_simple_scene_config *terrains;
 } simple_scene_config;

@@ -14,6 +14,7 @@ typedef enum ui_text_type
 
 typedef struct ui_text
 {
+   char* name;
    u32 unique_id;
    ui_text_type type;
    struct font_data* data;
@@ -25,7 +26,7 @@ typedef struct ui_text
    u64 render_frame_number;
 }ui_text;
 
-KAPI b8 ui_text_create(ui_text_type type,const char* font_name,u16 font_size,const char* text_content,ui_text* out_text);
+KAPI b8 ui_text_create(const char* name,ui_text_type type,const char* font_name,u16 font_size,const char* text_content,ui_text* out_text);
 KAPI void ui_text_destroy(ui_text* text);
 /**
  * @brief Sets the position on the given UI text object.

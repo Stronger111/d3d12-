@@ -39,7 +39,10 @@ vec3 camera_rotation_euler_get(const camera* c) {
 
 void camera_rotation_euler_set(camera* c, vec3 rotation) {
     if (c) {
-        c->euler_rotation = rotation;
+        // Convert number passed in to radians
+        c->euler_rotation.x = deg_to_rad(rotation.x);
+        c->euler_rotation.y = deg_to_rad(rotation.y);
+        c->euler_rotation.z = deg_to_rad(rotation.z);
         c->is_dirty = true;
     }
 }
@@ -93,10 +96,9 @@ vec3 camera_right(camera* c) {
 }
 
 vec3 camera_up(camera* c) {
-    if(c)
-    {
-       mat4 view=camera_view_get(c);
-       return mat4_up(view);
+    if (c) {
+        mat4 view = camera_view_get(c);
+        return mat4_up(view);
     }
     return vec3_zero();
 }
@@ -136,8 +138,6 @@ void camera_move_right(camera* c, f32 amount) {
         c->is_dirty = true;
     }
 }
-
-
 
 void camera_move_up(camera* c, f32 amount) {
     if (c) {
