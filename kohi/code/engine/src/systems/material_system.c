@@ -587,7 +587,11 @@ b8 material_system_apply_instance(material* m, b8 needs_update) {
     if (needs_update) {
         if (m->shader_id == state_ptr->material_shader_id) {
             // Material shader
-            MATERIAL_APPLY_OR_FAIL(shader_system_uniform_set_by_index(state_ptr->material_locations.properties, &m->properties));
+            // material_phong_properties* test=(material_phong_properties*)m->properties;
+            // test->shininess=8.0f;
+            // test->diffuse_colour=vec4_one();
+            MATERIAL_APPLY_OR_FAIL(shader_system_uniform_set_by_index(state_ptr->material_locations.properties, m->properties));
+            //  KDEBUG("%f %f %f %f %f",test->diffuse_colour.x,test->diffuse_colour.y,test->diffuse_colour.z,test->diffuse_colour.w, test->shininess);
             MATERIAL_APPLY_OR_FAIL(shader_system_uniform_set_by_index(state_ptr->material_locations.diffuse_texture, &m->maps[0]));
             MATERIAL_APPLY_OR_FAIL(shader_system_uniform_set_by_index(state_ptr->material_locations.specular_texture, &m->maps[1]));
             MATERIAL_APPLY_OR_FAIL(shader_system_uniform_set_by_index(state_ptr->material_locations.normal_texture, &m->maps[2]));

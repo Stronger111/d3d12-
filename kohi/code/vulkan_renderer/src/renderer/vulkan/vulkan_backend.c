@@ -2029,6 +2029,8 @@ b8 vulkan_renderer_uniform_set(renderer_plugin* plugin, shader* s, shader_unifor
             u64 addr = (u64)internal->mapped_uniform_buffer_block;
             addr += s->bound_ubo_offset + uniform->offset;
             kcopy_memory((void*)addr, value, uniform->size);
+            // f32 ss= *(f32*)value;
+            // KDEBUG("%f",ss);
             if (addr) {
             }
         }
