@@ -1,68 +1,10 @@
 #material file
 
-version=2
-# Types can be phong,pbr,custom
-type=phong
+version=1
 name=roof
-# If custom, shader is required.
+diffuse_colour=0.588000 0.588000 0.588000 1.000000
+shininess=10.000000
+diffuse_map_name=sponza_roof_diff
+specular_map_name=sponza_roof_spec
+normal_map_name=sponza_roof_ddn
 shader=Shader.Builtin.Material
-[map]
-name=(null)
-filter_min=linear
-filter_mag=linear
-repeat_u=repeat
-repeat_v=repeat
-repeat_w=repeat
-texture_name=sponza_roof_diff
-[/map]
-[map]
-name=diffuse
-filter_min=linear
-filter_mag=linear
-repeat_u=repeat
-repeat_v=repeat
-repeat_w=repeat
-texture_name=sponza_roof_diff
-[/map]
-[map]
-name=specular
-filter_min=linear
-filter_mag=linear
-repeat_u=repeat
-repeat_v=repeat
-repeat_w=repeat
-texture_name=sponza_roof_spec
-[/map]
-[map]
-name=normal
-filter_min=linear
-filter_mag=linear
-repeat_u=repeat
-repeat_v=repeat
-repeat_w=repeat
-texture_name=sponza_roof_ddn
-[/map]
-[map]
-name=normal
-filter_min=linear
-filter_mag=linear
-repeat_u=repeat
-repeat_v=repeat
-repeat_w=repeat
-texture_name=sponza_roof_ddn
-[/map]
-[prop]
-name=shininess
-type=f32
-value=10.000000
-[/prop]
-[prop]
-name=diffuse_colour
-type=vec4
-value=0.000000 0.000000 0.000000 0.000000
-[/prop]
-[prop]
-name=diffuse_colour
-type=vec4
-value=0.000000 0.000000 0.000000 0.000000
-[/prop]

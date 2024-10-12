@@ -1,23 +1,7 @@
 #material file
 
-version=2
-# Types can be phong,pbr,custom
-type=phong
+version=1
 name=Material__47
-# If custom, shader is required.
+diffuse_colour=0.588000 0.588000 0.588000 1.000000
+shininess=10.000000
 shader=Shader.Builtin.Material
-[prop]
-name=shininess
-type=f32
-value=10.000000
-[/prop]
-[prop]
-name=diffuse_colour
-type=vec4
-value=0.000000 0.000000 0.000000 0.000000
-[/prop]
-[prop]
-name=diffuse_colour
-type=vec4
-value=0.000000 0.000000 0.000000 0.000000
-[/prop]
