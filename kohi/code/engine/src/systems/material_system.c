@@ -415,7 +415,8 @@ material* material_system_acquire_terrain_material(const char* material_name, u3
                 map_config.repeat_w = ref_mat->maps[map_idx].repeat_w;
                 map_config.filter_min = ref_mat->maps[map_idx].filter_minify;
                 map_config.filter_mag = ref_mat->maps[map_idx].filter_magnify;
-                if (!assign_map(&m->maps[(map_idx * 3) + map_idx], &map_config, m->name, default_textures[map_idx])) {
+                map_config.texture_name = ref_mat->maps[map_idx].texture->name;
+                if (!assign_map(&m->maps[(material_idx * 3) + map_idx], &map_config, m->name, default_textures[map_idx])) {
                     KERROR("Failed to assign '%s' texture map for terrain material index %u", map_names[map_idx], material_idx);
                     return false;
                 }
@@ -434,6 +435,15 @@ material* material_system_acquire_terrain_material(const char* material_name, u3
         // Assign material maps.
         for (u32 i = 0; i < max_map_count; ++i) {
             maps[i] = &m->maps[i];
+        }
+
+        b8 result = renderer_shader_instance_resources_acquire(s, max_map_count, maps, &m->internal_id);
+        if (!result) {
+            KERROR("Failed to acquire renderer resources for material '%s'.", m->name);
+        }
+
+        if (maps) {
+            kfree(maps, sizeof(texture_map*) * max_map_count, MEMORY_TAG_ARRAY);
         }
 
         // NOTE:end terrain-specific load_material
@@ -759,7 +769,7 @@ static b8 load_material(material_config* config, material* m) {
         m->maps = darray_reserve(texture_map, 3);
         darray_length_set(m->maps, 3);
         u32 map_count = darray_length(config->maps);
-    
+
         b8 diffuse_assigned = false;
         b8 spec_assigned = false;
         b8 norm_assigned = false;
@@ -996,7 +1006,7 @@ static void destroy_material(material* m) {
 }
 
 static b8 create_default_material(material_system_state* state) {
-   kzero_memory(&state->default_material, sizeof(material));
+    kzero_memory(&state->default_material, sizeof(material));
     state->default_material.id = INVALID_ID;
     state->default_material.type = MATERIAL_TYPE_PHONG;
     state->default_material.generation = INVALID_ID;

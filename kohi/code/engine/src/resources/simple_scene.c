@@ -134,6 +134,45 @@ b8 simple_scene_initialize(simple_scene* scene) {
         }
     }
 
+    // Terrains
+    u32 terrain_config_count = darray_length(scene->config->terrains);
+    for (u32 i = 0; i < terrain_config_count; ++i) {
+        if (!scene->config->terrains[i].name || !scene->config->terrains[i].resource_name) {
+            KWARN("Invalid terrain config, name and resource_name are required.");
+            continue;
+        }
+        /*terrain_config new_terrain_config = {0};
+         new_terrain_config.name =
+         string_duplicate(scene->config->terrains[i].name);
+         // TODO: Copy resource name, load from resource.
+         new_terrain_config.tile_count_x = 100;
+         new_terrain_config.tile_count_z = 100;
+         new_terrain_config.tile_scale_x = 1.0f;
+         new_terrain_config.tile_scale_z = 1.0f;
+         new_terrain_config.material_count = 0;
+         new_terrain_config.material_names = 0;*/
+        resource terrain_resource;
+        if (!resource_system_load(scene->config->terrains[i].resource_name,
+                                  RESOURCE_TYPE_TERRAIN, 0, &terrain_resource)) {
+            KWARN("Failed to load terrain resource.");
+            continue;
+        }
+
+        terrain_config* parsed_config = (terrain_config*)terrain_resource.data;
+        parsed_config->xform = scene->config->terrains[i].xform;
+
+        terrain new_terrain = {0};
+        // TODO: Do we really want to copy this?
+        if (!terrain_create(parsed_config, &new_terrain)) {
+            KWARN("Failed to load terrain.");
+            continue;
+        }
+
+        resource_system_unload(&terrain_resource);
+
+        darray_push(scene->terrains, new_terrain);
+    }
+
     // Now handle hierarchy.
     // NOTE: This only currently supports heirarchy of meshes.
     u32 mesh_count = darray_length(scene->meshes);
@@ -153,14 +192,22 @@ b8 simple_scene_initialize(simple_scene* scene) {
         if (!skybox_initialize(scene->sb)) {
             KERROR("Skybox failed to initialize.");
             scene->sb = 0;
-            return false;
+            // return false;
         }
     }
 
     for (u32 i = 0; i < mesh_count; ++i) {
         if (!mesh_initialize(&scene->meshes[i])) {
             KERROR("Mesh failed to initialize.");
-            return false;
+            // return false;
+        }
+    }
+
+    u32 terrain_count = darray_length(scene->terrains);
+    for (u32 i = 0; i < terrain_count; ++i) {
+        if (!terrain_initialize(&scene->terrains[i])) {
+            KERROR("Terrain failed to initialize.");
+            // return false;
         }
     }
 
@@ -193,6 +240,14 @@ b8 simple_scene_load(simple_scene* scene) {
         if (!mesh_load(&scene->meshes[i])) {
             KERROR("Mesh failed to load.");
             return false;
+        }
+    }
+
+    u32 terrain_count = darray_length(scene->terrains);
+    for (u32 i = 0; i < terrain_count; ++i) {
+        if (!terrain_load(&scene->terrains[i])) {
+            KERROR("Terrain failed to load.");
+            // return false; // Return false on fail?
         }
     }
 
@@ -359,14 +414,14 @@ b8 simple_scene_populate_render_packet(simple_scene* scene,
                 // TODO: Check terrain generation
                 // TODO: Frustum culling
                 //
-                geometry_render_data data={0};
-                data.model=transform_world_get(&scene->terrains[i].xform);
-                data.geometry=&scene->terrains[i].geo;
-                data.unique_id=0; //TODO: Terrain unique_id for object picking
-                
-                darray_push(scene->world_data.terrain_geometries,data);
+                geometry_render_data data = {0};
+                data.model = transform_world_get(&scene->terrains[i].xform);
+                data.geometry = &scene->terrains[i].geo;
+                data.unique_id = 0;  // TODO: Terrain unique_id for object picking
 
-                //TODO: Counter for terrain geometries
+                darray_push(scene->world_data.terrain_geometries, data);
+
+                // TODO: Counter for terrain geometries
                 p_frame_data->drawn_mesh_count++;
             }
             // World
@@ -467,6 +522,32 @@ b8 simple_scene_skybox_add(simple_scene* scene, const char* name, struct skybox*
     return true;
 }
 
+
+b8 simple_scene_terrain_add(simple_scene *scene, const char *name,
+                            struct terrain *t) {
+    if (!scene || !t) {
+        return false;
+    }
+
+    if (scene->state > SIMPLE_SCENE_STATE_INITIALIZED) {
+        if (!terrain_initialize(t)) {
+            KERROR("Terrain failed to initialize.");
+            return false;
+        }
+    }
+
+    if (scene->state >= SIMPLE_SCENE_STATE_LOADED) {
+        if (!terrain_load(t)) {
+            KERROR("Terrain failed to load.");
+            return false;
+        }
+    }
+
+    darray_push(scene->terrains, t);
+
+    return true;
+}
+
 b8 simple_scene_directional_light_remove(simple_scene* scene, const char* name) {
     if (!scene || !name) {
         return false;
@@ -550,6 +631,31 @@ b8 simple_scene_skybox_remove(simple_scene* scene, const char* name) {
     return true;
 }
 
+
+b8 simple_scene_terrain_remove(simple_scene *scene, const char *name) {
+    if (!scene || !name) {
+        return false;
+    }
+
+    u32 terrain_count = darray_length(scene->terrains);
+    for (u32 i = 0; i < terrain_count; ++i) {
+        if (strings_equal(scene->terrains[i].name, name)) {
+            if (!terrain_unload(&scene->terrains[i])) {
+                KERROR("Failed to unload terrain");
+                return false;
+            }
+
+            terrain rubbish = {0};
+            darray_pop_at(scene->terrains, i, &rubbish);
+
+            return true;
+        }
+    }
+
+    KERROR("Cannot remove a terrain from a scene of which it is not a part.");
+    return false;
+}
+
 struct directional_light* simple_scene_directional_light_get(simple_scene* scene, const char* name) {
     if (!scene) {
         return 0;
@@ -598,6 +704,23 @@ struct skybox* simple_scene_skybox_get(simple_scene* scene, const char* name) {
     return scene->sb;
 }
 
+struct terrain *simple_scene_terrain_get(simple_scene *scene,
+                                         const char *name) {
+    if (!scene || !name) {
+        return 0;
+    }
+
+    u32 length = darray_length(scene->terrains);
+    for (u32 i = 0; i < length; ++i) {
+        if (strings_nequal(name, scene->terrains[i].name, 256)) {
+            return &scene->terrains[i];
+        }
+    }
+
+    KWARN("Simple scene does not contain a terrain called '%s'.", name);
+    return 0;
+}
+
 static void simple_scene_actual_unload(simple_scene* scene) {
     if (scene->sb) {
         if (!skybox_unload(scene->sb)) {
@@ -644,6 +767,21 @@ static void simple_scene_actual_unload(simple_scene* scene) {
 
     if (scene->meshes) {
         darray_destroy(scene->meshes);
+    }
+
+    if(scene->terrains)
+    {
+        darray_destroy(scene->terrains);
+    }
+
+    if(scene->world_data.world_geometries)
+    {
+        darray_destroy(scene->world_data.world_geometries);
+    }
+
+    if(scene->world_data.terrain_geometries)
+    {
+        darray_destroy(scene->world_data.terrain_geometries);
     }
 
     kzero_memory(scene, sizeof(simple_scene));

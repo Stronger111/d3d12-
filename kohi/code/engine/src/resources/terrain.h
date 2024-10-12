@@ -70,7 +70,7 @@ typedef struct terrain {
     terrain_vertex_data *vertex_datas;
     
     extents_3d extents;
-    vec3 orign;
+    vec3 origin;
     
     u32 vertex_count;
     terrain_vertex *vertices;

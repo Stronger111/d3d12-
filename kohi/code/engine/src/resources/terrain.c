@@ -35,7 +35,7 @@ b8 terrain_create(const terrain_config *config, terrain *out_terrain) {
 
     // TODO: calculate based on actual terrain dimensions.
     out_terrain->extents = (extents_3d){0};
-    out_terrain->orign = vec3_zero();
+    out_terrain->origin = vec3_zero();
 
     out_terrain->tile_count_x = config->tile_count_x;
     out_terrain->tile_count_z = config->tile_count_z;
@@ -50,6 +50,9 @@ b8 terrain_create(const terrain_config *config, terrain *out_terrain) {
     out_terrain->vertex_data_length = out_terrain->vertex_count;
     out_terrain->vertex_datas = kallocate(sizeof(terrain_vertex_data) * out_terrain->vertex_data_length, MEMORY_TAG_ARRAY);
     kcopy_memory(out_terrain->vertex_datas, config->vertex_datas, config->vertex_data_length * sizeof(terrain_vertex_data));
+
+    out_terrain->index_count=out_terrain->vertex_count*6;
+    out_terrain->indices=kallocate(sizeof(u32)*out_terrain->index_count, MEMORY_TAG_ARRAY);
 
     out_terrain->material_count = config->material_count;
     if (out_terrain->material_count) {
@@ -104,7 +107,7 @@ void terrain_destroy(terrain *t) {
     t->tile_count_x = 0;
     t->tile_count_z = 0;
     t->vertex_data_length = 0;
-    kzero_memory(&t->orign, sizeof(vec3));
+    kzero_memory(&t->origin, sizeof(vec3));
     kzero_memory(&t->extents, sizeof(vec3));
 }
 
@@ -184,7 +187,7 @@ b8 terrain_load(terrain *t) {
     }
 
     // Copy over extens,center ,etc
-    g->center = t->orign;
+    g->center = t->origin;
     g->extents.min = t->extents.min;
     g->extents.max = t->extents.max;
     // TODO: offload generation increments to frontend. Also do this in geometry_system_create.
@@ -193,7 +196,13 @@ b8 terrain_load(terrain *t) {
     // Create a terrain material by copying the properties of these materials to a new terrain material.
     char terrain_material_name[MATERIAL_NAME_MAX_LENGTH] = {0};
     string_format(terrain_material_name, "terrain_mat_%s", t->name);
-    // g->material=material_ac
+    g->material=material_system_acquire_terrain_material(terrain_material_name,t->material_count,(const char **)t->material_names,true);
+    if(!g->material)
+    {
+        KWARN("Failed to acquire terrain material. Using defualt instead.");
+        g->material=material_system_get_default_terrain();
+    }
+    
     return true;
 }
 
