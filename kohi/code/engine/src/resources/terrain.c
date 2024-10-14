@@ -167,6 +167,9 @@ b8 terrain_initialize(terrain *t) {
             t->indices[i + 5] = v2;
         }
     }
+    
+    terrain_geometry_generate_normals(t->vertex_count,t->vertices,t->index_count,t->indices);
+    terrain_geometry_generate_tangents(t->vertex_count,t->vertices,t->index_count,t->indices);
 
     return true;
 }

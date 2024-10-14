@@ -25,7 +25,7 @@ typedef struct terrain_vertex {
     /** @brief The colour of the vertex. */
     vec4 colour;
     /** @brief The tangent of the vertex. */
-    vec3 tangent;
+    vec4 tangent;
     /** @brief A collection of material weights for this vertex. */
     f32 material_weights[TERRAIN_MAX_MATERIAL_COUNT];
 } terrain_vertex;
