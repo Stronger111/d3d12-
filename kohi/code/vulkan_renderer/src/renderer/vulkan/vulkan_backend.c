@@ -1594,8 +1594,11 @@ b8 vulkan_renderer_shader_initialize(renderer_plugin* plugin, shader* s) {
     pipeline_config.shader_flags = s->flags;
     pipeline_config.push_constant_range_count = s->push_constant_range_count;
     pipeline_config.push_constant_ranges = s->push_constant_ranges;
+    pipeline_config.name = string_duplicate(s->name);
 
     b8 pipeline_result = vulkan_graphics_pipeline_create(context, &pipeline_config, &internal_shader->pipeline);
+
+    kfree(pipeline_config.name, string_length(pipeline_config.name) + 1, MEMORY_TAG_STRING);
 
     if (!pipeline_result) {
         KERROR("Failed to load graphics pipeline for object shader.");
@@ -2811,7 +2814,7 @@ b8 vulkan_buffer_load_range(renderer_plugin* plugin, renderbuffer* buffer, u64 o
         char bufname[256];
         kzero_memory(bufname, 256);
         string_format(bufname, "renderbuffer_loadrange_staging");
-        if (!renderer_renderbuffer_create(bufname,RENDERBUFFER_TYPE_STAGING, size, false, &staging)) {
+        if (!renderer_renderbuffer_create(bufname, RENDERBUFFER_TYPE_STAGING, size, false, &staging)) {
             KERROR("vulkan_buffer_load_range() - Failed to create staging buffer.");
             return false;
         }

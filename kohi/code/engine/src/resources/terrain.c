@@ -3,6 +3,7 @@
 #include "core/kmemory.h"
 #include "core/kstring.h"
 #include "core/logger.h"
+#include "core/identifier.h"
 #include "defines.h"
 #include "math/geometry_utils.h"
 #include "math/kmath.h"
@@ -137,16 +138,7 @@ b8 terrain_initialize(terrain *t) {
             v->material_weights[1] = ksmoothstep(0.25f, 0.50f, t->vertex_datas[i].height);
             v->material_weights[2] = ksmoothstep(0.50f, 0.75f, t->vertex_datas[i].height);
             v->material_weights[3] = ksmoothstep(0.75f, 1.00f, t->vertex_datas[i].height);
-
-            // if (t->vertex_datas[i].height < 0.25) {
-            //     // v->material_weights[0] = 1.0f;
-            // } else if (t->vertex_datas[i].height >= 0.25 && t->vertex_datas[i].height < 0.5) {
-            //     // v->material_weights[1] = 1.0f;
-            // } else if (t->vertex_datas[i].height >= 0.5 && t->vertex_datas[i].height < 0.75) {
-            //     // v->material_weights[2] = 1.0f;
-            // } else {
-            //     // v->material_weights[3] = 1.0f;
-            // }
+        
         }
     }
 
@@ -182,6 +174,8 @@ b8 terrain_load(terrain *t) {
 
     geometry *g = &t->geo;
 
+    t->unique_id=identifier_aquire_new_id(t);
+
     // Send the geometry off to the renderer to be uploaded to the GPU.
     if (!renderer_geometry_create(g, sizeof(terrain_vertex), t->vertex_count,
                                   t->vertices, sizeof(u32), t->index_count,
@@ -212,6 +206,8 @@ b8 terrain_load(terrain *t) {
 b8 terrain_unload(terrain *t) {
     material_system_release(t->geo.material->name);
     renderer_geometry_destroy(&t->geo);
+
+    t->unique_id=0;
     return true;
 }
 
