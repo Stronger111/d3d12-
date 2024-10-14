@@ -1,0 +1,10 @@
+-I
+../engine/src/
+-I
+./src/
+
+-I
+$VULKANSDK/include/
+
+-I
+/usr/local/include/

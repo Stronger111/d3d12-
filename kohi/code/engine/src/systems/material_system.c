@@ -631,7 +631,7 @@ b8 material_system_apply_instance(material* m, b8 needs_update) {
             MATERIAL_APPLY_OR_FAIL(shader_system_uniform_set_by_index(state_ptr->material_locations.num_p_lights, &p_light_count))
         } else if (m->shader_id == state_ptr->ui_shader_id) {
             // UI shader
-            MATERIAL_APPLY_OR_FAIL(shader_system_uniform_set_by_index(state_ptr->ui_locations.properties, &m->properties));
+            MATERIAL_APPLY_OR_FAIL(shader_system_uniform_set_by_index(state_ptr->ui_locations.properties, m->properties));
             MATERIAL_APPLY_OR_FAIL(shader_system_uniform_set_by_index(state_ptr->ui_locations.diffuse_texture, &m->maps[0]));
         } else if (m->shader_id == state_ptr->terrain_shader_id) {
             // Apply maps
