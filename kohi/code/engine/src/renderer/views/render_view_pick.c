@@ -113,14 +113,14 @@ void release_shader_instances(const struct render_view* self) {
         if (!renderer_shader_instance_resources_release(data->ui_shader_info.s, i)) {
             KWARN("Failed to release UI shader resources.");
         }
-
+        
         // World shader
         if (!renderer_shader_instance_resources_release(data->world_shader_info.s, i)) {
             KWARN("Failed to release World shader resources.");
         }
-
-        // Terrain shader
-        if (!renderer_shader_instance_resources_release(data->world_shader_info.s, i)) {
+        
+        // Terrain shader  Fixed:报错 DescriptorSet 被释放两次导致报错
+        if (!renderer_shader_instance_resources_release(data->terrain_shader_info.s, i)) {
             KWARN("Failed to release Terrain shader resources.");
         }
     }
