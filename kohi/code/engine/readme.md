@@ -33,6 +33,7 @@ Renderer:
 - 更详细的Vulkan Debug信息
 - attribute=vec4,in_tangent vulkan 属性布局 一定要和VBO 数据对应 不对应会出现花屏 比如切线为vec4 传进去为vec3 管线Vertex input stride步幅
 - 传入UBO 数据不正确
+- 环境变量更改需要重启
 
 -Feature
 -JobSystem

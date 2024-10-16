@@ -125,7 +125,12 @@
         "font_system.h": "c",
         "event.h": "c",
         "frame_data.h": "c",
-        "render_view_world.h": "c"
+        "render_view_world.h": "c",
+        "vulkan_utils.h": "c",
+        "debug_box3d.h": "c",
+        "identifier.h": "c",
+        "transform.h": "c",
+        "debug_grid.h": "c"
     },
     // File copyright documentation tag.  Array of strings will be converted to one line per element.  Can template {year}.
     "doxdocgen.file.copyrightTag": [

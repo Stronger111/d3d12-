@@ -12,13 +12,13 @@
 
 #pragma once
 
-#include "defines.h"
-#include "core/asserts.h"
-#include "renderer/renderer_types.inl"
+#include <vulkan/vulkan.h>
+
 #include "containers/freelist.h"
 #include "containers/hashtable.h"
-
-#include <vulkan/vulkan.h>
+#include "core/asserts.h"
+#include "defines.h"
+#include "renderer/renderer_types.inl"
 
 // Checks the given expression return value against VK_SUCCESS
 #define VK_CHECK(expr) \
@@ -149,6 +149,13 @@ typedef struct vulkan_shader_stage {
     VkPipelineShaderStageCreateInfo shader_stage_create_info;
 } vulkan_shader_stage;
 
+typedef enum vulkan_topology_class {
+    VULKAN_TOPOLOGY_CLASS_POINT = 0,
+    VULKAN_TOPOLOGY_CLASS_LINE = 1,
+    VULKAN_TOPOLOGY_CLASS_TRIANGLE = 2,
+    VULKAN_TOPOLOGY_CLASS_MAX = VULKAN_TOPOLOGY_CLASS_TRIANGLE + 1
+} vulkan_topology_class;
+
 /**
  * @brief A configuration structure for Vulkan pipelines.
  */
@@ -185,11 +192,15 @@ typedef struct vulkan_pipeline_config {
     u32 push_constant_range_count;
     /** @brief An array of push constant data ranges. */
     range* push_constant_ranges;
+    /** @brief Collection of topology types to be supported on this pipeline. */
+    u32 topology_types;
 } vulkan_pipeline_config;
 
 typedef struct vulkan_pipeline {
     VkPipeline handle;
     VkPipelineLayout pipeline_layout;
+    /** @brief Indicates the topology types used by this pipeline. See primitive_topology_type.*/
+    u32 supported_topology_types;
 } vulkan_pipeline;
 
 // Max number of material instance
@@ -360,7 +371,15 @@ typedef struct vulkan_shader {
     VkDescriptorSet global_descriptor_sets[3];
     /** @brief The uniform buffer used by this shader. */
     renderbuffer uniform_buffer;
-    vulkan_pipeline pipeline;
+
+    /** @brief An array of pointers to pipelines associated with this shader. */
+    vulkan_pipeline** pipelines;
+
+    /** @brief The currently bound pipeline index. */
+    u8 bound_pipeline_index;
+    /** @brief The currently-selected topology. */
+    VkPrimitiveTopology current_topology;
+
     /** @brief The instance states for all instances. @todo TODO: make dynamic */
     u32 instance_count;
     vulkan_shader_instance_state instance_states[VULKAN_MAX_MATERIAL_COUNT];

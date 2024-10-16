@@ -76,6 +76,19 @@ typedef enum face_cull_mode {
     FACE_CULL_MODE_FRONT_AND_BACK = 0x3
 } face_cull_mode;
 
+typedef enum primitive_topology_type {
+    /** Topology type not defined. Not valid for shader creation. */
+    PRIMITIVE_TOPOLOGY_TYPE_NONE = 0x00,
+    /** A list of triangles. The default if nothing is defined. */
+    PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE_LIST = 0x01,
+    PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE_STRIP = 0x02,
+    PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE_FAN = 0x04,
+    PRIMITIVE_TOPOLOGY_TYPE_LINE_LIST = 0x08,
+    PRIMITIVE_TOPOLOGY_TYPE_LINE_STRIP = 0x10,
+    PRIMITIVE_TOPOLOGY_TYPE_POINT_LIST = 0x20,
+    PRIMITIVE_TOPOLOGY_TYPE_MAX = PRIMITIVE_TOPOLOGY_TYPE_POINT_LIST << 1
+} primitive_topology_type;
+
 #define TEXTURE_NAME_MAX_LENGTH 512
 
 typedef enum texture_flag {
@@ -254,6 +267,8 @@ typedef struct mesh {
     u16 geometry_count;
     geometry** geometries;
     transform transform;
+    extents_3d extents;
+    void *debug_data;
 } mesh;
 
 /** @brief Shader stages available in the system. */
@@ -347,6 +362,10 @@ typedef struct shader_config {
 
     /** @brief The face cull mode to be used. Default is BACK if not supplied. */
     face_cull_mode cull_mode;
+
+    /** @brief The topology types for the shader pipeline. See primitive_topology_type. Defaults to "triangle list" if unspecified. */
+    u32 topology_types;
+
     /** @brief The count of attributes. */
     u8 attribute_count;
     /** @brief The collection of attributes. Darray. */
@@ -442,10 +461,10 @@ typedef struct material_ui_properties {
 } material_ui_properties;
 
 typedef struct material_terrain_properties {
-   material_phong_properties materials[4];
-   vec3 padding;
-   i32 num_materials;
-   vec4 padding2;
+    material_phong_properties materials[4];
+    vec3 padding;
+    i32 num_materials;
+    vec4 padding2;
 } material_terrain_properties;
 
 /**
@@ -468,13 +487,13 @@ typedef struct material {
     char name[MATERIAL_NAME_MAX_LENGTH];
 
     /** @brief An array of texture maps. */
-    texture_map *maps;
+    texture_map* maps;
 
     /** @brief property structure size. */
     u32 property_struct_size;
 
     /** @brief array of material property structures, which varies based on material type. e.g. material_phong_properties */
-    void *properties;
+    void* properties;
 
     // /** @brief The diffuse colour. */
     // vec4 diffuse_colour;
@@ -489,7 +508,6 @@ typedef struct material {
      * been applied that frame. */
     u32 render_frame_number;
 } material;
-
 
 typedef struct skybox_simple_scene_config {
     char* name;
@@ -518,25 +536,24 @@ typedef struct mesh_simple_scene_config {
     char* parent_name;  // optional
 } mesh_simple_scene_config;
 
-typedef struct terrain_simple_scene_config
-{
-    char *name;
-    char *resource_name;
+typedef struct terrain_simple_scene_config {
+    char* name;
+    char* resource_name;
     transform xform;
-}terrain_simple_scene_config;
+} terrain_simple_scene_config;
 
 typedef struct simple_scene_config {
-    char *name;
-    char *description;
+    char* name;
+    char* description;
     skybox_simple_scene_config skybox_config;
     directional_light_simple_scene_config directional_light_config;
 
     // darray
-    point_light_simple_scene_config *point_lights;
+    point_light_simple_scene_config* point_lights;
 
     // darray
-    mesh_simple_scene_config *meshes;
+    mesh_simple_scene_config* meshes;
 
-    //darray
-    terrain_simple_scene_config *terrains;
+    // darray
+    terrain_simple_scene_config* terrains;
 } simple_scene_config;
