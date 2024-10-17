@@ -44,7 +44,7 @@ static b8 render_view_on_event(u16 code, void* sender, void* listener_inst, even
     return false;
 }
 
-b8 render_view_skybox_on_create(render_view* self) {
+b8 render_view_skybox_on_registered(render_view* self) {
     if (self) {
         self->internal_data = kallocate(sizeof(render_view_skybox_internal_data), MEMORY_TAG_RENDERER);
         render_view_skybox_internal_data* data = self->internal_data;

@@ -130,7 +130,17 @@
         "debug_box3d.h": "c",
         "identifier.h": "c",
         "transform.h": "c",
-        "debug_grid.h": "c"
+        "debug_grid.h": "c",
+        "renderer_types.inl": "c",
+        "engine.h": "c",
+        "testbed_types.h": "c",
+        "render_view_system.h": "c",
+        "light_system.h": "c",
+        "simple_scene.h": "c",
+        "skybox.h": "c",
+        "system_error": "c",
+        "xlocale": "c",
+        "xiosbase": "c"
     },
     // File copyright documentation tag.  Array of strings will be converted to one line per element.  Can template {year}.
     "doxdocgen.file.copyrightTag": [

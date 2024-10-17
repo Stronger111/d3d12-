@@ -14,8 +14,8 @@
 #pragma once
 
 #include "defines.h"
-#include "systems/font_system.h"
 #include "renderer/renderer_types.inl"
+#include "systems/font_system.h"
 
 struct application;
 struct frame_data;
@@ -35,7 +35,7 @@ typedef struct application_config {
     font_system_config font_config;
 
     /** @brief A darray of render view configurations. */
-    render_view_config* render_views;
+    render_view* views;
 
     renderer_plugin renderer_plugin;
 

@@ -98,7 +98,7 @@ KAPI void camera_rotation_euler_set(camera* c, vec3 rotation);
  * @param c A pointer to a camera.
  * @return A copy of the up-to-date view matrix.
  */
-mat4 camera_view_get(camera* c);
+KAPI mat4 camera_view_get(camera* c);
 
 /**
  * @brief Returns a copy of the camera's forward vector.
