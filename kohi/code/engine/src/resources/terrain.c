@@ -52,8 +52,8 @@ b8 terrain_create(const terrain_config *config, terrain *out_terrain) {
     out_terrain->vertex_datas = kallocate(sizeof(terrain_vertex_data) * out_terrain->vertex_data_length, MEMORY_TAG_ARRAY);
     kcopy_memory(out_terrain->vertex_datas, config->vertex_datas, config->vertex_data_length * sizeof(terrain_vertex_data));
 
-    out_terrain->index_count=out_terrain->vertex_count*6;
-    out_terrain->indices=kallocate(sizeof(u32)*out_terrain->index_count, MEMORY_TAG_ARRAY);
+    out_terrain->index_count = out_terrain->vertex_count * 6;
+    out_terrain->indices = kallocate(sizeof(u32) * out_terrain->index_count, MEMORY_TAG_ARRAY);
 
     out_terrain->material_count = config->material_count;
     if (out_terrain->material_count) {
@@ -138,7 +138,6 @@ b8 terrain_initialize(terrain *t) {
             v->material_weights[1] = ksmoothstep(0.25f, 0.50f, t->vertex_datas[i].height);
             v->material_weights[2] = ksmoothstep(0.50f, 0.75f, t->vertex_datas[i].height);
             v->material_weights[3] = ksmoothstep(0.75f, 1.00f, t->vertex_datas[i].height);
-        
         }
     }
 
@@ -159,9 +158,9 @@ b8 terrain_initialize(terrain *t) {
             t->indices[i + 5] = v2;
         }
     }
-    
-    terrain_geometry_generate_normals(t->vertex_count,t->vertices,t->index_count,t->indices);
-    terrain_geometry_generate_tangents(t->vertex_count,t->vertices,t->index_count,t->indices);
+
+    terrain_geometry_generate_normals(t->vertex_count, t->vertices, t->index_count, t->indices);
+    terrain_geometry_generate_tangents(t->vertex_count, t->vertices, t->index_count, t->indices);
 
     return true;
 }
@@ -174,12 +173,16 @@ b8 terrain_load(terrain *t) {
 
     geometry *g = &t->geo;
 
-    t->unique_id=identifier_aquire_new_id(t);
+    t->unique_id = identifier_aquire_new_id(t);
 
-    // Send the geometry off to the renderer to be uploaded to the GPU.
     if (!renderer_geometry_create(g, sizeof(terrain_vertex), t->vertex_count,
                                   t->vertices, sizeof(u32), t->index_count,
                                   t->indices)) {
+        return false;
+    }
+
+    // Send the geometry off to the renderer to be uploaded to the GPU.
+    if (!renderer_geometry_upload(g)) {
         return false;
     }
 
@@ -193,13 +196,12 @@ b8 terrain_load(terrain *t) {
     // Create a terrain material by copying the properties of these materials to a new terrain material.
     char terrain_material_name[MATERIAL_NAME_MAX_LENGTH] = {0};
     string_format(terrain_material_name, "terrain_mat_%s", t->name);
-    g->material=material_system_acquire_terrain_material(terrain_material_name,t->material_count,(const char **)t->material_names,true);
-    if(!g->material)
-    {
+    g->material = material_system_acquire_terrain_material(terrain_material_name, t->material_count, (const char **)t->material_names, true);
+    if (!g->material) {
         KWARN("Failed to acquire terrain material. Using defualt instead.");
-        g->material=material_system_get_default_terrain();
+        g->material = material_system_get_default_terrain();
     }
-    
+
     return true;
 }
 
@@ -207,7 +209,7 @@ b8 terrain_unload(terrain *t) {
     material_system_release(t->geo.material->name);
     renderer_geometry_destroy(&t->geo);
 
-    t->unique_id=0;
+    t->unique_id = 0;
     return true;
 }
 

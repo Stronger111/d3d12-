@@ -141,8 +141,28 @@ KAPI void renderer_texture_read_data(texture* t, u32 offset, u32 size, void** ou
  * @param out_rgba A pointer to an array of u8s to hold the pixel data (should be sizeof(u8) * 4)
  */
 KAPI void renderer_texture_read_pixel(texture* t, u32 x, u32 y, u8** out_rgba);
+/**
+ * @brief Creates geometry, taking a copy of the provided data and setting up the data structure.
+ *
+ * @param g A pointer to the geometry to create.
+ * @param vertex_size The size of each vertex.
+ * @param vertex_count The number of vertices.
+ * @param vertices The vertex array.
+ * @param index_size The size of each index.
+ * @param index_count The number of indices.
+ * @param indices The index array.
+ * @return True on success; otherwise false.
+ */
 
-KAPI b8 renderer_geometry_create(geometry* geometry, u32 vertex_size, u32 vertex_count, const void* vertices, u32 index_size, u32 index_count, const void* indices);
+KAPI b8 renderer_geometry_create(geometry* g, u32 vertex_size, u32 vertex_count, const void* vertices, u32 index_size, u32 index_count, const void* indices);
+
+/**
+ * @brief Acquires GPU resources and uploads geometry data.
+ *
+ * @param geometry A pointer to the geometry to upload.
+ * @return True on success; otherwise false.
+ */
+KAPI b8 renderer_geometry_upload(geometry* geometry);
 
 /**
  * @brief Updates vertex data in the given geometry with the provided data in the given range.
@@ -152,7 +172,7 @@ KAPI b8 renderer_geometry_create(geometry* geometry, u32 vertex_size, u32 vertex
  * @param vertex_count The number of vertices which will be updated.
  * @param vertices The vertex data.
  */
-KAPI void renderer_geometry_vertex_update(geometry* g, u32 offset, u32 vertex_count,void* vertices);
+KAPI void renderer_geometry_vertex_update(geometry* g, u32 offset, u32 vertex_count, void* vertices);
 /**
  * @brief Destroys the given geometry, releasing GPU resources.
  *
@@ -252,9 +272,10 @@ KAPI b8 renderer_shader_uniform_set(struct shader* s, struct shader_uniform* uni
  * @brief Applies global data to the uniform buffer.
  *
  * @param s A pointer to the shader to apply the global data for.
+ *  @param needs_update Indicates if the shader uniforms need to be updated or just bound.
  * @return True on success; otherwise false.
  */
-KAPI b8 renderer_shader_apply_globals(struct shader* s);
+KAPI b8 renderer_shader_apply_globals(struct shader* s,b8 needs_update);
 
 /**
  * @brief Applies data for the currently bound instance.

@@ -19,7 +19,7 @@
 #include "systems/light_system.h"
 #include "systems/render_view_system.h"
 #include "systems/resource_system.h"
-#include "testbed_types.h"
+#include "../testbed_types.h"
 
 static void simple_scene_actual_unload(simple_scene* scene);
 
@@ -642,7 +642,7 @@ b8 simple_scene_populate_render_packet(simple_scene* scene,
         }
         // World
         if (!render_view_system_packet_build(view, p_frame_data->frame_allocator, &scene->world_data, &packet->views[1])) {
-            KERROR("Failed to build packet for view 'world_opaque'.");
+            KERROR("Failed to build packet for view 'world'.");
             return false;
         }
     }

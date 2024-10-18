@@ -287,8 +287,8 @@ KAPI b8 shader_system_sampler_set_by_index(u16 index, const texture* t) {
     return shader_system_uniform_set_by_index(index, t);
 }
 
-KAPI b8 shader_system_apply_global(void) {
-    return renderer_shader_apply_globals(&state_ptr->shaders[state_ptr->current_shader_id]);
+KAPI b8 shader_system_apply_global(b8 needs_update) {
+    return renderer_shader_apply_globals(&state_ptr->shaders[state_ptr->current_shader_id],needs_update);
 }
 
 KAPI b8 shader_system_apply_instance(b8 needs_update) {

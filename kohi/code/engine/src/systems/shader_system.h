@@ -12,9 +12,9 @@
  */
 #pragma once
 
+#include "containers/hashtable.h"
 #include "defines.h"
 #include "renderer/renderer_types.inl"
-#include "containers/hashtable.h"
 
 /** @brief Configuration for the shader system. */
 typedef struct shader_system_config {
@@ -272,10 +272,10 @@ KAPI b8 shader_system_sampler_set_by_index(u16 index, const texture* t);
 /**
  * @brief Applies global-scoped uniforms.
  * NOTE: Operates against the currently-used shader.
- *
+ * @param needs_update Indicates if shader internals need to be updated, or just to be bound.
  * @return True on success; otherwise false.
  */
-KAPI b8 shader_system_apply_global(void);
+KAPI b8 shader_system_apply_global(b8 needs_update);
 
 /**
  * @brief Applies instance-scoped uniforms.

@@ -215,14 +215,12 @@ typedef struct vulkan_pipeline {
  * @brief Internal buffer data for geometry.
  */
 typedef struct vulkan_geometry_data {
+    /** @brief The unique geometry identifier. */
     u32 id;
+      /** @brief The geometry generation. Incremented every time the geometry data changes. */
     u32 generation;
-    u32 vertex_count;
-    u32 vertex_element_size;
     /** @brief The offset in bytes in the vertex buffer. */
     u64 vertex_buffer_offset;
-    u32 index_count;
-    u32 index_element_size;
     /** @brief The offset in bytes in the index buffer. */
     u64 index_buffer_offset;
 } vulkan_geometry_data;

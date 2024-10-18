@@ -113,12 +113,12 @@ void release_shader_instances(const struct render_view* self) {
         if (!renderer_shader_instance_resources_release(data->ui_shader_info.s, i)) {
             KWARN("Failed to release UI shader resources.");
         }
-        
+
         // World shader
         if (!renderer_shader_instance_resources_release(data->world_shader_info.s, i)) {
             KWARN("Failed to release World shader resources.");
         }
-        
+
         // Terrain shader  Fixed:报错 DescriptorSet 被释放两次导致报错
         if (!renderer_shader_instance_resources_release(data->terrain_shader_info.s, i)) {
             KWARN("Failed to release Terrain shader resources.");
@@ -384,6 +384,11 @@ b8 render_view_pick_on_render(const render_view* self, const render_view_packet*
     renderpass* pass = &self->passes[p];  // First pass
 
     if (render_target_index == 0) {
+        pick_packet_data* packet_data = (pick_packet_data*)packet->extended_data;
+        if(!packet_data)
+        {
+            return true;
+        }
         // Reset.
         u64 count = darray_length(data->instance_updated);
         for (u64 i = 0; i < count; ++i) {
@@ -394,8 +399,6 @@ b8 render_view_pick_on_render(const render_view* self, const render_view_packet*
             KERROR("render_view_ui_on_render pass index %u failed to start.", p);
             return false;
         }
-
-        pick_packet_data* packet_data = (pick_packet_data*)packet->extended_data;
 
         i32 current_instance_id = 0;
 
@@ -412,7 +415,7 @@ b8 render_view_pick_on_render(const render_view* self, const render_view_packet*
         if (!shader_system_uniform_set_by_index(data->world_shader_info.view_location, &data->world_shader_info.view)) {
             KERROR("Failed to apply view matrix");
         }
-        shader_system_apply_global();
+        shader_system_apply_global(true);
 
         // Draw geometries. Start from 0 since world geometries are added first, and stop at the world geometry count.
         u32 world_geometry_count = !packet_data->world_mesh_data ? 0 : darray_length(packet_data->world_mesh_data);
@@ -461,7 +464,7 @@ b8 render_view_pick_on_render(const render_view* self, const render_view_packet*
             KERROR("Failed to apply view matrix");
         }
 
-        shader_system_apply_global();
+        shader_system_apply_global(true);
 
         // Draw geometries. Start from 0 since terrain geometries are added first, and stop at the terrain geometry count.
         u32 terrain_geometry_count = !packet_data->terrain_mesh_data ? 0 : darray_length(packet_data->terrain_mesh_data);
@@ -480,17 +483,17 @@ b8 render_view_pick_on_render(const render_view* self, const render_view_packet*
                 KERROR("Failed to apply id colour uniform.");
                 return false;
             }
-            
+
             b8 needs_update = !data->instance_updated[current_instance_id];
             shader_system_apply_instance(needs_update);
             data->instance_updated[current_instance_id] = true;
 
-            //Apply the locals
+            // Apply the locals
             if (!shader_system_uniform_set_by_index(data->terrain_shader_info.model_location, &geo->model)) {
                 KERROR("Failed to apply model matrix for terrain geometry.");
             }
 
-            //Draw it
+            // Draw it
             renderer_geometry_draw(&packet->terrain_geometries[i]);
         }
 
@@ -520,7 +523,7 @@ b8 render_view_pick_on_render(const render_view* self, const render_view_packet*
         if (!shader_system_uniform_set_by_index(data->ui_shader_info.view_location, &data->ui_shader_info.view)) {
             KERROR("Failed to apply view matrix");
         }
-        shader_system_apply_global();
+        shader_system_apply_global(true);
 
         // Draw geometries. Start off where world geometries left off.
         for (u32 i = world_geometry_count; i < packet->geometry_count; ++i) {
