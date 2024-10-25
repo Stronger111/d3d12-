@@ -143,7 +143,9 @@
         "xiosbase": "c",
         "editor_gizmo.h": "c",
         "render_view_editor_world.h": "c",
-        "xlocbuf": "c"
+        "xlocbuf": "c",
+        "stack.h": "c",
+        "game_keybinds.h": "c"
     },
     // File copyright documentation tag.  Array of strings will be converted to one line per element.  Can template {year}.
     "doxdocgen.file.copyrightTag": [

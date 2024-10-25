@@ -10,13 +10,17 @@
 #include <core/kstring.h>
 #include <core/logger.h>
 #include <core/metrics.h>
+#include <math/geometry_3d.h>
 #include <math/kmath.h>
 #include <memory/linear_allocator.h>
+#include <renderer/camera.h>
 #include <renderer/renderer_frontend.h>
 
 #include <renderer/renderer_types.inl>
 
+#include "defines.h"
 #include "game_state.h"
+#include "math/math_types.h"
 #include "testbed_types.h"
 
 // Views
@@ -27,6 +31,9 @@
 #include "views/render_view_world.h"
 
 // TODO: Editor temp
+#include <resources/debug/debug_box3d.h>
+#include <resources/debug/debug_line3d.h>
+
 #include "editor/editor_gizmo.h"
 #include "editor/render_view_editor_world.h"
 
@@ -52,6 +59,30 @@ b8 configure_render_views(application_config* config);
 void application_register_events(struct application* game_inst);
 void application_unregister_events(struct application* game_inst);
 static b8 load_main_scene(struct application* game_inst);
+
+static void clear_debug_objects(struct application* game_inst) {
+    testbed_game_state* state = (testbed_game_state*)game_inst->state;
+
+    if (state->test_boxes) {
+        u32 box_count = darray_length(state->test_boxes);
+        for (u32 i = 0; i < box_count; ++i) {
+            debug_box3d* box = &state->test_boxes[i];
+            debug_box3d_unload(box);
+            debug_box3d_destroy(box);
+        }
+        darray_clear(state->test_boxes);
+    }
+
+    if (state->test_lines) {
+        u32 line_count = darray_length(state->test_lines);
+        for (u32 i = 0; i < line_count; ++i) {
+            debug_line3d* line = &state->test_lines[i];
+            debug_line3d_unload(line);
+            debug_line3d_destroy(line);
+        }
+        darray_clear(state->test_lines);
+    }
+}
 
 b8 game_on_event(u16 code, void* sender, void* listener_inst, event_context context) {
     application* game_inst = (application*)listener_inst;
@@ -112,6 +143,7 @@ b8 game_on_debug_event(u16 code, void* sender, void* listener_inst, event_contex
 
             simple_scene_unload(&state->main_scene, false);
 
+            clear_debug_objects(game_inst);
             KDEBUG("Done.");
         }
         return true;
@@ -146,6 +178,34 @@ b8 game_on_key(u16 code, void* sender, void* listener_inst, event_context contex
     //         KDEBUG("'%s' key released in window.", input_keycode_str(key_code));
     //     }
     // }
+    return false;
+}
+
+b8 game_on_button_up(u16 code, void* sender, void* listener_list, event_context context) {
+    if (code == EVENT_CODE_BUTTON_RELEASED) {
+        u16 button = context.data.u16[0];
+        switch (button) {
+            case BUTTON_LEFT:
+                i16 x = context.data.i16[1];
+                i16 y = context.data.i16[2];
+                testbed_game_state* state = (testbed_game_state*)listener_list;
+
+                // If the scene isn't loaded, don't do anything else.
+                if (state->main_scene.state < SIMPLE_SCENE_STATE_LOADED) {
+                    return false;
+                }
+
+                mat4 view = camera_view_get(state->world_camera);
+                vec3 origin = camera_position_get(state->world_camera);
+
+                // TODO:Get this from the viewport
+                mat4 projection_matrix = mat4_perspective(deg_to_rad(45.0f), (f32)state->width / state->height, 0.1f, 4000.0f);
+                ray r=ray_from_screen(vec2_create((f32)x,(f32)y),vec2_create((f32)state->width,(f32)state->height),origin,view,projection_matrix);
+
+                
+                break;
+        }
+    }
     return false;
 }
 
@@ -505,7 +565,7 @@ b8 application_render(struct application* game_inst, struct render_packet* packe
         pick_packet.texts = ui_packet.texts;
         pick_packet.text_count = ui_packet.text_count;
 
-        if (!render_view_system_packet_build(view, p_frame_data->frame_allocator, &pick_packet,view_packet)) {
+        if (!render_view_system_packet_build(view, p_frame_data->frame_allocator, &pick_packet, view_packet)) {
             KERROR("Failed to build packet for view 'ui'.");
             return false;
         }

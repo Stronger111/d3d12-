@@ -84,6 +84,14 @@ KINLINE f32 ksmoothstep(f32 edge_0, f32 edge_1, f32 x) {
     return t * t * (3.0 - 2.0 * t);
 }
 
+/**
+ * @brief Compares the two floats and returns true if both are less
+ * than K_FLOAT_EPSILON apart; otherwise false.
+ */
+KINLINE b8 kfloat_compare(f32 f_0, f32 f_1) {
+    return kabs(f_0 - f_1) < K_FLOAT_EPSILON;
+}
+
 // ------------------------------------------
 // Vector 2
 // ------------------------------------------

@@ -2,8 +2,8 @@
 
 #include "defines.h"
 #include "math/math_types.h"
-#include "views/render_view_world.h"
 #include "resources/debug/debug_grid.h"
+#include "views/render_view_world.h"
 
 struct frame_data;
 struct render_packet;
@@ -15,6 +15,8 @@ struct geometry_config;
 struct camera;
 struct simple_scene_config;
 struct terrain;
+struct ray;
+struct raycast_result;
 
 typedef enum simple_scene_state {
     /** @brief created, but nothing more. */
@@ -134,6 +136,8 @@ KAPI b8 simple_scene_update(simple_scene* scene, const struct frame_data* p_fram
  * @return True on success; otherwise false.
  */
 KAPI b8 simple_scene_populate_render_packet(simple_scene* scene, struct camera* current_camera, f32 aspect, struct frame_data* p_frame_data, struct render_packet* packet);
+
+KAPI b8 simple_scene_raycast(simple_scene* scene,const struct ray* r,struct raycast_result* out_result);
 
 KAPI b8 simple_scene_directional_light_add(simple_scene* scene, const char* name, struct directional_light* light);
 
