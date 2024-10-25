@@ -32,6 +32,8 @@ ray ray_from_screen(vec2 screen_pos, vec2 viewport_size, vec3 origin, mat4 view,
     // Convert to world coordinates;
     r.direction = vec3_from_vec4(mat4_mul_vec4(view, ray_eye));
     vec3_normalize(&r.direction);
+    
+    return r;
 }
 
 // OBB-Ray 相交
