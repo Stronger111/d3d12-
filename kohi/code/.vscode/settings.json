@@ -145,7 +145,12 @@
         "render_view_editor_world.h": "c",
         "xlocbuf": "c",
         "stack.h": "c",
-        "game_keybinds.h": "c"
+        "game_keybinds.h": "c",
+        "algorithm": "c",
+        "map": "c",
+        "set": "c",
+        "xhash": "c",
+        "xtree": "c"
     },
     // File copyright documentation tag.  Array of strings will be converted to one line per element.  Can template {year}.
     "doxdocgen.file.copyrightTag": [

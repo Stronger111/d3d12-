@@ -47,7 +47,25 @@ typedef struct vulkan_swapchain_support_info {
     VkPresentModeKHR* present_modes;
 } vulkan_swapchain_support_info;
 
+typedef enum vulkan_device_support_flag_bits {
+    VULKAN_DEVICE_SUPPORT_FLAG_NONE_BIT = 0x0,
+    /** @brief Indicates if the device supports native dynamic topology (i.e. * using Vulkan API >= 1.3). */
+    VULKAN_DEVICE_SUPPORT_FLAG_NATIVE_DYNAMIC_TOPOLOGY_BIT = 0x1,
+    /** @brief Indicates if this device supports dynamic topology. If not, the renderer will need to generate a separate pipeline per topology type. */
+    VULKAN_DEVICE_SUPPORT_FLAG_DYNAMIC_TOPOLOGY_BIT = 0x2,
+    VULKAN_DEVICE_SUPPORT_FLAG_LINE_SMOOTH_RASTERISATION_BIT = 0x4
+} vulkan_device_support_flag_bits;
+
+/** @brief Bitwise flags for device support. @see vulkan_device_support_flag_bits. */
+typedef u32 vulkan_device_support_flags;
+
 typedef struct vulkan_device {
+    /** @brief The supported device-level api major version. */
+    u32 api_major;
+    /** @brief The supported device-level api minor version. */
+    u32 api_minor;
+    /** @brief The supported device-level api patch version. */
+    u32 api_patch;
     VkPhysicalDevice physical_device;
     VkDevice logical_device;
     vulkan_swapchain_support_info swapchain_support;
@@ -69,6 +87,9 @@ typedef struct vulkan_device {
     VkFormat depth_format;
     /** @brief The chosen depth format's number of channels.*/
     u8 depth_channel_count;
+
+    /** @brief Indicates support for various features. */
+    vulkan_device_support_flags support_flags;
 } vulkan_device;
 
 typedef struct vulkan_image {
@@ -217,7 +238,7 @@ typedef struct vulkan_pipeline {
 typedef struct vulkan_geometry_data {
     /** @brief The unique geometry identifier. */
     u32 id;
-      /** @brief The geometry generation. Incremented every time the geometry data changes. */
+    /** @brief The geometry generation. Incremented every time the geometry data changes. */
     u32 generation;
     /** @brief The offset in bytes in the vertex buffer. */
     u64 vertex_buffer_offset;
@@ -399,6 +420,14 @@ typedef struct vulkan_shader {
  * global renderer backend state, Vulkan instance, etc.
  */
 typedef struct vulkan_context {
+    /** @brief The instance-level api major version. */
+    u32 api_major;
+
+    /** @brief The instance-level api minor version. */
+    u32 api_minor;
+
+    /** @brief The instance-level api patch version. */
+    u32 api_patch;
     // The framebuffer current width.
     u32 framebuffer_width;
 
@@ -480,5 +509,6 @@ typedef struct vulkan_context {
      * @returns The index of the found memory type. Returns -1 if not found.
      */
     i32 (*find_memory_index)(struct vulkan_context* context, u32 type_filter, u32 property_flags);
-
+    
+    PFN_vkCmdSetPrimitiveTopologyEXT vkCmdSetPrimitiveTopologyEXT;
 } vulkan_context;
