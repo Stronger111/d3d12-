@@ -244,6 +244,15 @@ KAPI b8 input_is_button_down(buttons button);
 KAPI b8 input_is_button_up(buttons button);
 KAPI b8 input_was_button_down(buttons button);
 KAPI b8 input_was_button_up(buttons button);
+/**
+ * @brief Indicates if the mouse is currently being dragged with the provided button
+ * being held down.
+ *
+ * @param button The button to check.
+ * @returns True if dragging; otherwise false.
+ */
+KAPI b8 input_is_button_dragging(buttons button);
+
 KAPI void input_get_mouse_position(i32* x, i32* y);
 KAPI void input_get_previous_mouse_position(i32* x, i32* y);
 

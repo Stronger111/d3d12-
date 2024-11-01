@@ -252,6 +252,32 @@ b8 game_on_button_up(u16 code, void* sender, void* listener_list, event_context 
     return false;
 }
 
+static b8 game_on_mouse_move(u16 code, void* sender, void* listener_inst, event_context context) {
+    if (code == EVENT_CODE_MOUSE_MOVED && !input_is_button_dragging(BUTTON_LEFT)) {
+        i16 x = context.data.u16[0];
+        i16 y = context.data.u16[1];
+
+        testbed_game_state* state = (testbed_game_state*)listener_inst;
+
+        mat4 view = camera_view_get(state->world_camera);
+        vec3 origin = camera_position_get(state->world_camera);
+
+        // TODO:Get this from a viewport
+        mat4 projection_matrix = mat4_perspective(deg_to_rad(45.0f), (f32)state->width / state->height, 0.1f, 4000.0f);
+
+        ray r = ray_from_screen(
+            vec2_create((f32)x, (f32)y),
+            vec2_create((f32)state->width, (f32)state->height),
+            origin,
+            view,
+            projection_matrix);
+
+        editor_gizmo_handle_interaction(&state->gizmo, state->world_camera, &r, EDITOR_GIZMO_INTERACTION_TYPE_MOUSE_HOVER);
+    }
+
+    return false;  // Allow other handlers to recieve this event.
+}
+
 u64 application_state_size(void) {
     return sizeof(testbed_game_state);
 }
@@ -719,6 +745,8 @@ void application_register_events(struct application* game_inst) {
         event_register(EVENT_CODE_OBJECT_HOVER_ID_CHANGED, game_inst, game_on_event);
 
         event_register(EVENT_CODE_BUTTON_RELEASED, game_inst->state, game_on_button_up);
+
+        event_register(EVENT_CODE_MOUSE_MOVED, game_inst->state, game_on_mouse_move);
         // TODO: end temp
 
         event_register(EVENT_CODE_KEY_PRESSED, game_inst, game_on_key);
@@ -735,6 +763,7 @@ void application_unregister_events(struct application* game_inst) {
     event_unregister(EVENT_CODE_OBJECT_HOVER_ID_CHANGED, game_inst, game_on_event);
 
     event_unregister(EVENT_CODE_BUTTON_RELEASED, game_inst->state, game_on_button_up);
+    event_unregister(EVENT_CODE_MOUSE_MOVED, game_inst->state, game_on_mouse_move);
     // TODO: end temp
 
     event_unregister(EVENT_CODE_KEY_PRESSED, game_inst, game_on_key);

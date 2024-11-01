@@ -109,3 +109,26 @@ b8 raycast_oriented_extents(extents_3d bb_extents, const mat4* bb_model, const r
     *out_dist = nearest_far_intersection;
     return true;
 }
+
+b8 raycast_plane_3d(const ray* r,const plane_3d* p,vec3* out_point,f32* out_distance){
+    f32 normal_dir=vec3_dot(r->direction,p->normal);
+    f32 point_normal=vec3_dot(r->origin,p->normal);
+
+    //If the ray and plane normal point in the same direction. there can't  be a hit.
+    if(normal_dir>=0.0f){
+        return false;
+    }
+    
+    //Calculate the distance
+    f32 t=(p->distance-point_normal)/normal_dir;
+    
+    //Distance must be positive or 0,othewise the ray hits behind the plane
+    //which technically isn't a hit at all.
+    if(t>=0.0f){
+        *out_distance=t;
+        *out_point=vec3_add(r->origin,vec3_mul_scalar(r->direction,t));
+        return true;
+    }
+    
+    return false;
+}

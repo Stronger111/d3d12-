@@ -1,9 +1,19 @@
+
+// TODO:
+//  -multi-axis rotations.
+//  -The gizmo should only be active/visible on a selected object.
+//  -Before editing begins, a copy of the transform should be taken beforehand to allow canceling of the operation.
+//  -Canceling can be done by pressing the right mouse button while manipulating or by presseing esc.
+//  -Undo will be handled later by an undo stack.
+
 #include "editor_gizmo.h"
 
 #include <core/logger.h>
 #include <defines.h>
+#include <math/geometry_3d.h>
 #include <math/kmath.h>
 #include <math/transform.h>
+#include <renderer/camera.h>
 #include <renderer/renderer_frontend.h>
 
 #include "core/kmemory.h"
@@ -119,8 +129,9 @@ static void create_gizmo_mode_none(editor_gizmo* gizmo) {
     data->vertices[5].position.z = 1.0f;
 }
 static void create_gizmo_mode_move(editor_gizmo* gizmo) {
-     editor_gizmo_mode_data* data = &gizmo->mode_data[EDITOR_GIZMO_MODE_MOVE];
+    editor_gizmo_mode_data* data = &gizmo->mode_data[EDITOR_GIZMO_MODE_MOVE];
 
+    data->current_axis_index = INVALID_ID_U8;
     data->vertex_count = 18;  // 2 per line, 3 lines + 6 lines
     data->vertices = kallocate(sizeof(colour_vertex_3d) * data->vertex_count, MEMORY_TAG_ARRAY);
 
@@ -131,19 +142,19 @@ static void create_gizmo_mode_move(editor_gizmo* gizmo) {
     data->vertices[0].colour = r;
     data->vertices[0].position.x = 0.2f;
     data->vertices[1].colour = r;
-    data->vertices[1].position.x = 1.0f;
+    data->vertices[1].position.x = 2.0f;
 
     // y
     data->vertices[2].colour = g;
     data->vertices[2].position.y = 0.2f;
     data->vertices[3].colour = g;
-    data->vertices[3].position.y = 1.0f;
+    data->vertices[3].position.y = 2.0f;
 
     // z
     data->vertices[4].colour = b;
     data->vertices[4].position.z = 0.2f;
     data->vertices[5].colour = b;
-    data->vertices[5].position.z = 1.0f;
+    data->vertices[5].position.z = 2.0f;
 
     // x "box" lines
     data->vertices[6].colour = r;
@@ -183,9 +194,49 @@ static void create_gizmo_mode_move(editor_gizmo* gizmo) {
     data->vertices[17].colour = b;
     data->vertices[17].position.z = 0.4f;
     data->vertices[17].position.x = 0.4f;
+
+    data->extents_count = 7;
+    data->mode_extents = kallocate(sizeof(extents_3d) * data->extents_count, MEMORY_TAG_ARRAY);
+
+    // Create boxes for each axis
+    // x
+    extents_3d* ex = &data->mode_extents[0];
+    ex->min = vec3_create(0.4f, -0.2f, -0.2f);
+    ex->max = vec3_create(2.1f, 0.2f, 0.2f);
+
+    // y
+    ex = &data->mode_extents[1];
+    ex->min = vec3_create(-0.2f, 0.4f, -0.2f);
+    ex->max = vec3_create(0.2f, 2.1f, 0.2f);
+
+    // z
+    ex = &data->mode_extents[2];
+    ex->min = vec3_create(-0.2f, -0.2f, 0.4f);
+    ex->max = vec3_create(0.2f, 0.2f, 2.1f);
+
+    // Boxs for combo axes.
+    // x-y
+    ex = &data->mode_extents[3];
+    ex->min = vec3_create(0.1f, 0.1f, -0.05f);
+    ex->max = vec3_create(0.5f, 0.5f, 0.05f);
+
+    // x-z
+    ex = &data->mode_extents[4];
+    ex->min = vec3_create(0.1f, -0.05f, 0.1f);
+    ex->max = vec3_create(0.5f, 0.05f, 0.5f);
+
+    // y-z
+    ex = &data->mode_extents[5];
+    ex->min = vec3_create(-0.05f, 0.1f, 0.1f);
+    ex->max = vec3_create(0.05f, 0.5f, 0.5f);
+
+    // xyz
+    ex = &data->mode_extents[6];
+    ex->min = vec3_create(-0.1f, -0.1f, -0.1f);
+    ex->max = vec3_create(0.1f, 0.1f, 0.1f);
 }
 static void create_gizmo_mode_scale(editor_gizmo* gizmo) {
-       editor_gizmo_mode_data* data = &gizmo->mode_data[EDITOR_GIZMO_MODE_SCALE];
+    editor_gizmo_mode_data* data = &gizmo->mode_data[EDITOR_GIZMO_MODE_SCALE];
 
     data->vertex_count = 12;  // 2 per line, 3 lines + 3 lines
     data->vertices = kallocate(sizeof(colour_vertex_3d) * data->vertex_count, MEMORY_TAG_ARRAY);
@@ -297,5 +348,112 @@ static void create_gizmo_mode_rotate(editor_gizmo* gizmo) {
         data->vertices[j + 1].position.y = radius * kcos(theta);
         data->vertices[j + 1].position.z = radius * ksin(theta);
         data->vertices[j + 1].colour = r;
+    }
+}
+
+void editor_gizmo_interaction_begin(editor_gizmo* gizmo, struct camera* c, struct ray* r, editor_gizmo_interaction_type interaction_type) {
+    // TODO:
+}
+void editor_gizmo_interaction_end(editor_gizmo* gizmo) {
+    // TODO:
+}
+void editor_gizmo_handle_interaction(editor_gizmo* gizmo, struct camera* c, struct ray* r, editor_gizmo_interaction_type interaction_type) {
+    if (!gizmo || !r) {
+        return;
+    }
+
+    if (gizmo->mode == EDITOR_GIZMO_MODE_MOVE) {
+        editor_gizmo_mode_data* data = &gizmo->mode_data[gizmo->mode];
+        if (interaction_type == EDITOR_GIZMO_INTERACTION_TYPE_MOUSE_HOVER) {
+            f32 dist;
+            gizmo->xform.is_dirty = true;
+            u8 hit_axis = INVALID_ID_U8;
+
+            // Loop through each axis/axis combo. Loop backwards to give priority to combos since
+            // those hit boxes are much smaller.
+            mat4 gizmo_world = transform_world_get(&gizmo->xform);
+            for (i32 i = 6; i > -1; --i) {
+                if (raycast_oriented_extents(data->mode_extents[i], &gizmo_world, r, &dist)) {
+                    hit_axis = i;
+                    break;
+                }
+            }
+
+            // handle highlighting
+            vec4 y = vec4_create(1.0f, 1.0f, 0.0f, 1.0f);
+            vec4 r = vec4_create(1.0f, 0.0f, 0.0f, 1.0f);
+            vec4 g = vec4_create(0.0f, 1.0f, 0.0f, 1.0f);
+            vec4 b = vec4_create(0.0f, 0.0f, 1.0f, 1.0f);
+
+            if (data->current_axis_index != hit_axis) {
+                data->current_axis_index = hit_axis;
+
+                // Main axis colours
+                for (u32 i = 0; i < 3; ++i) {
+                    if (i == hit_axis) {
+                        data->vertices[(i * 2) + 0].colour = y;
+                        data->vertices[(i * 2) + 1].colour = y;
+                    } else {
+                        // Set non-hit axes back to their original colour.
+                        data->vertices[(i * 2) + 0].colour = vec4_create(0.0f, 0.0f, 0.0f, 1.0f);
+                        data->vertices[(i * 2) + 0].colour.elements[i] = 1.0f;
+                        data->vertices[(i * 2) + 1].colour = vec4_create(0.0f, 0.0f, 0.0f, 1.0f);
+                        data->vertices[(i * 2) + 1].colour.elements[i] = 1.0f;
+                    }
+                }
+
+                // xyz
+                if (hit_axis == 6) {
+                    // Turn them all yellow.
+                    for (u32 i = 0; i < 18; ++i) {
+                        data->vertices[i].colour = y;
+                    }
+                } else {
+                    if (hit_axis == 3) {
+                        // x/y
+                        // 6/7,12/13
+                        data->vertices[6].colour = y;
+                        data->vertices[7].colour = y;
+                        data->vertices[12].colour = y;
+                        data->vertices[13].colour = y;
+                    } else {
+                        // 还原颜色
+                        data->vertices[6].colour = r;
+                        data->vertices[7].colour = r;
+                        data->vertices[12].colour = g;
+                        data->vertices[12].colour = g;
+                    }
+
+                    if (hit_axis == 4) {
+                        // x/z
+                        // 8/9,16/17
+                        data->vertices[8].colour = y;
+                        data->vertices[9].colour = y;
+                        data->vertices[16].colour = y;
+                        data->vertices[17].colour = y;
+                    } else {
+                        data->vertices[8].colour = r;
+                        data->vertices[9].colour = r;
+                        data->vertices[16].colour = b;
+                        data->vertices[17].colour = b;
+                    }
+
+                    if (hit_axis == 5) {
+                        // y/z
+                        // 10/11, 14/15
+                        data->vertices[10].colour = y;
+                        data->vertices[11].colour = y;
+                        data->vertices[14].colour = y;
+                        data->vertices[15].colour = y;
+                    } else {
+                        data->vertices[10].colour = g;
+                        data->vertices[11].colour = g;
+                        data->vertices[14].colour = b;
+                        data->vertices[15].colour = b;
+                    }
+                }
+                renderer_geometry_vertex_update(&data->geo, 0, data->vertex_count, data->vertices);
+            }
+        }
     }
 }

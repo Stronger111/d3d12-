@@ -127,6 +127,38 @@ typedef enum system_event_code {
      * u32 watch_id = context.data.u32[0];
      */
     EVENT_CODE_WATCHED_FILE_DELETED = 0x19,
+
+    /**
+     * @brief An event fired while a button is being held down and the
+     * mouse is moved.
+     *
+     * Context usage:
+     * i16 x = context.data.i16[0]
+     * i16 y = context.data.i16[1]
+     * u16 button = context.data.u16[2]
+     */
+    EVENT_CODE_MOUSE_DRAGGED = 0x20,
+
+    /**
+     * @brief An event fired when a button is pressed and a mouse movement
+     * is done while it is pressed.
+     *
+     * Context usage:
+     * i16 x = context.data.i16[0]
+     * i16 y = context.data.i16[1]
+     * u16 button = context.data.u16[2]
+     */
+    EVENT_CODE_MOUSE_DRAG_BEGIN=0x21,
+   
+      /**
+     * @brief An event fired when a button is released was previously dragging.
+     *
+     * Context usage:
+     * i16 x = context.data.i16[0]
+     * i16 y = context.data.i16[1]
+     * u16 button = context.data.u16[2]
+     */
+    EVENT_CODE_MOUSE_DRAG_END=0x22,
     
     MAX_EVENT_CODE = 0xFF
 } system_event_code;
