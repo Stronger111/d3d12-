@@ -597,19 +597,17 @@ KINLINE f32 vec3_distance(vec3 vector_0, vec3 vector_1) {
 }
 
 /**
- * @brief Transform v by m. NOTE: It is assumed by this function that the
- * vector v is a point, not a direction, and is calculated as if a w component
- * with a value of 1.0f is there.
- *
+ * @brief Transform v by m.
  * @param v The vector to transform.
+ * @param w Pass 1.0f for a point, or 0.0f for a direction.
  * @param m The matrix to transform by.
  * @return A transformed copy of v.
  */
-KINLINE vec3 vec3_transform(vec3 v, mat4 m) {
+KINLINE vec3 vec3_transform(vec3 v,f32 w, mat4 m) {
     vec3 out;
-    out.x = v.x * m.data[0 + 0] + v.y * m.data[4 + 0] + v.z * m.data[8 + 0] + 1.0f * m.data[12 + 0];
-    out.y = v.x * m.data[0 + 1] + v.y * m.data[4 + 1] + v.z * m.data[8 + 1] + 1.0f * m.data[12 + 1];
-    out.z = v.x * m.data[0 + 2] + v.y * m.data[4 + 2] + v.z * m.data[8 + 2] + 1.0f * m.data[12 + 2];
+    out.x = v.x * m.data[0 + 0] + v.y * m.data[4 + 0] + v.z * m.data[8 + 0] + w * m.data[12 + 0];
+    out.y = v.x * m.data[0 + 1] + v.y * m.data[4 + 1] + v.z * m.data[8 + 1] + w * m.data[12 + 1];
+    out.z = v.x * m.data[0 + 2] + v.y * m.data[4 + 2] + v.z * m.data[8 + 2] + w * m.data[12 + 2];
     return out;
 }
 

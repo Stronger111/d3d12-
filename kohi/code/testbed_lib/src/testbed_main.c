@@ -181,6 +181,41 @@ b8 game_on_key(u16 code, void* sender, void* listener_inst, event_context contex
     return false;
 }
 
+static b8 game_on_drag(u16 code, void* sender, void* listener_list, event_context context) {
+    i16 x = context.data.i16[1];
+    i16 y = context.data.i16[2];
+    u16 drag_button = context.data.u16[2];
+    testbed_game_state* state = (testbed_game_state*)listener_list;
+
+    // Only care about left button drags.
+    if (drag_button == BUTTON_LEFT) {
+        mat4 view = camera_view_get(state->world_camera);
+        vec3 origin = camera_position_get(state->world_camera);
+
+        // TODO:Get this from a viewport
+        mat4 projection_matrix = mat4_perspective(deg_to_rad(45.0f), (f32)state->width / state->height, 0.1f, 4000.0f);
+
+        ray r = ray_from_screen(
+            vec2_create((f32)x, (f32)y),
+            vec2_create((f32)state->width, (f32)state->height),
+            origin,
+            view,
+            projection_matrix);
+
+        if (code == EVENT_CODE_MOUSE_DRAG_BEGIN) {
+            state->using_gizmo = true;
+            // Drag start -- change the interaction mode to "dragging".
+            editor_gizmo_interaction_begin(&state->gizmo, state->world_camera, &r, EDITOR_GIZMO_INTERACTION_TYPE_MOUSE_DRAG);
+        } else if (code == EVENT_CODE_MOUSE_DRAGGED) {
+            editor_gizmo_handle_interaction(&state->gizmo, state->world_camera, &r, EDITOR_GIZMO_INTERACTION_TYPE_MOUSE_DRAG);
+        } else if (code == EVENT_CODE_MOUSE_DRAG_END) {
+            editor_gizmo_interaction_end(&state->gizmo);
+            state->using_gizmo = false;
+        }
+    }
+    return false;  // Let other handles handle.
+}
+
 b8 game_on_button_up(u16 code, void* sender, void* listener_list, event_context context) {
     if (code == EVENT_CODE_BUTTON_RELEASED) {
         u16 button = context.data.u16[0];
@@ -747,6 +782,9 @@ void application_register_events(struct application* game_inst) {
         event_register(EVENT_CODE_BUTTON_RELEASED, game_inst->state, game_on_button_up);
 
         event_register(EVENT_CODE_MOUSE_MOVED, game_inst->state, game_on_mouse_move);
+        event_register(EVENT_CODE_MOUSE_DRAG_BEGIN, game_inst->state, game_on_drag);
+        event_register(EVENT_CODE_MOUSE_DRAG_END, game_inst->state, game_on_drag);
+        event_register(EVENT_CODE_MOUSE_DRAGGED, game_inst->state, game_on_drag);
         // TODO: end temp
 
         event_register(EVENT_CODE_KEY_PRESSED, game_inst, game_on_key);
@@ -764,6 +802,9 @@ void application_unregister_events(struct application* game_inst) {
 
     event_unregister(EVENT_CODE_BUTTON_RELEASED, game_inst->state, game_on_button_up);
     event_unregister(EVENT_CODE_MOUSE_MOVED, game_inst->state, game_on_mouse_move);
+    event_unregister(EVENT_CODE_MOUSE_DRAG_BEGIN, game_inst->state, game_on_drag);
+    event_unregister(EVENT_CODE_MOUSE_DRAG_END, game_inst->state, game_on_drag);
+    event_unregister(EVENT_CODE_MOUSE_DRAGGED, game_inst->state, game_on_drag);
     // TODO: end temp
 
     event_unregister(EVENT_CODE_KEY_PRESSED, game_inst, game_on_key);

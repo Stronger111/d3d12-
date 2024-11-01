@@ -352,7 +352,31 @@ static void create_gizmo_mode_rotate(editor_gizmo* gizmo) {
 }
 
 void editor_gizmo_interaction_begin(editor_gizmo* gizmo, struct camera* c, struct ray* r, editor_gizmo_interaction_type interaction_type) {
-    // TODO:
+    if (!gizmo || !r) {
+        return;
+    }
+
+    gizmo->interaction = interaction_type;
+
+    if (gizmo->interaction == EDITOR_GIZMO_INTERACTION_TYPE_MOUSE_DRAG) {
+        editor_gizmo_mode_data* data = &gizmo->mode_data[gizmo->mode];
+
+        mat4 gizmo_world = transform_world_get(&gizmo->xform);
+        vec3 origin = transform_position_get(&gizmo->xform);
+        vec3 plane_dir;
+        if (gizmo->mode == EDITOR_GIZMO_MODE_MOVE || gizmo->mode == EDITOR_GIZMO_MODE_SCALE) {
+            // create the plane
+            switch (data->current_axis_index) {
+                case 0:  // x axis
+                case 3:  // xy axis
+                    plane_dir = vec3_transform(vec3_back(), 0.0f, gizmo_world);
+                    break;
+
+                default:
+                    return;
+            }
+        }
+    }
 }
 void editor_gizmo_interaction_end(editor_gizmo* gizmo) {
     // TODO:
