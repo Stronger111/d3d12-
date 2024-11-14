@@ -280,6 +280,7 @@ typedef struct mesh {
     u8 generation;
     u16 geometry_count;
     geometry** geometries;
+    //TODO: rename to xform
     transform transform;
     extents_3d extents;
     void* debug_data;

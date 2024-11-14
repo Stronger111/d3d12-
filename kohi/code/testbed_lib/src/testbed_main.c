@@ -152,40 +152,31 @@ b8 game_on_debug_event(u16 code, void* sender, void* listener_inst, event_contex
     return false;
 }
 
-// 按键状态触发的方法
+// 按键状态触发的方法  改变局部坐标还是全局坐标模式
 b8 game_on_key(u16 code, void* sender, void* listener_inst, event_context context) {
-    // if (code == EVENT_CODE_KEY_PRESSED) {
-    //     u16 key_code = context.data.u16[0];
-    //     if (key_code == KEY_ESCAPE) {
-    //         // NOTE: Technically firing an event to itself, but there may be other listeners.
-    //         event_context data = {};
-    //         event_fire(EVENT_CODE_APPLICATION_QUIT, 0, data);
+    application* game_inst = (application*)listener_inst;
+    testbed_game_state* state = (testbed_game_state*)game_inst->state;
+    if(code==EVENT_CODE_KEY_RELEASED){
+        u16 key_code=context.data.u16[0];
+        //Change gizmo orientation
+        if(key_code==KEY_G){
+            editor_gizmo_orientation orientation=editor_gizmo_orientation_get(&state->gizmo);
 
-    //         // Block anything else from processing this.
-    //         return true;
-    //     } else if (key_code == KEY_A) {
-    //         // Example on checking for a key
-    //         KDEBUG("Explicit - A key pressed!");
-    //     } else {
-    //         KDEBUG("'%s' key pressed in window.", input_keycode_str(key_code));
-    //     }
-    // } else if (code == EVENT_CODE_KEY_RELEASED) {
-    //     u16 key_code = context.data.u16[0];
-    //     if (key_code == KEY_B) {
-    //         // Example on checking for a key
-    //         KDEBUG("Explicit - B key released!");
-    //     } else {
-    //         KDEBUG("'%s' key released in window.", input_keycode_str(key_code));
-    //     }
-    // }
+            orientation++;
+            if(orientation>EDITOR_GIZMO_ORIENTATION_MAX){
+                orientation=0;
+            }
+            editor_gizmo_orientation_set(&state->gizmo,orientation);
+        }
+    }
     return false;
 }
 
-static b8 game_on_drag(u16 code, void* sender, void* listener_list, event_context context) {
-    i16 x = context.data.i16[1];
-    i16 y = context.data.i16[2];
+static b8 game_on_drag(u16 code, void* sender, void* listener_inst, event_context context) {
+    i16 x = context.data.i16[0];
+    i16 y = context.data.i16[1];
     u16 drag_button = context.data.u16[2];
-    testbed_game_state* state = (testbed_game_state*)listener_list;
+    testbed_game_state* state = (testbed_game_state*)listener_inst;
 
     // Only care about left button drags.
     if (drag_button == BUTTON_LEFT) {
@@ -216,8 +207,10 @@ static b8 game_on_drag(u16 code, void* sender, void* listener_list, event_contex
     return false;  // Let other handles handle.
 }
 
-b8 game_on_button_up(u16 code, void* sender, void* listener_list, event_context context) {
-    if (code == EVENT_CODE_BUTTON_RELEASED) {
+b8 game_on_button(u16 code, void* sender, void* listener_list, event_context context) {
+    if (code == EVENT_CODE_BUTTON_PRESSED) {
+        //
+    } else if (code == EVENT_CODE_BUTTON_RELEASED) {
         u16 button = context.data.u16[0];
         switch (button) {
             case BUTTON_LEFT: {
@@ -227,6 +220,11 @@ b8 game_on_button_up(u16 code, void* sender, void* listener_list, event_context 
 
                 // If the scene isn't loaded, don't do anything else.
                 if (state->main_scene.state < SIMPLE_SCENE_STATE_LOADED) {
+                    return false;
+                }
+
+                // If "manipulating gizmo " don't do below logic
+                if (state->using_gizmo) {
                     return false;
                 }
 
@@ -267,6 +265,18 @@ b8 game_on_button_up(u16 code, void* sender, void* listener_list, event_context 
                         debug_box3d_extents_set(&test_box, ext);
 
                         darray_push(state->test_boxes, test_box);
+
+                        // Object selection
+                        if (i == 0) {
+                            state->selection.unique_id = hit->unique_id;
+                            state->selection.xform = simple_scene_transform_get_by_id(&state->main_scene, hit->unique_id);
+                            if (state->selection.xform) {
+                                KINFO("Selected object id %u", hit->unique_id);
+                                //state->gizmo.selected_xfrom=state->selection.xform;
+                                editor_gizmo_selected_transform_set(&state->gizmo, state->selection.xform);
+                                //transform_parent_set(&state->gizmo.xform,state->selection.xform);
+                            }
+                        }
                     }
                 } else {
                     KINFO("Not hit")
@@ -280,6 +290,16 @@ b8 game_on_button_up(u16 code, void* sender, void* listener_list, event_context 
                     debug_line3d_colour_set(&test_line, (vec4){1.0f, 0.0f, 1.0f, 1.0f});
 
                     darray_push(state->test_lines, test_line);
+
+                    if(state->selection.xform){
+                        KINFO("Object deselected.");
+                        state->selection.xform=0;
+                        state->selection.unique_id=INVALID_ID;
+
+                        editor_gizmo_selected_transform_set(&state->gizmo,0);
+                    }
+
+                    //TODO:hide gizmo,disable input,etc.
                 }
             } break;
         }
@@ -377,6 +397,10 @@ b8 application_initialize(struct application* game_inst) {
     resource_system_loader_register(simple_scene_resource_loader_create());
 
     testbed_game_state* state = (testbed_game_state*)game_inst->state;
+
+    state->selection.unique_id = INVALID_ID;
+    state->selection.xform=0;
+    
     debug_console_load(&state->debug_console);
 
     state->test_lines = darray_create(debug_line3d);
@@ -472,8 +496,9 @@ b8 application_initialize(struct application* game_inst) {
     // TODO: end temp load/prepare stuff
 
     state->world_camera = camera_system_get_default();
-    camera_position_set(state->world_camera, (vec3){1.45f, 3.34f, 17.15f});
-    camera_rotation_euler_set(state->world_camera, (vec3){-11.083f, 18.250f, 0.0f});
+    camera_position_set(state->world_camera, (vec3){2.07f, 3.09f, 2.46f});
+    
+    camera_rotation_euler_set(state->world_camera, (vec3){-47.34f, 38.450f, 0.0f});
 
     // kzero_memory(&game_inst->frame_data, sizeof(app_frame_data));
 
@@ -500,6 +525,8 @@ b8 application_update(application* game_inst, struct frame_data* p_frame_data) {
         if (!simple_scene_update(&state->main_scene, p_frame_data)) {
             KWARN("Failed to update main scene.");
         }
+
+        editor_gizmo_update(&state->gizmo);
 
         // // Perform a small rotation on the first mesh.
         // quat rotation = quat_from_axis_angle((vec3){0, 1, 0}, -0.5f * p_frame_data->delta_time, false);
@@ -779,7 +806,7 @@ void application_register_events(struct application* game_inst) {
         event_register(EVENT_CODE_DEBUG2, game_inst, game_on_debug_event);
         event_register(EVENT_CODE_OBJECT_HOVER_ID_CHANGED, game_inst, game_on_event);
 
-        event_register(EVENT_CODE_BUTTON_RELEASED, game_inst->state, game_on_button_up);
+        event_register(EVENT_CODE_BUTTON_RELEASED, game_inst->state, game_on_button);
 
         event_register(EVENT_CODE_MOUSE_MOVED, game_inst->state, game_on_mouse_move);
         event_register(EVENT_CODE_MOUSE_DRAG_BEGIN, game_inst->state, game_on_drag);
@@ -800,7 +827,7 @@ void application_unregister_events(struct application* game_inst) {
     event_unregister(EVENT_CODE_DEBUG2, game_inst, game_on_debug_event);
     event_unregister(EVENT_CODE_OBJECT_HOVER_ID_CHANGED, game_inst, game_on_event);
 
-    event_unregister(EVENT_CODE_BUTTON_RELEASED, game_inst->state, game_on_button_up);
+    event_unregister(EVENT_CODE_BUTTON_RELEASED, game_inst->state, game_on_button);
     event_unregister(EVENT_CODE_MOUSE_MOVED, game_inst->state, game_on_mouse_move);
     event_unregister(EVENT_CODE_MOUSE_DRAG_BEGIN, game_inst->state, game_on_drag);
     event_unregister(EVENT_CODE_MOUSE_DRAG_END, game_inst->state, game_on_drag);

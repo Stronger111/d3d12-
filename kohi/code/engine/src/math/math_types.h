@@ -77,6 +77,12 @@ typedef union vec4_u {
 
 typedef vec4 quat;
 
+/** @brief A 3x3 matrix */
+typedef union mat3_u {
+    /** @brief The matrix elements. */
+    f32 data[12];
+}mat3;
+
 typedef union mat4_u {
     f32 data[16];
 } mat4;
@@ -154,6 +160,8 @@ typedef struct transform {
      * the position, rotation or scale have changed.
      */
     mat4 local;
+    //行列式
+    f32 determinant;
 
     /** @brief A pointer to a parent transform if one is assigned. Can also be null. */
     struct transform* parent;

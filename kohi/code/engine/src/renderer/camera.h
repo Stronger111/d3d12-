@@ -114,7 +114,7 @@ KAPI vec3 camera_forward(camera* c);
  * @param c A pointer to a camera.
  * @return A copy of the camera's backward vector.
  */
-vec3 camera_backward(camera* c);
+KAPI vec3 camera_backward(camera* c);
 
 /**
  * @brief Returns a copy of the camera's left vector.
