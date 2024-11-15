@@ -48,12 +48,16 @@ typedef struct vulkan_swapchain_support_info {
 } vulkan_swapchain_support_info;
 
 typedef enum vulkan_device_support_flag_bits {
-    VULKAN_DEVICE_SUPPORT_FLAG_NONE_BIT = 0x0,
+    VULKAN_DEVICE_SUPPORT_FLAG_NONE_BIT = 0x00,
     /** @brief Indicates if the device supports native dynamic topology (i.e. * using Vulkan API >= 1.3). */
-    VULKAN_DEVICE_SUPPORT_FLAG_NATIVE_DYNAMIC_TOPOLOGY_BIT = 0x1,
+    VULKAN_DEVICE_SUPPORT_FLAG_NATIVE_DYNAMIC_TOPOLOGY_BIT = 0x01,
     /** @brief Indicates if this device supports dynamic topology. If not, the renderer will need to generate a separate pipeline per topology type. */
-    VULKAN_DEVICE_SUPPORT_FLAG_DYNAMIC_TOPOLOGY_BIT = 0x2,
-    VULKAN_DEVICE_SUPPORT_FLAG_LINE_SMOOTH_RASTERISATION_BIT = 0x4
+    VULKAN_DEVICE_SUPPORT_FLAG_DYNAMIC_TOPOLOGY_BIT = 0x02,
+    VULKAN_DEVICE_SUPPORT_FLAG_LINE_SMOOTH_RASTERISATION_BIT = 0x04,
+    /** @brief Indicates if the device supports native dynamic front-face swapping (i.e. using Vulkan API >= 1.3). */
+    VULKAN_DEVICE_SUPPORT_FLAG_NATIVE_DYNAMIC_FRONT_FACE_BIT = 0x08,
+    /** @brief Indicates if the device supports extension-based dynamic front-face swapping. */
+    VULKAN_DEVICE_SUPPORT_FLAG_DYNAMIC_FRONT_FACE_BIT = 0x10,
 } vulkan_device_support_flag_bits;
 
 /** @brief Bitwise flags for device support. @see vulkan_device_support_flag_bits. */
@@ -215,6 +219,8 @@ typedef struct vulkan_pipeline_config {
     range* push_constant_ranges;
     /** @brief Collection of topology types to be supported on this pipeline. */
     u32 topology_types;
+    /** @brief The vertex winding order used to determine the front face of triangles. */
+    renderer_winding winding;
 } vulkan_pipeline_config;
 
 typedef struct vulkan_pipeline {
@@ -394,6 +400,9 @@ typedef struct vulkan_shader {
     /** @brief An array of pointers to pipelines associated with this shader. */
     vulkan_pipeline** pipelines;
 
+    /** @brief An array of pointers to pipelines associated with this shader. Clockwise winding. Only used if native/extension support doesn't exitst. */
+    vulkan_pipeline** clockwise_pipelines;
+
     /** @brief The currently bound pipeline index. */
     u8 bound_pipeline_index;
     /** @brief The currently-selected topology. */
@@ -509,6 +518,10 @@ typedef struct vulkan_context {
      * @returns The index of the found memory type. Returns -1 if not found.
      */
     i32 (*find_memory_index)(struct vulkan_context* context, u32 type_filter, u32 property_flags);
-    
+
     PFN_vkCmdSetPrimitiveTopologyEXT vkCmdSetPrimitiveTopologyEXT;
+    PFN_vkCmdSetFrontFaceEXT vkCmdSetFrontFaceEXT;
+
+    /** @brief A pointer to the currently bound shader. */
+    struct shader* bound_shader;
 } vulkan_context;

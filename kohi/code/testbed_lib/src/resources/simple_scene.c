@@ -507,6 +507,9 @@ b8 simple_scene_populate_render_packet(simple_scene* scene,
             mesh* m = &scene->meshes[i];
             if (m->generation != INVALID_ID_U8) {
                 mat4 model = transform_world_get(&m->transform);
+                //GPT:一个矩阵的行列式为负，那么它表示的变换反转了物体的定向。在二维空间中，这就像是将一个物体翻转过来；
+                //在三维空间中，这就像是将一个物体变成了它的镜像
+                b8 winding_inverted = m->transform.determinant < 0;
 
                 for (u32 j = 0; j < m->geometry_count; ++j) {
                     geometry* g = m->geometries[j];
@@ -557,6 +560,7 @@ b8 simple_scene_populate_render_packet(simple_scene* scene,
                             data.model = model;
                             data.geometry = g;
                             data.unique_id = m->unique_id;
+                            data.winding_inverted = winding_inverted;
                             darray_push(scene->world_data.world_geometries, data);
 
                             p_frame_data->drawn_mesh_count++;
@@ -682,23 +686,22 @@ b8 simple_scene_raycast(simple_scene* scene, const struct ray* r, struct raycast
         }
     }
 
-    //Sort the results based on distance.
-    if(out_result->hits){
+    // Sort the results based on distance.
+    if (out_result->hits) {
         b8 swapped;
-        u32 length=darray_length(out_result->hits);
-        for(u32 i=0;i<length;++i){
-            swapped=false;
-            for (u32 j = 0; j < length-1; ++j)
-            {
-                if(out_result->hits[j].distance>out_result->hits[j+1].distance){
-                     KSWAP(raycast_hit,out_result->hits[j],out_result->hits[j+1]);
-                     swapped=true;
+        u32 length = darray_length(out_result->hits);
+        for (u32 i = 0; i < length; ++i) {
+            swapped = false;
+            for (u32 j = 0; j < length - 1; ++j) {
+                if (out_result->hits[j].distance > out_result->hits[j + 1].distance) {
+                    KSWAP(raycast_hit, out_result->hits[j], out_result->hits[j + 1]);
+                    swapped = true;
                 }
             }
-            //If no 2 elements were swapped,the sort is complete.
-            if(!swapped){
+            // If no 2 elements were swapped,the sort is complete.
+            if (!swapped) {
                 break;
-            }            
+            }
         }
     }
     return out_result->hits != 0;

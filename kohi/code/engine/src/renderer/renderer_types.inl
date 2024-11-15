@@ -14,6 +14,7 @@ typedef struct geometry_render_data {
     mat4 model;          // 模型矩阵
     geometry* geometry;  // 几何体
     u32 unique_id;
+    b8 winding_inverted;
 } geometry_render_data;
 
 typedef enum renderer_debug_view_mode {
@@ -181,6 +182,14 @@ typedef struct renderer_backend_config {
     renderer_config_flags flags;
 } renderer_backend_config;
 
+/** @brief The winding order of vertices, used to determine what is the front-face of a triangle. */
+typedef enum renderer_winding {
+    /** @brief Counter-clockwise vertex winding. */
+    RENDERER_WINDING_COUNTER_CLOCKWISE = 0,
+    /** @brief Counter-clockwise vertex winding. */
+    RENDERER_WINDING_CLOCKWISE = 1
+} renderer_winding;
+
 /**
  * @brief A generic "interface" for the renderer plugin. The renderer backend
  * is what is responsible for making calls to the graphics API such as
@@ -275,6 +284,14 @@ typedef struct renderer_plugin {
      * @param plugin A pointer to the renderer plugin interface.
      */
     void (*scissor_reset)(struct renderer_plugin* plugin);
+
+    /**
+     * @brief Set the renderer to use the given winding direction.
+     *
+     * @param A pointer to the renderer plugin interface.
+     * @param winding The winding direction.
+     */
+    void (*winding_set)(struct renderer_plugin* plugin, renderer_winding winding);
 
     /**
      * @brief Begins a renderpass with the given id.
@@ -488,7 +505,7 @@ typedef struct renderer_plugin {
      * @param needs_update Indicates if the shader uniforms need to be updated or just bound.
      * @return True on success; otherwise false.
      */
-    b8 (*shader_apply_globals)(struct renderer_plugin* plugin, struct shader* s,b8 needs_update);
+    b8 (*shader_apply_globals)(struct renderer_plugin* plugin, struct shader* s, b8 needs_update);
 
     /**
      * @brief Applies data for the currently bound instance.

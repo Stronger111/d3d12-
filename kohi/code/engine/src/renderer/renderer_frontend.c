@@ -162,6 +162,11 @@ void renderer_scissor_reset(void) {
     state_ptr->plugin.scissor_reset(&state_ptr->plugin);
 }
 
+void renderer_winding_set(renderer_winding winding) {
+    renderer_system_state* state_ptr= (renderer_system_state*)systems_manager_get_state(K_SYSTEM_TYPE_RENDERER);
+    state_ptr->plugin.winding_set(&state_ptr->plugin, winding);
+}
+
 void renderer_texture_create(const u8* pixels, struct texture* texture) {
     renderer_system_state* state_ptr = (renderer_system_state*)systems_manager_get_state(K_SYSTEM_TYPE_RENDERER);
     state_ptr->plugin.texture_create(&state_ptr->plugin, pixels, texture);
@@ -234,13 +239,12 @@ b8 renderer_geometry_create(geometry* g, u32 vertex_size, u32 vertex_count, cons
 }
 
 b8 renderer_geometry_upload(geometry* g) {
-    if(!g)
-    {
+    if (!g) {
         KERROR("renderer_geometry_upload requires a valid pointer to geometry.");
         return false;
     }
-    renderer_system_state* state_ptr= (renderer_system_state*)systems_manager_get_state(K_SYSTEM_TYPE_RENDERER);
-    return state_ptr->plugin.geometry_upload(&state_ptr->plugin,g,0,g->vertex_element_size*g->vertex_count,0,g->index_element_size*g->index_count);
+    renderer_system_state* state_ptr = (renderer_system_state*)systems_manager_get_state(K_SYSTEM_TYPE_RENDERER);
+    return state_ptr->plugin.geometry_upload(&state_ptr->plugin, g, 0, g->vertex_element_size * g->vertex_count, 0, g->index_element_size * g->index_count);
 }
 
 void renderer_geometry_vertex_update(geometry* g, u32 offset, u32 vertex_count, void* vertices) {
@@ -303,9 +307,9 @@ b8 renderer_shader_uniform_set(shader* s, shader_uniform* uniform, const void* v
     return state_ptr->plugin.shader_uniform_set(&state_ptr->plugin, s, uniform, value);
 }
 
-b8 renderer_shader_apply_globals(shader* s,b8 needs_update) {
+b8 renderer_shader_apply_globals(shader* s, b8 needs_update) {
     renderer_system_state* state_ptr = (renderer_system_state*)systems_manager_get_state(K_SYSTEM_TYPE_RENDERER);
-    return state_ptr->plugin.shader_apply_globals(&state_ptr->plugin, s,needs_update);
+    return state_ptr->plugin.shader_apply_globals(&state_ptr->plugin, s, needs_update);
 }
 
 b8 renderer_shader_apply_instance(shader* s, b8 needs_update) {

@@ -272,7 +272,7 @@ b8 render_view_world_on_packet_build(const struct render_view* self, struct line
             // Get the center, extract the global position from the model matrix and add it to the center,
             // then calculate the distance between it and the camera, and finally save it to a list to be sorted.
             // NOTE: This isn't perfect for translucent meshes that intersect, but is enough for our purposes now.
-            vec3 center = vec3_transform(g_data->geometry->center,1.0f, g_data->model);
+            vec3 center = vec3_transform(g_data->geometry->center, 1.0f, g_data->model);
             f32 distance = vec3_distance(center, internal_data->world_camera->position);
 
             geometry_distance gdist;
@@ -419,8 +419,18 @@ b8 render_view_world_on_render(const struct render_view* self, const struct rend
                 // Apply the locals
                 material_system_apply_local(m, &packet->geometries[i].model);
 
+                // Invert if needed
+                if (packet->geometries[i].winding_inverted) {
+                    renderer_winding_set(RENDERER_WINDING_CLOCKWISE);
+                }
+
                 // Draw it.
                 renderer_geometry_draw(&packet->geometries[i]);
+
+                // Change back if needed
+                if (packet->geometries[i].winding_inverted) {
+                    renderer_winding_set(RENDERER_WINDING_COUNTER_CLOCKWISE);
+                }
             }
         }
 
@@ -447,11 +457,11 @@ b8 render_view_world_on_render(const struct render_view* self, const struct rend
 
                 // Local
                 shader_system_uniform_set_by_index(data->debug_locations.model, &packet->debug_geometries[i].model);
-                
+
                 renderer_geometry_draw(&packet->debug_geometries[i]);
             }
-             // HACK: This should be handled somehow, every frame, by the shader system.
-             s->render_frame_number=frame_number;
+            // HACK: This should be handled somehow, every frame, by the shader system.
+            s->render_frame_number = frame_number;
         }
         if (!renderer_renderpass_end(pass)) {
             KERROR("render_view_world_on_render pass index %u failed to end.", p);
