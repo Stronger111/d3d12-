@@ -71,7 +71,7 @@
         "utility": "cpp",
         "kmemory.h": "c",
         "defines.h": "c",
-        "vulkan_types.inl": "c",
+        "vulkan_types.h": "c",
         "clock.h": "c",
         "kstring.h": "c",
         "logger.h": "c",
@@ -153,7 +153,8 @@
         "xtree": "c",
         "geometry_3d.h": "c",
         "debug_line3d.h": "c",
-        "camera.h": "c"
+        "camera.h": "c",
+        "renderer_types.h": "c"
     },
     // File copyright documentation tag.  Array of strings will be converted to one line per element.  Can template {year}.
     "doxdocgen.file.copyrightTag": [

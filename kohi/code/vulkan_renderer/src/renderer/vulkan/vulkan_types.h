@@ -18,7 +18,7 @@
 #include "containers/hashtable.h"
 #include "core/asserts.h"
 #include "defines.h"
-#include "renderer/renderer_types.inl"
+#include "renderer/renderer_types.h"
 
 // Checks the given expression return value against VK_SUCCESS
 #define VK_CHECK(expr) \
