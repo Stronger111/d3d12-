@@ -788,6 +788,9 @@ b8 application_render(struct application* game_inst, struct render_packet* packe
     // Executes the current command buffer.
     renderer_end(p_frame_data);
 
+    //Begins the command buffer
+    renderer_begin(p_frame_data);
+
     // Render the world again,but with the new viewport and camera.
     view_packet = &packet->views[TESTBED_PACKET_VIEW_WORLD];
     view_packet->projection_matrix = state->world_viewport2.projection;
@@ -799,6 +802,8 @@ b8 application_render(struct application* game_inst, struct render_packet* packe
     view_packet->view->on_render(view_packet->view, view_packet, p_frame_data);
 
     clock_update(&state->render_clock);
+
+    renderer_end(p_frame_data);
 
     if (!renderer_present(p_frame_data)) {
         KERROR("The call to renderer_present failed. This is likely unrecoverable.Shutting down.");

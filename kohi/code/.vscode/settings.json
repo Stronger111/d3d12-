@@ -159,7 +159,8 @@
         "systems_manager.h": "c",
         "linear_allocator.h": "c",
         "viewport.h": "c",
-        "mesh.h": "c"
+        "mesh.h": "c",
+        "geometry_2d.h": "c"
     },
     // File copyright documentation tag.  Array of strings will be converted to one line per element.  Can template {year}.
     "doxdocgen.file.copyrightTag": [
