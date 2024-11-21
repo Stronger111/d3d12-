@@ -1,8 +1,8 @@
 #pragma once
 
 #include "math/math_types.h"
-#include "resources/resource_types.h"
 #include "renderer/renderer_types.h"
+#include "resources/resource_types.h"
 
 struct font_data;
 
@@ -24,6 +24,7 @@ typedef struct ui_text
    transform transform;
    u32 instance_id;
    u64 render_frame_number;
+   u8 draw_index;
 }ui_text;
 
 KAPI b8 ui_text_create(const char* name,ui_text_type type,const char* font_name,u16 font_size,const char* text_content,ui_text* out_text);

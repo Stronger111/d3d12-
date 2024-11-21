@@ -53,7 +53,6 @@ b8 vulkan_graphics_pipeline_create(vulkan_context* context, const vulkan_pipelin
         rasterizer_create_info.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
     }
 
-    rasterizer_create_info.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;  // specifies that a triangle with positive area is considered front-facing.
     rasterizer_create_info.depthBiasEnable = VK_FALSE;
     rasterizer_create_info.depthBiasConstantFactor = 0.0f;
     rasterizer_create_info.depthBiasClamp = 0.0f;

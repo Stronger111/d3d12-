@@ -25,7 +25,8 @@ Renderer:
 - batch rendering
 - JobSystem
 - 字体渲染 字库->图集  代码点->codePoint 1 2 3 4 字节  对象拾取 原理 pass 绘制 物体ID->rgba 取出鼠标位置 然后读取纹理 然后rgba 在转换为 物体ID 
-- 光追 pso 多线程 hism
+- 光追 PSO 多线程 hism
+- Gizmo系統
 
 -bug
 -"Vulkan buffer creation failed for object shader  out_error_local_memory  windows ？？ TODO  重启解决问题 后面需要查一下
@@ -35,7 +36,7 @@ Renderer:
 - 传入UBO 数据不正确
 - 环境变量更改需要重启
 
--Feature
+-Feature特性
 -JobSystem
  --Ring queue 循环队列 -> CPU调度工作
 -空闲列表
@@ -45,3 +46,5 @@ Renderer:
 -场景管理
  -深度优先遍历物体
 -地形系统
+-多视口系统ViewPort
+-Gizmo系统->数学 射线和平面 AABB,OBB求交检测拾取对象,交互鼠标事件

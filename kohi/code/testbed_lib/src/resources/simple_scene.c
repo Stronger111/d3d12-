@@ -12,6 +12,7 @@
 #include "math/transform.h"
 #include "renderer/camera.h"
 #include "renderer/renderer_types.h"
+#include "renderer/viewport.h"
 #include "resources/debug/debug_box3d.h"
 #include "resources/debug/debug_line3d.h"
 #include "resources/mesh.h"
@@ -463,24 +464,11 @@ b8 simple_scene_update(simple_scene* scene, const struct frame_data* p_frame_dat
 
 b8 simple_scene_populate_render_packet(simple_scene* scene,
                                        struct camera* current_camera,
-                                       f32 aspect,
+                                       viewport* v,
                                        struct frame_data* p_frame_data,
                                        struct render_packet* packet) {
     if (!scene || !packet) {
         return false;
-    }
-
-    // Skybox
-    if (scene->sb) {
-        render_view_packet* view_packet = &packet->views[TESTBED_PACKET_VIEW_SKYBOX];
-        const render_view* view = view_packet->view;
-        // Skybox
-        skybox_packet_data skybox_data = {};
-        skybox_data.sb = scene->sb;
-        if (!render_view_system_packet_build(view, p_frame_data->frame_allocator, &skybox_data, view_packet)) {
-            KERROR("Failed to build packet for view 'skybox'.");
-            return false;
-        }
     }
 
     // World render
@@ -492,13 +480,16 @@ b8 simple_scene_populate_render_packet(simple_scene* scene,
         darray_clear(scene->world_data.terrain_geometries);
         darray_clear(scene->world_data.debug_geometries);
 
+        // Skybox
+        scene->world_data.skybox_data.sb = scene->sb;
+
         // Update the frustum
         vec3 forward = camera_forward(current_camera);
         vec3 right = camera_right(current_camera);
         vec3 up = camera_up(current_camera);
         // TODO: get camera fov, aspect, etc.
         frustum f = frustum_create(&current_camera->position, &forward, &right,
-                                   &up, aspect, deg_to_rad(45.0f), 0.1f, 1000.0f);
+                                   &up, v->rect.width / v->rect.height, v->fov, v->near_clip, v->far_clip);
 
         p_frame_data->drawn_mesh_count = 0;
 
@@ -507,8 +498,8 @@ b8 simple_scene_populate_render_packet(simple_scene* scene,
             mesh* m = &scene->meshes[i];
             if (m->generation != INVALID_ID_U8) {
                 mat4 model = transform_world_get(&m->transform);
-                //GPT:一个矩阵的行列式为负，那么它表示的变换反转了物体的定向。在二维空间中，这就像是将一个物体翻转过来；
-                //在三维空间中，这就像是将一个物体变成了它的镜像
+                // GPT:一个矩阵的行列式为负，那么它表示的变换反转了物体的定向。在二维空间中，这就像是将一个物体翻转过来；
+                // 在三维空间中，这就像是将一个物体变成了它的镜像
                 b8 winding_inverted = m->transform.determinant < 0;
 
                 for (u32 j = 0; j < m->geometry_count; ++j) {
@@ -646,7 +637,7 @@ b8 simple_scene_populate_render_packet(simple_scene* scene,
             }
         }
         // World
-        if (!render_view_system_packet_build(view, p_frame_data->frame_allocator, &scene->world_data, &packet->views[1])) {
+        if (!render_view_system_packet_build(view, p_frame_data, v, &scene->world_data, view_packet)) {
             KERROR("Failed to build packet for view 'world'.");
             return false;
         }

@@ -1,23 +1,20 @@
 #include "engine.h"
+
 #include "application_types.h"
-
-#include "version.h"
-
-#include "platform/platform.h"
-#include "core/kmemory.h"
-#include "core/logger.h"
-#include "core/event.h"
-#include "core/input.h"
-#include "core/clock.h"
-#include "core/kstring.h"
-#include "core/uuid.h"
-#include "core/metrics.h"
-#include "core/frame_data.h"
-
 #include "containers/darray.h"
-
-#include "renderer/renderer_frontend.h"
+#include "core/clock.h"
+#include "core/event.h"
+#include "core/frame_data.h"
+#include "core/input.h"
+#include "core/kmemory.h"
+#include "core/kstring.h"
+#include "core/logger.h"
+#include "core/metrics.h"
+#include "core/uuid.h"
 #include "memory/linear_allocator.h"
+#include "platform/platform.h"
+#include "renderer/renderer_frontend.h"
+#include "version.h"
 
 // systems
 #include "core/systems_manager.h"
@@ -164,8 +161,15 @@ b8 engine_run(application* game_inst) {
                 break;
             }
 
-            // TODO: refactor packet creation
+            //This frame's render packet
             render_packet packet = {};
+
+            //Have the application generate the render packet.
+            b8 prepare_result=engine_state->game_inst->prepare_render_packet(engine_state->game_inst, &packet, &engine_state->p_frame_data);
+            if(!prepare_result){
+                KERROR("Application failed to prepare the render packet.Skipping this frame.");
+                continue;
+            }
 
             // call the games render routine
             if (!engine_state->game_inst->render(engine_state->game_inst, &packet, &engine_state->p_frame_data)) {
@@ -173,8 +177,6 @@ b8 engine_run(application* game_inst) {
                 engine_state->is_running = false;
                 break;
             }
-
-            renderer_draw_frame(&packet,&engine_state->p_frame_data);
 
             // Cleanup the packet.
             for (u32 i = 0; i < packet.view_count; ++i) {
