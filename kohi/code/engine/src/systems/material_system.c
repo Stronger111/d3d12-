@@ -563,13 +563,13 @@ material* material_system_get_default_terrain(void) {
         return false;                                 \
     }
 
-b8 material_system_apply_global(u32 shader_id,const struct frame_data* p_frame_data, const mat4* projection, const mat4* view, 
-       const vec4* ambient_colour, const vec3* view_position, u32 render_mode) {
+b8 material_system_apply_global(u32 shader_id, const struct frame_data* p_frame_data, const mat4* projection, const mat4* view,
+                                const vec4* ambient_colour, const vec3* view_position, u32 render_mode) {
     shader* s = shader_system_get_by_id(shader_id);
     if (!s) {
         return false;
     }
-    if (s->render_frame_number == p_frame_data->renderer_frame_number&&s->draw_index==p_frame_data->draw_index) {
+    if (s->render_frame_number == p_frame_data->renderer_frame_number && s->draw_index == p_frame_data->draw_index) {
         return true;
     }
 
@@ -593,7 +593,7 @@ b8 material_system_apply_global(u32 shader_id,const struct frame_data* p_frame_d
     return true;
 }
 
-b8 material_system_apply_instance(material* m, b8 needs_update) {
+b8 material_system_apply_instance(material* m, struct frame_data* p_frame_data, b8 needs_update) {
     // Apply instance-level uniforms.
     MATERIAL_APPLY_OR_FAIL(shader_system_bind_instance(m->internal_id));
     if (needs_update) {
@@ -618,17 +618,14 @@ b8 material_system_apply_instance(material* m, b8 needs_update) {
             // Point lights.
             u32 p_light_count = light_system_point_light_count();
             if (p_light_count) {
-                // TODO: frame allocator?
-                point_light* p_lights = kallocate(sizeof(point_light) * p_light_count, MEMORY_TAG_ARRAY);
+                point_light* p_lights = p_frame_data->allocator.allocate(sizeof(point_light) * p_light_count);
                 light_system_point_lights_get(p_lights);
 
-                point_light_data* p_light_datas = kallocate(sizeof(point_light_data) * p_light_count, MEMORY_TAG_ARRAY);
+                point_light_data* p_light_datas = p_frame_data->allocator.allocate(sizeof(point_light_data) * p_light_count);
                 for (u32 i = 0; i < p_light_count; ++i) {
                     p_light_datas[i] = p_lights[i].data;
                 }
                 MATERIAL_APPLY_OR_FAIL(shader_system_uniform_set_by_index(state_ptr->material_locations.p_lights, p_light_datas));
-                kfree(p_light_datas, sizeof(point_light_data), MEMORY_TAG_ARRAY);
-                kfree(p_lights, sizeof(point_light), MEMORY_TAG_ARRAY);
             }
             MATERIAL_APPLY_OR_FAIL(shader_system_uniform_set_by_index(state_ptr->material_locations.num_p_lights, &p_light_count))
         } else if (m->shader_id == state_ptr->ui_shader_id) {
@@ -657,18 +654,15 @@ b8 material_system_apply_instance(material* m, b8 needs_update) {
             // Point lights.
             u32 p_light_count = light_system_point_light_count();
             if (p_light_count) {
-                // TODO: frame allocator?
-                point_light* p_lights = kallocate(sizeof(point_light) * p_light_count, MEMORY_TAG_ARRAY);
+                point_light* p_lights = p_frame_data->allocator.allocate(sizeof(point_light) * p_light_count);
                 light_system_point_lights_get(p_lights);
 
-                point_light_data* p_light_datas = kallocate(sizeof(point_light_data) * p_light_count, MEMORY_TAG_ARRAY);
+                point_light_data* p_light_datas = p_frame_data->allocator.allocate(sizeof(point_light_data) * p_light_count);
                 for (u32 i = 0; i < p_light_count; ++i) {
                     p_light_datas[i] = p_lights[i].data;
                 }
 
                 MATERIAL_APPLY_OR_FAIL(shader_system_uniform_set_by_index(state_ptr->terrain_locations.p_lights, p_light_datas));
-                kfree(p_light_datas, sizeof(point_light_data), MEMORY_TAG_ARRAY);
-                kfree(p_lights, sizeof(point_light), MEMORY_TAG_ARRAY);
             }
 
             MATERIAL_APPLY_OR_FAIL(shader_system_uniform_set_by_index(state_ptr->terrain_locations.num_p_lights, &p_light_count));

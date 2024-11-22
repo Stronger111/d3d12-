@@ -38,6 +38,27 @@ typedef struct engine_state_t {
 
 static engine_state_t* engine_state;
 
+// frame allocator functions.
+static void* frame_allocator_allocate(u64 size) {
+    if (!engine_state) {
+        return 0;
+    }
+    return linear_allocator_allocate(&engine_state->frame_allocator, size);
+}
+
+static void frame_allocator_free(u64 size) {
+    // NOTE: Linear allocator doesn't free, so this is a no-op.
+    /* if (engine_state) {
+   } */
+}
+
+static void frame_allocator_free_all(void){
+    if(engine_state){
+       // Don't wipe the memory each time,to save on performance 擦除内存会浪费性能
+       linear_allocator_free_all(&engine_state->frame_allocator,false);
+    }
+}
+
 // Event handlers
 static b8 engine_on_event(u16 code, void* sender, void* listener_inst, event_context context);
 static b8 engine_on_resized(u16 code, void* sender, void* listener_inst, event_context context);
@@ -84,13 +105,16 @@ b8 engine_create(application* game_inst) {
         return false;
     }
 
-    // // Setup the frame allocator.
+    // Setup the frame allocator.
     linear_allocator_create(game_inst->app_config.frame_allocator_size, 0, &engine_state->frame_allocator);
-    engine_state->p_frame_data.frame_allocator = &engine_state->frame_allocator;
+    engine_state->p_frame_data.allocator.allocate =frame_allocator_allocate;
+    engine_state->p_frame_data.allocator.free = frame_allocator_free;
+    engine_state->p_frame_data.allocator.free_all = frame_allocator_free_all;
+
+    //Allocate for the  application's frame data.
     if (game_inst->app_config.app_frame_data_size > 0) {
         engine_state->p_frame_data.application_frame_data = kallocate(game_inst->app_config.app_frame_data_size, MEMORY_TAG_GAME);
-    }else
-    {
+    } else {
         engine_state->p_frame_data.application_frame_data = 0;
     }
 
@@ -125,8 +149,8 @@ b8 engine_run(application* game_inst) {
     clock_update(&engine_state->clock);
     engine_state->last_time = engine_state->clock.elapsed;
     // f64 running_time = 0;
-    //TODO: frame rate lock
-    //u8 frame_count = 0;
+    // TODO: frame rate lock
+    // u8 frame_count = 0;
     f64 target_frame_seconds = 1.0f / 60;
     f64 frame_elapsed_time = 0;  // 帧过去的时间
 
@@ -143,12 +167,12 @@ b8 engine_run(application* game_inst) {
             f64 delta = (current_time - engine_state->last_time);
             f64 frame_start_time = platform_get_absolute_time();
 
-            engine_state->p_frame_data.total_time=current_time;
-            engine_state->p_frame_data.delta_time=(f32)delta;
-            
-            //Reset the frame allocator
-            linear_allocator_free_all(&engine_state->frame_allocator);
-            
+            engine_state->p_frame_data.total_time = current_time;
+            engine_state->p_frame_data.delta_time = (f32)delta;
+
+            // Reset the frame allocator
+           engine_state->p_frame_data.allocator.free_all();
+
             // Update  system.
             systems_manager_update(&engine_state->sys_manager_state, &engine_state->p_frame_data);
 
@@ -161,12 +185,12 @@ b8 engine_run(application* game_inst) {
                 break;
             }
 
-            //This frame's render packet
+            // This frame's render packet
             render_packet packet = {};
 
-            //Have the application generate the render packet.
-            b8 prepare_result=engine_state->game_inst->prepare_render_packet(engine_state->game_inst, &packet, &engine_state->p_frame_data);
-            if(!prepare_result){
+            // Have the application generate the render packet.
+            b8 prepare_result = engine_state->game_inst->prepare_render_packet(engine_state->game_inst, &packet, &engine_state->p_frame_data);
+            if (!prepare_result) {
                 KERROR("Application failed to prepare the render packet.Skipping this frame.");
                 continue;
             }
@@ -198,7 +222,7 @@ b8 engine_run(application* game_inst) {
                     platform_sleep(remaining_ms - 1);
                 }
                 // TODO: frame rate lock
-                //frame_count++;
+                // frame_count++;
             }
 
             // 渲染后是键盘鼠标事件系统

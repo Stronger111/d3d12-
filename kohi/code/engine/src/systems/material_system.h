@@ -43,7 +43,7 @@ KAPI material* material_system_acquire(const char* name);
  * @param material_names The names of the source materials to be used.
  * @return A pointer to the loaded terrain material. Can be a pointer to the defualt terrain material if not found.
  */
-KAPI material* material_system_acquire_terrain_material(const char* material_name, u32 material_count, const char** material_names,b8 auto_release);
+KAPI material* material_system_acquire_terrain_material(const char* material_name, u32 material_count, const char** material_names, b8 auto_release);
 
 KAPI material* material_system_acquire_from_config(material_config* config);
 KAPI void material_system_release(const char* name);
@@ -72,17 +72,18 @@ KAPI material* material_system_get_default_terrain(void);
  * @param render_mode The render mode.
  * @return True on success; otherwise false.
  */
-KAPI b8 material_system_apply_global(u32 shader_id,const struct frame_data* frame_data, const mat4* projection, const mat4* view, 
-               const vec4* ambient_colour, const vec3* view_position, u32 render_mode);
+KAPI b8 material_system_apply_global(u32 shader_id, const struct frame_data* frame_data, const mat4* projection, const mat4* view,
+                                     const vec4* ambient_colour, const vec3* view_position, u32 render_mode);
 
 /**
  * @brief Applies instance-level material data for the given material.
  *
  * @param m A pointer to the material to be applied.
+ * @param p_frame_data A pointer to the current frame's data.
  * @param needs_update Indicates if material internals require updating, or if they should just be bound.
  * @return True on success; otherwise false.
  */
-KAPI b8 material_system_apply_instance(material* m, b8 needs_update);
+KAPI b8 material_system_apply_instance(material* m, struct frame_data* p_frame_data, b8 needs_update);
 
 /**
  * @brief Applies local-level material data (typically just model matrix).
@@ -92,7 +93,6 @@ KAPI b8 material_system_apply_instance(material* m, b8 needs_update);
  * @return True on success; otherwise false.
  */
 KAPI b8 material_system_apply_local(material* m, const mat4* model);
-
 
 /**
  * @brief Dumps all of the registered materials and their reference counts/handles.

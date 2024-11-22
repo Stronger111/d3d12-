@@ -161,7 +161,8 @@
         "viewport.h": "c",
         "mesh.h": "c",
         "geometry_2d.h": "c",
-        "hashtable.h": "c"
+        "hashtable.h": "c",
+        "expect.h": "c"
     },
     // File copyright documentation tag.  Array of strings will be converted to one line per element.  Can template {year}.
     "doxdocgen.file.copyrightTag": [
