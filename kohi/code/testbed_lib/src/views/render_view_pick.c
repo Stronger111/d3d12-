@@ -253,7 +253,7 @@ void render_view_pick_on_resize(render_view* self, u32 width, u32 height) {
     self->height = height;
 }
 
-b8 render_view_pick_on_packet_build(const render_view* self, struct frame_data* p_frame_data, struct viewport* v, void* data, render_view_packet* out_packet) {
+b8 render_view_pick_on_packet_build(const render_view* self, struct frame_data* p_frame_data, struct viewport* v, struct camera* c, void* data, render_view_packet* out_packet) {
     if (!self || !data || !out_packet) {
         KWARN("render_view_pick_on_packet_build requires valid pointer to view, packet, and data.");
         return false;
@@ -268,10 +268,8 @@ b8 render_view_pick_on_packet_build(const render_view* self, struct frame_data* 
     // 视口
     out_packet->vp = v;
 
-    // TODO: Get active camera.
-    camera* world_camera = camera_system_get_default();
-    internal_data->world_shader_info.view = camera_view_get(world_camera);
-    internal_data->terrain_shader_info.view = camera_view_get(world_camera);
+    internal_data->world_shader_info.view = camera_view_get(c);
+    internal_data->terrain_shader_info.view = camera_view_get(c);
 
     // Set the pick packet data to extended data.
     packet_data->ui_geometry_count = 0;
@@ -380,7 +378,7 @@ b8 render_view_pick_on_render(const render_view* self, const render_view_packet*
         }
 
         // Apply globals
-        viewport* v=renderer_active_viewport_get();
+        viewport* v = renderer_active_viewport_get();
         if (!shader_system_uniform_set_by_index(data->world_shader_info.projection_location, &v->projection)) {
             KERROR("Failed to apply projection matrix");
         }
@@ -489,15 +487,15 @@ b8 render_view_pick_on_render(const render_view* self, const render_view_packet*
         }
 
         // Apply globals
-        //TODO:This  won't work as a single view because the application needs the ability
-        //to set viewport in between. UI and world should be handled separately anyway.
-        //Throwing an error if we try to use this in the meantime.
+        // TODO:This  won't work as a single view because the application needs the ability
+        // to set viewport in between. UI and world should be handled separately anyway.
+        // Throwing an error if we try to use this in the meantime.
         KFATAL("Cannot use pick pass without it being split into UI/World first due to viewport changes.");
-        //TODO:Get the projection from the current viewport once split up.
-        // if (!shader_system_uniform_set_by_index(data->ui_shader_info.projection_location, &data->ui_shader_info.projection)) {
-        //     KERROR("Failed to apply projection matrix");
-        // }
-        
+        // TODO:Get the projection from the current viewport once split up.
+        //  if (!shader_system_uniform_set_by_index(data->ui_shader_info.projection_location, &data->ui_shader_info.projection)) {
+        //      KERROR("Failed to apply projection matrix");
+        //  }
+
         if (!shader_system_uniform_set_by_index(data->ui_shader_info.view_location, &data->ui_shader_info.view)) {
             KERROR("Failed to apply view matrix");
         }

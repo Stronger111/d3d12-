@@ -31,6 +31,9 @@ typedef struct testbed_game_state {
     f32 delta_time;
     camera* world_camera;
 
+    //TODO:temp
+    camera* world_camera_2;
+
     u16 width, height;
 
     frustum camera_frustum;
