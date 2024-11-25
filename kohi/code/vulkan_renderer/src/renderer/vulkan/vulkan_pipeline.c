@@ -25,7 +25,7 @@ b8 vulkan_graphics_pipeline_create(vulkan_context* context, const vulkan_pipelin
     VkPipelineRasterizationStateCreateInfo rasterizer_create_info = {VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO};
     rasterizer_create_info.depthClampEnable = VK_FALSE;  // 超过范围丢弃掉
     rasterizer_create_info.rasterizerDiscardEnable = VK_FALSE;
-    rasterizer_create_info.polygonMode = config->is_wireframe ? VK_POLYGON_MODE_LINE : VK_POLYGON_MODE_FILL;
+    rasterizer_create_info.polygonMode = (config->shader_flags & SHADER_FLAG_WIREFRAME) ? VK_POLYGON_MODE_LINE : VK_POLYGON_MODE_FILL;
     rasterizer_create_info.lineWidth = 1.0f;
     // VK_FRONT_FACE_COUNTER_CLOCKWISE 逆时针
     switch (config->cull_mode) {
@@ -231,10 +231,10 @@ b8 vulkan_graphics_pipeline_create(vulkan_context* context, const vulkan_pipelin
     pipeline_create_info.basePipelineIndex = -1;
 
     VkResult result = vkCreateGraphicsPipelines(context->device.logical_device, VK_NULL_HANDLE, 1, &pipeline_create_info, context->allocator, &out_pipeline->handle);
-    
-    //Cleanup
+
+    // Cleanup
     darray_destroy(dynamic_states);
-    
+
     char pipeline_name_buf[512] = {0};
     string_format(pipeline_name_buf, "pipeline_shader_%s", config->name);
     VK_SET_DEBUG_OBJECT_NAME(context, VK_OBJECT_TYPE_PIPELINE, out_pipeline->handle, pipeline_name_buf);

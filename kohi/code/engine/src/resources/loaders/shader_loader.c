@@ -1,16 +1,15 @@
 #include "shader_loader.h"
 
-#include "core/logger.h"
+#include "containers/darray.h"
 #include "core/kmemory.h"
 #include "core/kstring.h"
+#include "core/logger.h"
+#include "loader_utils.h"
+#include "math/kmath.h"
+#include "platform/filesystem.h"
 #include "resources/resource_types.h"
 #include "systems/resource_system.h"
-#include "math/kmath.h"
-#include "loader_utils.h"
-#include "containers/darray.h"
-
-#include "platform/filesystem.h"
-
+#include "systems/shader_system.h"
 static b8 shader_loader_load(struct resource_loader* self, const char* name, void* params, resource* out_resource) {
     if (!self || !name || !out_resource) {
         return false;
@@ -163,10 +162,25 @@ static b8 shader_loader_load(struct resource_loader* self, const char* name, voi
             string_cleanup_split_array(topologies);
             darray_destroy(topologies);
         } else if (strings_equali(trimmed_var_name, "depth_test")) {
-            string_to_bool(trimmed_value, &resource_data->depth_test);
+            b8 depth_test;
+            string_to_bool(trimmed_value, &depth_test);
+            if (depth_test) {
+                resource_data->flags |= SHADER_FLAG_DEPTH_TEST;
+            }
         } else if (strings_equali(trimmed_var_name, "depth_write")) {
-            string_to_bool(trimmed_value, &resource_data->depth_write);
-        } else if (strings_equali(trimmed_var_name, "attribute")) {
+            b8 depth_write;
+            string_to_bool(trimmed_value, &depth_write);
+            if (depth_write) {
+                resource_data->flags |= SHADER_FLAG_DEPTH_WRITE;
+            }
+        }else if(strings_equali(trimmed_var_name,"wireframe")){
+            b8 wireframe;
+            string_to_bool(trimmed_value, &wireframe);
+            if(wireframe){
+                resource_data->flags |= SHADER_FLAG_WIREFRAME;
+            }
+        } 
+        else if (strings_equali(trimmed_var_name, "attribute")) {
             // Parse attribute.
             char** fields = darray_create(char*);
             u32 field_count = string_split(trimmed_value, ',', &fields, true, true);
