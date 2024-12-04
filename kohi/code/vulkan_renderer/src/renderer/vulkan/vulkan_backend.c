@@ -592,7 +592,7 @@ b8 vulkan_renderer_frame_prepare(renderer_plugin* plugin, struct frame_data* p_f
     if (context->recreating_swapchain) {
         VkResult result = vkDeviceWaitIdle(device->logical_device);
         if (!vulkan_result_is_success(result)) {
-            KERROR("vulkan_renderer_backend_frame_begin vkDeviceWaitIdle(1) failed:'%s'", vulkan_result_string(result, true));
+            KERROR("vulkan_renderer_backend_begin_frame vkDeviceWaitIdle(1) failed:'%s'", vulkan_result_string(result, true));
             return false;
         }
     }
@@ -602,7 +602,7 @@ b8 vulkan_renderer_frame_prepare(renderer_plugin* plugin, struct frame_data* p_f
     if (context->framebuffer_size_generation != context->framebuffer_size_last_generation || context->render_flag_changed) {
         VkResult result = vkDeviceWaitIdle(device->logical_device);
         if (!vulkan_result_is_success(result)) {
-            KERROR("vulkan_renderer_backend_frame_begin vkDeviceWaitIdle(1) failed:'%s'", vulkan_result_string(result, true));
+            KERROR("vulkan_renderer_backend_begin_frame vkDeviceWaitIdle(2) failed:'%s'", vulkan_result_string(result, true));
             return false;
         }
 
@@ -2670,7 +2670,7 @@ void vulkan_renderpass_destroy(renderer_plugin* plugin, renderpass* pass) {
 b8 vulkan_renderer_render_target_create(renderer_plugin* plugin, u8 attachment_count, render_target_attachment* attachments, renderpass* pass, u32 width, u32 height, render_target* out_target) {
     vulkan_context* context = (vulkan_context*)plugin->internal_context;
     // Max number of attachments
-    VkImageView attachment_views[32];
+    VkImageView attachment_views[32] = {0};
     for (u32 i = 0; i < attachment_count; ++i) {
         attachment_views[i] = ((vulkan_image*)attachments[i].texture->internal_data)->view;
     }

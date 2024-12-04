@@ -15,10 +15,10 @@
  *
  */
 #pragma once
+
+#include "application_types.h"
 #include "core/engine.h"
 #include "core/logger.h"
-#include "core/kmemory.h"
-#include "application_types.h"
 
 /** @brief Externally-defined function to create a application, provided by the consumer
  * of this library.
@@ -37,11 +37,12 @@ int main(void) {
         return -1;
     }
     // Ensure the function pointer exist
-    if (!app_inst.render || !app_inst.update || !app_inst.initialize || !app_inst.on_resize) {
+    if (!app_inst.render_frame || !app_inst.prepare_frame || !app_inst.update || !app_inst.initialize || !app_inst.on_resize) {
         KFATAL("The application function pointers must be assigned!");
         return -2;
     }
 
+    // Initialization.
     if (!engine_create(&app_inst)) {
         KINFO("Engine filed to create!\n");
         return 1;

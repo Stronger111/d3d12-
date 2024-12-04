@@ -25,10 +25,10 @@ b8 load_game_lib(application* app) {
     if (!platform_dynamic_library_load_function("application_update", &app->game_library)) {
         return false;
     }
-    if (!platform_dynamic_library_load_function("application_prepare_render_packet", &app->game_library)) {
+    if (!platform_dynamic_library_load_function("application_prepare_frame", &app->game_library)) {
         return false;
     }
-    if (!platform_dynamic_library_load_function("application_render", &app->game_library)) {
+    if (!platform_dynamic_library_load_function("application_render_frame", &app->game_library)) {
         return false;
     }
     if (!platform_dynamic_library_load_function("application_on_resize", &app->game_library)) {
@@ -50,8 +50,8 @@ b8 load_game_lib(application* app) {
     app->boot = app->game_library.functions[0].pfn;
     app->initialize = app->game_library.functions[1].pfn;
     app->update = app->game_library.functions[2].pfn;
-    app->prepare_render_packet = app->game_library.functions[3].pfn;
-    app->render = app->game_library.functions[4].pfn;
+    app->prepare_frame = app->game_library.functions[3].pfn;
+    app->render_frame = app->game_library.functions[4].pfn;
     app->on_resize = app->game_library.functions[5].pfn;
     app->shutdown = app->game_library.functions[6].pfn;
     app->lib_on_load = app->game_library.functions[7].pfn;
@@ -116,7 +116,7 @@ b8 create_application(application* out_application) {
     out_application->app_config.start_pos_y = 100;
     out_application->app_config.start_width = 1280;
     out_application->app_config.start_height = 720;
-    out_application->app_config.name = "Kohi Engine Testbed";
+    out_application->app_config.name = "Kohi Editor";
 
     platform_error_code err_code = PLATFORM_ERROR_FILE_LOCKED;
     while (err_code == PLATFORM_ERROR_FILE_LOCKED) {
