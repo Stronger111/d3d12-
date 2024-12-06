@@ -488,6 +488,14 @@ b8 vulkan_renderer_backend_initialize(renderer_plugin* plugin, const renderer_ba
     }
     renderer_renderbuffer_bind(&context->object_index_buffer, 0);
 
+    // Staging buffer.
+    const u64 staging_buffer_size = 256 * 1000 * 1000;
+    if (!renderer_renderbuffer_create("staging", RENDERBUFFER_TYPE_STAGING, staging_buffer_size, true, &context->staging)) {
+        KERROR("Failed to create staging buffer.");
+        return false;
+    }
+    renderer_renderbuffer_bind(&context->staging, 0);
+
     // Mark all geometries as invalid
     for (u32 i = 0; i < VULKAN_MAX_GEOMETRY_COUNT; ++i) {
         context->geometries[i].id = INVALID_ID;
@@ -505,6 +513,7 @@ void vulkan_renderer_backend_shutdown(renderer_plugin* plugin) {
     // Destroy Buffers
     renderer_renderbuffer_destroy(&context->object_vertex_buffer);
     renderer_renderbuffer_destroy(&context->object_index_buffer);
+    renderer_renderbuffer_destroy(&context->staging);
 
     // Sync objects
     for (u8 i = 0; i < context->swapchain.max_frames_in_flight; ++i) {
@@ -617,6 +626,12 @@ b8 vulkan_renderer_frame_prepare(renderer_plugin* plugin, struct frame_data* p_f
         }
 
         KINFO("Resized,booting.");
+        return false;
+    }
+
+    // Reset staging buffer.
+    if (!renderer_renderbuffer_clear(&context->staging, false)) {
+        KERROR("Failed to clear staging buffer.");
         return false;
     }
 
@@ -1008,51 +1023,40 @@ void vulkan_renderer_texture_write_data(renderer_plugin* plugin, texture* t, u32
 
     VkFormat image_format = channel_count_to_format(t->channel_count, VK_FORMAT_R8G8B8A8_UNORM);
 
-    // Create a staging buffer and load data into it.
-    renderbuffer staging;
-    char bufname[256];
-    kzero_memory(bufname, 256);
-    string_format(bufname, "renderbuffer_texture_write_staging");
-    if (!renderer_renderbuffer_create(bufname, RENDERBUFFER_TYPE_STAGING, size, false, &staging)) {
-        KERROR("Failed to create staging buffer for texture write.");
-        return;
-    }
-    renderer_renderbuffer_bind(&staging, 0);
-    // vkMapMemory
-    vulkan_buffer_load_range(plugin, &staging, 0, size, pixels);
+    // Staging buffer.
+    u64 staging_offset = 0;
+    renderer_renderbuffer_allocate(&context->staging, size, &staging_offset);
+    vulkan_buffer_load_range(plugin, &context->staging, staging_offset, size, pixels);
 
-    vulkan_command_buffer temp_buffer;
+    vulkan_command_buffer temp_command_buffer;
     VkCommandPool pool = context->device.graphics_command_pool;
     VkQueue queue = context->device.graphics_queue;
-    vulkan_command_buffer_allocate_and_begin_single_use(context, pool, &temp_buffer);
+    vulkan_command_buffer_allocate_and_begin_single_use(context, pool, &temp_command_buffer);
 
     // Transition the layout from whatever it is currently to optimal for recieving data.
     vulkan_image_transition_layout(
         context,
         t->type,
-        &temp_buffer,
+        &temp_command_buffer,
         image,
         image_format,
         VK_IMAGE_LAYOUT_UNDEFINED,
         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
     // Copy the data from the buffer.
-    vulkan_image_copy_from_buffer(context, t->type, image, ((vulkan_buffer*)staging.internal_data)->handle, &temp_buffer);
+    vulkan_image_copy_from_buffer(context, t->type, image, ((vulkan_buffer*)context->staging.internal_data)->handle, staging_offset, &temp_command_buffer);
 
     // Transition from optimal for data reciept to shader-read-only optimal layout.
     vulkan_image_transition_layout(
         context,
         t->type,
-        &temp_buffer,
+        &temp_command_buffer,
         image,
         image_format,
         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
-    vulkan_command_buffer_end_single_use(context, pool, &temp_buffer, queue);
-
-    renderer_renderbuffer_unbind(&staging);
-    renderer_renderbuffer_destroy(&staging);
+    vulkan_command_buffer_end_single_use(context, pool, &temp_command_buffer, queue);
 
     t->generation++;
 }
@@ -1064,6 +1068,7 @@ void vulkan_renderer_texture_read_data(renderer_plugin* plugin, texture* t, u32 
     VkFormat image_format = channel_count_to_format(t->channel_count, VK_FORMAT_R8G8B8A8_UNORM);
 
     // Create a staging buffer and load data into it.
+    // TODO:global read buffer w/freelist (like staging), but for reading.
     renderbuffer staging;
     char bufname[256];
     kzero_memory(bufname, 256);
@@ -3060,29 +3065,17 @@ b8 vulkan_buffer_load_range(renderer_plugin* plugin, renderbuffer* buffer, u64 o
 
     vulkan_buffer* internal_buffer = (vulkan_buffer*)buffer->internal_data;
     if (vulkan_buffer_is_device_local(plugin, internal_buffer) && !vulkan_buffer_is_host_visible(plugin, internal_buffer)) {
-        // NOTE: If a staging buffer is needed (i.e.) the target buffer's memory is not host visible but is device-local,
-        // create a staging buffer to load the data into first. Then copy from it to the target buffer.
-
-        // Create a host-visible staging buffer to upload to. Mark it as the source of the transfer.
-        renderbuffer staging;
-        char bufname[256];
-        kzero_memory(bufname, 256);
-        string_format(bufname, "renderbuffer_loadrange_staging");
-        if (!renderer_renderbuffer_create(bufname, RENDERBUFFER_TYPE_STAGING, size, false, &staging)) {
-            KERROR("vulkan_buffer_load_range() - Failed to create staging buffer.");
-            return false;
-        }
-        renderer_renderbuffer_bind(&staging, 0);
+        // NOTE: If a staging buffer is needed (i.e.) the target buffer's memory is
+        // not host visible but is device-local, create a staging buffer to load the
+        // data into first. Then copy from it to the target buffer.
 
         // Load the data into the staging buffer.
-        vulkan_buffer_load_range(plugin, &staging, 0, size, data);
+        u64 staging_offset = 0;
+        renderer_renderbuffer_allocate(&context->staging, size, &staging_offset);
+        vulkan_buffer_load_range(plugin, &context->staging, staging_offset, size, data);
 
         // Perform the copy from staging to the device local buffer.
-        vulkan_buffer_copy_range(plugin, &staging, 0, buffer, offset, size);
-
-        // Clean up the staging buffer.
-        renderer_renderbuffer_unbind(&staging);
-        renderer_renderbuffer_destroy(&staging);
+        vulkan_buffer_copy_range(plugin, &context->staging, 0, buffer, offset, size);
     } else {
         // If no staging buffer is needed, map/copy/unmap.
         void* data_ptr;

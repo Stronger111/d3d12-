@@ -119,7 +119,7 @@ b8 rendergraph_pass_create(rendergraph* graph, const char* name, b8 (*create_pfn
     return true;
 }
 
-//添加Pass资源
+// 添加Pass资源
 b8 rendergraph_pass_source_add(rendergraph* graph, const char* pass_name, const char* source_name, rendergraph_source_type type,
                                rendergraph_source_origin origin) {
     if (!graph) {
@@ -294,6 +294,7 @@ b8 rendergraph_finalize(rendergraph* graph) {
                     source->textures[i] = renderer_depth_attachment_get(i);
                 } else {
                     KERROR("Unsupported source type:0x%x", source->type);
+                    return false;
                 }
             }
         }

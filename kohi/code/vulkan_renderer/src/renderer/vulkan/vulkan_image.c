@@ -60,9 +60,8 @@ void vulkan_image_create(vulkan_context* context,
     memory_allocate_info.allocationSize = out_image->memory_requirements.size;
     memory_allocate_info.memoryTypeIndex = memory_type;
     VK_CHECK(vkAllocateMemory(context->device.logical_device, &memory_allocate_info, context->allocator, &out_image->memory));
-    if(out_image->name)
-    {
-       VK_SET_DEBUG_OBJECT_NAME(context, VK_OBJECT_TYPE_DEVICE_MEMORY, out_image->memory, out_image->name);
+    if (out_image->name) {
+        VK_SET_DEBUG_OBJECT_NAME(context, VK_OBJECT_TYPE_DEVICE_MEMORY, out_image->memory, out_image->name);
     }
 
     // Bind the memory
@@ -172,11 +171,16 @@ void vulkan_image_transition_layout(vulkan_context* context,
     vkCmdPipelineBarrier(command_buffer->handle, source_stage, dest_stage, 0, 0, 0, 0, 0, 1, &barrier);
 }
 
-void vulkan_image_copy_from_buffer(vulkan_context* context, texture_type type, vulkan_image* image, VkBuffer buffer, vulkan_command_buffer* command_buffer) {
+void vulkan_image_copy_from_buffer(vulkan_context* context,
+                                   texture_type type,
+                                   vulkan_image* image,
+                                   VkBuffer buffer,
+                                   u64 offset,
+                                   vulkan_command_buffer* command_buffer) {
     // Region to copy
     VkBufferImageCopy region;
     kzero_memory(&region, sizeof(VkBufferImageCopy));
-    region.bufferOffset = 0;
+    region.bufferOffset = offset;
     region.bufferRowLength = 0;
     region.bufferImageHeight = 0;
 
