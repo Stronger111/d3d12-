@@ -26,6 +26,10 @@
 #include "vulkan_types.h"
 #include "vulkan_utils.h"
 
+// For runtime shader compilation.
+#include <shaderc/shaderc.h>
+#include <shaderc/status.h>
+
 // NOTE: If wanting to trace allocations, uncomment this.
 // #ifndef KVULKAN_ALLOCATOR_TRACE
 // #define KVULKAN_ALLOCATOR_TRACE 1
@@ -384,12 +388,17 @@ b8 vulkan_renderer_backend_initialize(renderer_plugin* plugin, const renderer_ba
 // Debugger
 #if defined(_DEBUG)
     KDEBUG("Creating Vulkan debugger...");
-    u32 log_severity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT;
-    // VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT;
+    u32 log_severity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT |
+                       VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
+                       VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT |
+                       VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT;
 
     VkDebugUtilsMessengerCreateInfoEXT debug_create_info = {VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT};
     debug_create_info.messageSeverity = log_severity;
-    debug_create_info.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT;
+    debug_create_info.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
+                                    VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT |
+                                    VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT;
+    // VK_DEBUG_UTILS_MESSAGE_TYPE_DEVICE_ADDRESS_BINDING_BIT_EXT;
     debug_create_info.pfnUserCallback = vk_debug_callback;
     debug_create_info.pUserData = 0;
 
@@ -457,12 +466,6 @@ b8 vulkan_renderer_backend_initialize(renderer_plugin* plugin, const renderer_ba
         fence_create_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
         VK_CHECK(vkCreateFence(context->device.logical_device, &fence_create_info, context->allocator, &context->in_flight_fences[i]));
     }
-    // In flight fences should not yet exist at this point, so clear the list. these are stored in pointers
-    // because the initial state should be 0, and will be 0 when not in use.Acutal fences are not owned
-    // by this list
-    for (u32 i = 0; i < context->swapchain.image_count; ++i) {
-        context->images_in_flight[i] = 0;
-    }
 
     // Create buffers
     // Geometry vertex buffer
@@ -501,6 +504,9 @@ b8 vulkan_renderer_backend_initialize(renderer_plugin* plugin, const renderer_ba
         context->geometries[i].id = INVALID_ID;
     }
 
+    // Create a shader compiler to be used.
+    context->shader_compiler = shaderc_compiler_initialize();
+
     KINFO("vulkan renderer initialized successfully.");
     return true;
 }
@@ -509,6 +515,13 @@ void vulkan_renderer_backend_shutdown(renderer_plugin* plugin) {
     // Cold-cast the context
     vulkan_context* context = (vulkan_context*)plugin->internal_context;
     vkDeviceWaitIdle(context->device.logical_device);
+
+    // Destroy the runtime shader compiler
+    if (context->shader_compiler) {
+        shaderc_compiler_release(context->shader_compiler);
+        context->shader_compiler = 0;
+    }
+
     // Destroy in the opposite order of creation
     // Destroy Buffers
     renderer_renderbuffer_destroy(&context->object_vertex_buffer);
@@ -644,11 +657,25 @@ b8 vulkan_renderer_frame_prepare(renderer_plugin* plugin, struct frame_data* p_f
 
     // Acquire the next image from the swap chain. pass along the semaphore that should signaled when this completes.
     // This same semaphore will later be waited on by the queue submission to ensure this image is available.
-    if (!vulkan_swapchain_acquire_next_image_index(
-            context, &context->swapchain, UINT64_MAX, context->image_available_semaphores[context->current_frame], 0, &context->image_index)) {
-        KERROR("Failed to acquire next image index, booting.");
+    result = vkAcquireNextImageKHR(
+        context->device.logical_device,
+        context->swapchain.handle,
+        UINT64_MAX,
+        context->image_available_semaphores[context->current_frame],
+        0,
+        &context->image_index);
+
+    if (result == VK_ERROR_OUT_OF_DATE_KHR) {
+        // Trigger swapchain recreation,then boot out of the render loop.
+        vulkan_swapchain_recreate(context, context->framebuffer_width, context->framebuffer_height, &context->swapchain);
+        return false;
+    } else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
+        KFATAL("Failed to acquire swapchain image!");
         return false;
     }
+
+    // Reset the fence for use on the next frame.
+    VK_CHECK(vkResetFences(context->device.logical_device, 1, &context->in_flight_fences[context->current_frame]));
 
     return true;
 }
@@ -657,17 +684,6 @@ b8 vulkan_renderer_begin(renderer_plugin* plugin, struct frame_data* p_frame_dat
     vulkan_context* context = (vulkan_context*)plugin->internal_context;
     // Begin recording commands.
     vulkan_command_buffer* command_buffer = &context->graphics_command_buffers[context->image_index];
-
-    // Wait for the execution of the current frame to complete. The fence being
-    // free will allow this one to move on.
-    VkResult result = vkWaitForFences(
-        context->device.logical_device, 1,
-        &context->in_flight_fences[context->current_frame], true, UINT64_MAX);
-
-    if (!vulkan_result_is_success(result)) {
-        KFATAL("In-flight fence wait failure! error: %s", vulkan_result_string(result, true));
-        return false;
-    }
 
     vulkan_command_buffer_reset(command_buffer);
     vulkan_command_buffer_begin(command_buffer, false, false, false);
@@ -682,21 +698,6 @@ b8 vulkan_renderer_end(renderer_plugin* plugin, struct frame_data* p_frame_data)
     vulkan_command_buffer* command_buffer = &context->graphics_command_buffers[context->image_index];
 
     vulkan_command_buffer_end(command_buffer);
-
-    // Make sure the previous frame is not using this image(i.e.its fence is being waited on)
-    if (context->images_in_flight[context->image_index] != VK_NULL_HANDLE)  // was frame
-    {
-        VkResult result = vkWaitForFences(context->device.logical_device, 1, &context->images_in_flight[context->image_index], true, UINT64_MAX);
-        if (!vulkan_result_is_success(result)) {
-            KFATAL("vkWaitForFences error: %s", vulkan_result_string(result, true));
-        }
-    }
-
-    // Mark the image as in-use by this frame
-    context->images_in_flight[context->image_index] = context->in_flight_fences[context->current_frame];
-
-    // Reset the fence for use on the next frame
-    VK_CHECK(vkResetFences(context->device.logical_device, 1, &context->in_flight_fences[context->current_frame]));
 
     // Submit the queue and wait for the operation to complete
     // Begin queue submission
@@ -744,12 +745,31 @@ b8 vulkan_renderer_present(renderer_plugin* plugin, struct frame_data* p_frame_d
     // Cold-cast the context
     vulkan_context* context = (vulkan_context*)plugin->internal_context;
 
-    // Give the image back to the swapchain
-    vulkan_swapchain_present(context,
-                             &context->swapchain,
-                             context->device.present_queue,
-                             context->queue_complete_semaphores[context->current_frame],
-                             context->image_index);
+    // Return the image to the swapchain for presentation
+    VkPresentInfoKHR present_info = {VK_STRUCTURE_TYPE_PRESENT_INFO_KHR};
+    present_info.waitSemaphoreCount = 1;
+    present_info.pWaitSemaphores = &context->queue_complete_semaphores[context->current_frame];
+    present_info.swapchainCount = 1;
+    present_info.pSwapchains = &context->swapchain.handle;
+    present_info.pImageIndices = &context->image_index;
+    present_info.pResults = 0;
+
+    // HACK:Waiting on the fence here solves the issue,but this shouldn't
+    //  be needed since it _should_ be waiting on the pWaitSemaphores, which _should_ be
+    //  signaled by the queue's completion after submission.
+    vkWaitForFences(context->device.logical_device, 1, &context->in_flight_fences[context->current_frame], true, UINT64_MAX);
+    VkResult result = vkQueuePresentKHR(context->device.present_queue, &present_info);
+    if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
+        // Swapchain is out of data, suboptimal or a framebuffer resize has occurred.Triggle swapchain recreation.
+        vulkan_swapchain_recreate(context, context->framebuffer_width, context->framebuffer_height, &context->swapchain);
+        KDEBUG("Swapchain recreated because swapchain returned out of data or suboptimal.");
+    } else if (result != VK_SUCCESS) {
+        KFATAL("Failed to present swap chain image!");
+    }
+
+    // Increment (and loop) the index.
+    context->current_frame = (context->current_frame + 1) % context->swapchain.max_frames_in_flight;
+
     return true;
 }
 
@@ -2371,11 +2391,6 @@ static b8 recreate_swapchain(vulkan_context* context) {
     // Wait for any operations to complete.
     vkDeviceWaitIdle(context->device.logical_device);
 
-    // Clear these out just in case.
-    for (u32 i = 0; i < context->swapchain.image_count; ++i) {
-        context->images_in_flight[i] = 0;
-    }
-
     // Requery support
     vulkan_device_query_swapchain_support(context->device.physical_device, context->surface, &context->device.swapchain_support);
     vulkan_device_detect_depth_format(&context->device);
@@ -2404,17 +2419,85 @@ static b8 recreate_swapchain(vulkan_context* context) {
 
 static b8 create_shader_module(vulkan_context* context, vulkan_shader* shader, vulkan_shader_stage_config config, vulkan_shader_stage* shader_stage) {
     // Read the resource.
-    resource binary_resource;
-    if (!resource_system_load(config.file_name, RESOURCE_TYPE_BINARY, 0, &binary_resource)) {
-        KERROR("Unable to read shader module: %s.", config.file_name);
+    resource text_resource;
+    if (!resource_system_load(config.file_name, RESOURCE_TYPE_TEXT, 0, &text_resource)) {
+        KERROR("Unable to read shader file: %s.", config.file_name);
         return false;
     }
 
+    shaderc_shader_kind shader_kind;
+    switch (config.stage) {
+        case VK_SHADER_STAGE_VERTEX_BIT:
+            shader_kind = shaderc_glsl_default_vertex_shader;
+            break;
+        case VK_SHADER_STAGE_FRAGMENT_BIT:
+            shader_kind = shaderc_glsl_default_fragment_shader;
+            break;
+        case VK_SHADER_STAGE_COMPUTE_BIT:
+            shader_kind = shaderc_glsl_default_compute_shader;
+            break;
+        case VK_SHADER_STAGE_GEOMETRY_BIT:
+            shader_kind = shaderc_glsl_default_geometry_shader;
+            break;
+        default:
+            KERROR("Unsupported shader kind.Unable to create module.");
+            return false;
+    }
+
+    KDEBUG("Compiling shader:'%s'", config.file_name);
+
+    // Attempt to compile the shader.
+    shaderc_compilation_result_t compilation_result = shaderc_compile_into_spv(
+        context->shader_compiler,
+        text_resource.data,
+        text_resource.data_size,
+        shader_kind,
+        config.file_name,
+        "main",
+        0);
+
+    // Release the resource as it isn't needed anymore at this point.
+    resource_system_unload(&text_resource);
+
+    if (!compilation_result) {
+        KERROR("An unknown error occurred while trying to compile the shader.unable to process futher.");
+        return false;
+    }
+    shaderc_compilation_status status = shaderc_result_get_compilation_status(compilation_result);
+
+    // Handle errors,if any.
+    if (status != shaderc_compilation_status_success) {
+        const char* error_message = shaderc_result_get_error_message(compilation_result);
+        u64 error_count = shaderc_result_get_num_errors(compilation_result);
+        KERROR("Error compiling shader with %llu errors.", error_count);
+        KERROR("Error(s):\n%s", error_message);
+        shaderc_result_release(compilation_result);
+        return false;
+    }
+
+    KDEBUG("Shader compilation successful.");
+
+    // Output warning if there are any.
+    u64 warning_count = shaderc_result_get_num_warnings(compilation_result);
+    if (warning_count) {
+        // NOTE:Not sure this it the correct way to obtain warnings.
+        KWARN("%llu warnings were generated during shader compilation:\n%s", warning_count, shaderc_result_get_error_message(compilation_result));
+    }
+
+    // Extract the data from the result.
+    const char* bytes = shaderc_result_get_bytes(compilation_result);
+    size_t result_length = shaderc_result_get_length(compilation_result);
+    // Take a copy of the result data and cast it to a  u32* as is required by Vulkan.
+    u32* code = kallocate(result_length, MEMORY_TAG_RENDERER);
+    kcopy_memory(code, bytes, result_length);
+
+    // release the compilation result.
+    shaderc_result_release(compilation_result);
+
     kzero_memory(&shader_stage->create_info, sizeof(VkShaderModuleCreateInfo));
     shader_stage->create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-    // Use the resource's size and data directly.
-    shader_stage->create_info.codeSize = binary_resource.data_size;
-    shader_stage->create_info.pCode = (u32*)binary_resource.data;
+    shader_stage->create_info.codeSize = result_length;
+    shader_stage->create_info.pCode = code;
 
     VK_CHECK(vkCreateShaderModule(
         context->device.logical_device,
@@ -2422,8 +2505,8 @@ static b8 create_shader_module(vulkan_context* context, vulkan_shader* shader, v
         context->allocator,
         &shader_stage->handle));
 
-    // Release the resource.
-    resource_system_unload(&binary_resource);
+    // Release the copy of the code.
+    kfree(code, result_length, MEMORY_TAG_RENDERER);
 
     // Shader stage info
     kzero_memory(&shader_stage->shader_stage_create_info, sizeof(VkPipelineShaderStageCreateInfo));

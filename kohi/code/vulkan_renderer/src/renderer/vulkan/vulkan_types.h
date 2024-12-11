@@ -422,6 +422,9 @@ typedef struct vulkan_shader {
     u8 local_uniform_count;
 } vulkan_shader;
 
+// Forward declare shader compiler.
+struct shaderc_comppiler;
+
 /**
  * @brief The overall Vulkan context for the backend. Holds and maintains
  * global renderer backend state, Vulkan instance, etc.
@@ -489,10 +492,7 @@ typedef struct vulkan_context {
 
     u32 in_flight_fence_count;
     VkFence in_flight_fences[2];
-
-    /** @brief Holds pointers to fences which exist and are owned elsewhere, one per frame. */
-    VkFence images_in_flight[3];
-
+    
     u32 image_index;
     u32 current_frame;
 
@@ -525,4 +525,9 @@ typedef struct vulkan_context {
 
     /** @brief A resusable staging buffer to transfer data from a resource to a GPU-only buffer. */
     renderbuffer staging;
+
+    /**
+     * Used for dynamic compilation of vulkan shaders (using the shaderc lib.)
+     */
+    struct shaderc_compiler* shader_compiler;
 } vulkan_context;
