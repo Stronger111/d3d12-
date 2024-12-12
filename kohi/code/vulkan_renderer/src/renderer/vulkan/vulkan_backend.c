@@ -3157,8 +3157,8 @@ b8 vulkan_buffer_load_range(renderer_plugin* plugin, renderbuffer* buffer, u64 o
         renderer_renderbuffer_allocate(&context->staging, size, &staging_offset);
         vulkan_buffer_load_range(plugin, &context->staging, staging_offset, size, data);
 
-        // Perform the copy from staging to the device local buffer.
-        vulkan_buffer_copy_range(plugin, &context->staging, 0, buffer, offset, size);
+        // Perform the copy from staging to the device local buffer. NOTE: vulkan_buffer_copy_range source_offset staging_offset
+        vulkan_buffer_copy_range(plugin, &context->staging, staging_offset, buffer, offset, size);
     } else {
         // If no staging buffer is needed, map/copy/unmap.
         void* data_ptr;
