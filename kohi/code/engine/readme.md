@@ -28,6 +28,7 @@ Renderer:
 - 光追 PSO 多线程 hism
 - Gizmo系統
 - Intel VTune Profiler 性能分析工具
+- 插件形式添加模块代码
 
 -bug
 -"Vulkan buffer creation failed for object shader  out_error_local_memory  windows ？？ TODO  重启解决问题 后面需要查一下
