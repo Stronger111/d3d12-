@@ -22,6 +22,8 @@ typedef enum resource_type {
     RESOURCE_TYPE_SIMPLE_SCENE,
     /** @brief Terrain resource type. */
     RESOURCE_TYPE_TERRAIN,
+    /** @brief Audio resource type. */
+    RESOURCE_TYPE_AUDIO,
     /** @brief Custom resource type. Used by loaders outside the core engine. */
     RESOURCE_TYPE_CUSTOM
 } resource_type;
@@ -280,7 +282,7 @@ typedef struct mesh {
     u8 generation;
     u16 geometry_count;
     geometry** geometries;
-    //TODO: rename to xform
+    // TODO: rename to xform
     transform transform;
     extents_3d extents;
     void* debug_data;
@@ -398,7 +400,7 @@ typedef struct shader_config {
     /** @brief The collection of stage file names to be loaded (one per stage). Must align with stages array. Darray. */
     char** stage_filenames;
 
-     /** @brief The flags set for this shader. */
+    /** @brief The flags set for this shader. */
     u32 flags;
 } shader_config;
 
