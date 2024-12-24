@@ -2,6 +2,7 @@
 #define _UI_PASS_H_
 
 #include "defines.h"
+#include "standard_ui_system.h"
 
 struct rendergraph_pass;
 struct frame_data;

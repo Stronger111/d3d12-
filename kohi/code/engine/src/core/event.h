@@ -47,47 +47,60 @@ typedef enum system_event_code {
     // keyboard key pressed
     /*
        Context usage:
-       u16 key_code=data.data.u16[0];
+      * u16 key_code=data.data.u16[0];
+      * u16 repeat_count = data.data.u16[1];
     */
     EVENT_CODE_KEY_PRESSED = 0x02,
     // keyboard key released
     /*
        Context usage:
        u16 key_code=data.data.u16[0];
+      * u16 repeat_count = data.data.u16[1];
     */
     EVENT_CODE_KEY_RELEASED = 0x03,
-    // Mouse button pressed
-    /*
-       Context usage:
-       u16 key_code=data.data.u16[0];
-    */
+    /** @brief Mouse button pressed.
+     * Context usage:
+     * u16 button = data.data.u16[0];
+     * u16 x = data.data.i16[1];
+     * u16 y = data.data.i16[2];
+     */
     EVENT_CODE_BUTTON_PRESSED = 0x04,
-    // Mouse button released
-    /*
-       Context usage:
-       u16 key_code=data.data.u16[0];
-    */
+
+    /** @brief Mouse button released.
+     * Context usage:
+     * u16 button = data.data.u16[0];
+     * u16 x = data.data.i16[1];
+     * u16 y = data.data.i16[2];
+     */
     EVENT_CODE_BUTTON_RELEASED = 0x05,
+
+    /** @brief Mouse button pressed then released.
+     * Context usage:
+     * u16 button = data.data.u16[0];
+     * u16 x = data.data.i16[1];
+     * u16 y = data.data.i16[2];
+     */
+    EVENT_CODE_BUTTON_CLICKED = 0x06,
     // Mouse moved
     /*
        Context usage:
         u16 x=data.data.i16[0];
         u16 y=data.data.i16[1];
     */
-    EVENT_CODE_MOUSE_MOVED = 0x06,
+    EVENT_CODE_MOUSE_MOVED = 0x07,
     // Mouse moved
     /*
        Context usage:
         ui z_delta=data.data.i8[0]
     */
-    EVENT_CODE_MOUSE_WHEEL = 0x07,
+    EVENT_CODE_MOUSE_WHEEL = 0x08,
     // Resized/resolution changed from the OS
     /*  0xFF 255
        Context usage:
          u16 width=data.data.u16[0];
          u16 height=data.data.u16[1];
     */
-    EVENT_CODE_RESIZED = 0x08,
+    EVENT_CODE_RESIZED = 0x09,
     // Change the render mode for debugging purposes.
     /* Context usage:
      * i32 mode = context.data.i32[0];
@@ -148,9 +161,9 @@ typedef enum system_event_code {
      * i16 y = context.data.i16[1]
      * u16 button = context.data.u16[2]
      */
-    EVENT_CODE_MOUSE_DRAG_BEGIN=0x21,
-   
-      /**
+    EVENT_CODE_MOUSE_DRAG_BEGIN = 0x21,
+
+    /**
      * @brief An event fired when a button is released was previously dragging.
      *
      * Context usage:
@@ -158,7 +171,7 @@ typedef enum system_event_code {
      * i16 y = context.data.i16[1]
      * u16 button = context.data.u16[2]
      */
-    EVENT_CODE_MOUSE_DRAG_END=0x22,
-    
+    EVENT_CODE_MOUSE_DRAG_END = 0x22,
+
     MAX_EVENT_CODE = 0xFF
 } system_event_code;

@@ -64,6 +64,7 @@
 #include <systems/resource_system.h>
 // Standard ui
 #include <core/systems_manager.h>
+#include <standard_ui_system.h>
 
 #include "debug_console.h"
 // Game code.
