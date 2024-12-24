@@ -9,7 +9,6 @@
  *
  */
 
-
 #pragma once
 
 #include "defines.h"
@@ -23,18 +22,13 @@ typedef struct identifier{
    u64 uniqueid;
 }identifier;
 
-/**
- * @brief Acquires a new identifier for the given owner.
- *
- * @param owner The owner of the identifier.
- * @return The new identifier.
- */
-KAPI u32 identifier_aquire_new_id(void* owner);
 
 /**
- * @brief Releases the given identifier, which can then be used
- * again.
- *
- * @param id The identifier to be released.
+ * @brief Generates a new unique identifier.
  */
-void identifier_release_id(u32 id);
+KAPI identifier identifier_create(void);
+
+/**
+ * @brief Creates an identifier from a known value. Useful for deserialization.
+ */
+KAPI identifier identifier_from_u64(u64 uniqueid);

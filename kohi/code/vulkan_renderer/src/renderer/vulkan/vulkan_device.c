@@ -41,6 +41,7 @@ b8 vulkan_device_create(vulkan_context* context) {
     // NOTE: Do not create additional queues for shared indices
     b8 present_shares_graphics_queue = context->device.graphics_queue_index == context->device.present_queue_index;
     b8 transfer_shares_graphics_queue = context->device.graphics_queue_index == context->device.transfer_queue_index;
+    b8 present_must_share_graphics = false;
     u32 index_count = 1;
     if (!present_shares_graphics_queue) {
         index_count++;
@@ -48,7 +49,7 @@ b8 vulkan_device_create(vulkan_context* context) {
     if (!transfer_shares_graphics_queue) {
         index_count++;
     }
-    u32 indices[32];
+    i32 indices[32];
     u8 index = 0;
     indices[index++] = context->device.graphics_queue_index;
     if (!present_shares_graphics_queue) {
@@ -59,27 +60,42 @@ b8 vulkan_device_create(vulkan_context* context) {
     }
 
     VkDeviceQueueCreateInfo queue_create_infos[32];
-    f32 queue_priority = 1.0f;
+    f32 queue_priorities[2] = {0.9f, 1.0f};
+
+    VkQueueFamilyProperties props[32];
+    u32 prop_count;
+    vkGetPhysicalDeviceQueueFamilyProperties(context->device.physical_device, &prop_count, 0);
+    vkGetPhysicalDeviceQueueFamilyProperties(context->device.physical_device, &prop_count, props);
+
     for (u32 i = 0; i < index_count; ++i) {
         queue_create_infos[i].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
         queue_create_infos[i].queueFamilyIndex = indices[i];
         queue_create_infos[i].queueCount = 1;
 
-        // TODO: Enable this for a feature enhancement.
-        //  if(indices[i]==context->device.graphics_queue_index)
-        //  {
-        //      queue_create_infos[i].queueCount=2;
-        //  }
+        if (present_shares_graphics_queue && indices[i] == context->device.present_queue_index) {
+            if (props[context->device.present_queue_index].queueCount > 1) {
+                // If the same family is shared between graphic and presentation,
+                // pull from the second index instead of the first for a unique queue.
+                queue_create_infos[i].queueCount = 2;
+            } else {
+                // Don't have available queues, just share them.
+                present_must_share_graphics = true;
+            }
+        }
+        // TODO: Enable this for a future enhancement.
+        // if (indices[i] == context->device.graphics_queue_index) {
+        //     queue_create_infos[i].queueCount = 2;
+        // }
         queue_create_infos[i].flags = 0;
         queue_create_infos[i].pNext = 0;
-        queue_create_infos[i].pQueuePriorities = &queue_priority;
+        queue_create_infos[i].pQueuePriorities = queue_priorities;
     }
 
     // Request device features
     // TODO: should be config driven
     VkPhysicalDeviceFeatures device_features = {};
     device_features.samplerAnisotropy = VK_TRUE;  // Request anistrophy
-    device_features.fillModeNonSolid = VK_TRUE; //TODO: Check if supported?
+    device_features.fillModeNonSolid = VK_TRUE;   // TODO: Check if supported?
 
     b8 portability_required = false;
     u32 available_extension_count = 0;
@@ -201,8 +217,11 @@ b8 vulkan_device_create(vulkan_context* context) {
     // Get queues
     vkGetDeviceQueue(context->device.logical_device, context->device.graphics_queue_index, 0,
                      &context->device.graphics_queue);
-
-    vkGetDeviceQueue(context->device.logical_device, context->device.present_queue_index, 0,
+    // If the same family is shared between graphic and presentation,
+    // pull from the second index instead of the first for a unique queue.
+    vkGetDeviceQueue(context->device.logical_device, context->device.present_queue_index,
+                     present_must_share_graphics ? 0 : (context->device.graphics_queue_index == context->device.present_queue_index) ? 1
+                                                                                                                                     : 0,
                      &context->device.present_queue);
 
     vkGetDeviceQueue(context->device.logical_device, context->device.transfer_queue_index, 0,

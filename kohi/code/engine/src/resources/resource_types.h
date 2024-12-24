@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/identifier.h"
 #include "math/math_types.h"
 
 #define TERRAIN_MAX_MATERIAL_COUNT 4
@@ -157,8 +158,8 @@ typedef struct texture_map {
     texture_repeat repeat_v;
     /** @brief The repeat mode on the W axis (or Z, or R) */
     texture_repeat repeat_w;
-    /** @brief A pointer to internal, render API-specific data. Typically the internal sampler. */
-    void* internal_data;
+    /** @brief An identifier used for internal resource lookups/management. */
+    u32 internal_id;
 } texture_map;
 
 typedef struct font_glyph {
@@ -236,7 +237,6 @@ struct material;
  */
 typedef struct geometry {
     u32 id;
-    u32 internal_id;
     /** @brief The geometry generation. Incremented every time the geometry changes. */
     u16 generation;
     /** @brief The center of the geometry in local coordinates. */
@@ -250,6 +250,8 @@ typedef struct geometry {
     u32 vertex_element_size;
     /** @brief The vertex data. */
     void* vertices;
+    /** @brief The offset from the beginning of the vertex buffer. */
+    u64 vertex_buffer_offset;
 
     /** @brief The index count. */
     u32 index_count;
@@ -257,6 +259,8 @@ typedef struct geometry {
     u32 index_element_size;
     /** @brief The index data. */
     void* indices;
+    /** @brief The offset from the beginning of the index buffer. */
+    u64 index_buffer_offset;
 
     char name[GEOMETRY_NAME_MAX_LENGTH];
     /** @brief A pointer to the material associated with this geometry.. */
@@ -276,11 +280,11 @@ typedef struct mesh_config {
 typedef struct mesh {
     char* name;
     mesh_config config;
-    u32 unique_id;
+    identifier id;
     u8 generation;
     u16 geometry_count;
     geometry** geometries;
-    //TODO: rename to xform
+    // TODO: rename to xform
     transform transform;
     extents_3d extents;
     void* debug_data;
@@ -398,7 +402,7 @@ typedef struct shader_config {
     /** @brief The collection of stage file names to be loaded (one per stage). Must align with stages array. Darray. */
     char** stage_filenames;
 
-     /** @brief The flags set for this shader. */
+    /** @brief The flags set for this shader. */
     u32 flags;
 } shader_config;
 
