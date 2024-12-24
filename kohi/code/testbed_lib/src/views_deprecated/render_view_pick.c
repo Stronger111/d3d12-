@@ -66,7 +66,7 @@ static b8 render_view_on_event(u16 code, void* sender, void* listener_inst, even
 
     switch (code) {
         case EVENT_CODE_DEFAULT_RENDERTARGET_REFRESH_REQUIRED:
-             /* render_view_system_render_targets_regenerate(self); */
+            /* render_view_system_render_targets_regenerate(self); */
             // This needs to be consumed by other views, so consider it _not_ handled.
             return false;
     }
@@ -305,20 +305,20 @@ b8 render_view_pick_on_packet_build(const render_view* self, struct frame_data* 
             geometry_render_data render_data;
             render_data.geometry = m->geometries[j];
             render_data.model = transform_world_get(&m->transform);
-            render_data.unique_id = m->unique_id;
+            render_data.unique_id = m->id.uniqueid;
             darray_push(out_packet->geometries, render_data);
             out_packet->geometry_count++;
         }
         // Count all geometries as a single id.
-        if (m->unique_id > highest_instance_id) {
-            highest_instance_id = m->unique_id;
+        if (m->id.uniqueid > highest_instance_id) {
+            highest_instance_id = m->id.uniqueid;
         }
     }
 
     // Count texts as well.
     for (u32 i = 0; i < packet_data->text_count; ++i) {
-        if (packet_data->texts[i]->unique_id > highest_instance_id) {
-            highest_instance_id = packet_data->texts[i]->unique_id;
+        if (packet_data->texts[i]->id.uniqueid > highest_instance_id) {
+            highest_instance_id = packet_data->texts[i]->id.uniqueid;
         }
     }
 
@@ -342,7 +342,7 @@ void render_view_pick_on_packet_destroy(const render_view* self, render_view_pac
     kzero_memory(packet, sizeof(render_view_packet));
 }
 
-b8 render_view_pick_on_render(const render_view* self, const render_view_packet* packet,struct frame_data* p_frame_data) {
+b8 render_view_pick_on_render(const render_view* self, const render_view_packet* packet, struct frame_data* p_frame_data) {
     render_view_pick_internal_data* data = self->internal_data;
 
     // Bind the viewport
@@ -367,7 +367,7 @@ b8 render_view_pick_on_render(const render_view* self, const render_view_packet*
             return false;
         }
 
-        i32 current_instance_id = 0;
+        u64 current_instance_id = 0;
 
         // World
         if (!shader_system_use_by_id(data->world_shader_info.s->id)) {
@@ -532,13 +532,13 @@ b8 render_view_pick_on_render(const render_view* self, const render_view_packet*
         // Draw bitmap text
         for (u32 i = 0; i < packet_data->text_count; ++i) {
             ui_text* text = packet_data->texts[i];
-            current_instance_id = text->unique_id;
+            current_instance_id = text->id.uniqueid;
             shader_system_bind_instance(current_instance_id);
 
             // Get colour based on id
             vec3 id_colour;
             u32 r, g, b;
-            u32_to_rgb(text->unique_id, &r, &g, &b);
+            u32_to_rgb(text->id.uniqueid, &r, &g, &b);
             rgb_u32_to_vec3(r, g, b, &id_colour);
             if (!shader_system_uniform_set_by_index(data->ui_shader_info.id_colour_location, &id_colour)) {
                 KERROR("Failed to apply id colour uniform.");

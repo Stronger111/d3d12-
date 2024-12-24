@@ -84,8 +84,7 @@ static void store_result(pfn_job_on_complete callback, u32 param_size, void* par
 static u32 job_thread_run(void* params) {
     u32 index = *(u32*)params;
     job_thread* thread = &state_ptr->job_threads[index];
-    u64 thread_id = thread->thread.thread_id;
-    KTRACE("Starting job thread #%i (id=%#x, type=%#x).", thread->index, thread_id, thread->type_mask);
+    KTRACE("Starting job thread #%i (id=%#x, type=%#x).", thread->index, thread->thread.thread_id, thread->type_mask);
 
     // A mutex to lock info for this thread.
     if (!kmutex_create(&thread->info_mutex)) {
@@ -153,8 +152,8 @@ static u32 job_thread_run(void* params) {
     return 1;
 }
 
-b8 job_system_initialize(u64* job_system_memory_requirement, void* state,void* config) {
-    job_system_config* type_config=(job_system_config*)config;
+b8 job_system_initialize(u64* job_system_memory_requirement, void* state, void* config) {
+    job_system_config* type_config = (job_system_config*)config;
     *job_system_memory_requirement = sizeof(job_system_state);
     if (state == 0) {
         return true;
@@ -285,7 +284,7 @@ static void process_queue(ring_queue* queue, kmutex* queue_mutex) {
     }
 }
 
-b8 job_system_update(void* state,struct frame_data* p_frame_data) {
+b8 job_system_update(void* state, struct frame_data* p_frame_data) {
     if (!state_ptr || !state_ptr->running) {
         return false;
     }

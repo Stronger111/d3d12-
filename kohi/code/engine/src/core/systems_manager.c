@@ -21,6 +21,9 @@
 #include "systems/shader_system.h"
 #include "systems/texture_system.h"
 
+// Version reporting
+#include "version.h"
+
 static b8 register_known_systems_pre_boot(systems_manager_state* state, application_config* app_config);
 static b8 register_known_systems_post_boot(systems_manager_state* state, application_config* app_config);
 static void shutdown_known_systems(systems_manager_state* state);
@@ -44,7 +47,7 @@ void systems_manager_shutdown(systems_manager_state* state) {
     shutdown_known_systems(state);
 }
 
-b8 systems_manager_update(systems_manager_state* state,struct frame_data* p_frame_data) {
+b8 systems_manager_update(systems_manager_state* state, struct frame_data* p_frame_data) {
     for (u32 i = 0; i < K_SYSTEM_TYPE_MAX_COUNT; ++i) {
         k_system* s = &state->systems[i];
         if (s->update) {
@@ -123,6 +126,14 @@ static b8 register_known_systems_pre_boot(systems_manager_state* state, applicat
         KERROR("Failed to register logging system.");
         return false;
     }
+
+// Report engine version
+#if KRELEASE
+    const char* build_type = "Release";
+#else
+    const char* build_type = "Debug";
+#endif
+    KINFO("Kohi Engine v. %s (%s)", KVERSION, build_type);
 
     // Input
     if (!systems_manager_register(state, K_SYSTEM_TYPE_INPUT, input_system_initialize, input_system_shutdown, 0, 0)) {

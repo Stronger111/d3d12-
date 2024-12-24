@@ -1,9 +1,23 @@
+/**
+ * @file logger.h
+ * @author Travis Vroman (travis@kohiengine.com)
+ * @brief This file contains structures and logic pertaining to the logging system.
+ * @version 1.0
+ * @date 2022-01-10
+ *
+ * @copyright Kohi Game Engine is Copyright (c) Travis Vroman 2021-2022
+ *
+ */
+
 #pragma once
 
 #include "defines.h"
 
+/** @brief Indicates if warning level logging is enabled. */
 #define LOG_WARN_ENABLE 1
+/** @brief Indicates if info level logging is enabled. */
 #define LOG_INFO_ENABLED 1
+
 // Disable debug and trace logging for release builds.
 #if KRELEASE == 1
 #define LOG_DEBUG_ENABLED 0
