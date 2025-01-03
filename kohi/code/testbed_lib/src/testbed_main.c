@@ -655,6 +655,11 @@ b8 application_update(application* game_inst, struct frame_data* p_frame_data) {
     }
     clock_start(&state->update_clock);
 
+    // TODO: testing resize
+    static f32 button_height = 50.0f;
+    button_height = 50.0f + (ksin(p_frame_data->total_time) * 20.0f);
+    sui_button_control_height_set(&state->test_button, (i32)button_height);
+
     if (state->main_scene.state >= SIMPLE_SCENE_STATE_LOADED) {
         if (!simple_scene_update(&state->main_scene, p_frame_data)) {
             KWARN("Failed to update main scene.");

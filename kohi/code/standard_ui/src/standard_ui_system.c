@@ -91,7 +91,7 @@ static b8 standard_ui_system_click(u16 code, void* sender, void* listener_inst, 
         sui_control* control = typed_state->active_controls[i];
         if (control->on_click || control->internal_click) {
             mat4 model = transform_world_get(&control->xform);
-            // 世界到模型矩阵
+            // 世界到模型矩阵 转换到本地空间
             mat4 inv = mat4_inverse(model);
             vec3 transformed_evt = vec3_transform((vec3){evt.x, evt.y, 0.0f}, 1.0f, inv);
             if (rect_2d_contains_point(control->bounds, (vec2){transformed_evt.x, transformed_evt.y})) {
