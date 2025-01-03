@@ -110,7 +110,7 @@ KAPI b8 console_command_register(const char* command, u8 arg_count, PFN_console_
 }
 
 b8 console_command_unregister(const char* command) {
-     KASSERT_MSG(state_ptr && command, "console_update_command requires state and valid command");
+    KASSERT_MSG(state_ptr && command, "console_update_command requires state and valid command");
 
     // Make sure it doesn't already exist.
     u32 command_count = darray_length(state_ptr->registered_commands);
@@ -181,7 +181,7 @@ KAPI b8 console_command_execute(const char* command) {
     }
 
     if (!command_found) {
-        KERROR("The command '%s' does not exist.", parts[0]);
+        KERROR("The command '%s' does not exist.", string_trim(parts[0]));
         has_error = true;
     }
 

@@ -190,27 +190,16 @@ b8 render_view_wireframe_on_packet_build(const struct render_view* self, struct 
                 *target_arrays[s] = p_frame_data->allocator.allocate(sizeof(geometry_render_data) * geometry_data_count);
                 for (u32 i = 0; i < geometry_data_count; ++i) {
                     geometry_render_data* render_data = &((*target_arrays[s])[i]);
-                    render_data->unique_id = source_array[i].unique_id;
-                    render_data->geometry = source_array[i].geometry;
+                    geometry_render_data* source_data = &source_array[i];
+                    render_data->unique_id = source_data->unique_id;
+                    render_data->material = source_data->material;
+                    render_data->vertex_count = source_data->vertex_count;
+                    render_data->vertex_buffer_offset = source_data->vertex_buffer_offset;
+                    render_data->index_count = source_data->index_count;
+                    render_data->index_buffer_offset = source_data->index_buffer_offset;
                     render_data->model = source_array[i].model;
                     render_data->winding_inverted = source_array[i].winding_inverted;
                 }
-            }
-        }
-    }
-    // Geometries.
-    if (world_data->world_geometries) {
-        u32 geometry_data_count = darray_length(world_data->world_geometries);
-        out_packet->geometry_count = geometry_data_count;
-        if (geometry_data_count) {
-            // For this view,render everything provided.
-            out_packet->geometries = p_frame_data->allocator.allocate(sizeof(geometry_render_data) * geometry_data_count);
-            for (u32 i = 0; i < geometry_data_count; ++i) {
-                geometry_render_data* render_data = &out_packet->geometries[i];
-                render_data->unique_id = world_data->world_geometries[i].unique_id;
-                render_data->geometry = world_data->world_geometries[i].geometry;
-                render_data->model = world_data->world_geometries[i].model;
-                render_data->winding_inverted = world_data->world_geometries[i].winding_inverted;
             }
         }
     }
@@ -298,7 +287,7 @@ b8 render_view_wireframe_on_render(const struct render_view* self, const struct 
                     }
 
                     // Draw it.
-                    renderer_geometry_draw(&array[i]);
+                     renderer_geometry_draw(&array[i]);
                 }
             }
         }

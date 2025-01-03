@@ -171,7 +171,16 @@
         "shaderc.h": "c",
         "texture_system.h": "c",
         "standard_ui_system.h": "c",
-        "game_commands.h": "c"
+        "game_commands.h": "c",
+        "locale": "c",
+        "xlocmes": "c",
+        "xlocmon": "c",
+        "xlocnum": "c",
+        "xloctime": "c",
+        "sui_textbox.h": "c",
+        "rendergraph.h": "c",
+        "sui_label.h": "c",
+        "sui_panel.h": "c"
     },
     // File copyright documentation tag.  Array of strings will be converted to one line per element.  Can template {year}.
     "doxdocgen.file.copyrightTag": [

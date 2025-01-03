@@ -86,6 +86,26 @@ b8 vulkan_graphics_pipeline_create(vulkan_context* context, const vulkan_pipelin
         depth_stencil.depthBoundsTestEnable = VK_FALSE;
         depth_stencil.stencilTestEnable = VK_FALSE;
     }
+    /*
+    depth_stencil.stencilTestEnable = (config->shader_flags & SHADER_FLAG_STENCIL_TEST) ? VK_TRUE : VK_FALSE;
+    if (config->shader_flags & SHADER_FLAG_STENCIL_TEST) {
+        // equivalent to glStencilFunc(func,ref,mask)
+        depth_stencil.back.compareOp = VK_COMPARE_OP_ALWAYS;
+        depth_stencil.back.reference = 1;
+        depth_stencil.back.compareMask = 0xFF;
+
+        // equivalent of glStencilOp(stencilFail,depthFail,depthPass)pipelin
+        depth_stencil.back.failOp = VK_STENCIL_OP_ZERO;
+        depth_stencil.back.depthFailOp = VK_STENCIL_OP_ZERO;
+        depth_stencil.back.passOp = VK_STENCIL_OP_REPLACE;
+        // equivalent of glStencilMask(mask)
+
+        // Back face
+        depth_stencil.back.writeMask = (config->shader_flags & SHADER_FLAG_STENCIL_WRITE) ? 0xFF : 0x00;
+
+        // Front face. Just use the same settings for front/back.
+        depth_stencil.front = depth_stencil.back;
+    }*/
 
     VkPipelineColorBlendAttachmentState color_blend_attachment_state = {};
     kzero_memory(&color_blend_attachment_state, sizeof(VkPipelineColorBlendAttachmentState));
@@ -103,19 +123,35 @@ b8 vulkan_graphics_pipeline_create(vulkan_context* context, const vulkan_pipelin
     color_blend_state_create_info.logicOp = VK_LOGIC_OP_COPY;
     color_blend_state_create_info.attachmentCount = 1;
     color_blend_state_create_info.pAttachments = &color_blend_attachment_state;
-
+    /*
     // Dynamic state
     VkDynamicState* dynamic_states = darray_create(VkDynamicState);
     darray_push(dynamic_states, VK_DYNAMIC_STATE_VIEWPORT);
     darray_push(dynamic_states, VK_DYNAMIC_STATE_SCISSOR);
-    // Primitive topology,if supported.
-    if ((context->device.support_flags & VULKAN_DEVICE_SUPPORT_FLAG_NATIVE_DYNAMIC_TOPOLOGY_BIT) ||
-        (context->device.support_flags & VULKAN_DEVICE_SUPPORT_FLAG_DYNAMIC_TOPOLOGY_BIT)) {
+    // Dynamic state, if supported.
+    if ((context->device.support_flags & VULKAN_DEVICE_SUPPORT_FLAG_NATIVE_DYNAMIC_STATE_BIT) ||
+        (context->device.support_flags & VULKAN_DEVICE_SUPPORT_FLAG_DYNAMIC_STATE_BIT)) {
+        darray_push(dynamic_states, VK_DYNAMIC_STATE_PRIMITIVE_TOPOLOGY);
+        darray_push(dynamic_states, VK_DYNAMIC_STATE_FRONT_FACE);
+        darray_push(dynamic_states, VK_DYNAMIC_STATE_STENCIL_OP);
+        darray_push(dynamic_states, VK_DYNAMIC_STATE_STENCIL_TEST_ENABLE_EXT);
+        darray_push(dynamic_states, VK_DYNAMIC_STATE_STENCIL_WRITE_MASK);
+        darray_push(dynamic_states, VK_DYNAMIC_STATE_STENCIL_COMPARE_MASK);
+        darray_push(dynamic_states, VK_DYNAMIC_STATE_DEPTH_TEST_ENABLE);
+        darray_push(dynamic_states, VK_DYNAMIC_STATE_STENCIL_REFERENCE);
+         darray_push(dynamic_states, VK_DYNAMIC_STATE_COLOR_WRITE_ENABLE_EXT);
+        darray_push(dynamic_states, VK_DYNAMIC_STATE_COLOR_WRITE_MASK_EXT);
+    } */
+    // Dynamic state
+    VkDynamicState* dynamic_states = darray_create(VkDynamicState);
+    darray_push(dynamic_states, VK_DYNAMIC_STATE_VIEWPORT);
+    darray_push(dynamic_states, VK_DYNAMIC_STATE_SCISSOR);
+    // Primitive topology, if supported.
+    if ((context->device.support_flags & VULKAN_DEVICE_SUPPORT_FLAG_NATIVE_DYNAMIC_TOPOLOGY_BIT) || (context->device.support_flags & VULKAN_DEVICE_SUPPORT_FLAG_DYNAMIC_TOPOLOGY_BIT)) {
         darray_push(dynamic_states, VK_DYNAMIC_STATE_PRIMITIVE_TOPOLOGY);
     }
-    // Front-face. if supported.
-    if ((context->device.support_flags & VULKAN_DEVICE_SUPPORT_FLAG_NATIVE_DYNAMIC_FRONT_FACE_BIT) ||
-        (context->device.support_flags & VULKAN_DEVICE_SUPPORT_FLAG_DYNAMIC_FRONT_FACE_BIT)) {
+    // Front-face, if supported.
+    if ((context->device.support_flags & VULKAN_DEVICE_SUPPORT_FLAG_NATIVE_DYNAMIC_FRONT_FACE_BIT) || (context->device.support_flags & VULKAN_DEVICE_SUPPORT_FLAG_DYNAMIC_FRONT_FACE_BIT)) {
         darray_push(dynamic_states, VK_DYNAMIC_STATE_FRONT_FACE);
     }
 

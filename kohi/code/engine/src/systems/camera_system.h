@@ -39,7 +39,7 @@ typedef struct camera_system_config {
 b8 camera_system_initialize(u64* memory_requirement, void* state, void* config);
 
 /**
- * @brief Shuts down the geometry camera.
+ * @brief Shuts down the camera system.
  *
  * @param state The state block of memory.
  */

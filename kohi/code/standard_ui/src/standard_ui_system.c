@@ -137,10 +137,10 @@ static b8 standard_ui_system_move(u16 code, void* sender, void* listener_inst, e
                 }
 
                 // Move events are only triggred while actually over the control.
-                if (control->internal_mouse_over) {
+                if (control->internal_mouse_move) {
                     control->internal_mouse_move(control, evt);
                 }
-                if (control->on_mouse_over) {
+                if (control->on_mouse_move) {
                     control->on_mouse_move(control, evt);
                 }
             } else {
@@ -370,7 +370,7 @@ b8 standard_ui_system_control_add_child(void* state, sui_control* parent, sui_co
 
     darray_push(parent->children, child);
 
-    transform_set_parent(&child->xform, &parent->xform);
+    transform_parent_set(&child->xform, &parent->xform);
 
     return true;
 }
@@ -402,7 +402,7 @@ b8 standard_ui_system_control_remove_child(void* state, sui_control* parent, sui
 
 void standard_ui_system_focus_control(void* state, sui_control* control) {
     standard_ui_state* typed_state = (standard_ui_state*)state;
-    typed_state->focused_id = control ? control->unique_id : INVALID_ID_U64;
+    typed_state->focused_id = control ? control->id.uniqueid : INVALID_ID_U64;
 }
 
 b8 sui_base_control_create(const char* name, struct sui_control* out_control) {
@@ -421,7 +421,7 @@ b8 sui_base_control_create(const char* name, struct sui_control* out_control) {
     out_control->render = sui_base_control_render;
 
     out_control->name = string_duplicate(name);
-    out_control->unique_id = identifier_aquire_new_id(out_control);
+    out_control->id = identifier_create();
 
     out_control->xform = transform_create();
     return true;
@@ -429,8 +429,6 @@ b8 sui_base_control_create(const char* name, struct sui_control* out_control) {
 
 void sui_base_control_destroy(struct sui_control* self) {
     if (self) {
-        identifier_release_id(self->unique_id);
-
         // TODO:recurse children/unparent?
         if (self->internal_data && self->internal_data_size) {
             kfree(self->internal_data, self->internal_data_size, MEMORY_TAG_UI);

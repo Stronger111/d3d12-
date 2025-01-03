@@ -71,7 +71,7 @@ typedef struct sui_clip_mask {
 } sui_clip_mask;
 
 typedef struct sui_control {
-    u32 unique_id;
+    identifier id;
     transform xform;
     char* name;
     // TODO:Convert to flags.

@@ -20,7 +20,7 @@ typedef struct debug_console_state {
 
     // 命令历史
     command_history_entry* history;
-    u32 history_offset;
+    i32 history_offset;
 
     b8 dirty;
     b8 visible;

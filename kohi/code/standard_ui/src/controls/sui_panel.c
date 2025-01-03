@@ -54,6 +54,7 @@ b8 sui_panel_control_load(struct sui_control* self) {
 
     // Create a simple plane.
     geometry_config ui_config = {0};
+    //生成网格数据
     generate_quad_2d(self->name, typed_data->rect.width, typed_data->rect.height, xmin, xmax, ymin, ymax, &ui_config);
     // Get UI geometry from config. NOTE:this upload to GPU.
     typed_data->g = geometry_system_acquire_from_config(ui_config, true);
@@ -87,13 +88,51 @@ b8 sui_panel_control_render(struct sui_control* self, struct frame_data* p_frame
     sui_panel_internal_data* typed_data = self->internal_data;
     if (typed_data->g) {
         standard_ui_renderable renderable = {0};
-        renderable.render_data.unique_id = self->unique_id;
+        renderable.render_data.unique_id = self->id.uniqueid;
         renderable.render_data.material = typed_data->g->material;
         renderable.render_data.vertex_count = typed_data->g->vertex_count;
-        renderable.render_data.vertex_element_size=typed_data->g->vertex_element_size;
-        //renderable.render_data.vertex_buffer_offset=typed_data->g->;
-        
+        renderable.render_data.vertex_element_size = typed_data->g->vertex_element_size;
+        renderable.render_data.vertex_buffer_offset = typed_data->g->vertex_buffer_offset;
+        renderable.render_data.index_count = typed_data->g->index_count;
+        renderable.render_data.index_element_size = typed_data->g->index_element_size;
+        renderable.render_data.index_buffer_offset = typed_data->g->index_buffer_offset;
+        renderable.render_data.model=transform_world_get(&self->xform);
+        renderable.render_data.diffuse_colour = typed_data->colour;
+
+        renderable.instance_id = &typed_data->instance_id;
+        renderable.frame_number = &typed_data->frame_number;
+        renderable.draw_index = &typed_data->draw_index;
+
+        darray_push(render_data->renderables, renderable);
     }
+
+    return true;
+}
+
+vec2 sui_panel_size(struct sui_control* self) {
+    if (!self) {
+        return vec2_zero();
+    }
+
+    sui_panel_internal_data* typed_data = self->internal_data;
+    return (vec2){typed_data->rect.width, typed_data->rect.height};
+}
+
+b8 sui_panel_control_resize(struct sui_control* self, vec2 new_size) {
+    if (!self) {
+        return false;
+    }
+
+    sui_panel_internal_data* typed_data = self->internal_data;
+
+    typed_data->rect.width = new_size.x;
+    typed_data->rect.height = new_size.y;
+    vertex_2d* vertices = typed_data->g->vertices;
+    vertices[1].position.y = new_size.y;
+    vertices[1].position.x = new_size.x;
+    vertices[2].position.y = new_size.y;
+    vertices[3].position.x = new_size.x;
+    renderer_geometry_vertex_update(typed_data->g, 0, typed_data->g->vertex_count, vertices);
 
     return true;
 }
