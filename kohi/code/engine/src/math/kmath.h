@@ -72,6 +72,12 @@ KAPI f32 kcos(f32 x);
 KAPI f32 ktan(f32 x);
 KAPI f32 kacos(f32 x);
 KAPI f32 ksqrt(f32 x);
+/**
+ * @brief Calculates the absolute value of x.
+ *
+ * @param x The number to get the absolute value of.
+ * @return The absolute value of x.
+ */
 KAPI f32 kabs(f32 x);
 /**
  * @brief Returns the largest integer value less than or equal to x.

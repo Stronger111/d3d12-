@@ -467,9 +467,6 @@ b8 vulkan_renderer_backend_initialize(renderer_plugin* plugin, const renderer_ba
         VK_CHECK(vkCreateFence(context->device.logical_device, &fence_create_info, context->allocator, &context->in_flight_fences[i]));
     }
 
-    // Samplers array
-    context->samplers = darray_create(VkSampler);
-
     // Staging buffer.
     const u64 staging_buffer_size = 256 * 1000 * 1000;
     if (!renderer_renderbuffer_create("staging", RENDERBUFFER_TYPE_STAGING, staging_buffer_size, true, &context->staging)) {
@@ -916,6 +913,7 @@ void vulkan_renderer_texture_create(renderer_plugin* plugin, const u8* pixels, t
         true,
         VK_IMAGE_ASPECT_COLOR_BIT,
         t->name,
+        t->mip_levels,
         image);
 
     // Load the data
@@ -973,7 +971,7 @@ void vulkan_renderer_texture_create_writeable(renderer_plugin* plugin, texture* 
     }
 
     vulkan_image_create(context, t->type, t->width, t->height, image_format, VK_IMAGE_TILING_OPTIMAL, usage,
-                        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, true, aspect, t->name, image);
+                        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, true, aspect, t->name, t->mip_levels, image);
 
     t->generation++;
 }
@@ -989,6 +987,16 @@ void vulkan_renderer_texture_resize(renderer_plugin* plugin, texture* t, u32 new
 
         VkFormat image_format = channel_count_to_format(t->channel_count, VK_FORMAT_R8G8B8A8_UNORM);
 
+        // Recalculate mip levels if anything other than 1
+        if (t->mip_levels > 1) {
+            // Recalculate the number of levels.
+            // The number of mip levels is calculated by first taking the largest dimension
+            // (either width or height), figuring out how many times that number can be divided
+            // by 2, taking the floor value (rounding down) and adding 1 to represent the
+            // base level. This always leaves a value of at least 1.
+            t->mip_levels = (u32)(kfloor(klog2(KMAX(new_width, new_height))) + 1);
+        }
+
         // TODO: Lots of assumptions here, different texture types will require
         // different options here.
         vulkan_image_create(
@@ -1003,6 +1011,7 @@ void vulkan_renderer_texture_resize(renderer_plugin* plugin, texture* t, u32 new
             true,
             VK_IMAGE_ASPECT_COLOR_BIT,
             t->name,
+            t->mip_levels,
             image);
 
         t->generation++;
@@ -1038,15 +1047,19 @@ void vulkan_renderer_texture_write_data(renderer_plugin* plugin, texture* t, u32
     // Copy the data from the buffer.
     vulkan_image_copy_from_buffer(context, t->type, image, ((vulkan_buffer*)context->staging.internal_data)->handle, staging_offset, &temp_command_buffer);
 
-    // Transition from optimal for data reciept to shader-read-only optimal layout.
-    vulkan_image_transition_layout(
-        context,
-        t->type,
-        &temp_command_buffer,
-        image,
-        image_format,
-        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    if (t->mip_levels <= 1 || !vulkan_image_mipmaps_generate(context, image, &temp_command_buffer)) {
+        // If mip generation isn't needed or fails, fall back to ordinary transition.
+        // Transition from optimal for data reciept to shader-read-only optimal layout.
+        // Transition from optimal for data reciept to shader-read-only optimal layout.
+        vulkan_image_transition_layout(
+            context,
+            t->type,
+            &temp_command_buffer,
+            image,
+            image_format,
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    }
 
     vulkan_command_buffer_end_single_use(context, pool, &temp_command_buffer, queue);
 
@@ -1891,13 +1904,28 @@ b8 vulkan_renderer_shader_apply_instance(renderer_plugin* plugin, shader* s, b8 
 
                 // Ensure the texture is valid.
                 if (t->generation == INVALID_ID) {
+                    // If using the default texture, invalidate the map's generation so it's updated next run.
                     t = texture_system_get_default_texture();
+                    map->generation = INVALID_ID;
+                } else {
+                    // If valid,ensure the texture  map's generation matches the texture's .
+                    // If not,the texture map resources should be regenerated.
+                    if (t->generation != map->generation) {
+                        b8 refresh_required = t->mip_levels != map->mip_levels;
+                        KTRACE("A sampler refresh is%s required. Tex/map mips: %u/%u", refresh_required ? "" : " not", t->mip_levels, map->mip_levels);
+                        if (refresh_required && !vulkan_renderer_texture_map_resources_refresh(plugin, map)) {
+                            KWARN("Failed to refresh texture map resources. This means the sampler settings could be out of date.");
+                        } else {
+                            // Sync the generations.
+                            map->generation = t->generation;
+                        }
+                    }
                 }
 
                 vulkan_image* image = (vulkan_image*)t->internal_data;
                 image_infos[i].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
                 image_infos[i].imageView = image->view;
-                image_infos[i].sampler = context->samplers[map->internal_id];
+                image_infos[i].sampler = (VkSampler)map->internal_data;
 
                 // TODO: change up descriptor state to handle this properly.
                 // Sync frame generation if not using a default texture.
@@ -1964,7 +1992,7 @@ static b8 create_sampler(vulkan_context* context, texture_map* map, VkSampler* s
     VkSamplerCreateInfo sampler_info = {VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO};
 
     // Sync the mip levels with that of the assigned texture.
-    // map->mip_levels = map->texture->mip_levels;
+    map->mip_levels = map->texture->mip_levels;
 
     sampler_info.minFilter = convert_filter_type("min", map->filter_minify);
     sampler_info.magFilter = convert_filter_type("mag", map->filter_magnify);
@@ -1986,7 +2014,7 @@ static b8 create_sampler(vulkan_context* context, texture_map* map, VkSampler* s
     sampler_info.minLod = 0.0f;
     // NOTE: Uncomment the following line to test the lowest mip level.
     /* sampler_info.minLod = map->texture->mip_levels > 1 ? map->texture->mip_levels : 0.0f; */
-    // sampler_info.maxLod = map->texture->mip_levels;
+    sampler_info.maxLod = map->texture->mip_levels;
 
     VkResult result = vkCreateSampler(context->device.logical_device, &sampler_info, context->allocator, sampler);
     if (!vulkan_result_is_success(VK_SUCCESS)) {
@@ -1999,47 +2027,29 @@ static b8 create_sampler(vulkan_context* context, texture_map* map, VkSampler* s
 
 b8 vulkan_renderer_texture_map_resources_acquire(renderer_plugin* plugin, texture_map* map) {
     vulkan_context* context = (vulkan_context*)plugin->internal_context;
-    // Find a free sampler.
-    u32 sampler_count = darray_length(context->samplers);
-    u32 selected_id = INVALID_ID;
-    for (u32 i = 0; i < sampler_count; ++i) {
-        if (context->samplers[i] == 0) {
-            selected_id = i;
-            break;
-        }
-    }
-    if (selected_id == INVALID_ID) {
-        // Push an empty entry into the array.
-        darray_push(context->samplers, 0);
-        selected_id = sampler_count;
-    }
-
-    if (!create_sampler(context, map, &context->samplers[selected_id])) {
+    if (!create_sampler(context, map, (VkSampler*)&map->internal_data)) {
         return false;
     }
 
     char formatted_name[TEXTURE_NAME_MAX_LENGTH] = {0};
     string_format(formatted_name, "%s_texmap_sampler", map->texture->name);
-    VK_SET_DEBUG_OBJECT_NAME(context, VK_OBJECT_TYPE_SAMPLER, context->samplers[selected_id], formatted_name);
-    map->internal_id = selected_id;
-
+    VK_SET_DEBUG_OBJECT_NAME(context, VK_OBJECT_TYPE_SAMPLER, (VkSampler)map->internal_data, formatted_name);
     return true;
 }
 
 void vulkan_renderer_texture_map_resources_release(renderer_plugin* plugin, texture_map* map) {
     vulkan_context* context = (vulkan_context*)plugin->internal_context;
-    if (map && map->internal_id != INVALID_ID) {
+    if (map && map->internal_data) {
         // Make sure there's no way this is in use.
         vkDeviceWaitIdle(context->device.logical_device);
-        vkDestroySampler(context->device.logical_device, context->samplers[map->internal_id], context->allocator);
-        context->samplers[map->internal_id] = 0;
-        map->internal_id = INVALID_ID;
+        vkDestroySampler(context->device.logical_device, map->internal_data, context->allocator);
+        map->internal_data = 0;
     }
 }
 
 b8 vulkan_renderer_texture_map_resources_refresh(renderer_plugin* plugin, texture_map* map) {
     vulkan_context* context = (vulkan_context*)plugin->internal_context;
-    if (map && map->internal_id != INVALID_ID) {
+    if (map && map->internal_data) {
         // Create a new sampler first.
         VkSampler new_sampler = 0;
         if (!create_sampler(context, map, &new_sampler)) {
@@ -2047,12 +2057,12 @@ b8 vulkan_renderer_texture_map_resources_refresh(renderer_plugin* plugin, textur
         }
 
         // Take a pointer to the current sampler.
-        VkSampler old_sampler = context->samplers[map->internal_id];
+        VkSampler old_sampler = map->internal_data;
 
         // Make sure there's no way this is in use.
         vkDeviceWaitIdle(context->device.logical_device);
         // Assign the new.
-        context->samplers[map->internal_id] = new_sampler;
+        map->internal_data = new_sampler;
         // Destroy the old.
         vkDestroySampler(context->device.logical_device, old_sampler, context->allocator);
     }

@@ -201,7 +201,7 @@ static void create(vulkan_context* context, u32 width, u32 height, renderer_conf
         // Create depth image and its view.
         char formatted_name[TEXTURE_NAME_MAX_LENGTH] = {0};
         string_format(formatted_name, "swapchain_image_%u", i);
-        
+
         vulkan_image* image = kallocate(sizeof(vulkan_image), MEMORY_TAG_TEXTURE);
         vulkan_image_create(
             context,
@@ -215,6 +215,7 @@ static void create(vulkan_context* context, u32 width, u32 height, renderer_conf
             true,
             VK_IMAGE_ASPECT_DEPTH_BIT,
             formatted_name,
+            1,
             image);
 
         // Wrap it in a texture.

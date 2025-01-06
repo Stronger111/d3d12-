@@ -105,10 +105,14 @@ typedef struct vulkan_image {
     VkMemoryRequirements memory_requirements;
     /** @brief Memory property flags */
     VkMemoryPropertyFlags memory_flags;
+    /** @brief The format of the image. */
+    VkFormat format;
     u32 width;
     u32 height;
     /** @brief The name of the image. */
     char* name;
+    /** The number of mipmaps to be generated for this image. Must always be at least 1. */
+    u32 mip_levels;
 } vulkan_image;
 
 typedef enum vulkan_render_pass_state {
@@ -486,9 +490,6 @@ typedef struct vulkan_context {
     /** @brief Indicates if multi-threading is supported by this device. */
     b8 multithreading_enabled;
 
-    /** @brief Collection of samplers. darray */
-    VkSampler* samplers;
-    
     /**
      * @brief A function pointer to find a memory index of the given type and with the given properties.
      * @param context A pointer to the renderer context.
