@@ -152,7 +152,7 @@ void* vulkan_alloc_reallocation(void* user_data, void* original, size_t size, si
 #endif
 
         // Copy over the original memory.
-        kcopy_memory(result, original, size);  // 错误todo fixed
+        kcopy_memory(result, original, alloc_size); 
 #ifdef KVULKAN_ALLOCATOR_TRACE
         KTRACE("Freeing original aligned block %p...", original);
 #endif
