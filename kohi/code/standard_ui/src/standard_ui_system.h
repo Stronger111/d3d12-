@@ -14,7 +14,6 @@
 
 #include <math/math_types.h>
 
-#include "core/identifier.h"
 #include "core/input.h"
 #include "defines.h"
 #include "renderer/renderer_types.h"
@@ -42,9 +41,10 @@ typedef struct standard_ui_renderable {
 } standard_ui_renderable;
 
 typedef struct standard_ui_render_data {
+    //UI 图集
     texture_map* ui_atlas;
     // darray
-    // stan
+    standard_ui_renderable* renderables;
 } standard_ui_render_data;
 
 typedef struct sui_mouse_event {
@@ -71,8 +71,7 @@ typedef struct sui_clip_mask {
 } sui_clip_mask;
 
 typedef struct sui_control {
-    // FIXME: Convery to identifier
-    //u32 id;
+    identifier id;
     transform xform;
     char* name;
     // TODO:Convert to flags.
@@ -127,7 +126,7 @@ typedef struct standard_ui_state {
     // Array of pointers to controls，the system does not own these,The application does.
     u32 total_control_count;
     u32 active_control_count;
-    //防止内存碎片化 一个激活数组和非激活数组
+    // 防止内存碎片化 一个激活数组和非激活数组
     sui_control** active_controls;
     u32 inactive_control_count;
     sui_control** inactive_controls;
@@ -159,29 +158,29 @@ KAPI void standard_ui_system_shutdown(void* state);
 
 KAPI b8 standard_ui_system_update(void* state, struct frame_data* p_frame_data);
 
-KAPI b8 standard_ui_system_render(void* state,sui_control* root,struct frame_data* p_frame_data,standard_ui_render_data* render_data);
+KAPI b8 standard_ui_system_render(void* state, sui_control* root, struct frame_data* p_frame_data, standard_ui_render_data* render_data);
 
-KAPI b8 standard_ui_system_update_active(void* state,sui_control* control);
+KAPI b8 standard_ui_system_update_active(void* state, sui_control* control);
 
-KAPI b8 standard_ui_system_register_control(void* state,sui_control* control);
+KAPI b8 standard_ui_system_register_control(void* state, sui_control* control);
 
-KAPI b8 standard_ui_system_control_add_child(void* state,sui_control* parent,sui_control* child);
+KAPI b8 standard_ui_system_control_add_child(void* state, sui_control* parent, sui_control* child);
 
-KAPI b8 standard_ui_system_control_remove_child(void* state,sui_control* parent,sui_control* child);
+KAPI b8 standard_ui_system_control_remove_child(void* state, sui_control* parent, sui_control* child);
 
-KAPI void standard_ui_system_focus_control(void* state,sui_control* control);
+KAPI void standard_ui_system_focus_control(void* state, sui_control* control);
 
 // ---------------------------
 // Base control
 // ---------------------------
-KAPI b8 sui_base_control_create(const char* name,struct sui_control* out_control);
+KAPI b8 sui_base_control_create(const char* name, struct sui_control* out_control);
 KAPI void sui_base_control_destroy(struct sui_control* self);
 
 KAPI b8 sui_base_control_load(struct sui_control* self);
 KAPI void sui_base_control_unload(struct sui_control* self);
 
-KAPI b8 sui_base_control_update(struct sui_control* self,struct frame_data* p_frame_data);
-KAPI b8 sui_base_control_render(struct sui_control* self,struct frame_data* p_frame_data,standard_ui_render_data* render_data);
+KAPI b8 sui_base_control_update(struct sui_control* self, struct frame_data* p_frame_data);
+KAPI b8 sui_base_control_render(struct sui_control* self, struct frame_data* p_frame_data, standard_ui_render_data* render_data);
 
 /**
  * @brief Sets the position on the given control.
@@ -189,7 +188,7 @@ KAPI b8 sui_base_control_render(struct sui_control* self,struct frame_data* p_fr
  * @param self A pointer to the control whose position will be set.
  * @param position The position to be set.
  */
-KAPI void sui_control_position_set(struct sui_control* self,vec3 position);
+KAPI void sui_control_position_set(struct sui_control* self, vec3 position);
 
 /**
  * @brief Gets the position on the given control.
@@ -199,14 +198,3 @@ KAPI void sui_control_position_set(struct sui_control* self,vec3 position);
  */
 KAPI vec3 sui_control_position_get(struct sui_control* self);
 
-// ---------------------------
-// Panel control
-// ---------------------------
-KAPI b8 sui_panel_control_create(const char* name,struct sui_control* out_control);
-KAPI void sui_panel_control_destroy(struct sui_control* self);
-
-KAPI b8 sui_panel_control_load(struct sui_control* self);
-KAPI void sui_panel_control_unload(struct sui_control* self);
-
-KAPI b8 sui_panel_control_update(struct sui_control* self,struct frame_data* p_frame_data);
-KAPI b8 sui_panel_control_render(struct sui_control* self,struct frame_data* p_frame_data,standard_ui_render_data* render_data);

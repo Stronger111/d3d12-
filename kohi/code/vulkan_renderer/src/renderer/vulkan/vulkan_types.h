@@ -49,9 +49,11 @@ typedef struct vulkan_swapchain_support_info {
 } vulkan_swapchain_support_info;
 
 typedef enum vulkan_device_support_flag_bits {
-    VULKAN_DEVICE_SUPPORT_FLAG_NONE_BIT = 0x00,
-    /** @brief Indicates if the device supports native dynamic topology (i.e. * using Vulkan API >= 1.3). */
+  VULKAN_DEVICE_SUPPORT_FLAG_NONE_BIT = 0x00,
+
+    /** @brief Indicates if the device supports native dynamic topology (i.e. using Vulkan API >= 1.3). */
     VULKAN_DEVICE_SUPPORT_FLAG_NATIVE_DYNAMIC_TOPOLOGY_BIT = 0x01,
+
     /** @brief Indicates if this device supports dynamic topology. If not, the renderer will need to generate a separate pipeline per topology type. */
     VULKAN_DEVICE_SUPPORT_FLAG_DYNAMIC_TOPOLOGY_BIT = 0x02,
     VULKAN_DEVICE_SUPPORT_FLAG_LINE_SMOOTH_RASTERISATION_BIT = 0x04,
@@ -501,6 +503,9 @@ typedef struct vulkan_context {
 
     PFN_vkCmdSetPrimitiveTopologyEXT vkCmdSetPrimitiveTopologyEXT;
     PFN_vkCmdSetFrontFaceEXT vkCmdSetFrontFaceEXT;
+    PFN_vkCmdSetStencilTestEnable vkCmdSetStencilTestEnableEXT;
+    PFN_vkCmdSetDepthTestEnableEXT vkCmdSetDepthTestEnableEXT;
+    PFN_vkCmdSetStencilOpEXT vkCmdSetStencilOpEXT;
 
     /** @brief A pointer to the currently bound shader. */
     struct shader* bound_shader;

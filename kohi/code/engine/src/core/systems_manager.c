@@ -28,6 +28,8 @@
 static b8 register_known_systems_pre_boot(systems_manager_state* state, application_config* app_config);
 static b8 register_known_systems_post_boot(systems_manager_state* state, application_config* app_config);
 static void shutdown_known_systems(systems_manager_state* state);
+static void shutdown_extension_systems(systems_manager_state* state);
+static void shutdown_user_systems(systems_manager_state* state);
 
 // TODO: Find a way to have this not be static.
 static systems_manager_state* g_state;
@@ -45,6 +47,8 @@ b8 systems_manager_post_boot_initialize(systems_manager_state* state, applicatio
 }
 
 void systems_manager_shutdown(systems_manager_state* state) {
+    shutdown_user_systems(state);
+    shutdown_extension_systems(state);
     shutdown_known_systems(state);
 }
 
@@ -241,6 +245,47 @@ static b8 register_known_systems_pre_boot(systems_manager_state* state, applicat
     return true;
 }
 
+static void shutdown_extension_systems(systems_manager_state* state) {
+    // NOTE:Anything between 127-254 is extension systems.
+    for (u32 i = K_SYSTEM_TYPE_KNOWN_MAX; i < K_SYSTEM_TYPE_EXT_MAX; ++i) {
+        if (state->systems[i].shutdown) {
+            state->systems[i].shutdown(state->systems[i].state);
+        }
+    }
+}
+
+static void shutdown_user_systems(systems_manager_state* state) {
+    // NOTE:Anything beyond this  is in user space.
+    for (u32 i = K_SYSTEM_TYPE_USER_MAX; i < K_SYSTEM_TYPE_MAX; ++i) {
+        if (state->systems[i].shutdown) {
+            state->systems[i].shutdown(state->systems[i].state);
+        }
+    }
+}
+
+void shutdown_known_systems(systems_manager_state* state) {
+    state->systems[K_SYSTEM_TYPE_CAMERA].shutdown(state->systems[K_SYSTEM_TYPE_CAMERA].state);
+    state->systems[K_SYSTEM_TYPE_FONT].shutdown(state->systems[K_SYSTEM_TYPE_FONT].state);
+
+    state->systems[K_SYSTEM_TYPE_GEOMETRY].shutdown(state->systems[K_SYSTEM_TYPE_GEOMETRY].state);
+    state->systems[K_SYSTEM_TYPE_MATERIAL].shutdown(state->systems[K_SYSTEM_TYPE_MATERIAL].state);
+    state->systems[K_SYSTEM_TYPE_TEXTURE].shutdown(state->systems[K_SYSTEM_TYPE_TEXTURE].state);
+
+    state->systems[K_SYSTEM_TYPE_JOB].shutdown(state->systems[K_SYSTEM_TYPE_JOB].state);
+    state->systems[K_SYSTEM_TYPE_SHADER].shutdown(state->systems[K_SYSTEM_TYPE_SHADER].state);
+    state->systems[K_SYSTEM_TYPE_RENDERER].shutdown(state->systems[K_SYSTEM_TYPE_RENDERER].state);
+
+    state->systems[K_SYSTEM_TYPE_RESOURCE].shutdown(state->systems[K_SYSTEM_TYPE_RESOURCE].state);
+    state->systems[K_SYSTEM_TYPE_PLATFORM].shutdown(state->systems[K_SYSTEM_TYPE_PLATFORM].state);
+    state->systems[K_SYSTEM_TYPE_INPUT].shutdown(state->systems[K_SYSTEM_TYPE_INPUT].state);
+    state->systems[K_SYSTEM_TYPE_LOGGING].shutdown(state->systems[K_SYSTEM_TYPE_LOGGING].state);
+    state->systems[K_SYSTEM_TYPE_EVENT].shutdown(state->systems[K_SYSTEM_TYPE_EVENT].state);
+    state->systems[K_SYSTEM_TYPE_KVAR].shutdown(state->systems[K_SYSTEM_TYPE_KVAR].state);
+    state->systems[K_SYSTEM_TYPE_CONSOLE].shutdown(state->systems[K_SYSTEM_TYPE_CONSOLE].state);
+
+    state->systems[K_SYSTEM_TYPE_MEMORY].shutdown(state->systems[K_SYSTEM_TYPE_MEMORY].state);
+}
+
 static b8 register_known_systems_post_boot(systems_manager_state* state, application_config* app_config) {
     // Texture system.
     texture_system_config texture_sys_config;
@@ -289,26 +334,3 @@ static b8 register_known_systems_post_boot(systems_manager_state* state, applica
     return true;
 }
 
-void shutdown_known_systems(systems_manager_state* state) {
-    state->systems[K_SYSTEM_TYPE_CAMERA].shutdown(state->systems[K_SYSTEM_TYPE_CAMERA].state);
-    state->systems[K_SYSTEM_TYPE_FONT].shutdown(state->systems[K_SYSTEM_TYPE_FONT].state);
-
-    state->systems[K_SYSTEM_TYPE_GEOMETRY].shutdown(state->systems[K_SYSTEM_TYPE_GEOMETRY].state);
-    state->systems[K_SYSTEM_TYPE_MATERIAL].shutdown(state->systems[K_SYSTEM_TYPE_MATERIAL].state);
-    state->systems[K_SYSTEM_TYPE_TEXTURE].shutdown(state->systems[K_SYSTEM_TYPE_TEXTURE].state);
-
-    state->systems[K_SYSTEM_TYPE_AUDIO].shutdown(state->systems[K_SYSTEM_TYPE_AUDIO].state);
-    state->systems[K_SYSTEM_TYPE_JOB].shutdown(state->systems[K_SYSTEM_TYPE_JOB].state);
-    state->systems[K_SYSTEM_TYPE_SHADER].shutdown(state->systems[K_SYSTEM_TYPE_SHADER].state);
-    state->systems[K_SYSTEM_TYPE_RENDERER].shutdown(state->systems[K_SYSTEM_TYPE_RENDERER].state);
-
-    state->systems[K_SYSTEM_TYPE_RESOURCE].shutdown(state->systems[K_SYSTEM_TYPE_RESOURCE].state);
-    state->systems[K_SYSTEM_TYPE_PLATFORM].shutdown(state->systems[K_SYSTEM_TYPE_PLATFORM].state);
-    state->systems[K_SYSTEM_TYPE_INPUT].shutdown(state->systems[K_SYSTEM_TYPE_INPUT].state);
-    state->systems[K_SYSTEM_TYPE_LOGGING].shutdown(state->systems[K_SYSTEM_TYPE_LOGGING].state);
-    state->systems[K_SYSTEM_TYPE_EVENT].shutdown(state->systems[K_SYSTEM_TYPE_EVENT].state);
-    state->systems[K_SYSTEM_TYPE_KVAR].shutdown(state->systems[K_SYSTEM_TYPE_KVAR].state);
-    state->systems[K_SYSTEM_TYPE_CONSOLE].shutdown(state->systems[K_SYSTEM_TYPE_CONSOLE].state);
-
-    state->systems[K_SYSTEM_TYPE_MEMORY].shutdown(state->systems[K_SYSTEM_TYPE_MEMORY].state);
-}

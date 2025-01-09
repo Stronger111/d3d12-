@@ -2,6 +2,7 @@
 
 #include "math/math_types.h"
 #include "renderer/renderer_types.h"
+#include "resources/resource_types.h"
 
 typedef struct system_font_config {
     char* name;
@@ -35,24 +36,24 @@ void font_system_shutdown(void* memory);
  * @param config A pointer to the config to use for loading.
  * @return True on success; otherwise false.
  */
-b8 font_system_system_font_load(system_font_config* config);
+KAPI b8 font_system_system_font_load(system_font_config* config);
 /**
  * @brief Loads a bitmap font from the following config.
  * 
  * @param config A pointer to the config to use for loading.
  * @return True on success; otherwise false.
  */
-b8 font_system_bitmap_font_load(bitmap_font_config* config);
+KAPI b8 font_system_bitmap_font_load(bitmap_font_config* config);
 
 /**
  * @brief Attempts to acquire a font of the given name and assign it to the given ui_text.
  *
  * @param font_name The name of the font to acquire. Must be an already loaded font.
  * @param font_size The font size. Ignored for bitmap fonts.
- * @param text A pointer to the text object for which to acquire the font.
- * @return True on success; otherwise false.
+ * @param type The type of the font to acquire.
+ * @return A pointer to font data if successful; otherwise 0/null.
  */
-b8 font_system_acquire(const char* font_name, u16 font_size, struct ui_text* text);
+KAPI font_data* font_system_acquire(const char* font_name, u16 font_size, font_type type);
 
 /**
  * @brief Releases references to the font held by the provided ui_text.
@@ -60,6 +61,14 @@ b8 font_system_acquire(const char* font_name, u16 font_size, struct ui_text* tex
  * @param text A pointer to the text object to release the font from.
  * @return True on success; otherwise false.
  */
-b8 font_system_release(struct ui_text* text);
+KAPI b8 font_system_release(struct ui_text* text);
 //校验图集
-b8 font_system_verify_atlas(font_data* font,const char* text);
+KAPI b8 font_system_verify_atlas(font_data* font,const char* text);
+
+/**
+ * @brief Measures the given string to find out how large it is at the widest/tallest point.
+ *
+ * @param font A pointer to the font to use for measuring.
+ * @param text The text to be measured.
+ */
+KAPI vec2 font_system_measure_string(font_data* font,const char* text);
