@@ -51,3 +51,7 @@ Renderer:
 -地形系统
 -多视口系统ViewPort
 -Gizmo系统->数学 射线和平面 AABB,OBB求交检测拾取对象,交互鼠标事件
+
+The audio plugin requires an installatiion of OpenAL.
+ - Linux: use a package manager to install OpenAL, if not already installed (i.e. `sudo apt install openal` for Ubuntu or `sudo pacman -S openal` on Arch)
+ - macOS: install openal-soft via homebrew: `brew install openal-soft`. Note on M1 macs this installs to `/opt/homebrew/opt/openal-soft/`, where the `include`, `lib`, and `'bin` directories can be found. The `build-all.sh` script accounts for this version of the install.

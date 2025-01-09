@@ -5,7 +5,7 @@
 #include <resources/resource_types.h>
 
 #ifdef _DEBUG
-#include <resources/debug/debug_line3d.h>
+#include <resources/Kohidebug/debug_line3d.h>
 #endif
 
 struct ray;

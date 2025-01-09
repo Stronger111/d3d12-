@@ -6,6 +6,7 @@
 #include <renderer/rendergraph.h>
 #include <systems/camera_system.h>
 
+#include "audio/audio_types.h"
 #include "editor/editor_gizmo.h"
 #include "renderer/viewport.h"
 #include "resources/simple_scene.h"
@@ -32,7 +33,7 @@ typedef struct testbed_game_state {
     f32 delta_time;
     camera* world_camera;
 
-    //TODO:temp
+    // TODO:temp
     camera* world_camera_2;
 
     u16 width, height;
@@ -84,11 +85,16 @@ typedef struct testbed_game_state {
     rendergraph_pass scene_pass;
     rendergraph_pass editor_pass;
     rendergraph_pass ui_pass;
-    
+
     selected_object selection;
     b8 using_gizmo;
 
     u32 render_mode;
+
+    struct audio_file* test_audio_file;
+    struct audio_file* test_loop_audio_file;
+    struct audio_file* test_music;
+    audio_emitter test_emitter;
     // TODO: end temp
 } testbed_game_state;
 

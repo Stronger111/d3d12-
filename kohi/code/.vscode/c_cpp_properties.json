@@ -8,7 +8,8 @@
                 "${workspaceFolder}/standard_ui/src/**",
                 "${workspaceFolder}/testbed_lib/src/**",
                 "${workspaceFolder}/plugin_audio_openal/src/**",
-                "${VULKAN_SDK}/include"
+                "${VULKAN_SDK}/include",
+                "${%programfiles(x86)%}/OpenAL 1.1 SDK/include"
             ],
             "defines": [
                 "_DEBUG",
@@ -51,7 +52,8 @@
                 "${workspaceFolder}/standard_ui/src/**",
                 "${workspaceFolder}/testbed_lib/src/**",
                 "${workspaceFolder}/plugin_audio_openal/src/**",
-                "${VULKAN_SDK}/include"
+                "${VULKAN_SDK}/include",
+                "C:/Program Files (x86)/OpenAL 1.1 SDK/include"
             ],
             "defines": [
                 "_DEBUG",

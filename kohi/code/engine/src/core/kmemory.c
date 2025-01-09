@@ -1,14 +1,14 @@
 #include "kmemory.h"
 
-#include "core/logger.h"
-#include "core/kstring.h"
 #include "core/kmutex.h"
-#include "platform/platform.h"
+#include "core/kstring.h"
+#include "core/logger.h"
 #include "memory/dynamic_allocator.h"
+#include "platform/platform.h"
 
-// TODO:
-#include <string.h>
+// TODO: Custom string lib
 #include <stdio.h>
+#include <string.h>
 
 struct memory_stats {
     u64 total_allocated;
@@ -45,8 +45,8 @@ static const char* memory_tag_strings[MEMORY_TAG_MAX_TAGS] =
         "SYSTEM_FONT",
         "KEYMAP     ",
         "HASHTABLE  ",
-        "UI         "
-        };
+        "AUDIO      ",
+        "UI         "};
 
 typedef struct memory_system_state {
     memory_system_configuration config;
@@ -220,7 +220,7 @@ KAPI b8 kmemory_get_size_alignment(void* block, u64* out_size, u16* out_alignmen
         KFATAL("Error obtaining mutex lock during kmemory_get_size_alignment.");
         return false;
     }
-    b8 result=dynamic_allocator_get_size_alignment(block, out_size, out_alignment);
+    b8 result = dynamic_allocator_get_size_alignment(block, out_size, out_alignment);
     kmutex_unlock(&state_ptr->allocation_mutex);
     return result;
 }

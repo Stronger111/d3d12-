@@ -7,7 +7,8 @@ struct frame_data;
 
 typedef b8 (*PFN_system_initialize)(u64* memory_requirement, void* memory, void* config);
 typedef void (*PFN_system_shutdown)(void* state);
-typedef b8 (*PFN_system_update)(void* state,struct frame_data* p_frame_data);
+/** @brief Typedef for a update function pointer. */
+typedef b8 (*PFN_system_update)(void* state, struct frame_data* p_frame_data);
 
 typedef struct k_system {
     u64 state_size;
@@ -39,6 +40,7 @@ typedef enum k_system_type {
     K_SYSTEM_TYPE_MATERIAL,
     K_SYSTEM_TYPE_GEOMETRY,
     K_SYSTEM_TYPE_LIGHT,
+    K_SYSTEM_TYPE_AUDIO,
 
     // NOTE: Anything between 127-254 is extension space.
     K_SYSTEM_TYPE_KNOWN_MAX = 127,
@@ -70,7 +72,7 @@ void systems_manager_shutdown(systems_manager_state* state);
  * @param p_frame_data A constant pointer to the data for this frame.
  * @return b8 True on success; otherwise false.
  */
-b8 systems_manager_update(systems_manager_state* state,struct frame_data* p_frame_data);
+b8 systems_manager_update(systems_manager_state* state, struct frame_data* p_frame_data);
 
 KAPI b8 systems_manager_register(systems_manager_state* state, u16 type, PFN_system_initialize initialize, PFN_system_shutdown shutdown, PFN_system_update update, void* config);
 

@@ -33,7 +33,7 @@ typedef struct audio_file {
     struct audio_file_plugin_data* plugin_data;
 
     u64 (*load_samples)(struct audio_file* audio, u32 chunk_size, i32 count);
-    void (*stream_buffer_data)(struct audio_file* audio);
+    void* (*stream_buffer_data)(struct audio_file* audio);
     void (*rewind)(struct audio_file* audio);
 
 } audio_file;
@@ -69,7 +69,7 @@ typedef struct audio_plugin_config {
 typedef struct audio_plugin {
     struct audio_plugin_state* internal_state;
 
-    b8 (*initialize)(struct audio_plugin* plugin, audio_plugin_config* config);
+    b8 (*initialize)(struct audio_plugin* plugin, audio_plugin_config config);
 
     void (*shutdown)(struct audio_plugin* plugin);
 
