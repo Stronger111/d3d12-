@@ -1,5 +1,6 @@
 -I..\testbed_lib\src
 -I..\engine\src
+-I..\plugin_audio_openal\src
 -I..\standard_ui\src
 -DKEXPORT
 -D_CRT_SECURE_NO_WARNINGS

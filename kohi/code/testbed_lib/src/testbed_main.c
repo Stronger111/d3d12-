@@ -45,8 +45,8 @@
 #include "views/render_view_world.h" */
 
 // TODO: Editor temp
-#include <resources/debug/debug_box3d.h>
-#include <resources/debug/debug_line3d.h>
+#include <resources/Kohidebug/debug_box3d.h>
+#include <resources/Kohidebug/debug_line3d.h>
 
 #include "editor/editor_gizmo.h"
 /* #include "editor/render_view_editor_world.h" */
@@ -54,10 +54,12 @@
 // TODO: temp
 #include <core/identifier.h>
 #include <math/transform.h>
+#include <resources/loaders/audio_loader.h>
 #include <resources/mesh.h>
 #include <resources/simple_scene.h>
 #include <resources/skybox.h>
 #include <resources/ui_text.h>
+#include <systems/audio_system.h>
 #include <systems/geometry_system.h>
 #include <systems/light_system.h>
 #include <systems/material_system.h>
@@ -190,6 +192,29 @@ b8 game_on_debug_event(u16 code, void* sender, void* listener_inst, event_contex
             KDEBUG("Done.");
         }
         return true;
+    } else if (code == EVENT_CODE_DEBUG3) {
+        if (state->test_audio_file) {
+            // Cycle between first 5 channels.
+            static i8 channel_id = -1;
+            channel_id++;
+            channel_id = channel_id % 5;
+            KTRACE("Playing audio on channel %u", channel_id);
+            audio_system_channel_play(channel_id, state->test_audio_file, false);
+        }
+    } else if (code == EVENT_CODE_DEBUG4) {
+        if (state->test_loop_audio_file) {
+            static b8 playing = true;
+            playing = !playing;
+            if (playing) {
+                // Play on channel 6
+                if (!audio_system_channel_emitter_play(6, &state->test_emitter)) {
+                    KERROR("Failed to play test emitter.");
+                }
+            } else {
+                // Stop channel 6
+                audio_system_channel_stop(6);
+            }
+        }
     }
 
     return false;
@@ -455,6 +480,7 @@ b8 application_initialize(struct application* game_inst) {
 
     // Register resource loader
     resource_system_loader_register(simple_scene_resource_loader_create());
+    resource_system_loader_register(audio_resource_loader_create());
 
     testbed_game_state* state = (testbed_game_state*)game_inst->state;
 
@@ -590,8 +616,45 @@ b8 application_initialize(struct application* game_inst) {
 
     kzero_memory(&state->update_clock, sizeof(clock));
     kzero_memory(&state->render_clock, sizeof(clock));
-    state->running = true;
 
+    // Load up a test audio file.
+    state->test_audio_file = audio_system_chunk_load("Test.ogg");
+    if (!state->test_audio_file) {
+        KERROR("Failed to load test audio file.");
+    }
+
+    // Looping audio file.
+    state->test_loop_audio_file = audio_system_chunk_load("Fire_loop.ogg");
+    // Test music
+    state->test_music = audio_system_stream_load("Woodland Fantasy.mp3");
+    if (!state->test_music) {
+        KERROR("Failed to load test music file.");
+    }
+
+    // Setup a test emitter.
+    state->test_emitter.file = state->test_loop_audio_file;
+    state->test_emitter.volume = 1.0f;
+    state->test_emitter.looping = true;
+    state->test_emitter.falloff = 1.0f;
+    state->test_emitter.position = vec3_create(10.0f, 0.8f, 20.0f);
+
+    // Set some channel volumes.
+    audio_system_master_volume_set(0.7f);
+    audio_system_channel_volume_set(0, 1.0f);
+    audio_system_channel_volume_set(1, 0.75f);
+    audio_system_channel_volume_set(2, 0.50f);
+    audio_system_channel_volume_set(3, 0.25);
+    audio_system_channel_volume_set(4, 0.0f);
+
+    audio_system_channel_volume_set(7, 0.4f);
+
+    // Try playing the emitter.
+    if (!audio_system_channel_emitter_play(6, &state->test_emitter)) {
+        KERROR("Failed to play test emitter.");
+    }
+    audio_system_channel_play(7, state->test_music, true);
+
+    state->running = true;
     return true;
 }
 
@@ -631,6 +694,9 @@ b8 application_update(application* game_inst, struct frame_data* p_frame_data) {
                 KCLAMP(ksin(p_frame_data->total_time - (K_4PI / 3)) * 0.75f + 0.5f, 0.0f, 1.0f),
                 1.0f};
             state->p_light_1->data.position.z = 20.0f + ksin(p_frame_data->total_time);
+
+            // Make the audio emitter follow it
+            state->test_emitter.position = vec3_from_vec4(state->p_light_1->data.position);
         }
     }
 
@@ -684,6 +750,10 @@ Text",
     }
 
     debug_console_update(&((testbed_game_state*)game_inst->state)->debug_console);
+
+    vec3 forward = camera_forward(state->world_camera);
+    vec3 up = camera_up(state->world_camera);
+    audio_system_listener_orientation_set(pos, forward, up);
 
     clock_update(&state->update_clock);
     state->last_update_elapsed = state->update_clock.elapsed;
@@ -1233,6 +1303,8 @@ void application_register_events(struct application* game_inst) {
         event_register(EVENT_CODE_DEBUG0, game_inst, game_on_debug_event);
         event_register(EVENT_CODE_DEBUG1, game_inst, game_on_debug_event);
         event_register(EVENT_CODE_DEBUG2, game_inst, game_on_debug_event);
+        event_register(EVENT_CODE_DEBUG3, game_inst, game_on_debug_event);
+        event_register(EVENT_CODE_DEBUG4, game_inst, game_on_debug_event);
         event_register(EVENT_CODE_OBJECT_HOVER_ID_CHANGED, game_inst, game_on_event);
 
         event_register(EVENT_CODE_SET_RENDER_MODE, game_inst, game_on_event);
@@ -1255,6 +1327,8 @@ void application_unregister_events(struct application* game_inst) {
     event_unregister(EVENT_CODE_DEBUG0, game_inst, game_on_debug_event);
     event_unregister(EVENT_CODE_DEBUG1, game_inst, game_on_debug_event);
     event_unregister(EVENT_CODE_DEBUG2, game_inst, game_on_debug_event);
+    event_unregister(EVENT_CODE_DEBUG3, game_inst, game_on_debug_event);
+    event_unregister(EVENT_CODE_DEBUG4, game_inst, game_on_debug_event);
     event_unregister(EVENT_CODE_OBJECT_HOVER_ID_CHANGED, game_inst, game_on_event);
 
     event_unregister(EVENT_CODE_SET_RENDER_MODE, game_inst, game_on_event);

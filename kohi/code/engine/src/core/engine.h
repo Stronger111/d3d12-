@@ -13,6 +13,7 @@
  */
 #pragma once
 
+#include "audio/audio_types.h"
 #include "defines.h"
 #include "renderer/renderer_types.h"
 #include "systems/font_system.h"
@@ -39,6 +40,7 @@ typedef struct application_config {
     render_view* views;
 
     renderer_plugin renderer_plugin;
+    audio_plugin audio_plugin;
 
     /** @brief The size of the frame allocator. */
     u64 frame_allocator_size;
@@ -70,7 +72,7 @@ KAPI b8 engine_run(struct application* game_inst);
 void engine_on_event_system_initialized(void);
 /**
  * @brief Obtains a constant pointer to the current frame data.
- * 
+ *
  * @param game_inst A pointer to the application instance.
  * @return A constant pointer to the current frame data.
  */

@@ -58,8 +58,12 @@ REM Standard UI lib
 make -f "Makefile.library.mak" %ACTION% TARGET=%TARGET% ASSEMBLY=standard_ui VER_MAJOR=0 VER_MINOR=1 DO_VERSION=no ADDL_INC_FLAGS="-Iengine\src" ADDL_LINK_FLAGS="-lengine"
 IF %ERRORLEVEL% NEQ 0 (echo Error:%ERRORLEVEL% && exit)
 
+REM OpenAL plugin lib
+make -f "Makefile.library.mak" %ACTION% TARGET=%TARGET% ASSEMBLY=plugin_audio_openal VER_MAJOR=0 VER_MINOR=1 DO_VERSION=no ADDL_INC_FLAGS="-Iengine\src -I'%programfiles(x86)%\OpenAL 1.1 SDK\include'" ADDL_LINK_FLAGS="-lengine -lopenal32 -L'%programfiles(x86)%\OpenAL 1.1 SDK\libs\win64'"
+IF %ERRORLEVEL% NEQ 0 (echo Error:%ERRORLEVEL% && exit)
+
 REM Testbed lib
-make -f "Makefile.library.mak" %ACTION% TARGET=%TARGET% ASSEMBLY=testbed_lib VER_MAJOR=0 VER_MINOR=1 DO_VERSION=no ADDL_INC_FLAGS="-Iengine\src -Istandard_ui\src" ADDL_LINK_FLAGS="-lengine -lstandard_ui"
+make -f "Makefile.library.mak" %ACTION% TARGET=%TARGET% ASSEMBLY=testbed_lib VER_MAJOR=0 VER_MINOR=1 DO_VERSION=no ADDL_INC_FLAGS="-Iengine\src -Iplugin_audio_openal\src -Istandard_ui\src" ADDL_LINK_FLAGS="-lengine -lplugin_audio_openal -lstandard_ui"
 IF %ERRORLEVEL% NEQ 0 (echo Error:%ERRORLEVEL% && exit)
 
 REM Testbed

@@ -170,7 +170,14 @@
         "scene_pass.h": "c",
         "shaderc.h": "c",
         "texture_system.h": "c",
-        "standard_ui_system.h": "c"
+        "standard_ui_system.h": "c",
+        "stb_vorbis.h": "c",
+        "audio_loader.h": "c",
+        "al.h": "c",
+        "entry.h": "c",
+        "application_types.h": "c",
+        "asserts.h": "c",
+        "audio_types.h": "c"
     },
     // File copyright documentation tag.  Array of strings will be converted to one line per element.  Can template {year}.
     "doxdocgen.file.copyrightTag": [

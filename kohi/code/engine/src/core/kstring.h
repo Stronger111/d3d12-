@@ -1,14 +1,14 @@
 #pragma once
 
-#include"defines.h"
+#include "defines.h"
 #include "math/math_types.h"
 
-//Returns the length of the given string
+// Returns the length of the given string
 KAPI u64 string_length(const char* str);
 
 /**
  * @brief Gets the length of a string in UTF-8 (potentially multibyte) characters.
- * 
+ *
  * @param str The string to examine.
  * @return The UTF-8 length of the string.
  */
@@ -17,29 +17,29 @@ KAPI u32 string_utf8_length(const char* str);
 /**
  * @brief Obtains bytes needed from the byte array to form a UTF-8 codepoint,
  * also providing how many bytes the current character is.
- * 
+ *
  * @param bytes The byte array to choose from.
  * @param offset The offset in bytes to start from.
  * @param out_codepoint A pointer to hold the UTF-8 codepoint.
  * @param out_advance A pointer to hold the advance, or how many bytes the codepoint takes.
  * @return True on success; otherwise false for invalid/unsupported UTF-8.
  */
-KAPI b8 bytes_to_codepoint(const char* bytes,u32 offset,i32* out_codepoint,u8* out_advance);
+KAPI b8 bytes_to_codepoint(const char* bytes, u32 offset, i32* out_codepoint, u8* out_advance);
 
 KAPI char* string_duplicate(const char* str);
 
 /**
  * @brief Frees the memory of the given string.
- * 
+ *
  * @param str The string to be freed.
  */
 KAPI void string_free(char* str);
 
-//Case -sensitive string comparison . True if the same,otherwise false
-KAPI b8 strings_equal(const char* str0,const char* str1);
+// Case -sensitive string comparison . True if the same,otherwise false
+KAPI b8 strings_equal(const char* str0, const char* str1);
 
-//Case- insensitive string comparision,True if the same ,otherwise false
-KAPI b8 strings_equali(const char* str0,const char* str1);
+// Case- insensitive string comparision,True if the same ,otherwise false
+KAPI b8 strings_equali(const char* str0, const char* str1);
 
 /**
  * @brief Case-sensitive string comparison for a number of characters.
@@ -76,16 +76,16 @@ KAPI i32 string_format_v(char* dest, const char* format, void* va_list);
 
 /**
  * @brief Empties the provided string by setting the first character to 0.
- * 
+ *
  * @param str The string to be emptied.
- * @return A pointer to str. 
+ * @return A pointer to str.
  */
 KAPI char* string_empty(char* str);
 
 KAPI char* string_copy(char* dest, const char* source);
 
 KAPI char* string_ncopy(char* dest, const char* source, i64 length);
-//删除头尾空字符串
+// 删除头尾空字符串
 KAPI char* string_trim(char* str);
 /**
  * @brief Gets a substring of the source string between start and length or to the end of the string.
@@ -94,22 +94,31 @@ KAPI char* string_trim(char* str);
  * Done by placing zeroes in the string at relevant points.
  * @param str The string to be trimmed.
  */
-KAPI void string_mid(char* dest,const char* source,i32 start, i32 length);
+KAPI void string_mid(char* dest, const char* source, i32 start, i32 length);
 /**
  * @brief Returns the index of the first occurance of c in str; otherwise -1.
- * 
+ *
  * @param str The string to be scanned.
  * @param c The character to search for.
- * @return The index of the first occurance of c; otherwise -1 if not found. 
+ * @return The index of the first occurance of c; otherwise -1 if not found.
  */
 KAPI i32 string_index_of(const char* str, char c);
 
 /**
+ * @brief Returns the index of the first occurance of str_1 in str_0; otherwise -1.
+ *
+ * @param str_0 The string to be scanned.
+ * @param str_1 The substring to search for.
+ * @return The index of the first occurance of str_1; otherwise -1 if not found.
+ */
+KAPI i32 string_index_of_str(const char* str_0, const char* str_1);
+
+/**
  * @brief Attempts to parse a transform from the provided string.
  * If the string contains 10 elements, rotation is parsed as quaternion.
- * If it contains 9 elements, rotation is parsed as euler angles and is 
+ * If it contains 9 elements, rotation is parsed as euler angles and is
  * converted to quaternion. Anything else is invalid.
- * 
+ *
  * @param str The string to parse from.
  * @param out_transform A pointer to the transform to write to.
  * @return True if parsed successfully, otherwise false.
@@ -126,7 +135,7 @@ KAPI b8 string_to_transform(const char* str, transform* out_transform);
 KAPI b8 string_to_mat4(const char* str, mat4* out_mat);
 /**
  * @brief Attempts to parse a vector from the provided string.
- * 
+ *
  * @param str The string to parse from. Should be space-delimited. (i.e. "1.0 2.0 3.0 4.0")
  * @param out_vector A pointer to the vector to write to.
  * @return True if parsed successfully; otherwise false.
@@ -135,7 +144,7 @@ KAPI b8 string_to_vec4(const char* str, vec4* out_vector);
 
 /**
  * @brief Attempts to parse a vector from the provided string.
- * 
+ *
  * @param str The string to parse from. Should be space-delimited. (i.e. "1.0 2.0 3.0")
  * @param out_vector A pointer to the vector to write to.
  * @return True if parsed successfully; otherwise false.
@@ -144,17 +153,16 @@ KAPI b8 string_to_vec3(const char* str, vec3* out_vector);
 
 /**
  * @brief Attempts to parse a vector from the provided string.
- * 
+ *
  * @param str The string to parse from. Should be space-delimited. (i.e. "1.0 2.0")
  * @param out_vector A pointer to the vector to write to.
  * @return True if parsed successfully; otherwise false.
  */
 KAPI b8 string_to_vec2(const char* str, vec2* out_vector);
 
-
 /**
  * @brief Attempts to parse a 32-bit floating-point number from the provided string.
- * 
+ *
  * @param str The string to parse from. Should *not* be postfixed with 'f'.
  * @param f A pointer to the float to write to.
  * @return True if parsed successfully; otherwise false.
@@ -163,7 +171,7 @@ KAPI b8 string_to_f32(const char* str, f32* f);
 
 /**
  * @brief Attempts to parse a 64-bit floating-point number from the provided string.
- * 
+ *
  * @param str The string to parse from.
  * @param f A pointer to the float to write to.
  * @return True if parsed successfully; otherwise false.
@@ -172,17 +180,16 @@ KAPI b8 string_to_f64(const char* str, f64* f);
 
 /**
  * @brief Attempts to parse an 8-bit signed integer from the provided string.
- * 
+ *
  * @param str The string to parse from.
  * @param i A pointer to the int to write to.
  * @return True if parsed successfully; otherwise false.
  */
 KAPI b8 string_to_i8(const char* str, i8* i);
 
-
 /**
  * @brief Attempts to parse a 16-bit signed integer from the provided string.
- * 
+ *
  * @param str The string to parse from.
  * @param i A pointer to the int to write to.
  * @return True if parsed successfully; otherwise false.
@@ -191,7 +198,7 @@ KAPI b8 string_to_i16(const char* str, i16* i);
 
 /**
  * @brief Attempts to parse a 32-bit signed integer from the provided string.
- * 
+ *
  * @param str The string to parse from.
  * @param i A pointer to the int to write to.
  * @return True if parsed successfully; otherwise false.
@@ -200,7 +207,7 @@ KAPI b8 string_to_i32(const char* str, i32* i);
 
 /**
  * @brief Attempts to parse a 64-bit signed integer from the provided string.
- * 
+ *
  * @param str The string to parse from.
  * @param i A pointer to the int to write to.
  * @return True if parsed successfully; otherwise false.
@@ -209,7 +216,7 @@ KAPI b8 string_to_i64(const char* str, i64* i);
 
 /**
  * @brief Attempts to parse an 8-bit unsigned integer from the provided string.
- * 
+ *
  * @param str The string to parse from.
  * @param u A pointer to the int to write to.
  * @return True if parsed successfully; otherwise false.
@@ -218,7 +225,7 @@ KAPI b8 string_to_u8(const char* str, u8* u);
 
 /**
  * @brief Attempts to parse a 16-bit unsigned integer from the provided string.
- * 
+ *
  * @param str The string to parse from.
  * @param u A pointer to the int to write to.
  * @return True if parsed successfully; otherwise false.
@@ -227,7 +234,7 @@ KAPI b8 string_to_u16(const char* str, u16* u);
 
 /**
  * @brief Attempts to parse a 32-bit unsigned integer from the provided string.
- * 
+ *
  * @param str The string to parse from.
  * @param u A pointer to the int to write to.
  * @return True if parsed successfully; otherwise false.
@@ -236,7 +243,7 @@ KAPI b8 string_to_u32(const char* str, u32* u);
 
 /**
  * @brief Attempts to parse a 64-bit unsigned integer from the provided string.
- * 
+ *
  * @param str The string to parse from.
  * @param u A pointer to the int to write to.
  * @return True if parsed successfully; otherwise false.
@@ -246,13 +253,12 @@ KAPI b8 string_to_u64(const char* str, u64* u);
 /**
  * @brief Attempts to parse a boolean from the provided string.
  * "true" or "1" are considered true; anything else is false.
- * 
+ *
  * @param str The string to parse from. "true" or "1" are considered true; anything else is false.
  * @param b A pointer to the boolean to write to.
  * @return True if parsed successfully; otherwise false.
  */
 KAPI b8 string_to_bool(const char* str, b8* b);
-
 
 /**
  * @brief Splits the given string by the delimiter provided and stores in the
@@ -287,7 +293,7 @@ KAPI void string_append_string(char* dest, const char* source, const char* appen
 
 /**
  * @brief Appends the supplied integer to source and outputs to dest.
- * 
+ *
  * @param dest The destination for the string.
  * @param source The string to be appended to.
  * @param i The integer to be appended.
@@ -296,7 +302,7 @@ KAPI void string_append_int(char* dest, const char* source, i64 i);
 
 /**
  * @brief Appends the supplied float to source and outputs to dest.
- * 
+ *
  * @param dest The destination for the string.
  * @param source The string to be appended to.
  * @param f The float to be appended.
@@ -305,7 +311,7 @@ KAPI void string_append_float(char* dest, const char* source, f32 f);
 
 /**
  * @brief Appends the supplied boolean (as either "true" or "false") to source and outputs to dest.
- * 
+ *
  * @param dest The destination for the string.
  * @param source The string to be appended to.
  * @param b The boolean to be appended.
@@ -314,7 +320,7 @@ KAPI void string_append_bool(char* dest, const char* source, b8 b);
 
 /**
  * @brief Appends the supplied character to source and outputs to dest.
- * 
+ *
  * @param dest The destination for the string.
  * @param source The string to be appended to.
  * @param c The character to be appended.
@@ -323,7 +329,7 @@ KAPI void string_append_char(char* dest, const char* source, char c);
 
 /**
  * @brief Extracts the directory from a full file path.
- * 
+ *
  * @param dest The destination for the path.
  * @param path The full path to extract from.
  */
@@ -331,7 +337,7 @@ KAPI void string_directory_from_path(char* dest, const char* path);
 
 /**
  * @brief Extracts the filename (including file extension) from a full file path.
- * 
+ *
  * @param dest The destination for the filename.
  * @param path The full path to extract from.
  */
@@ -339,7 +345,7 @@ KAPI void string_filename_from_path(char* dest, const char* path);
 
 /**
  * @brief Extracts the filename (excluding file extension) from a full file path.
- * 
+ *
  * @param dest The destination for the filename.
  * @param path The full path to extract from.
  */
@@ -354,22 +360,21 @@ KAPI void string_filename_no_extension_from_path(char* dest, const char* path);
  * length/allocation information and doesn't have to use strlen on most of its
  * internal operations.
  */
-typedef struct kstring
-{
-   //字符串当前长度
-   u32 length;
-   //当前分配的内存量。始终考虑空终止符
-   u32 allocated;
-   //原生字符数据
-   char* data;
-}kstring;
+typedef struct kstring {
+    // 字符串当前长度
+    u32 length;
+    // 当前分配的内存量。始终考虑空终止符
+    u32 allocated;
+    // 原生字符数据
+    char* data;
+} kstring;
 
 KAPI void kstring_create(kstring* out_string);
-KAPI void kstring_from_cstring(const char* source,kstring* out_string);
+KAPI void kstring_from_cstring(const char* source, kstring* out_string);
 KAPI void kstring_destroy(kstring* string);
 
 KAPI u32 kstring_length(const kstring* string);
 KAPI u32 kstring_utf8_length(const kstring* string);
 
-KAPI void kstring_append_str(kstring* string,const char* s);
-KAPI void kstring_append_kstring(kstring* string,const kstring* other);
+KAPI void kstring_append_str(kstring* string, const char* s);
+KAPI void kstring_append_kstring(kstring* string, const kstring* other);
