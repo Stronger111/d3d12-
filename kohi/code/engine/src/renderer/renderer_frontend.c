@@ -75,7 +75,7 @@ b8 renderer_system_initialize(u64* memory_requirement, void* state, void* config
     kzero_memory(bufname, 256);
     string_format(bufname, "renderbuffer_vertexbuffer_globalgeometry");
     const u64 vertex_buffer_size = sizeof(vertex_3d) * 20 * 1024 * 1024;
-    if (!renderer_renderbuffer_create(bufname, RENDERBUFFER_TYPE_VERTEX, vertex_buffer_size, true, &state_ptr->geometry_vertex_buffer)) {
+    if (!renderer_renderbuffer_create(bufname, RENDERBUFFER_TYPE_VERTEX, vertex_buffer_size, RENDERBUFFER_TRACK_TYPE_FREELIST, &state_ptr->geometry_vertex_buffer)) {
         KERROR("Error creating vertex buffer.");
         return false;
     }
@@ -86,7 +86,7 @@ b8 renderer_system_initialize(u64* memory_requirement, void* state, void* config
     kzero_memory(bufname, 256);
     string_format(bufname, "renderbuffer_indexbuffer_globalgeometry");
     const u64 index_buffer_size = sizeof(u32) * 100 * 1024 * 1024;
-    if (!renderer_renderbuffer_create(bufname, RENDERBUFFER_TYPE_INDEX, index_buffer_size, true, &state_ptr->geometry_index_buffer)) {
+    if (!renderer_renderbuffer_create(bufname, RENDERBUFFER_TYPE_INDEX, index_buffer_size, RENDERBUFFER_TRACK_TYPE_FREELIST, &state_ptr->geometry_index_buffer)) {
         KERROR("Error creating index buffer.");
         return false;
     }
@@ -465,7 +465,7 @@ b8 renderer_shader_apply_instance(shader* s, b8 needs_update) {
     return state_ptr->plugin.shader_apply_instance(&state_ptr->plugin, s, needs_update);
 }
 
-b8  renderer_shader_instance_resources_acquire(shader* s, u32 texture_map_count, texture_map** maps, u32* out_instance_id) {
+b8 renderer_shader_instance_resources_acquire(shader* s, u32 texture_map_count, texture_map** maps, u32* out_instance_id) {
     renderer_system_state* state_ptr = (renderer_system_state*)systems_manager_get_state(K_SYSTEM_TYPE_RENDERER);
     return state_ptr->plugin.shader_instance_resources_acquire(&state_ptr->plugin, s, texture_map_count, maps, out_instance_id);
 }
@@ -590,7 +590,7 @@ void renderer_flag_enabled_set(renderer_config_flags flag, b8 enabled) {
     state_ptr->plugin.flag_enabled_set(&state_ptr->plugin, flag, enabled);
 }
 
-b8 renderer_renderbuffer_create(const char* name, renderbuffer_type type, u64 total_size, b8 use_freelist, renderbuffer* out_buffer) {
+b8 renderer_renderbuffer_create(const char* name, renderbuffer_type type, u64 total_size, renderbuffer_track_type track_type, renderbuffer* out_buffer) {
     renderer_system_state* state_ptr = (renderer_system_state*)systems_manager_get_state(K_SYSTEM_TYPE_RENDERER);
     if (!out_buffer) {
         KERROR("renderer_renderbuffer_create requires a valid pointer to hold the created buffer.");
@@ -610,11 +610,15 @@ b8 renderer_renderbuffer_create(const char* name, renderbuffer_type type, u64 to
         out_buffer->name = string_duplicate(temp_name);
     }
 
+    out_buffer->track_type = track_type;
+
     // Create the freelist, if needed.
-    if (use_freelist) {
+    if (track_type == RENDERBUFFER_TRACK_TYPE_FREELIST) {
         freelist_create(total_size, &out_buffer->freelist_memory_requirement, 0, 0);
         out_buffer->freelist_block = kallocate(out_buffer->freelist_memory_requirement, MEMORY_TAG_RENDERER);
         freelist_create(total_size, &out_buffer->freelist_memory_requirement, out_buffer->freelist_block, &out_buffer->buffer_freelist);
+    } else if (track_type == RENDERBUFFER_TRACK_TYPE_LINEAR) {
+        out_buffer->offset = 0;
     }
 
     // Create the internal buffer from the backend.
@@ -629,10 +633,12 @@ b8 renderer_renderbuffer_create(const char* name, renderbuffer_type type, u64 to
 void renderer_renderbuffer_destroy(renderbuffer* buffer) {
     renderer_system_state* state_ptr = (renderer_system_state*)systems_manager_get_state(K_SYSTEM_TYPE_RENDERER);
     if (buffer) {
-        if (buffer->freelist_memory_requirement > 0) {
+        if (buffer->track_type == RENDERBUFFER_TRACK_TYPE_FREELIST) {
             freelist_destroy(&buffer->buffer_freelist);
             kfree(buffer->freelist_block, buffer->freelist_memory_requirement, MEMORY_TAG_RENDERER);
             buffer->freelist_memory_requirement = 0;
+        } else if (buffer->track_type == RENDERBUFFER_TRACK_TYPE_LINEAR) {
+            buffer->offset = 0;
         }
 
         if (buffer->name) {
@@ -690,7 +696,7 @@ b8 renderer_renderbuffer_resize(renderbuffer* buffer, u64 new_total_size) {
         return false;
     }
 
-    if (buffer->freelist_memory_requirement > 0) {
+    if (buffer->track_type == RENDERBUFFER_TRACK_TYPE_FREELIST) {
         // Resize the freelist first, if used.
         u64 new_memory_requirement = 0;
         freelist_resize(&buffer->buffer_freelist, &new_memory_requirement, 0, 0, 0);
@@ -723,9 +729,13 @@ b8 renderer_renderbuffer_allocate(renderbuffer* buffer, u64 size, u64* out_offse
         return false;
     }
 
-    if (buffer->freelist_memory_requirement == 0) {
+    if (buffer->track_type == RENDERBUFFER_TRACK_TYPE_NONE) {
         KWARN("renderer_renderbuffer_allocate called on a buffer not using freelists. Offset will not be valid. Call renderer_renderbuffer_load_range instead.");
         *out_offset = 0;
+        return true;
+    } else if (buffer->track_type == RENDERBUFFER_TRACK_TYPE_LINEAR) {
+        *out_offset = buffer->offset;
+        buffer->offset += size;
         return true;
     }
     return freelist_allocate_block(&buffer->buffer_freelist, size, out_offset);
@@ -737,8 +747,8 @@ b8 renderer_renderbuffer_free(renderbuffer* buffer, u64 size, u64 offset) {
         return false;
     }
 
-    if (buffer->freelist_memory_requirement == 0) {
-        KWARN("renderer_render_buffer_allocate called on a buffer not using freelists. Nothing was done.");
+    if (buffer->track_type != RENDERBUFFER_TRACK_TYPE_FREELIST) {
+        KWARN("renderer_render_buffer_free called on a buffer not using freelists. Nothing was done.");
         return true;
     }
     return freelist_free_block(&buffer->buffer_freelist, size, offset);
@@ -750,8 +760,10 @@ b8 renderer_renderbuffer_clear(renderbuffer* buffer, b8 zero_memory) {
         return false;
     }
 
-    if (buffer->freelist_memory_requirement != 0) {
+    if (buffer->track_type == RENDERBUFFER_TRACK_TYPE_FREELIST) {
         freelist_clear(&buffer->buffer_freelist);
+    }else if(buffer->track_type == RENDERBUFFER_TRACK_TYPE_LINEAR){
+        buffer->offset = 0;
     }
 
     if (zero_memory) {

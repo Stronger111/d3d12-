@@ -106,7 +106,7 @@ void* darray_pop_at(void* array, u64 index, void* dest) {
         kcopy_memory(
             (void*)(addr + (index * stride)),
             (void*)(addr + ((index + 1) * stride)),
-            stride * (length - index));
+            stride * (length - (index + 1)));
     }
     darray_length_set(array, length - 1);
     return array;
@@ -126,8 +126,8 @@ void* _darray_insert_at(void* array, u64 index, void* value_ptr) {
 
     u64 addr = (u64)array;
 
-    //Push element(s) from index forward out by one. This should
-    //even happen if inserted at the last index.
+    // Push element(s) from index forward out by one. This should
+    // even happen if inserted at the last index.
     kcopy_memory(
         (void*)(addr + ((index + 1) * stride)),
         (void*)(addr + (index * stride)),

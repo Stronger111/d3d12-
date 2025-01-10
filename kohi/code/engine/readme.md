@@ -49,6 +49,7 @@ Renderer:
 -场景管理
  -深度优先遍历物体
 -地形系统
+  地形分块和LOD 使用Compute Shader进行计算和粒子
 -多视口系统ViewPort
 -Gizmo系统->数学 射线和平面 AABB,OBB求交检测拾取对象,交互鼠标事件
 

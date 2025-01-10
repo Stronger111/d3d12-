@@ -48,17 +48,12 @@ KAPI void freelist_create(u64 total_size, u64* memory_requirement, void* memory,
     state->max_entries = max_entries;
     state->total_size = total_size;
 
+    kzero_memory(state->nodes, state->max_entries * sizeof(freelist_node));
+
     state->head = &state->nodes[0];
     state->head->offset = 0;
     state->head->size = total_size;
     state->head->next = 0;
-
-    // Invalidate the offset and size for all but the first node. The invalid
-    // value will be checked for when seeking a new node from the list.
-    for (u64 i = 1; i < state->max_entries; ++i) {
-        state->nodes[i].offset = INVALID_ID;
-        state->nodes[i].size = INVALID_ID;
-    }
 }
 
 KAPI void freelist_destroy(freelist* list) {
@@ -236,12 +231,9 @@ KAPI b8 freelist_resize(freelist* list, u64* memory_requirement, void* new_memor
     state->max_entries = max_entries;
     state->total_size = new_size;
 
-    // Invalidate the offset and size for all but the first node. The invalid
+    // Invalidate the offset for all but the first node. The invalid
     // value will be checked for when seeking a new node from the list.
-    for (u64 i = 1; i < state->max_entries; ++i) {
-        state->nodes[i].offset = INVALID_ID;
-        state->nodes[i].size = INVALID_ID;
-    }
+    kzero_memory(state->nodes, sizeof(freelist_node) * state->max_entries);
 
     state->head = &state->nodes[0];
     // Copy over the nodes.
@@ -296,12 +288,9 @@ KAPI void freelist_clear(freelist* list) {
         return;
     }
     internal_state* state = list->memory;
-    // Invalidate the offset and size for all but the first node. The invalid
+    // Invalidate the offset for all but the first node. The invalid
     // value will be checked for when seeking a new node from the list.
-    for (u64 i = 1; i < state->max_entries; ++i) {
-        state->nodes[i].offset = INVALID_ID;
-        state->nodes[i].size = INVALID_ID;
-    }
+    kzero_memory(state->nodes, sizeof(freelist_node) * state->max_entries);
 
     // Reset the head to occupy the entire thing.
     state->head->offset = 0;
@@ -328,7 +317,9 @@ KAPI u64 freelist_free_space(freelist* list) {
 static freelist_node* get_node(freelist* list) {
     internal_state* state = list->memory;
     for (u64 i = 1; i < state->max_entries; ++i) {
-        if (state->nodes[i].offset == INVALID_ID) {
+        if (state->nodes[i].size == 0) {
+            state->nodes[i].next = 0;
+            state->nodes[i].offset = 0;
             return &state->nodes[i];
         }
     }
@@ -338,7 +329,7 @@ static freelist_node* get_node(freelist* list) {
 }
 
 static void return_node(freelist* list, freelist_node* node) {
-    node->offset = INVALID_ID;
-    node->size = INVALID_ID;
+    node->offset = 0;
+    node->size = 0;
     node->next = 0;
 }

@@ -152,7 +152,7 @@ void* vulkan_alloc_reallocation(void* user_data, void* original, size_t size, si
 #endif
 
         // Copy over the original memory.
-        kcopy_memory(result, original, alloc_size); 
+        kcopy_memory(result, original, alloc_size);
 #ifdef KVULKAN_ALLOCATOR_TRACE
         KTRACE("Freeing original aligned block %p...", original);
 #endif
@@ -469,7 +469,7 @@ b8 vulkan_renderer_backend_initialize(renderer_plugin* plugin, const renderer_ba
 
     // Staging buffer.
     const u64 staging_buffer_size = 256 * 1000 * 1000;
-    if (!renderer_renderbuffer_create("staging", RENDERBUFFER_TYPE_STAGING, staging_buffer_size, true, &context->staging)) {
+    if (!renderer_renderbuffer_create("staging", RENDERBUFFER_TYPE_STAGING, staging_buffer_size, RENDERBUFFER_TRACK_TYPE_LINEAR, &context->staging)) {
         KERROR("Failed to create staging buffer.");
         return false;
     }
@@ -659,7 +659,7 @@ b8 vulkan_renderer_begin(renderer_plugin* plugin, struct frame_data* p_frame_dat
 
     // Dynamic state
     vulkan_renderer_winding_set(plugin, RENDERER_WINDING_COUNTER_CLOCKWISE);
-    
+
     /*
     vulkan_renderer_set_stencil_reference(plugin, 0);
     vulkan_renderer_set_stencil_compare_mask(plugin, 0xFF);  // 255
@@ -722,6 +722,10 @@ b8 vulkan_renderer_end(renderer_plugin* plugin, struct frame_data* p_frame_data)
     vulkan_command_buffer_update_submitted(command_buffer);
     // End queue submission
 
+    // For timing purposes, wait for the queue to complete.
+    // This gives an accurate picture of how long the render takes, including the
+    // work submitted to the actual queue.
+    vkWaitForFences(context->device.logical_device, 1, &context->in_flight_fences[context->current_frame], true, UINT64_MAX);
     return true;
 }
 
@@ -738,10 +742,12 @@ b8 vulkan_renderer_present(renderer_plugin* plugin, struct frame_data* p_frame_d
     present_info.pImageIndices = &context->image_index;
     present_info.pResults = 0;
 
-    // HACK:Waiting on the fence here solves the issue,but this shouldn't
-    //  be needed since it _should_ be waiting on the pWaitSemaphores, which _should_ be
-    //  signaled by the queue's completion after submission.
-    vkWaitForFences(context->device.logical_device, 1, &context->in_flight_fences[context->current_frame], true, UINT64_MAX);
+    // HACK: By waiting on the transfer queue, we avoid a segfault here for some reason. This shouldn't
+    // be needed since it _should_ be waiting on the pWaitSemaphores, which _should_ be
+    // signaled by the queue's completion after submission. And strangely, it's specifically the
+    // _transfer_ queue, even though the one being used for presentation here is the present queue.
+    // TODO: Need to dive a bit deeper on this to figure it out.
+    vkQueueWaitIdle(context->device.transfer_queue);
     VkResult result = vkQueuePresentKHR(context->device.present_queue, &present_info);
     if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
         // Swapchain is out of data, suboptimal or a framebuffer resize has occurred.Triggle swapchain recreation.
@@ -803,8 +809,8 @@ void vulkan_renderer_scissor_reset(renderer_plugin* plugin) {
 }
 
 void vulkan_renderer_winding_set(struct renderer_plugin* plugin, renderer_winding winding) {
-    vulkan_context *context = (vulkan_context *)plugin->internal_context;
-    vulkan_command_buffer *command_buffer = &context->graphics_command_buffers[context->image_index];
+    vulkan_context* context = (vulkan_context*)plugin->internal_context;
+    vulkan_command_buffer* command_buffer = &context->graphics_command_buffers[context->image_index];
 
     VkFrontFace vk_winding = winding == RENDERER_WINDING_COUNTER_CLOCKWISE ? VK_FRONT_FACE_COUNTER_CLOCKWISE : VK_FRONT_FACE_CLOCKWISE;
     if (context->device.support_flags & VULKAN_DEVICE_SUPPORT_FLAG_NATIVE_DYNAMIC_FRONT_FACE_BIT) {
@@ -813,7 +819,7 @@ void vulkan_renderer_winding_set(struct renderer_plugin* plugin, renderer_windin
         context->vkCmdSetFrontFaceEXT(command_buffer->handle, vk_winding);
     } else {
         if (context->bound_shader) {
-            vulkan_shader *internal_shader = context->bound_shader->internal_data;
+            vulkan_shader* internal_shader = context->bound_shader->internal_data;
             // Bind the correct winding pipeline.
             if (winding == RENDERER_WINDING_COUNTER_CLOCKWISE) {
                 vulkan_pipeline_bind(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, internal_shader->pipelines[internal_shader->bound_pipeline_index]);
@@ -875,22 +881,22 @@ static VkCompareOp vulkan_renderer_get_compare_op(renderer_compare_op op) {
 */
 
 void vulkan_renderer_set_stencil_test_enabled(struct renderer_plugin* plugin, b8 enabled) {
-   // vulkan_context* context = (vulkan_context*)plugin->internal_context;
-   // vulkan_command_buffer* command_buffer = &context->graphics_command_buffers[context->image_index];
- /*
-    if (context->device.support_flags & VULKAN_DEVICE_SUPPORT_FLAG_NATIVE_DYNAMIC_STATE_BIT) {
-        vkCmdSetStencilTestEnable(command_buffer->handle, (VkBool32)enabled);
-    } else if (context->device.support_flags & VULKAN_DEVICE_SUPPORT_FLAG_DYNAMIC_STATE_BIT) {
-        context->vkCmdSetStencilTestEnableEXT(command_buffer->handle, (VkBool32)enabled);
-    } else {
-        KFATAL("renderer_set_stencil_test_enabled cannot be used on a device without dynamic state support.");
-    }
-    */
+    // vulkan_context* context = (vulkan_context*)plugin->internal_context;
+    // vulkan_command_buffer* command_buffer = &context->graphics_command_buffers[context->image_index];
+    /*
+       if (context->device.support_flags & VULKAN_DEVICE_SUPPORT_FLAG_NATIVE_DYNAMIC_STATE_BIT) {
+           vkCmdSetStencilTestEnable(command_buffer->handle, (VkBool32)enabled);
+       } else if (context->device.support_flags & VULKAN_DEVICE_SUPPORT_FLAG_DYNAMIC_STATE_BIT) {
+           context->vkCmdSetStencilTestEnableEXT(command_buffer->handle, (VkBool32)enabled);
+       } else {
+           KFATAL("renderer_set_stencil_test_enabled cannot be used on a device without dynamic state support.");
+       }
+       */
 }
 
 void vulkan_renderer_set_depth_test_enabled(struct renderer_plugin* plugin, b8 enabled) {
-    //vulkan_context* context = (vulkan_context*)plugin->internal_context;
-    //vulkan_command_buffer* command_buffer = &context->graphics_command_buffers[context->image_index];
+    // vulkan_context* context = (vulkan_context*)plugin->internal_context;
+    // vulkan_command_buffer* command_buffer = &context->graphics_command_buffers[context->image_index];
     /*
     if (context->device.support_flags & VULKAN_DEVICE_SUPPORT_FLAG_NATIVE_DYNAMIC_STATE_BIT) {
         vkCmdSetDepthTestEnable(command_buffer->handle, (VkBool32)enabled);
@@ -1219,7 +1225,7 @@ void vulkan_renderer_texture_read_data(renderer_plugin* plugin, texture* t, u32 
     char bufname[256];
     kzero_memory(bufname, 256);
     string_format(bufname, "renderbuffer_texture_read_staging");
-    if (!renderer_renderbuffer_create(bufname, RENDERBUFFER_TYPE_READ, size, false, &staging)) {
+    if (!renderer_renderbuffer_create(bufname, RENDERBUFFER_TYPE_READ, size, RENDERBUFFER_TRACK_TYPE_NONE, &staging)) {
         KERROR("Failed to create staging buffer for texture read.");
         return;
     }
@@ -1278,7 +1284,7 @@ void vulkan_renderer_texture_read_pixel(renderer_plugin* plugin, texture* t, u32
     char bufname[256];
     kzero_memory(bufname, 256);
     string_format(bufname, "renderbuffer_texture_read_pixel_staging");
-    if (!renderer_renderbuffer_create(bufname, RENDERBUFFER_TYPE_READ, sizeof(u8) * 4, false, &staging)) {
+    if (!renderer_renderbuffer_create(bufname, RENDERBUFFER_TYPE_READ, sizeof(u8) * 4, RENDERBUFFER_TRACK_TYPE_NONE, &staging)) {
         KERROR("Failed to create staging buffer for texture pixel read.");
         return;
     }
@@ -1669,7 +1675,7 @@ b8 vulkan_renderer_shader_initialize(renderer_plugin* plugin, shader* s) {
         pipeline_count = 3;
 
         // Create an array of pointers to pipelines, one per topology class. Null means not supported for this shader.
-        internal_shader->pipelines = kallocate(sizeof(vulkan_pipeline *) * pipeline_count, MEMORY_TAG_ARRAY);
+        internal_shader->pipelines = kallocate(sizeof(vulkan_pipeline*) * pipeline_count, MEMORY_TAG_ARRAY);
 
         // Create one pipeline per topology class.
         // Point class.
@@ -1702,9 +1708,9 @@ b8 vulkan_renderer_shader_initialize(renderer_plugin* plugin, shader* s) {
         pipeline_count = 6;
 
         // Create an array of pointers to pipelines, one per topology type. Counter-clockwise. Null means not supported for this shader.
-        internal_shader->pipelines = kallocate(sizeof(vulkan_pipeline *) * pipeline_count, MEMORY_TAG_ARRAY);
+        internal_shader->pipelines = kallocate(sizeof(vulkan_pipeline*) * pipeline_count, MEMORY_TAG_ARRAY);
         // Create an array of pointers to pipelines, one per topology type. Clockwise. Null means not supported for this shader.
-        internal_shader->clockwise_pipelines = kallocate(sizeof(vulkan_pipeline *) * pipeline_count, MEMORY_TAG_ARRAY);
+        internal_shader->clockwise_pipelines = kallocate(sizeof(vulkan_pipeline*) * pipeline_count, MEMORY_TAG_ARRAY);
 
         // Check each type individually. Will always be in this order.
 
@@ -1762,7 +1768,7 @@ b8 vulkan_renderer_shader_initialize(renderer_plugin* plugin, shader* s) {
             internal_shader->clockwise_pipelines[5]->supported_topology_types = PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE_FAN;
         }
     }
-    
+
     // Loop through and config/create one pipeline per class . NUll entries are skipped.
     for (u32 i = 0; i < pipeline_count; ++i) {
         if (!internal_shader->pipelines[i]) {
@@ -1863,7 +1869,7 @@ b8 vulkan_renderer_shader_initialize(renderer_plugin* plugin, shader* s) {
     char bufname[256];
     kzero_memory(bufname, 256);
     string_format(bufname, "renderbuffer_global_uniform");
-    if (!renderer_renderbuffer_create(bufname, RENDERBUFFER_TYPE_UNIFORM, total_buffer_size, true, &internal_shader->uniform_buffer)) {
+    if (!renderer_renderbuffer_create(bufname, RENDERBUFFER_TYPE_UNIFORM, total_buffer_size, RENDERBUFFER_TRACK_TYPE_FREELIST, &internal_shader->uniform_buffer)) {
         KERROR("Vulkan buffer creation failed for object shader.");
         return false;
     }
@@ -1979,7 +1985,7 @@ b8 vulkan_renderer_shader_apply_globals(renderer_plugin* plugin, shader* s, b8 n
     return true;
 }
 
-b8  vulkan_renderer_shader_apply_instance(renderer_plugin* plugin, shader* s, b8 needs_update) {
+b8 vulkan_renderer_shader_apply_instance(renderer_plugin* plugin, shader* s, b8 needs_update) {
     vulkan_context* context = (vulkan_context*)plugin->internal_context;
     vulkan_shader* internal = s->internal_data;
     if (internal->instance_uniform_count < 1 && internal->instance_uniform_sampler_count < 1) {
@@ -3157,7 +3163,7 @@ b8 vulkan_buffer_read(renderer_plugin* plugin, renderbuffer* buffer, u64 offset,
         char bufname[256];
         kzero_memory(bufname, 256);
         string_format(bufname, "renderbuffer_read");
-        if (!renderer_renderbuffer_create(bufname, RENDERBUFFER_TYPE_READ, size, false, &read)) {
+        if (!renderer_renderbuffer_create(bufname, RENDERBUFFER_TYPE_READ, size, RENDERBUFFER_TRACK_TYPE_NONE, &read)) {
             KERROR("vulkan_buffer_read() - Failed to create read buffer.");
             return false;
         }
