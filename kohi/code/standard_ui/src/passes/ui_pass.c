@@ -55,10 +55,10 @@ b8 ui_pass_initialize(struct rendergraph_pass* self) {
     renderpass_config ui_pass_config;
     ui_pass_config.name = "Renderpass.UI";
     ui_pass_config.clear_colour = (vec4){0.0f, 0.0f, 0.2f, 1.0f};
-    ui_pass_config.clear_flags = RENDERPASS_CLEAR_NONE_FLAG;
+    ui_pass_config.clear_flags = RENDERPASS_CLEAR_DEPTH_BUFFER_FLAG | RENDERPASS_CLEAR_STENCIL_BUFFER_FLAG;
     ui_pass_config.depth = 1.0f;
     ui_pass_config.stencil = 0;
-    ui_pass_config.target.attachment_count = 1;
+    ui_pass_config.target.attachment_count = 2;
     ui_pass_config.target.attachments = kallocate(sizeof(render_target_attachment_config) * ui_pass_config.target.attachment_count, MEMORY_TAG_ARRAY);
     ui_pass_config.render_target_count = renderer_window_attachment_count_get();
 
@@ -142,14 +142,14 @@ b8 ui_pass_execute(struct rendergraph_pass* self, struct frame_data* p_frame_dat
 
     // Bind the viewport
     renderer_active_viewport_set(self->pass_data.vp);
-    
+
     renderer_set_depth_test_enabled(false);
 
     if (!renderer_renderpass_begin(&self->pass, &self->pass.targets[p_frame_data->render_target_index])) {
         KERROR("UI renderpass failed to start.");
         return false;
     }
-    //sui_shader StandardUI Shader 刚才是s s是没有贴图的。
+    // sui_shader StandardUI Shader 刚才是s s是没有贴图的。
     if (!shader_system_use_by_id(internal_data->sui_shader->id)) {
         KERROR("Failed to use StandardUI shader. Render frame failed.");
         return false;
@@ -193,8 +193,8 @@ b8 ui_pass_execute(struct rendergraph_pass* self, struct frame_data* p_frame_dat
                 RENDERER_STENCIL_OP_KEEP,
                 RENDERER_COMPARE_OP_EQUAL);
         } else {
-            //renderer_set_stencil_write_mask(0x00);
-           // renderer_set_stencil_test_enabled(false);
+            renderer_set_stencil_write_mask(0x00);
+            renderer_set_stencil_test_enabled(false);
         }
 
         // Apply instance
@@ -210,17 +210,17 @@ b8 ui_pass_execute(struct rendergraph_pass* self, struct frame_data* p_frame_dat
         shader_system_uniform_set_by_index(internal_data->sui_locations.model, &renderable->render_data.model);
 
         // Draw
-       renderer_geometry_draw(&renderable->render_data);
+        renderer_geometry_draw(&renderable->render_data);
 
         // Turn off stencil tests if they were on.
         if (renderable->clip_mask_render_data) {
             // Turn off stencil testing.
-            //renderer_set_stencil_test_enabled(false);
-            //renderer_set_stencil_op(
-           //     RENDERER_STENCIL_OP_KEEP,
-            //    RENDERER_STENCIL_OP_KEEP,
-           //     RENDERER_STENCIL_OP_KEEP,
-            //    RENDERER_COMPARE_OP_ALWAYS);
+            renderer_set_stencil_test_enabled(false);
+            renderer_set_stencil_op(
+                RENDERER_STENCIL_OP_KEEP,
+                RENDERER_STENCIL_OP_KEEP,
+                RENDERER_STENCIL_OP_KEEP,
+                RENDERER_COMPARE_OP_ALWAYS);
         }
 
         // Sync the frame number.

@@ -19,10 +19,13 @@ typedef struct sui_textbox_internal_data {
     u64 frame_number;
     u8 draw_index;
     sui_control content_label;
+    //面板显示光标
     sui_control cursor;
+    //高亮区域
     sui_control highlight_box;
     range32 highlight_range;
     u32 cursor_position;
+    //????固定偏移view
     f32 text_view_offset;
     sui_clip_mask clip_mask;
 } sui_textbox_internal_data;
@@ -46,4 +49,4 @@ KAPI b8 sui_textbox_control_render(struct sui_control* self, struct frame_data* 
 KAPI const char* sui_textbox_text_get(struct sui_control* self);
 KAPI void sui_textbox_text_set(struct sui_control* self, const char* text);
 KAPI void sui_textbox_on_mouse_down(struct sui_control* self, struct sui_mouse_event event);
-KAPI void suii_textbox_on_mouse_up(struct sui_control* self, struct sui_mouse_event event);
+KAPI void sui_textbox_on_mouse_up(struct sui_control* self, struct sui_mouse_event event);

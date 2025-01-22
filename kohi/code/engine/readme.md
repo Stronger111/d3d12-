@@ -29,7 +29,9 @@ Renderer:
 - Gizmo系統
 - Intel VTune Profiler 性能分析工具
 - 插件形式添加模块代码
-
+- PBR
+# 引擎待完成
+  
 -bug
 -"Vulkan buffer creation failed for object shader  out_error_local_memory  windows ？？ TODO  重启解决问题 后面需要查一下
 - 赋值内存错误,内存空间开辟不足和内存不正确
@@ -38,6 +40,9 @@ Renderer:
 - 传入UBO 数据不正确
 - 环境变量更改需要重启
 - filesystem_read_all_text 文件 
+- Debug root->children,10 打印数组的10个元素.
+- 模版测试-裁剪输入框外部的内容 模版需要clear
+
 
 -Feature特性
 -JobSystem

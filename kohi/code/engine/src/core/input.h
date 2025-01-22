@@ -232,6 +232,14 @@ void input_system_shutdown(void* state);
 void input_update(const struct frame_data* p_frame_data);
 
 // keyboard input
+
+/**
+ * @brief Enables/disables keyboard key repeats.
+ * @param enable Indicates if key repeats should be enabled.
+ */
+KAPI void input_key_repeats_enable(b8 enable);
+
+// keyboard input
 KAPI b8 input_is_key_down(keys key);
 KAPI b8 input_is_key_up(keys key);
 KAPI b8 input_was_key_down(keys key);

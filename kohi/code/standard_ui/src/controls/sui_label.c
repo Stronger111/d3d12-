@@ -82,7 +82,7 @@ b8 sui_label_control_load(sui_control* self) {
 
     if (typed_data->text && typed_data->text[0] != 0) {
         static const u64 quad_vertex_size = (sizeof(vertex_2d) * 4);
-        static const u64 quad_index_size = (sizeof(u8) * 6);
+        static const u64 quad_index_size = (sizeof(u32) * 6);
         u64 text_length = string_utf8_length(typed_data->text);
 
         // Allocate space in the buffers. vertex_buffer这个一个大的buffer

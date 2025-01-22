@@ -660,7 +660,6 @@ b8 vulkan_renderer_begin(renderer_plugin* plugin, struct frame_data* p_frame_dat
     // Dynamic state
     vulkan_renderer_winding_set(plugin, RENDERER_WINDING_COUNTER_CLOCKWISE);
 
-    /*
     vulkan_renderer_set_stencil_reference(plugin, 0);
     vulkan_renderer_set_stencil_compare_mask(plugin, 0xFF);  // 255
     vulkan_renderer_set_stencil_op(
@@ -673,7 +672,7 @@ b8 vulkan_renderer_begin(renderer_plugin* plugin, struct frame_data* p_frame_dat
     vulkan_renderer_set_depth_test_enabled(plugin, true);
     // Disable stencil writing
     vulkan_renderer_set_stencil_write_mask(plugin, 0x00);
-    */
+
     return true;
 }
 
@@ -813,25 +812,15 @@ void vulkan_renderer_winding_set(struct renderer_plugin* plugin, renderer_windin
     vulkan_command_buffer* command_buffer = &context->graphics_command_buffers[context->image_index];
 
     VkFrontFace vk_winding = winding == RENDERER_WINDING_COUNTER_CLOCKWISE ? VK_FRONT_FACE_COUNTER_CLOCKWISE : VK_FRONT_FACE_CLOCKWISE;
-    if (context->device.support_flags & VULKAN_DEVICE_SUPPORT_FLAG_NATIVE_DYNAMIC_FRONT_FACE_BIT) {
+    if (context->device.support_flags & VULKAN_DEVICE_SUPPORT_FLAG_NATIVE_DYNAMIC_STATE_BIT) {
         vkCmdSetFrontFace(command_buffer->handle, vk_winding);
-    } else if (context->device.support_flags & VULKAN_DEVICE_SUPPORT_FLAG_DYNAMIC_FRONT_FACE_BIT) {
+    } else if (context->device.support_flags & VULKAN_DEVICE_SUPPORT_FLAG_DYNAMIC_STATE_BIT) {
         context->vkCmdSetFrontFaceEXT(command_buffer->handle, vk_winding);
     } else {
-        if (context->bound_shader) {
-            vulkan_shader* internal_shader = context->bound_shader->internal_data;
-            // Bind the correct winding pipeline.
-            if (winding == RENDERER_WINDING_COUNTER_CLOCKWISE) {
-                vulkan_pipeline_bind(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, internal_shader->pipelines[internal_shader->bound_pipeline_index]);
-            } else {
-                vulkan_pipeline_bind(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, internal_shader->clockwise_pipelines[internal_shader->bound_pipeline_index]);
-            }
-        } else {
-            KERROR("Unable to set winding because there is no currently bound shader.");
-        }
+        KFATAL("vulkan_renderer_winding_set cannot be used on a device without dynamic state support.");
     }
 }
-/*
+
 static VkStencilOp vulkan_renderer_get_stencil_op(renderer_stencil_op op) {
     switch (op) {
         case RENDERER_STENCIL_OP_KEEP:
@@ -878,26 +867,24 @@ static VkCompareOp vulkan_renderer_get_compare_op(renderer_compare_op op) {
             break;
     }
 }
-*/
 
 void vulkan_renderer_set_stencil_test_enabled(struct renderer_plugin* plugin, b8 enabled) {
-    // vulkan_context* context = (vulkan_context*)plugin->internal_context;
-    // vulkan_command_buffer* command_buffer = &context->graphics_command_buffers[context->image_index];
-    /*
-       if (context->device.support_flags & VULKAN_DEVICE_SUPPORT_FLAG_NATIVE_DYNAMIC_STATE_BIT) {
-           vkCmdSetStencilTestEnable(command_buffer->handle, (VkBool32)enabled);
-       } else if (context->device.support_flags & VULKAN_DEVICE_SUPPORT_FLAG_DYNAMIC_STATE_BIT) {
-           context->vkCmdSetStencilTestEnableEXT(command_buffer->handle, (VkBool32)enabled);
-       } else {
-           KFATAL("renderer_set_stencil_test_enabled cannot be used on a device without dynamic state support.");
-       }
-       */
+    vulkan_context* context = (vulkan_context*)plugin->internal_context;
+    vulkan_command_buffer* command_buffer = &context->graphics_command_buffers[context->image_index];
+
+    if (context->device.support_flags & VULKAN_DEVICE_SUPPORT_FLAG_NATIVE_DYNAMIC_STATE_BIT) {
+        vkCmdSetStencilTestEnable(command_buffer->handle, (VkBool32)enabled);
+    } else if (context->device.support_flags & VULKAN_DEVICE_SUPPORT_FLAG_DYNAMIC_STATE_BIT) {
+        context->vkCmdSetStencilTestEnableEXT(command_buffer->handle, (VkBool32)enabled);
+    } else {
+        KFATAL("renderer_set_stencil_test_enabled cannot be used on a device without dynamic state support.");
+    }
 }
 
 void vulkan_renderer_set_depth_test_enabled(struct renderer_plugin* plugin, b8 enabled) {
-    // vulkan_context* context = (vulkan_context*)plugin->internal_context;
-    // vulkan_command_buffer* command_buffer = &context->graphics_command_buffers[context->image_index];
-    /*
+    vulkan_context* context = (vulkan_context*)plugin->internal_context;
+    vulkan_command_buffer* command_buffer = &context->graphics_command_buffers[context->image_index];
+
     if (context->device.support_flags & VULKAN_DEVICE_SUPPORT_FLAG_NATIVE_DYNAMIC_STATE_BIT) {
         vkCmdSetDepthTestEnable(command_buffer->handle, (VkBool32)enabled);
     } else if (context->device.support_flags & VULKAN_DEVICE_SUPPORT_FLAG_DYNAMIC_STATE_BIT) {
@@ -905,7 +892,6 @@ void vulkan_renderer_set_depth_test_enabled(struct renderer_plugin* plugin, b8 e
     } else {
         KFATAL("renderer_set_depth_test_enabled cannot be used on a device without dynamic state support.");
     }
-    */
 }
 
 void vulkan_renderer_set_stencil_reference(struct renderer_plugin* plugin, u32 reference) {
@@ -916,7 +902,7 @@ void vulkan_renderer_set_stencil_reference(struct renderer_plugin* plugin, u32 r
 }
 
 void vulkan_renderer_set_stencil_op(struct renderer_plugin* plugin, renderer_stencil_op fail_op, renderer_stencil_op pass_op, renderer_stencil_op depth_fail_op, renderer_compare_op compare_op) {
-    /*
+ 
     vulkan_context* context = (vulkan_context*)plugin->internal_context;
     vulkan_command_buffer* command_buffer = &context->graphics_command_buffers[context->image_index];
 
@@ -939,7 +925,6 @@ void vulkan_renderer_set_stencil_op(struct renderer_plugin* plugin, renderer_ste
     } else {
         KFATAL("renderer_set_stencil_op cannot be used on a device without dynamic state support.");
     }
-    */
 }
 
 void vulkan_renderer_set_stencil_compare_mask(struct renderer_plugin* plugin, u32 compare_mask) {
@@ -1001,7 +986,7 @@ b8 vulkan_renderer_renderpass_begin(renderer_plugin* plugin, renderpass* pass, r
         begin_info.clearValueCount++;
     } else {
         for (u32 i = 0; i < target->attachment_count; ++i) {
-            if (target->attachments[i].type == RENDER_TARGET_ATTACHMENT_TYPE_DEPTH || target->attachments[i].type & RENDER_TARGET_ATTACHMENT_TYPE_STENCIL) {
+            if (target->attachments[i].type & RENDER_TARGET_ATTACHMENT_TYPE_DEPTH || target->attachments[i].type & RENDER_TARGET_ATTACHMENT_TYPE_STENCIL) {
                 // If there is a depth attachment, make sure to add the clear count, but don't bother copying the data.
                 begin_info.clearValueCount++;
             }
@@ -1664,109 +1649,36 @@ b8 vulkan_renderer_shader_initialize(renderer_plugin* plugin, shader* s) {
     for (u32 i = 0; i < internal_shader->config.stage_count; ++i) {
         stage_create_infos[i] = internal_shader->stages[i].shader_stage_create_info;
     }
+    // Only dynamic topology is supported, create one pipeline per topology class.
+    // If this isn't supported,perhaps a different backend should be used.
+    u32 pipeline_count = 3;
+    // Create an array of pointers to pipelines, one per topology class. Null means not supported for this shader.
+    internal_shader->pipelines = kallocate(sizeof(vulkan_pipeline*) * pipeline_count, MEMORY_TAG_ARRAY);
 
-    u32 pipeline_count = 0;
-    // If dynamic topology is supported, create one pipeline per topology class. Otherwise,
-    // we must create one pipeline per topology type.
+    // Create one pipeline per topology class.
+    // Point class.
+    if (s->topology_types & PRIMITIVE_TOPOLOGY_TYPE_POINT_LIST) {
+        internal_shader->pipelines[VULKAN_TOPOLOGY_CLASS_POINT] = kallocate(sizeof(vulkan_pipeline), MEMORY_TAG_VULKAN);
+        // Set the supported types for this class.
+        internal_shader->pipelines[VULKAN_TOPOLOGY_CLASS_POINT]->supported_topology_types |= PRIMITIVE_TOPOLOGY_TYPE_POINT_LIST;
+    }
 
-    if (
-        (context->device.support_flags & VULKAN_DEVICE_SUPPORT_FLAG_NATIVE_DYNAMIC_TOPOLOGY_BIT) ||
-        (context->device.support_flags & VULKAN_DEVICE_SUPPORT_FLAG_DYNAMIC_TOPOLOGY_BIT)) {
-        pipeline_count = 3;
-
-        // Create an array of pointers to pipelines, one per topology class. Null means not supported for this shader.
-        internal_shader->pipelines = kallocate(sizeof(vulkan_pipeline*) * pipeline_count, MEMORY_TAG_ARRAY);
-
-        // Create one pipeline per topology class.
-        // Point class.
-        if (s->topology_types & PRIMITIVE_TOPOLOGY_TYPE_POINT_LIST) {
-            internal_shader->pipelines[VULKAN_TOPOLOGY_CLASS_POINT] = kallocate(sizeof(vulkan_pipeline), MEMORY_TAG_VULKAN);
-            // Set the supported types for this class.
-            internal_shader->pipelines[VULKAN_TOPOLOGY_CLASS_POINT]->supported_topology_types |= PRIMITIVE_TOPOLOGY_TYPE_POINT_LIST;
-        }
-
-        // Line class.
-        if (s->topology_types & PRIMITIVE_TOPOLOGY_TYPE_LINE_LIST || s->topology_types & PRIMITIVE_TOPOLOGY_TYPE_LINE_STRIP) {
-            internal_shader->pipelines[VULKAN_TOPOLOGY_CLASS_LINE] = kallocate(sizeof(vulkan_pipeline), MEMORY_TAG_VULKAN);
-            // Set the supported types for this class.
-            internal_shader->pipelines[VULKAN_TOPOLOGY_CLASS_LINE]->supported_topology_types |= PRIMITIVE_TOPOLOGY_TYPE_LINE_LIST;
-            internal_shader->pipelines[VULKAN_TOPOLOGY_CLASS_LINE]->supported_topology_types |= PRIMITIVE_TOPOLOGY_TYPE_LINE_STRIP;
-        }
-
-        // Triangle class.
-        if (s->topology_types & PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE_LIST ||
-            s->topology_types & PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE_STRIP ||
-            s->topology_types & PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE_FAN) {
-            internal_shader->pipelines[VULKAN_TOPOLOGY_CLASS_TRIANGLE] = kallocate(sizeof(vulkan_pipeline), MEMORY_TAG_VULKAN);
-            // Set the supported types for this class.
-            internal_shader->pipelines[VULKAN_TOPOLOGY_CLASS_TRIANGLE]->supported_topology_types |= PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE_LIST;
-            internal_shader->pipelines[VULKAN_TOPOLOGY_CLASS_TRIANGLE]->supported_topology_types |= PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE_STRIP;
-            internal_shader->pipelines[VULKAN_TOPOLOGY_CLASS_TRIANGLE]->supported_topology_types |= PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE_FAN;
-        }
-    } else {
-        // In this case, one pipeline must be created per topology type.
-        pipeline_count = 6;
-
-        // Create an array of pointers to pipelines, one per topology type. Counter-clockwise. Null means not supported for this shader.
-        internal_shader->pipelines = kallocate(sizeof(vulkan_pipeline*) * pipeline_count, MEMORY_TAG_ARRAY);
-        // Create an array of pointers to pipelines, one per topology type. Clockwise. Null means not supported for this shader.
-        internal_shader->clockwise_pipelines = kallocate(sizeof(vulkan_pipeline*) * pipeline_count, MEMORY_TAG_ARRAY);
-
-        // Check each type individually. Will always be in this order.
-
-        // Point
-        if (s->topology_types & PRIMITIVE_TOPOLOGY_TYPE_POINT_LIST) {
-            // Counter-clockwise
-            internal_shader->pipelines[0] = kallocate(sizeof(vulkan_pipeline), MEMORY_TAG_VULKAN);
-            internal_shader->pipelines[0]->supported_topology_types = PRIMITIVE_TOPOLOGY_TYPE_POINT_LIST;
-            // Clockwise
-            internal_shader->clockwise_pipelines[0] = kallocate(sizeof(vulkan_pipeline), MEMORY_TAG_VULKAN);
-            internal_shader->clockwise_pipelines[0]->supported_topology_types = PRIMITIVE_TOPOLOGY_TYPE_POINT_LIST;
-        }
-
-        // Line
-        if (s->topology_types & PRIMITIVE_TOPOLOGY_TYPE_LINE_LIST) {
-            // Counter-clockwise
-            internal_shader->pipelines[1] = kallocate(sizeof(vulkan_pipeline), MEMORY_TAG_VULKAN);
-            internal_shader->pipelines[1]->supported_topology_types = PRIMITIVE_TOPOLOGY_TYPE_LINE_LIST;
-            // Clockwise
-            internal_shader->clockwise_pipelines[1] = kallocate(sizeof(vulkan_pipeline), MEMORY_TAG_VULKAN);
-            internal_shader->clockwise_pipelines[1]->supported_topology_types = PRIMITIVE_TOPOLOGY_TYPE_LINE_LIST;
-        }
-        if (s->topology_types & PRIMITIVE_TOPOLOGY_TYPE_LINE_STRIP) {
-            // Counter-clockwise
-            internal_shader->pipelines[2] = kallocate(sizeof(vulkan_pipeline), MEMORY_TAG_VULKAN);
-            internal_shader->pipelines[2]->supported_topology_types = PRIMITIVE_TOPOLOGY_TYPE_LINE_STRIP;
-            // Clockwise
-            internal_shader->clockwise_pipelines[2] = kallocate(sizeof(vulkan_pipeline), MEMORY_TAG_VULKAN);
-            internal_shader->clockwise_pipelines[2]->supported_topology_types = PRIMITIVE_TOPOLOGY_TYPE_LINE_STRIP;
-        }
-
-        // Triangle
-        if (s->topology_types & PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE_LIST) {
-            // Clockwise
-            internal_shader->pipelines[3] = kallocate(sizeof(vulkan_pipeline), MEMORY_TAG_VULKAN);
-            internal_shader->pipelines[3]->supported_topology_types = PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE_LIST;
-            // Clockwise
-            internal_shader->clockwise_pipelines[3] = kallocate(sizeof(vulkan_pipeline), MEMORY_TAG_VULKAN);
-            internal_shader->clockwise_pipelines[3]->supported_topology_types = PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE_LIST;
-        }
-        if (s->topology_types & PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE_STRIP) {
-            // Clockwise
-            internal_shader->pipelines[4] = kallocate(sizeof(vulkan_pipeline), MEMORY_TAG_VULKAN);
-            internal_shader->pipelines[4]->supported_topology_types = PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE_STRIP;
-            // Counter-clockwise
-            internal_shader->clockwise_pipelines[4] = kallocate(sizeof(vulkan_pipeline), MEMORY_TAG_VULKAN);
-            internal_shader->clockwise_pipelines[4]->supported_topology_types = PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE_STRIP;
-        }
-        if (s->topology_types & PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE_FAN) {
-            // Clockwise
-            internal_shader->pipelines[5] = kallocate(sizeof(vulkan_pipeline), MEMORY_TAG_VULKAN);
-            internal_shader->pipelines[5]->supported_topology_types = PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE_FAN;
-            // Clockwise
-            internal_shader->clockwise_pipelines[5] = kallocate(sizeof(vulkan_pipeline), MEMORY_TAG_VULKAN);
-            internal_shader->clockwise_pipelines[5]->supported_topology_types = PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE_FAN;
-        }
+    // Line class.
+    if (s->topology_types & PRIMITIVE_TOPOLOGY_TYPE_LINE_LIST || s->topology_types & PRIMITIVE_TOPOLOGY_TYPE_LINE_STRIP) {
+        internal_shader->pipelines[VULKAN_TOPOLOGY_CLASS_LINE] = kallocate(sizeof(vulkan_pipeline), MEMORY_TAG_VULKAN);
+        // Set the supported types for this class.
+        internal_shader->pipelines[VULKAN_TOPOLOGY_CLASS_LINE]->supported_topology_types |= PRIMITIVE_TOPOLOGY_TYPE_LINE_LIST;
+        internal_shader->pipelines[VULKAN_TOPOLOGY_CLASS_LINE]->supported_topology_types |= PRIMITIVE_TOPOLOGY_TYPE_LINE_STRIP;
+    }
+    // Triangle class.
+    if (s->topology_types & PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE_LIST ||
+        s->topology_types & PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE_STRIP ||
+        s->topology_types & PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE_FAN) {
+        internal_shader->pipelines[VULKAN_TOPOLOGY_CLASS_TRIANGLE] = kallocate(sizeof(vulkan_pipeline), MEMORY_TAG_VULKAN);
+        // Set the supported types for this class.
+        internal_shader->pipelines[VULKAN_TOPOLOGY_CLASS_TRIANGLE]->supported_topology_types |= PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE_LIST;
+        internal_shader->pipelines[VULKAN_TOPOLOGY_CLASS_TRIANGLE]->supported_topology_types |= PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE_STRIP;
+        internal_shader->pipelines[VULKAN_TOPOLOGY_CLASS_TRIANGLE]->supported_topology_types |= PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE_FAN;
     }
 
     // Loop through and config/create one pipeline per class . NUll entries are skipped.
@@ -1908,9 +1820,9 @@ b8 vulkan_renderer_shader_use(renderer_plugin* plugin, shader* shader) {
     context->bound_shader = shader;
 
     // Make sure to use the current bound type as well
-    if (context->device.support_flags & VULKAN_DEVICE_SUPPORT_FLAG_NATIVE_DYNAMIC_TOPOLOGY_BIT) {
+    if (context->device.support_flags & VULKAN_DEVICE_SUPPORT_FLAG_NATIVE_DYNAMIC_STATE_BIT) {
         vkCmdSetPrimitiveTopology(command_buffer->handle, s->current_topology);
-    } else if (context->device.support_flags & VULKAN_DEVICE_SUPPORT_FLAG_DYNAMIC_TOPOLOGY_BIT) {
+    } else if (context->device.support_flags & VULKAN_DEVICE_SUPPORT_FLAG_DYNAMIC_STATE_BIT) {
         context->vkCmdSetPrimitiveTopologyEXT(command_buffer->handle, s->current_topology);
     }
 
@@ -2688,9 +2600,6 @@ b8 vulkan_renderpass_create(renderer_plugin* plugin, const renderpass_config* co
                 KFATAL("Invalid store operation (0x%x) set for depth attachment. Check configuration.", attachment_config->store_operation);
                 return false;
             }
-            // TODO: Configurability for stencil attachments.
-            attachment_desc.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-            attachment_desc.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
             // If coming from a previous pass, should already be VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL. Otherwise undefined.
             attachment_desc.initialLayout = attachment_config->load_operation == RENDER_TARGET_ATTACHMENT_LOAD_OPERATION_LOAD ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL : VK_IMAGE_LAYOUT_UNDEFINED;
             // Final layout for depth stencil attachments is always this.

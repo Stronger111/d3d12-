@@ -178,7 +178,7 @@
         "xlocnum": "c",
         "xloctime": "c",
         "sui_textbox.h": "c",
-         "stb_vorbis.h": "c",
+        "stb_vorbis.h": "c",
         "audio_loader.h": "c",
         "al.h": "c",
         "entry.h": "c",
@@ -187,7 +187,8 @@
         "audio_types.h": "c",
         "rendergraph.h": "c",
         "sui_label.h": "c",
-        "sui_panel.h": "c"
+        "sui_panel.h": "c",
+        "*.rh": "c"
     },
     // File copyright documentation tag.  Array of strings will be converted to one line per element.  Can template {year}.
     "doxdocgen.file.copyrightTag": [

@@ -98,6 +98,7 @@ typedef struct sui_control {
     b8 (*update)(struct sui_control* self, struct frame_data* p_frame_data);
     b8 (*render)(struct sui_control* self, struct frame_data* p_frame_data, standard_ui_render_data* reneder_data);
 
+    //用户自己处理按钮事件
     /**
      * The click handler for a control.
      * @param self A pointer to the control.
@@ -110,7 +111,8 @@ typedef struct sui_control {
     void (*on_mouse_over)(struct sui_control* self, struct sui_mouse_event event);
     void (*on_mouse_out)(struct sui_control* self, struct sui_mouse_event event);
     void (*on_mouse_move)(struct sui_control* self, struct sui_mouse_event event);
-
+    
+    //引擎内部处理事件状态
     void (*internal_click)(struct sui_control* self, struct sui_mouse_event event);
     void (*internal_mouse_over)(struct sui_control* self, struct sui_mouse_event event);
     void (*internal_mouse_out)(struct sui_control* self, struct sui_mouse_event event);
@@ -118,7 +120,7 @@ typedef struct sui_control {
     void (*internal_mouse_up)(struct sui_control* self, struct sui_mouse_event event);
     void (*internal_mouse_move)(struct sui_control* self, struct sui_mouse_event event);
 
-    void (*on_key)(struct sui_control* self, struct sui_mouse_event event);
+    void (*on_key)(struct sui_control* self, struct sui_keyboard_event event);
 } sui_control;
 
 typedef struct standard_ui_state {

@@ -174,7 +174,7 @@ void sui_button_on_mouse_down(struct sui_control* self, struct sui_mouse_event e
 }
 void sui_button_on_mouse_up(struct sui_control* self, struct sui_mouse_event event) {
     if (self) {
-        // TODO: DRY
+        // TODO: 拖拽
         sui_button_internal_data* typed_data = self->internal_data;
         if (self->is_hovered) {
             typed_data->nslice.atlas_px_min.x = 151;
