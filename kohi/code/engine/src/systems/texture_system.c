@@ -14,6 +14,7 @@ typedef struct texture_system_state {
     texture default_diffuse_texture;
     texture default_specular_texture;
     texture default_normal_texture;
+    texture default_combined_texture;
 
     // Array of registered textures.
     texture* registered_textures;
@@ -281,6 +282,17 @@ b8 texture_system_write_data(texture* t, u32 offset, u32 size, void* data) {
     KERROR("%s called before texture system initialization! Null pointer returned.", func_name); \
     return 0;
 
+b8 texture_system_is_default_texture(texture* t) {
+    if (!state_ptr) {
+        return false;
+    }
+    return (t == &state_ptr->default_texture) ||
+           (t == &state_ptr->default_diffuse_texture) ||
+           (t == &state_ptr->default_normal_texture) ||
+           (t == &state_ptr->default_specular_texture) ||
+           (t == &state_ptr->default_combined_texture);
+}
+
 texture* texture_system_get_default_texture(void) {
     RETURN_TEXT_PTR_OR_NULL(state_ptr->default_texture, "texture_system_get_default_texture");
 }
@@ -297,14 +309,32 @@ texture* texture_system_get_default_normal_texture(void) {
     RETURN_TEXT_PTR_OR_NULL(state_ptr->default_normal_texture, "texture_system_get_default_normal_texture");
 }
 
+texture* texture_system_get_default_combined_texture(void) {
+    RETURN_TEXT_PTR_OR_NULL(state_ptr->default_combined_texture, "texture_system_get_default_metallic_texture");
+}
+
+static void create_default_texture(texture* t, u8* pixels, u32 tex_dimension, const char* name) {
+    string_ncopy(t->name, name, TEXTURE_NAME_MAX_LENGTH);
+    t->width = tex_dimension;
+    t->height = tex_dimension;
+    t->channel_count = 4;
+    t->generation = INVALID_ID;
+    t->flags = 0;
+    t->type = TEXTURE_TYPE_2D;
+    t->mip_levels = 1;
+    renderer_texture_create(pixels, t);
+    // Manually set the texture generation to invalid since this is a default texture.
+    t->generation = INVALID_ID;
+}
+
 static b8 create_default_textures(texture_system_state* state) {
     // NOTE: Create default texture, a 256x256 blue/white checkerboard pattern.
     // This is done in code to eliminate asset dependencies.
-    // KTRACE("Creating default texture...");
-    const u32 tex_dimension = 256;
+    KTRACE("Creating default texture...");
+    const u32 tex_dimension = 16;
     const u32 channels = 4;
     const u32 pixel_count = tex_dimension * tex_dimension;
-    u8 pixels[262144];  // pixel_count * channels
+    u8 pixels[262144] = {255};  // pixel_count * channels
     kset_memory(pixels, 255, sizeof(u8) * pixel_count * channels);
 
     // Each pixel.
@@ -326,56 +356,26 @@ static b8 create_default_textures(texture_system_state* state) {
         }
     }
 
-    string_ncopy(state->default_texture.name, DEFAULT_TEXTURE_NAME, TEXTURE_NAME_MAX_LENGTH);
-    state->default_texture.width = tex_dimension;
-    state->default_texture.height = tex_dimension;
-    state->default_texture.channel_count = 4;
-    state->default_texture.generation = INVALID_ID;
-    state->default_texture.flags = 0;
-    state->default_texture.type = TEXTURE_TYPE_2D;
-    state->default_texture.mip_levels = 1;
-    renderer_texture_create(pixels, &state->default_texture);
-    // Manually set the texture generation to invalid since this is a default texture.
-    state->default_texture.generation = INVALID_ID;
+    create_default_texture(&state->default_texture, pixels, tex_dimension, DEFAULT_TEXTURE_NAME);
 
     // Diffuse texture.
-    // KTRACE("Creating default diffuse texture...");
+    KTRACE("Creating default diffuse texture...");
     u8 diff_pixels[16 * 16 * 4];
     // Default diffuse map is all white.
     kset_memory(diff_pixels, 255, sizeof(u8) * 16 * 16 * 4);
-    string_ncopy(state->default_diffuse_texture.name, DEFAULT_DIFFUSE_TEXTURE_NAME, TEXTURE_NAME_MAX_LENGTH);
-    state->default_diffuse_texture.width = 16;
-    state->default_diffuse_texture.height = 16;
-    state->default_diffuse_texture.channel_count = 4;
-    state->default_diffuse_texture.generation = INVALID_ID;
-    state->default_diffuse_texture.flags = 0;
-    state->default_diffuse_texture.type = TEXTURE_TYPE_2D;
-    state->default_diffuse_texture.mip_levels = 1;
-    renderer_texture_create(diff_pixels, &state->default_diffuse_texture);
-    // Manually set the texture generation to invalid since this is a default texture.
-    state->default_diffuse_texture.generation = INVALID_ID;
+    create_default_texture(&state->default_diffuse_texture, diff_pixels, 16, DEFAULT_DIFFUSE_TEXTURE_NAME);
 
     // Specular texture.
-    // KTRACE("Creating default specular texture...");
+    KTRACE("Creating default specular texture...");
     u8 spec_pixels[16 * 16 * 4];
     // Default spec map is black (no specular)
     kset_memory(spec_pixels, 0, sizeof(u8) * 16 * 16 * 4);
-    string_ncopy(state->default_specular_texture.name, DEFAULT_SPECULAR_TEXTURE_NAME, TEXTURE_NAME_MAX_LENGTH);
-    state->default_specular_texture.width = 16;
-    state->default_specular_texture.height = 16;
-    state->default_specular_texture.channel_count = 4;
-    state->default_specular_texture.generation = INVALID_ID;
-    state->default_specular_texture.flags = 0;
-    state->default_specular_texture.type = TEXTURE_TYPE_2D;
-    state->default_specular_texture.mip_levels = 1;
-    renderer_texture_create(spec_pixels, &state->default_specular_texture);
-    // Manually set the texture generation to invalid since this is a default texture.
-    state->default_specular_texture.generation = INVALID_ID;
+    create_default_texture(&state->default_specular_texture, spec_pixels, 16, DEFAULT_SPECULAR_TEXTURE_NAME);
 
     // Normal texture.
-    // KTRACE("Creating default normal texture...");
+    KTRACE("Creating default normal texture...");
     u8 normal_pixels[16 * 16 * 4];  // w * h * channels
-    kset_memory(normal_pixels, 0, sizeof(u8) * 16 * 16 * 4);
+    kset_memory(normal_pixels, 255, sizeof(u8) * 16 * 16 * 4);
 
     // Each pixel.
     for (u64 row = 0; row < 16; ++row) {
@@ -385,22 +385,27 @@ static b8 create_default_textures(texture_system_state* state) {
             // Set blue, z-axis by default and alpha.
             normal_pixels[index_bpp + 0] = 128;
             normal_pixels[index_bpp + 1] = 128;
-            normal_pixels[index_bpp + 2] = 255;
-            normal_pixels[index_bpp + 3] = 255;
         }
     }
 
-    string_ncopy(state->default_normal_texture.name, DEFAULT_NORMAL_TEXTURE_NAME, TEXTURE_NAME_MAX_LENGTH);
-    state->default_normal_texture.width = 16;
-    state->default_normal_texture.height = 16;
-    state->default_normal_texture.channel_count = 4;
-    state->default_normal_texture.generation = INVALID_ID;
-    state->default_normal_texture.flags = 0;
-    state->default_normal_texture.type = TEXTURE_TYPE_2D;
-    state->default_normal_texture.mip_levels = 1;
-    renderer_texture_create(normal_pixels, &state->default_normal_texture);
-    // Manually set the texture generation to invalid since this is a default texture.
-    state->default_normal_texture.generation = INVALID_ID;
+    create_default_texture(&state->default_normal_texture, normal_pixels, 16, DEFAULT_NORMAL_TEXTURE_NAME);
+
+    // Combined texture
+    KTRACE("Creating default combined (metallic, roughness, AO) texture...");
+    u8 combined_pixels[16 * 16 * 4];  // w * h * channels
+    kset_memory(combined_pixels, 255, sizeof(u8) * 16 * 16 * 4);
+
+    // Each pixel.
+    for (u64 row = 0; row < 16; ++row) {
+        for (u64 col = 0; col < 16; ++col) {
+            u64 index = (row * 16) + col;
+            u64 index_bpp = index * channels;
+            combined_pixels[index_bpp + 0] = 0;    // Default for metallic is black.
+            combined_pixels[index_bpp + 1] = 128;  // Default for roughness is medium grey
+            combined_pixels[index_bpp + 2] = 255;  // Default for AO is white.
+        }
+    }
+    create_default_texture(&state->default_combined_texture, combined_pixels, 16, DEFAULT_COMBINED_TEXTURE_NAME);
 
     return true;
 }
@@ -411,6 +416,7 @@ static void destroy_default_textures(texture_system_state* state) {
         destroy_texture(&state->default_diffuse_texture);
         destroy_texture(&state->default_specular_texture);
         destroy_texture(&state->default_normal_texture);
+        destroy_texture(&state->default_combined_texture);
     }
 }
 
@@ -563,7 +569,6 @@ static b8 load_texture(const char* texture_name, texture* t) {
     params.image_resource = (resource){};
     params.current_generation = t->generation;
     params.temp_texture = (texture){};
-
     job_info job = job_create(texture_load_job_start, texture_load_job_success, texture_load_job_fail, &params, sizeof(texture_load_params), sizeof(texture_load_params));
     job_system_submit(job);
     return true;

@@ -43,7 +43,7 @@ b8 debug_console_consumer_write(void* inst, log_level level, const char* message
         u32 count = string_split(message, '\n', &split_message, true, false);
         // 把每一个新行放入数组中
         for (u32 i = 0; i < count; ++i) {
-            darray_push(state->lines, split_message[i]);
+            //darray_push(state->lines, split_message[i]);
         }
 
         // 清理临时数组

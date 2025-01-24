@@ -902,7 +902,6 @@ void vulkan_renderer_set_stencil_reference(struct renderer_plugin* plugin, u32 r
 }
 
 void vulkan_renderer_set_stencil_op(struct renderer_plugin* plugin, renderer_stencil_op fail_op, renderer_stencil_op pass_op, renderer_stencil_op depth_fail_op, renderer_compare_op compare_op) {
- 
     vulkan_context* context = (vulkan_context*)plugin->internal_context;
     vulkan_command_buffer* command_buffer = &context->graphics_command_buffers[context->image_index];
 
@@ -1958,8 +1957,14 @@ b8 vulkan_renderer_shader_apply_instance(renderer_plugin* plugin, shader* s, b8 
 
                 // Ensure the texture is valid.
                 if (t->generation == INVALID_ID) {
+                    // Texture generations are always invalid for default textures, so
+                    // check first if already using one.
+                    if (!texture_system_is_default_texture(t)) {
+                        // If not using one, grab the default. This is only here as a failsafe
+                        // and to be used while assets are loading.
+                        t = texture_system_get_default_texture();
+                    }
                     // If using the default texture, invalidate the map's generation so it's updated next run.
-                    t = texture_system_get_default_texture();
                     map->generation = INVALID_ID;
                 } else {
                     // If valid,ensure the texture  map's generation matches the texture's .
@@ -2875,6 +2880,11 @@ b8 vulkan_buffer_create_internal(renderer_plugin* plugin, renderbuffer* buffer) 
 
     // Allocate the memory
     VkResult result = vkAllocateMemory(context->device.logical_device, &allocate_info, context->allocator, &internal_buffer.memory);
+
+    if(!vulkan_result_is_success(result)){
+       KERROR("Failed to allocate memory for buffer with error:%s",vulkan_result_string(result,true));
+       return false;
+    }
 
     // Determine if memory is on a device heap.
     b8 is_device_memory = (internal_buffer.memory_property_flags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) == VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;

@@ -136,6 +136,16 @@ KINLINE f32 ksmoothstep(f32 edge_0, f32 edge_1, f32 x) {
 }
 
 /**
+ * @brief Returns the attenuation of x based off distance from the midpoint of min and max.
+ *
+ * @param min The minimum value.
+ * @param max The maximum value.
+ * @param x The value to attenuate.
+ * @return The attenuation of x based on distance of the midpoint of min and max.
+ */
+KAPI f32 kattenuation_min_max(f32 min,f32 max,f32 x);
+
+/**
  * @brief Compares the two floats and returns true if both are less
  * than K_FLOAT_EPSILON apart; otherwise false.
  */

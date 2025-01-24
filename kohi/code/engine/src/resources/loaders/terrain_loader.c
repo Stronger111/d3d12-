@@ -149,12 +149,16 @@ static b8 terrain_loader_load(struct resource_loader *self, const char *name,
         resource_data->tile_count_x = image_data->width;
         resource_data->tile_count_z = image_data->height;
 
-        // LEFTOFF: Terrains are only loading as a single triangle now...
         for (u32 i = 0; i < pixel_count; ++i) {
             u8 r = image_data->pixels[(i * 4) + 0];
             u8 g = image_data->pixels[(i * 4) + 1];
             u8 b = image_data->pixels[(i * 4) + 2];
-            f32 height = ((r + g + b)) / 255.0f;
+            // Need to base height off combined RGB value
+            // 这说明你的机器字长是32位的，其中有一位是符号位，7位是阶码，
+            // 剩下的24位是有效数字，而24位最大为FFFFFF,即2^24=16777216,即从0-16777215，所以16777215是最大的有效数。
+            u32 colour_int = 0;
+            rgbu_to_u32(r, g, b, &colour_int);
+            f32 height = (f32)colour_int / 16777215;
             resource_data->vertex_datas[i].height = height;
         }
         resource_system_unload(&heightmap_image_resource);

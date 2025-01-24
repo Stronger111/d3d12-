@@ -840,7 +840,7 @@ VSync: %s Drawn: %-5u Hovered: %s%u",
         sui_label_text_set(&state->test_text, text_buffer);
     }
 
-    debug_console_update(&((testbed_game_state*)game_inst->state)->debug_console);
+    //debug_console_update(&((testbed_game_state*)game_inst->state)->debug_console);
 
     vec3 forward = camera_forward(state->world_camera);
     vec3 up = camera_up(state->world_camera);

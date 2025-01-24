@@ -17,6 +17,9 @@ typedef struct texture_system_config {
 /** @brief The default normal texture name. */
 #define DEFAULT_NORMAL_TEXTURE_NAME "default_NORM"
 
+/** @brief The default combined (metallic, roughness, AO) texture name. */
+#define DEFAULT_COMBINED_TEXTURE_NAME "default_COMBINED"
+
 /**
  * @brief Initializes the texture system.
  * Should be called twice; once to get the memory requirement (passing state=0), and a second
@@ -93,7 +96,7 @@ KAPI void texture_system_release(const char* name);
  * @param register_texture Indicates if the texture should be registered with the system.
  * @param out_texture An optional pointer to hold the wrapped texture. If null, a new pointer is allocated and returned instead.
  */
-KAPI void texture_system_wrap_internal(const char* name, u32 width, u32 height, u8 channel_count, b8 has_transparency, b8 is_writeable, b8 register_texture, void* internal_data,texture* out_texture);
+KAPI void texture_system_wrap_internal(const char* name, u32 width, u32 height, u8 channel_count, b8 has_transparency, b8 is_writeable, b8 register_texture, void* internal_data, texture* out_texture);
 
 /**
  * @brief Sets the internal data of a texture. Useful for replacing internal data from within the
@@ -130,6 +133,15 @@ KAPI b8 texture_system_resize(texture* t, u32 width, u32 height, b8 regenerate_i
 KAPI b8 texture_system_write_data(texture* t, u32 offset, u32 size, void* data);
 
 /**
+ * @brief Indicates if the passed-in texture is a default texture.
+ * Will return false if texture system is not yet initialized.
+ *
+ * @param t A pointer to the texture to be checked.
+ * @returns True if t is a default texture; otherwise false.
+ */
+KAPI b8 texture_system_is_default_texture(texture* t);
+
+/**
  * @brief Gets a pointer to the default texture. No reference counting is
  * done for default textures.
  */
@@ -152,3 +164,9 @@ KAPI texture* texture_system_get_default_specular_texture(void);
  * done for default textures.
  */
 KAPI texture* texture_system_get_default_normal_texture(void);
+
+/**
+ * @brief Gets a pointer to the default combined (metallic, roughness, AO) texture. No reference counting is
+ * done for default textures.
+ */
+KAPI texture* texture_system_get_default_combined_texture(void);

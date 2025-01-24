@@ -30,7 +30,12 @@ Renderer:
 - Intel VTune Profiler 性能分析工具
 - 插件形式添加模块代码
 - PBR
+  Phone光照模型 PBR ->Albedo Normal Metalle Roughness AO
+  R通道 金属度 G通道 粗糙度 B通道 ao
+  Shadow Map
 # 引擎待完成
+# Math
+  Alt+41420 根号 Alt+178 平方号  1:44:25
   
 -bug
 -"Vulkan buffer creation failed for object shader  out_error_local_memory  windows ？？ TODO  重启解决问题 后面需要查一下

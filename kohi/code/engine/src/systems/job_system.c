@@ -394,7 +394,7 @@ KAPI job_info job_create_priority(pfn_job_start entry_point, pfn_job_on_complete
     job.type = type;
     job.priority = priority;
 
-    job.param_data_size = param_data_size;
+     job.param_data_size = param_data_size;
     if (param_data_size) {
         job.param_data = kallocate(param_data_size, MEMORY_TAG_JOB);
         kcopy_memory(job.param_data, param_data, param_data_size);
