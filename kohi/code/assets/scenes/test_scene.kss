@@ -14,9 +14,23 @@ cubemap_name=skybox
 
 [DirectionalLight]
 name=sun
-colour=0.4 0.4 0.4 1.0
-direction=-0.57735 -0.57735 -0.57735 0.0
+colour=1.0 1.0 1.0 1.0
+direction=0.1 -1.0 0.1 1.0 
+#direction=-0.57735 -0.57735 -0.57735 0.0
 [/DirectionalLight]
+
+[Mesh]
+name=sponza
+resource_name=sponza
+transform=0.0 -1.0 0.0 0.0 0.0 0.0 1.0 0.01 0.01 0.01
+[/Mesh]
+
+[Mesh]
+name=falcon
+resource_name=falcon
+transform=9.4 0.8 14.0 0.0 0.0 0.0 1.0 0.35 0.35 0.35
+[/Mesh]
+
 
 [PointLight]
 name=point_light_0
@@ -48,6 +62,6 @@ quadratic=0.44
 [Terrain]
 name=test_terrain
 resource_name=test_terrain
-transform=-50.0 -5.0 -50.0 0.0 0.0 0.0 1.0 1.0 1.0 1.0
+transform=-50.0 -3.9 -50.0 0.0 0.0 0.0 1.0 1.0 1.0 1.0
 [/Terrain]
 

@@ -113,7 +113,7 @@ void main() {
     //Sample each material
     for(int m=0;m<instance_ubo.properties.num_materials;++m)
     {
-        int m_element=(m*5);
+        int m_element=(m*3);
         albedos[m]= texture(samplers[m_element + SAMP_ALBEDO_OFFSET], in_dto.tex_coord);
         albedos[m]=vec4(pow(albedos[m].rgb,vec3(2.2)),albedos[m].a);
         vec3 local_normal=2.0 * texture(samplers[m_element + SAMP_NORMAL_OFFSET], in_dto.tex_coord).rgb - 1.0;

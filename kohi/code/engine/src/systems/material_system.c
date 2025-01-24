@@ -152,14 +152,13 @@ b8 material_system_initialize(u64* memory_requirement, void* state, void* config
     state_ptr->pbr_locations.view = INVALID_ID_U16;
     state_ptr->pbr_locations.projection = INVALID_ID_U16;
     state_ptr->pbr_locations.properties = INVALID_ID_U16;
-    state_ptr->pbr_locations.cube_texture = INVALID_ID_U16;
     state_ptr->pbr_locations.albedo_texture = INVALID_ID_U16;
     state_ptr->pbr_locations.normal_texture = INVALID_ID_U16;
     state_ptr->pbr_locations.combined_texture = INVALID_ID_U16;
     state_ptr->pbr_locations.ambient_colour = INVALID_ID_U16;
     state_ptr->pbr_locations.model = INVALID_ID_U16;
     state_ptr->pbr_locations.render_mode = INVALID_ID_U16;
-    state_ptr->pbr_locations.properties = INVALID_ID_U16;
+    state_ptr->pbr_locations.cube_texture = INVALID_ID_U16;
 
     state_ptr->terrain_locations.projection = INVALID_ID_U16;
     state_ptr->terrain_locations.view = INVALID_ID_U16;
@@ -677,10 +676,10 @@ b8 material_system_apply_instance(material* m, struct frame_data* p_frame_data, 
             // Directional light.
             directional_light* dir_light = light_system_directional_light_get();
             if (dir_light) {
-                MATERIAL_APPLY_OR_FAIL(shader_system_uniform_set_by_index(state_ptr->terrain_locations.dir_light, &dir_light->data));
+                MATERIAL_APPLY_OR_FAIL(shader_system_uniform_set_by_index(state_ptr->pbr_locations.dir_light, &dir_light->data));
             } else {
                 directional_light_data data = {0};
-                MATERIAL_APPLY_OR_FAIL(shader_system_uniform_set_by_index(state_ptr->terrain_locations.dir_light, &data));
+                MATERIAL_APPLY_OR_FAIL(shader_system_uniform_set_by_index(state_ptr->pbr_locations.dir_light, &data));
             }
             // Point lights.
             u32 p_light_count = light_system_point_light_count();
@@ -693,10 +692,10 @@ b8 material_system_apply_instance(material* m, struct frame_data* p_frame_data, 
                     p_light_datas[i] = p_lights[i].data;
                 }
 
-                MATERIAL_APPLY_OR_FAIL(shader_system_uniform_set_by_index(state_ptr->terrain_locations.p_lights, p_light_datas));
+                MATERIAL_APPLY_OR_FAIL(shader_system_uniform_set_by_index(state_ptr->pbr_locations.p_lights, p_light_datas));
             }
 
-            MATERIAL_APPLY_OR_FAIL(shader_system_uniform_set_by_index(state_ptr->terrain_locations.num_p_lights, &p_light_count));
+            MATERIAL_APPLY_OR_FAIL(shader_system_uniform_set_by_index(state_ptr->pbr_locations.num_p_lights, &p_light_count));
         } else if (m->shader_id == state_ptr->terrain_shader_id) {
             // Apply maps
             u32 map_count = darray_length(m->maps);
@@ -1098,7 +1097,7 @@ static b8 load_material(material_config* config, material* m) {
         map_count = 1;
     } else if (config->type == MATERIAL_TYPE_PBR) {
         // Map count for this type is known.
-        map_count = 5;
+        map_count = 3;
     } else if (config->type == MATERIAL_TYPE_CUSTOM) {
         // Map count provided by config.
         map_count = darray_length(config->maps);
@@ -1106,7 +1105,7 @@ static b8 load_material(material_config* config, material* m) {
 
     texture_map** maps = kallocate(sizeof(texture_map*) * map_count, MEMORY_TAG_ARRAY);
     for (u32 i = 0; i < map_count; ++i) {
-        maps[i] = &m->maps[i];
+        maps[i] = &m->maps[i];  //m->maps是3  map_count是5的话就会产生垃圾数据
     }
 
     b8 result = renderer_shader_instance_resources_acquire(s, map_count, maps, &m->internal_id);

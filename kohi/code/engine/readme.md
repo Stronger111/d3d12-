@@ -43,6 +43,7 @@ Renderer:
 - 更详细的Vulkan Debug信息
 - attribute=vec4,in_tangent vulkan 属性布局 一定要和VBO 数据对应 不对应会出现花屏 比如切线为vec4 传进去为vec3 管线Vertex input stride步幅
 - 传入UBO 数据不正确
+- 传入采样器12个 但是shader里面越界访问也会报错
 - 环境变量更改需要重启
 - filesystem_read_all_text 文件 
 - Debug root->children,10 打印数组的10个元素.
