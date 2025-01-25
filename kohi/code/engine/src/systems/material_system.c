@@ -23,7 +23,6 @@
 typedef struct material_shader_uniform_locations {
     u16 projection;
     u16 view;
-    u16 ambient_colour;
     u16 view_position;
     u16 properties;
     u16 diffuse_texture;
