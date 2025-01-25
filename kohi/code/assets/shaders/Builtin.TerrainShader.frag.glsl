@@ -68,7 +68,7 @@ const float PI = 3.14159265359;
 //Environment map is at the last index.
 layout(set = 1, binding = 1) uniform sampler2D samplers[3*MAX_TERRAIN_MATERIALS];
 //IBL - Alias to get cube samples
-layout(set = 1, binding = 1) uniform samplerCube samplers[1+3*MAX_TERRAIN_MATERIALS];
+layout(set = 1, binding = 1) uniform samplerCube cube_samplers[1+3*MAX_TERRAIN_MATERIALS];
 
 layout(location = 0) flat in int in_mode;
 // Data Transfer Object

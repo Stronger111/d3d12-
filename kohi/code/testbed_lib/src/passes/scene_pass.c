@@ -161,6 +161,10 @@ b8 scene_pass_execute(struct rendergraph_pass* self, struct frame_data* p_frame_
     scene_pass_internal_data* internal_data = self->internal_data;
     scene_pass_extended_data* ext_data = self->pass_data.ext_data;
 
+    if (!material_system_irradiance_set(ext_data->irradiance_cube_texture)) {
+        KERROR("Failed to set irradiance texture,check the properties of said texture.");
+    }
+
     // Use the appropriate shader and apply the global uniforms.
     u32 terrain_count = ext_data->terrain_geometry_count;
     if (terrain_count > 0) {

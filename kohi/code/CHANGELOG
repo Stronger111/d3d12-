@@ -1,0 +1,84 @@
+Changelog
+
+- 0.5x
+  - Added Physically-Based Rendering (PBR) material type support.
+  - Fixed an issue with pulling the default checkerboard texture when already using a default texture (i.e normal, spec, ao, etc.).
+  - Added in partial descriptor binding support in Vulkan backend to allow for uniform descriptor aliasing.
+  - Modified material system to handle PBR properties.
+  - PBR materials are now required on terrains. Phong will not work.
+  - Added default cubemap, metallic, roughness and AO textures to texture system.
+  - Added query to texture system to indicate if a given texture is a one of the default textures.
+  - Adjusted material system to globally track an irradiance cubemap for IBL.
+  - Renamed clock to kclock to avoid collisions with standard library types.
+  - Added function pointers to rendergraph_passes to get attachment textures and regenerate textures for self-owned attachments.
+  - Added shadow maps with optional PCF filtering. A KVAR called "use_pcf" can be toggled 1/0 to turn this on/off.
+  - Added dynamic shadow frustum generation.
+  - Implemented generic quick-sort (see ksort.h).
+  - Added queries to simple scene for getting mesh and terrain geometries using frustums.
+  - Fixed various math bugs as they relate to frustum generation and use.
+  - Added per-frame tracking of shadow map draw calls.
+  - Added cascading shadow maps (right now limited to 4 cascades).
+  - Fixed a bug in the Vulkan allocator where memory was not properly freed from a call to vulkan_alloc_reallocation if the reported size was 0, as per the spec.
+  - Moved uniform sampler counts logic to renderer frontend to facilitate queries.
+  - Removed all traces of defunct UI material type.
+  - Removed Phong material type, shaders, etc. Entire material pipeline is now PBR.
+  - Changed the way samplers work on the frontend and backend to allow for arrayed uniforms.
+    - Shader config now requires specification of sampler type (sampler2D, samplerCube, sampler2DArray, etc.)
+    - Shader config now allows for arrays of uniform types. Ex: sampler2D[4] specifies an array of 4 sampler2Ds.
+  - Added array_index argument to shader uniform-setting functions to allow for setting arrayed uniforms. array_index is ignored for non-arrayed uniforms.
+  - Changed nomenclature of "uniform index" to "uniform location".
+  - Moved shader file parsing logic to frontend in preparation for #include directive logic.
+  - Vulkan backend changes to allow not having any global/instance (one or the other) UBO and/or samplers.
+  - Updated the API around local uniforms to require a bind/set/apply flow similar to the other scopes. 
+  - Refactored Vulkan push constant logic to handle the above.
+  - Added support for array textures. Converted shadow map pass to use them as attachments.
+  - Changed PBR and terrain materials to use a "combined" map containing metallic in R, roughness in G and AO in B. Also wrote a conversion utility in tools for this.
+    - As a result, explicit metallic, roughness and AO maps have been removed.
+  - Terrains now combine maps from materials into a single array texture. This comes with the requirement that all terrain material maps be of the same size.
+  - Refactored various Vulkan image loading logic to properly handle layered images.
+  - Added ability to load layered textures in the texture system by passing a series of texture names and a layer count to a new function.
+  - Fixed an issue with parsing directory from string where the resulting string was not zero terminated.
+  - Fixed various obj/mtl loading issues and added conversions for new PBR map types.
+  - Fixed an issue in the shadow map shader/pass where albedo textures were not being sampled (thus transparent materials weren't being taken into account).
+  - Added a test tree model resource.
+  - Point lights are now unaffected by directional shadow maps.
+
+- 0.4x
+  - Added first pass of Standard UI system, including panel, button, label, and textbox controls.
+  - Removed ui_text and replaced with sui_label_control as part of the Standard UI system.
+  - Moved DebugConsole to Standard UI.
+  - Resolved several DebugConsole bugs, in particular ones involving commands and command history.
+  - Modified the Windows build process to use incremental linking to speed things up.
+  - Added cursor to textbox control. Fixed typing, backspace, delete and left/right navigation.
+  - Added support for stencil buffers/stencil testing.
+  - Added support for toggling keyboard key repeats on/off.
+  - Added Standard UI clip masks.
+  - Fixed various issues around Vulkan dynamic state feature detection.
+  - Changed Vulkan backend to require dynamic pipeline state either natively (Vulkan 1.3+) or via extension (VK_EXT_extended_dynamic_state). If this plugin is not available, this backend won't work. This is because the engine requires several forms of dynamic state, potentially all at once, which would mean having a pipeline for each state _on top of_ per topology category, which was becoming unweildy.
+  - Updated readme with build instructions and updated prerequisites.
+  - Updated VSCode configuration to include new libraries' include paths.
+  - Various tweaks to debug console to make it look/act nicer.
+
+- 0.3x - Changelog started at this point to track change list. The major changes here are:
+  - Fixed build process for both debug _and_ release builds, including a few required code changes.
+  - Release builds now properly make no-ops out of KTRACE and KDEBUG log messages.
+  - Release builds are now set to use O2 level compiler optimizations.
+  - Debug builds are now set to use O0 level compiler optimizations explicitly (although -g did this informally already).
+  - Removed all geometry logic and tracking from the renderer backend and correctly handle this in the frontend.
+  - Moved geometry vertex and index buffers to the renderer frontend.
+  - Removed the concept of geometry internal data, since it no longer has graphics API-specific data (and really never did).
+  - Geometry itself now manages the concept of vertex/index buffer offsets.
+  - Moved version console output to systems_manager, right after logging is instantiated so it appears at the top of the logs.
+  - Overhauled the implementation of identifiers to now be a struct which holds a u64, generated by a newly Mersenne Twister random number generator. This new refactoring will also ease the process of (de)serialization.
+  - Anything using a form of "unique id" should now be using the refactored identifiers.
+  - Fixed scene unloading by handling this state in application_prepare_frame in testbed_lib.
+  - Fixed a state checking issue in simple scene updates to trigger an unload and return if an unload has been requested.
+  - Added device pixel ratio logic for Windows and macOS.
+  - Added event handler for monitor changing on macOS. This helps capture DPI changes when switching monitors.
+    
+- 0.2x - Added audio plugin. Build versioning wasn't fixed yet, though, so this wasn't a readily visible
+    change in version number. Also recieved a plethora of nondescript bugfixes and performance tweaks.
+
+- 0.1x - Initial versions of the engine including all changes up to ~October 2023. Includes 
+    basic functionality and some basic engine sub-systems.
+

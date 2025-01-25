@@ -531,6 +531,12 @@ typedef struct material {
     /** @brief array of material property structures, which varies based on material type. e.g. material_phong_properties */
     void* properties;
 
+    /**
+     * @brief An explicitly-set irradiance texture for this material. Should only be set
+     * in limited circumstances. Ideally a scene should set it through material manager.
+     */
+    texture* irradiance_texture;
+
     // /** @brief The diffuse colour. */
     // vec4 diffuse_colour;
 
@@ -543,7 +549,7 @@ typedef struct material {
     /** @brief Synced to the renderer's current frame number when the material has
      * been applied that frame. */
     u64 render_frame_number;
-    u64 render_draw_index;
+    u8 render_draw_index;
 } material;
 
 typedef struct skybox_simple_scene_config {

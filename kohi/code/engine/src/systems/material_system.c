@@ -20,9 +20,16 @@
 #define PBR_MAP_COUNT 4
 #endif
 
+// Samplers
+const u32 SAMP_ALBEDO = 0;
+const u32 SAMP_NORMAL = 1;
+const u32 SAMP_COMBINED = 2;
+const u32 SAMP_IRRADIANCE_MAP = 3;
+
 typedef struct material_shader_uniform_locations {
     u16 projection;
     u16 view;
+    u16 ambient_colour;
     u16 view_position;
     u16 properties;
     u16 diffuse_texture;
@@ -101,6 +108,9 @@ typedef struct material_system_state {
     // Known locations for the PBR shader.
     pbr_shader_uniform_locations pbr_locations;
     u32 pbr_shader_id;
+
+    // The current irradiance cubemap texture to be used.
+    texture* irradiance_cube_texture;
 } material_system_state;
 
 typedef struct material_reference {
@@ -289,6 +299,9 @@ b8 material_system_initialize(u64* memory_requirement, void* state, void* config
     state_ptr->terrain_locations.samplers[(mat_index * 3) + 0] = shader_system_uniform_index(s, "albedo_texture_3");
     state_ptr->terrain_locations.samplers[(mat_index * 3) + 1] = shader_system_uniform_index(s, "normal_texture_3");
     state_ptr->terrain_locations.samplers[(mat_index * 3) + 2] = shader_system_uniform_index(s, "combined_texture_3");
+
+    // Grab the default cubemap texture as the irradiance texture.
+    state_ptr->irradiance_cube_texture = texture_system_get_default_cube_texture();
 
     return true;
 }
@@ -491,23 +504,23 @@ material* material_system_acquire_terrain_material(const char* material_name, u3
             material_system_release(material_names[i]);
         }
 
-        // kfree(materials, sizeof(material*) * material_count, MEMORY_TAG_ARRAY);
+        kfree(materials, sizeof(material*) * material_count, MEMORY_TAG_ARRAY);
 
         // Acquire instance resources for all maps.
-        // texture_map** maps = kallocate(sizeof(texture_map*) * max_map_count, MEMORY_TAG_ARRAY);
+        texture_map** maps = kallocate(sizeof(texture_map*) * max_map_count, MEMORY_TAG_ARRAY);
         // // Assign material maps.
-        // for (u32 i = 0; i < max_map_count; ++i) {
-        //     maps[i] = &m->maps[i];
-        // }
+        for (u32 i = 0; i < max_map_count; ++i) {
+            maps[i] = &m->maps[i];
+        }
 
-        // b8 result = renderer_shader_instance_resources_acquire(s, max_map_count, maps, &m->internal_id);
-        // if (!result) {
-        //     KERROR("Failed to acquire renderer resources for material '%s'.", m->name);
-        // }
+        b8 result = renderer_shader_instance_resources_acquire(s, max_map_count, maps, &m->internal_id);
+        if (!result) {
+            KERROR("Failed to acquire renderer resources for material '%s'.", m->name);
+        }
 
-        // // if (maps) {
-        //     kfree(maps, sizeof(texture_map*) * max_map_count, MEMORY_TAG_ARRAY);
-        // }
+        if (maps) {
+            kfree(maps, sizeof(texture_map*) * max_map_count, MEMORY_TAG_ARRAY);
+        }
 
         // NOTE:end terrain-specific load_material
         if (m->generation == INVALID_ID) {
@@ -685,11 +698,12 @@ b8 material_system_apply_instance(material* m, struct frame_data* p_frame_data, 
         } else if (m->shader_id == state_ptr->pbr_shader_id) {
             // PBR shader
             MATERIAL_APPLY_OR_FAIL(shader_system_uniform_set_by_index(state_ptr->pbr_locations.properties, m->properties));
-            MATERIAL_APPLY_OR_FAIL(shader_system_uniform_set_by_index(state_ptr->pbr_locations.albedo_texture, &m->maps[0]));
-            MATERIAL_APPLY_OR_FAIL(shader_system_uniform_set_by_index(state_ptr->pbr_locations.normal_texture, &m->maps[1]));
-            MATERIAL_APPLY_OR_FAIL(shader_system_uniform_set_by_index(state_ptr->pbr_locations.combined_texture, &m->maps[2]));
+            MATERIAL_APPLY_OR_FAIL(shader_system_uniform_set_by_index(state_ptr->pbr_locations.albedo_texture, &m->maps[SAMP_ALBEDO]));
+            MATERIAL_APPLY_OR_FAIL(shader_system_uniform_set_by_index(state_ptr->pbr_locations.normal_texture, &m->maps[SAMP_NORMAL]));
+            MATERIAL_APPLY_OR_FAIL(shader_system_uniform_set_by_index(state_ptr->pbr_locations.combined_texture, &m->maps[SAMP_COMBINED]));
             // IBL
-            MATERIAL_APPLY_OR_FAIL(shader_system_uniform_set_by_index(state_ptr->pbr_locations.ibl_cube_texture, &m->maps[3]));
+            m->maps[SAMP_IRRADIANCE_MAP].texture = m->irradiance_texture ? m->irradiance_texture : state_ptr->irradiance_cube_texture;
+            MATERIAL_APPLY_OR_FAIL(shader_system_uniform_set_by_index(state_ptr->pbr_locations.ibl_cube_texture, &m->maps[SAMP_IRRADIANCE_MAP]));
 
             // TODO: Duplicating above... move this to its own function, perhaps.
             // Directional light.
@@ -723,6 +737,7 @@ b8 material_system_apply_instance(material* m, struct frame_data* p_frame_data, 
             }
 
             // IBL
+            m->maps[TERRAIN_MAX_MATERIAL_COUNT * 3].texture = m->irradiance_texture ? m->irradiance_texture : state_ptr->irradiance_cube_texture;
             MATERIAL_APPLY_OR_FAIL(shader_system_uniform_set_by_index(state_ptr->terrain_locations.ibl_cube_texture, &m->maps[TERRAIN_MAX_MATERIAL_COUNT * 3]));
 
             // Apply properties.
@@ -773,6 +788,21 @@ b8 material_system_apply_local(material* m, const mat4* model) {
 
     KERROR("Unrecognized shader id '%d'", m->shader_id);
     return false;
+}
+
+b8 material_system_irradiance_set(texture* irradiance_cube_texture) {
+    if (irradiance_cube_texture) {
+        if (irradiance_cube_texture->type != TEXTURE_TYPE_CUBE) {
+            KWARN("material_system_irradiance_set requires parameter irradiance_cube_texture to be a cubemap type texute. Nothing was done.");
+            return false;
+        }
+
+        state_ptr->irradiance_cube_texture = irradiance_cube_texture;
+    } else {
+        // Null sets us back to default state.
+        state_ptr->irradiance_cube_texture = texture_system_get_default_cube_texture();
+    }
+    return true;
 }
 
 void material_system_dump(void) {
