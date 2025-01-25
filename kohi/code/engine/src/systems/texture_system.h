@@ -20,6 +20,9 @@ typedef struct texture_system_config {
 /** @brief The default combined (metallic, roughness, AO) texture name. */
 #define DEFAULT_COMBINED_TEXTURE_NAME "default_COMBINED"
 
+/** @brief The default cube texture name. */
+#define DEFAULT_CUBE_TEXTURE_NAME "default_cube"
+
 /**
  * @brief Initializes the texture system.
  * Should be called twice; once to get the memory requirement (passing state=0), and a second
@@ -170,3 +173,8 @@ KAPI texture* texture_system_get_default_normal_texture(void);
  * done for default textures.
  */
 KAPI texture* texture_system_get_default_combined_texture(void);
+/**
+ * @brief Gets a pointer to the default cube texture. No reference counting is
+ * done for default textures.
+ */
+KAPI texture* texture_system_get_default_cube_texture(void);

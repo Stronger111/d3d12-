@@ -37,6 +37,9 @@ uniform=samp,1,albedo_texture_3
 uniform=samp,1,normal_texture_3
 uniform=samp,1,combined_texture_3
 
+#Irradience
+uniform=samp,1,ibl_cube_texture
+
 uniform=struct160,1,properties
 uniform=struct480,1,p_lights
 uniform=vec3,1,padding

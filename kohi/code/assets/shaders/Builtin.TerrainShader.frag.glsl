@@ -59,11 +59,16 @@ layout(set = 1, binding = 0) uniform instance_uniform_object
 const int SAMP_ALBEDO_OFFSET = 0;
 const int SAMP_NORMAL_OFFSET = 1;
 const int SAMP_COMBINED_OFFSET=2;
+//Irradience cube comes after all material textures.
+const int SAMP_IRRADIENCE_OFFSET = 3*MAX_TERRAIN_MATERIALS;
 
 const float PI = 3.14159265359;
 
 //Samplers,albedo, normal,combineTex, etc...
+//Environment map is at the last index.
 layout(set = 1, binding = 1) uniform sampler2D samplers[3*MAX_TERRAIN_MATERIALS];
+//IBL - Alias to get cube samples
+layout(set = 1, binding = 1) uniform samplerCube samplers[1+3*MAX_TERRAIN_MATERIALS];
 
 layout(location = 0) flat in int in_mode;
 // Data Transfer Object
@@ -198,7 +203,10 @@ void main() {
            total_reflectance += calculate_reflectance(albedo.xyz, normal, view_direction, light_direction, metallic, roughness, base_reflectivity, radiance);
         }
 
-        //Add in albedo and ambient occlusion.
+        //Irradiance holds all the scenes indirect diffuse light.Use the surface normal to sample from it.
+        vec3 irradiance=texture(cube_samplers[SAMP_IRRADIENCE_OFFSET],normal).rgb;
+
+        //Combine irradiance with albedo and ambient occlusion.Also add in total accumulated reflectance.
         vec3 ambient=vec3(0.03)*albedo.xyz*ao;  //will be replaced by IBL
         vec3 colour=ambient+total_reflectance;
 

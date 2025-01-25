@@ -40,13 +40,14 @@ layout(set = 1, binding = 0) uniform instance_uniform_object {
 const int SAMP_ALBEDO = 0;
 const int SAMP_NORMAL=1;
 const int SAMP_COMBINED = 2;
+const int SAMP_IBL_CUBE = 3;
 
 const float PI= 3.14159265359;
 
-//Samplers, albedo,normal,metallic,roughness,ao
-layout(set = 1, binding = 1) uniform sampler2D samplers[3];
-
-// layout(set=0, binding = 0) uniform TheStruct { vec4 theMember; };
+//Samplers, albedo,normal,combined,IBL_cubemap
+layout(set = 1, binding = 1) uniform sampler2D samplers[4];
+//IBL
+layout(set = 1, binding = 1) uniform samplerCube cube_samplers[4]; //Alias to get cube samplers
 
 layout(location = 0) flat in int in_mode;
 // Data Transfer Object
@@ -133,8 +134,11 @@ void main() {
            total_reflectance += calculate_reflectance(albedo, normal, view_direction, light_direction, metallic, roughness, base_reflectivity, radiance);
         }
 
-        //Add in albedo and ambient occlusion.
-        vec3 ambient=vec3(0.03)*albedo*ao;  //will be replaced by IBL
+        //Irradiance holds all the scenes indirect diffuse light.Use the surface normal to sample from it.
+        vec3 irradiance=texture(cube_samplers[SAMP_IBL_CUBE],normal).rgb;
+
+        //Combine irradiance with albedo and ambient occlusion.Also add in total accumulated reflectance.
+        vec3 ambient=irradiance*albedo*ao; 
         vec3 colour=ambient+total_reflectance;
 
         //HDR tonemapping.

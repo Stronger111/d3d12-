@@ -30,7 +30,7 @@ Renderer:
 - Intel VTune Profiler 性能分析工具
 - 插件形式添加模块代码
 - PBR
-  Phone光照模型 PBR ->Albedo Normal Metalle Roughness AO
+  Phone光照模型 PBR ->Albedo Normal Metalle Roughness AO IBL 间接漫反射
   R通道 金属度 G通道 粗糙度 B通道 ao
   Shadow Map
 # 引擎待完成
@@ -46,7 +46,7 @@ Renderer:
 - 传入采样器12个 但是shader里面越界访问也会报错
 - 环境变量更改需要重启
 - filesystem_read_all_text 文件 
-- Debug root->children,10 打印数组的10个元素.
+- Debug root->children,10 打印数组的10个元素. ,6 可以打印数组元素
 - 模版测试-裁剪输入框外部的内容 模版需要clear
 
 
