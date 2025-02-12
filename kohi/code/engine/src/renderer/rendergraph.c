@@ -44,19 +44,7 @@ void rendergraph_destroy(rendergraph* graph) {
                 for (u32 p = 0; p < pass->pass.render_target_count; ++p) {
                     render_target* target = &pass->pass.targets[p];
 
-                    // Destroy the old target if it exists.
-                    renderer_render_target_destroy(target, false);
-
-                    for (u32 a = 0; a < target->attachment_count; ++a) {
-                        render_target_attachment* attachment = &target->attachments[a];
-                        if (attachment->source == RENDER_TARGET_ATTACHMENT_SOURCE_VIEW) {
-                            // TODO:Self-owned attachments for rendergraph passes, e.g. call a pfn to (re)generate attachments.
-                            KERROR("Self-owned attachments not yet supported.");
-                            continue;
-                        }
-                    }
-
-                    // Destroy the underlying render target.
+                    // Destroy the target if it exists.
                     renderer_render_target_destroy(target, true);
                 }
 
@@ -91,7 +79,7 @@ b8 rendergraph_global_source_add(rendergraph* graph, const char* name, rendergra
 }
 
 // pass functions
-b8 rendergraph_pass_create(rendergraph* graph, const char* name, b8 (*create_pfn)(struct rendergraph_pass* self), rendergraph_pass* out_pass) {
+b8 rendergraph_pass_create(rendergraph* graph, const char* name, b8 (*create_pfn)(struct rendergraph_pass* self, void* config), void* config, rendergraph_pass* out_pass) {
     if (!graph || !out_pass) {
         return false;
     }
@@ -109,7 +97,7 @@ b8 rendergraph_pass_create(rendergraph* graph, const char* name, b8 (*create_pfn
     out_pass->sources = darray_create(rendergraph_source);
     out_pass->sinks = darray_create(rendergraph_sink);
 
-    if (!create_pfn(out_pass)) {
+    if (!create_pfn(out_pass, config)) {
         KERROR("Error creating rendergraph pass,See logs for details.");
         return false;
     }
@@ -280,7 +268,7 @@ b8 rendergraph_finalize(rendergraph* graph) {
         return false;
     }
 
-    // Get global texture references for global sources.
+    // Get global texture references for global sources. 给全局RT赋引用
     u32 global_source_count = darray_length(graph->global_sources);
     for (u32 i = 0; i < global_source_count; ++i) {
         rendergraph_source* source = &graph->global_sources[i];
@@ -300,7 +288,7 @@ b8 rendergraph_finalize(rendergraph* graph) {
         }
     }
 
-    // Verify that something is linked up to the global colour source.
+    // Verify that something is linked up to the global colour source. 必须有pass使用全局ColorBuffer
     rendergraph_pass* backbuffer_first_user = 0;
     u32 pass_count = darray_length(graph->passes);
     for (u32 i = 0; i < pass_count; ++i) {
@@ -355,6 +343,36 @@ b8 rendergraph_finalize(rendergraph* graph) {
                         }
                     }
                 }
+            } else if (source->type == RENDERGRAPH_SOURCE_TYPE_RENDER_TARGET_DEPTH_STENCIL) {
+                if (source->origin == RENDERGRAPH_SOURCE_ORIGIN_OTHER) {
+                    // Other is a reference to the source output of another pass.
+                    // Search all other pass' sinks to see if any have this source
+                    // as a bound source.
+                    for (u32 k = 0; k < pass_count; ++k) {
+                        rendergraph_pass* ref_check_pass = graph->passes[k];
+                        u32 sink_count = darray_length(ref_check_pass->sinks);
+                        b8 found = false;
+                        for (u32 s = 0; s < sink_count; ++s) {
+                            if (ref_check_pass->sinks[s].bound_source == source) {
+                                found = true;
+                                break;
+                            }
+                        }
+                        if (!found) {
+                            KWARN("No source found with depth stencil texture available.");
+                            break;
+                        }
+                    }
+                } else if (source->origin == RENDERGRAPH_SOURCE_ORIGIN_SELF) {
+                    // If the origin is self,hook up the textures to the source.
+                    if (pass->attachment_texture_get) {
+                        u32 frame_count = renderer_window_attachment_count_get();  // 获取交换链Image Count
+                        source->textures = kallocate(sizeof(texture*) * frame_count, MEMORY_TAG_ARRAY);
+                        for (u32 ti = 0; ti < frame_count; ti++) {
+                            source->textures[ti] = pass->attachment_texture_get(pass, RENDER_TARGET_ATTACHMENT_TYPE_STENCIL, ti);
+                        }
+                    }
+                }
             }
             if (graph->backbuffer_global_sink.bound_source) {
                 break;
@@ -384,6 +402,41 @@ b8 rendergraph_finalize(rendergraph* graph) {
         }
     }
 
+    return true;
+}
+
+b8 rendergraph_load_resources(rendergraph* graph) {
+    if (!graph) {
+        return false;
+    }
+    u32 pass_count = darray_length(graph->passes);
+    for (u32 i = 0; i < pass_count; ++i) {
+        rendergraph_pass* pass = graph->passes[i];
+
+        // Before loading resources, ensure any self-sourced have textures loaded.
+        u32 source_count = darray_length(pass->sources);
+        for (u32 j = 0; j < source_count; ++j) {
+            rendergraph_source* source = &pass->sources[i];
+            if (source->origin == RENDERGRAPH_SOURCE_ORIGIN_SELF) {
+                // If the origin is self,hook up the textures to the source.
+                if (pass->attachment_texture_get) {
+                    u32 texture_type = (source->type == RENDERGRAPH_SOURCE_TYPE_RENDER_TARGET_COLOUR ? RENDER_TARGET_ATTACHMENT_TYPE_COLOUR : RENDER_TARGET_ATTACHMENT_TYPE_STENCIL | RENDER_TARGET_ATTACHMENT_TYPE_DEPTH);
+                    u32 frame_count = renderer_window_attachment_count_get();
+                    source->textures = kallocate(sizeof(texture*) * frame_count, MEMORY_TAG_ARRAY);
+                    for (u32 ti = 0; ti < frame_count; ti++) {
+                        source->textures[ti] = pass->attachment_texture_get(pass, texture_type, ti);
+                    }
+                } else {
+                    KERROR("Rendergraph pass '%s':source '%s' is set to RENDERGRAPH_SOURCE_ORIGIN_SELF but does not have attachment_texture_get defined.");
+                    return false;
+                }
+            }
+        }
+
+        if (pass->load_resources) {
+            pass->load_resources(pass);
+        }
+    }
     return true;
 }
 
@@ -429,6 +482,7 @@ static b8 regenerate_render_targets(rendergraph* graph, rendergraph_pass* pass, 
         // Destroy the old target if it exists.
         renderer_render_target_destroy(target, false);
 
+        // Retrieve texture pointers for all attachments and frames.
         for (u32 a = 0; a < target->attachment_count; ++a) {
             render_target_attachment* attachment = &target->attachments[a];
             if (attachment->source == RENDER_TARGET_ATTACHMENT_SOURCE_DEFAULT) {
@@ -440,15 +494,35 @@ static b8 regenerate_render_targets(rendergraph* graph, rendergraph_pass* pass, 
                     KERROR("Unsupported attachment type: 0x%x", attachment->type);
                     return false;
                 }
-            } else if (attachment->source == RENDER_TARGET_ATTACHMENT_SOURCE_VIEW) {
-                // TODO:Self-owned attachments for rendergraph passes.e.g. call a pfn to  (re)generate  attachments.
-                KFATAL("Self-owned attachements not yet supported.");
-                return false;
+            } else if (attachment->source == RENDER_TARGET_ATTACHMENT_SOURCE_SELF) {
+                // Regenerate,if needed/supported for the pass.
+                if (pass->attachment_textures_regenerate) {
+                    if (!pass->attachment_textures_regenerate(pass, width, height)) {
+                        KERROR("Failed to regenerate attachment textures for rendergraph '%s'.", pass->name);
+                    }
+                }
+
+                if (!pass->attachment_texture_get) {
+                    KERROR("Attempted to get a self-owned attachment texture for a pass that does not implement  ");
+                    return false;
+                }
+                attachment->texture = pass->attachment_texture_get(pass, attachment->type, i);
+                if (!attachment->texture) {
+                    KERROR("Unsupported attachment type: 0x%x", attachment->type);
+                    return false;
+                }
             }
         }
 
+        b8 use_custom_size = target->attachments[0].source == RENDER_TARGET_ATTACHMENT_SOURCE_SELF;
+
         // Create the underlying render target.
-        renderer_render_target_create(target->attachment_count, target->attachments, &pass->pass, width, height, &pass->pass.targets[i]);
+        renderer_render_target_create(target->attachment_count,
+                                      target->attachments,
+                                      &pass->pass,
+                                      use_custom_size ? target->attachments[0].texture->width : width,
+                                      use_custom_size ?target->attachments[0].texture->height : height,
+                                      &pass->pass.targets[i]);
     }
 
     return true;

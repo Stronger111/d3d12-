@@ -1092,7 +1092,7 @@ void vulkan_renderer_texture_create_writeable(renderer_plugin* plugin, texture* 
     VkImageAspectFlagBits aspect;
     VkFormat image_format;
     if (t->flags & TEXTURE_FLAG_DEPTH) {
-        usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+        usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;  // 深度需要采样
         aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
         image_format = context->device.depth_format;
     } else {
@@ -2077,7 +2077,7 @@ static b8 create_sampler(vulkan_context* context, texture_map* map, VkSampler* s
     // TODO: Configurable
     sampler_info.anisotropyEnable = VK_TRUE;
     sampler_info.maxAnisotropy = 16;
-    sampler_info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+    sampler_info.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
     sampler_info.unnormalizedCoordinates = VK_FALSE;
     sampler_info.compareEnable = VK_FALSE;
     sampler_info.compareOp = VK_COMPARE_OP_ALWAYS;
@@ -2622,7 +2622,8 @@ b8 vulkan_renderpass_create(renderer_plugin* plugin, const renderpass_config* co
             // If coming from a previous pass, should already be VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL. Otherwise undefined.
             attachment_desc.initialLayout = attachment_config->load_operation == RENDER_TARGET_ATTACHMENT_LOAD_OPERATION_LOAD ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL : VK_IMAGE_LAYOUT_UNDEFINED;
             // Final layout for depth stencil attachments is always this.
-            attachment_desc.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+            attachment_desc.finalLayout =
+                attachment_config->present_after ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL : VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
             // Push to colour attachments array.
             darray_push(depth_attachment_descs, attachment_desc);
@@ -2755,6 +2756,11 @@ b8 vulkan_renderer_render_target_create(renderer_plugin* plugin, u8 attachment_c
     framebuffer_create_info.layers = 1;
 
     VK_CHECK(vkCreateFramebuffer(context->device.logical_device, &framebuffer_create_info, context->allocator, (VkFramebuffer*)&out_target->internal_framebuffer));
+
+    char formatted_name[512] = {0};
+    string_format(formatted_name, "pass_%s_framebuffer_%u_x_%u", pass->name, width, height);
+    VK_SET_DEBUG_OBJECT_NAME(context, VK_OBJECT_TYPE_FRAMEBUFFER, out_target->internal_framebuffer, formatted_name);
+    KTRACE("Created framebuffer ' %s ' at 0x%x.", formatted_name, out_target->internal_framebuffer);
     return true;
 }
 

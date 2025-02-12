@@ -59,20 +59,26 @@ layout(set = 1, binding = 0) uniform instance_uniform_object
 const int SAMP_ALBEDO_OFFSET = 0;
 const int SAMP_NORMAL_OFFSET = 1;
 const int SAMP_COMBINED_OFFSET=2;
+
+//Shadow map comes after all materials
+const int SAMP_SHADOW_MAP=12;
+
 //Irradience cube comes after all material textures.
-const int SAMP_IRRADIENCE_OFFSET = 3*MAX_TERRAIN_MATERIALS;
+const int SAMP_IRRADIENCE_OFFSET =13;
 
 const float PI = 3.14159265359;
 
 //Samplers,albedo, normal,combineTex, etc...
+//One more sampler2D is at the end,which is the shadow map.
 //Environment map is at the last index.
-layout(set = 1, binding = 1) uniform sampler2D samplers[3*MAX_TERRAIN_MATERIALS];
+layout(set = 1, binding = 1) uniform sampler2D samplers[2+(3*MAX_TERRAIN_MATERIALS)];
 //IBL - Alias to get cube samples
-layout(set = 1, binding = 1) uniform samplerCube cube_samplers[1+3*MAX_TERRAIN_MATERIALS];
+layout(set = 1, binding = 1) uniform samplerCube cube_samplers[2+(3*MAX_TERRAIN_MATERIALS)];
 
 layout(location = 0) flat in int in_mode;
 // Data Transfer Object
 layout(location = 1) in struct dto {
+    vec4 light_space_frag_pos;
     vec4 ambient;
 	vec2 tex_coord;
     vec3 normal;
@@ -84,6 +90,32 @@ layout(location = 1) in struct dto {
 } in_dto;
 
 mat3 TBN;
+
+//Compare the fragment position against the depth buffer, and if it is further
+//back than the shadow map, its in shadow. 1.0 = in shadow ,0.0 =not
+float calculate_shadow(vec4 light_space_frag_pos){
+    //NOTE:Can either use bias OR front-face culling to avoid peter-panning
+    float bias=0;
+
+   //Perspective divide - note that while this is pointless for ortho projection,
+   //Perspective will require this.
+   vec3 projected=light_space_frag_pos.xyz/light_space_frag_pos.w;
+
+   //Need to reverse y
+   projected.y=1.0-projected.y;
+
+   //HACK: test
+   //projected=vec3(projected.x,1.0-projected.y,projected.z);
+
+   //Sample the shadow map.
+   float map_depth=texture(samplers[SAMP_SHADOW_MAP],projected.xy).r;
+
+   //Depth along the z-axis.
+   float projected_depth=projected.z;
+   
+   float shadow=projected_depth-bias>map_depth? 0.0:1.0;
+   return shadow;
+}
 
 // Based on a combination of GGX and Schlick-Beckmann approximation to calculate probability
 // of overshadowing micro-facets.
@@ -110,10 +142,6 @@ void main() {
     float metallics[MAX_TERRAIN_MATERIALS];
     float roughnesses[MAX_TERRAIN_MATERIALS];
     float aos[MAX_TERRAIN_MATERIALS];
-    
-    material_phong_properties mat;
-    mat.diffuse_colour=vec4(0);
-    mat.shininess=1.0;
     
     //Sample each material
     for(int m=0;m<instance_ubo.properties.num_materials;++m)
@@ -206,7 +234,12 @@ void main() {
         //Irradiance holds all the scenes indirect diffuse light.Use the surface normal to sample from it.
         vec3 irradiance=texture(cube_samplers[SAMP_IRRADIENCE_OFFSET],normal).rgb;
 
-        //Combine irradiance with albedo and ambient occlusion.Also add in total accumulated reflectance.
+        //Generate shadow value based on current fragment position vs shadow map.
+        //Light and normal are also taken in the case that a bias is to be used.
+        //TODO: take point lights into account in shadows.
+
+        //Combine irradiance with albedo and ambient occlusion.
+        //Also add in total accumulated reflectance.
         vec3 ambient=vec3(0.03)*albedo.xyz*ao;  //will be replaced by IBL
         vec3 colour=ambient+total_reflectance;
 

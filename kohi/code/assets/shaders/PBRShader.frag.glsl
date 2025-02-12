@@ -40,18 +40,22 @@ layout(set = 1, binding = 0) uniform instance_uniform_object {
 const int SAMP_ALBEDO = 0;
 const int SAMP_NORMAL=1;
 const int SAMP_COMBINED = 2;
-const int SAMP_IBL_CUBE = 3;
+const int SAMP_SHADOW_MAP=3;
+const int SAMP_IBL_CUBE = 4;
 
 const float PI= 3.14159265359;
 
-//Samplers, albedo,normal,combined,IBL_cubemap
-layout(set = 1, binding = 1) uniform sampler2D samplers[4];
-//IBL
-layout(set = 1, binding = 1) uniform samplerCube cube_samplers[4]; //Alias to get cube samplers
+//Samplers, albedo,normal,combined,Shadowmap IBL_cubemap
+layout(set = 1, binding = 1) uniform sampler2D samplers[5];
+
+//Environment map is at the last index.
+//IBL - Alias to get cube samplers
+layout(set = 1, binding = 1) uniform samplerCube cube_samplers[5]; //Alias to get cube samplers
 
 layout(location = 0) flat in int in_mode;
 // Data Transfer Object
 layout(location = 1) in struct dto {
+    vec4 light_space_frag_pos;
     vec4 ambient;
 	vec2 tex_coord;
     vec3 normal;
@@ -62,6 +66,32 @@ layout(location = 1) in struct dto {
 } in_dto;
 
 mat3 TBN;
+
+//Compare the fragment position against the depth buffer, and if it is further
+//back than the shadow map, its in shadow. 1.0 = in shadow ,0.0 =not
+float calculate_shadow(vec4 light_space_frag_pos){
+    //NOTE:Can either use bias OR front-face culling to avoid peter-panning
+    float bias=0;
+
+   //Perspective divide - note that while this is pointless for ortho projection,
+   //Perspective will require this.
+   vec3 projected=light_space_frag_pos.xyz/light_space_frag_pos.w;
+
+   //Need to reverse y
+   projected.y=1.0-projected.y;
+
+   //HACK: test
+   //projected=vec3(projected.x,1.0-projected.y,projected.z);
+
+   //Sample the shadow map.
+   float map_depth=texture(samplers[SAMP_SHADOW_MAP],projected.xy).r;
+
+   //Depth along the z-axis.
+   float projected_depth=projected.z;
+   
+   float shadow=projected_depth-bias>map_depth? 0.0:1.0;
+   return shadow;
+}
 
 // Based on a combination of GGX and Schlick-Beckmann approximation to calculate probability
 // of overshadowing micro-facets.
@@ -137,9 +167,13 @@ void main() {
         //Irradiance holds all the scenes indirect diffuse light.Use the surface normal to sample from it.
         vec3 irradiance=texture(cube_samplers[SAMP_IBL_CUBE],normal).rgb;
 
+        //Shadow
+        float shadow=calculate_shadow(in_dto.light_space_frag_pos);
+
         //Combine irradiance with albedo and ambient occlusion.Also add in total accumulated reflectance.
         vec3 ambient=irradiance*albedo*ao; 
-        vec3 colour=ambient+total_reflectance;
+        //vec3 colour=ambient+total_reflectance;
+        vec3 colour=vec3(shadow);
 
         //HDR tonemapping.
         colour=colour/(colour+vec3(1.0));

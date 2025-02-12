@@ -36,6 +36,7 @@ uniform=samp,1,combined_texture_2
 uniform=samp,1,albedo_texture_3
 uniform=samp,1,normal_texture_3
 uniform=samp,1,combined_texture_3
+uniform=samp,1,shadow_texture
 
 #Irradience
 uniform=samp,1,ibl_cube_texture
