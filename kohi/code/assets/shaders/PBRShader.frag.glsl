@@ -89,7 +89,7 @@ float calculate_shadow(vec4 light_space_frag_pos){
    //Depth along the z-axis.
    float projected_depth=projected.z;
    
-   float shadow=projected_depth-bias>map_depth? 0.0:1.0;
+   float shadow=projected_depth-bias>map_depth?0.0:1.0;
    return shadow;
 }
 
@@ -146,6 +146,8 @@ void main() {
 
         // Overall reflectance.
         vec3 total_reflectance=vec3(0.0);
+          //Shadow
+        float shadow=calculate_shadow(in_dto.light_space_frag_pos);
 
         //Directional light radiance.
         {
@@ -154,7 +156,7 @@ void main() {
             vec3 radiance=calculate_directional_light_radiance(light, view_direction);
 
             //Only directional light should be affected by shadow map.
-            total_reflectance+=calculate_reflectance(albedo, normal, view_direction, light_direction, metallic, roughness, base_reflectivity, radiance);
+            total_reflectance+=(shadow*calculate_reflectance(albedo, normal, view_direction, light_direction, metallic, roughness, base_reflectivity, radiance));
         }
 
         for(int i = 0; i < instance_ubo.num_p_lights; ++i) {
@@ -167,13 +169,9 @@ void main() {
         //Irradiance holds all the scenes indirect diffuse light.Use the surface normal to sample from it.
         vec3 irradiance=texture(cube_samplers[SAMP_IBL_CUBE],normal).rgb;
 
-        //Shadow
-        float shadow=calculate_shadow(in_dto.light_space_frag_pos);
-
         //Combine irradiance with albedo and ambient occlusion.Also add in total accumulated reflectance.
         vec3 ambient=irradiance*albedo*ao; 
-        //vec3 colour=ambient+total_reflectance;
-        vec3 colour=vec3(shadow);
+        vec3 colour=ambient+total_reflectance;
 
         //HDR tonemapping.
         colour=colour/(colour+vec3(1.0));

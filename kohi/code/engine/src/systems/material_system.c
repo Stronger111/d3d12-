@@ -87,6 +87,7 @@ typedef struct terrain_shader_locations {
     u16 dir_light;
     u16 p_lights;
     u16 num_p_lights;
+    u16 light_space;
 
     u16 properties;
     u16 ibl_cube_texture;
@@ -202,6 +203,7 @@ b8 material_system_initialize(u64* memory_requirement, void* state, void* config
     state_ptr->terrain_locations.properties = INVALID_ID_U16;
     state_ptr->terrain_locations.ibl_cube_texture = INVALID_ID_U16;
     state_ptr->terrain_locations.shadow_texture = INVALID_ID_U16;
+    state_ptr->terrain_locations.light_space = INVALID_ID_U16;
 
     for (u32 i = 0; i < 3 * TERRAIN_MAX_MATERIAL_COUNT; ++i) {
         state_ptr->terrain_locations.samplers[i] = INVALID_ID_U16;
@@ -287,6 +289,7 @@ b8 material_system_initialize(u64* memory_requirement, void* state, void* config
     state_ptr->terrain_shader_id = s->id;
     state_ptr->terrain_locations.projection = shader_system_uniform_index(s, "projection");
     state_ptr->terrain_locations.view = shader_system_uniform_index(s, "view");
+    state_ptr->terrain_locations.light_space = shader_system_uniform_index(s, "light_space");
     state_ptr->terrain_locations.ambient_colour = shader_system_uniform_index(s, "ambient_colour");
     state_ptr->terrain_locations.view_position = shader_system_uniform_index(s, "view_position");
     state_ptr->terrain_locations.model = shader_system_uniform_index(s, "model");
@@ -686,6 +689,17 @@ b8 material_system_apply_global(u32 shader_id, const struct frame_data* p_frame_
         MATERIAL_APPLY_OR_FAIL(shader_system_uniform_set_by_index(state_ptr->terrain_locations.ambient_colour, ambient_colour));
         MATERIAL_APPLY_OR_FAIL(shader_system_uniform_set_by_index(state_ptr->terrain_locations.view_position, view_position));
         MATERIAL_APPLY_OR_FAIL(shader_system_uniform_set_by_index(state_ptr->terrain_locations.render_mode, &render_mode));
+        // Light space for shadow mapping.
+        MATERIAL_APPLY_OR_FAIL(shader_system_uniform_set_by_index(state_ptr->terrain_locations.light_space, &state_ptr->directional_light_space));
+        // Directional light- global for this shader.
+        directional_light* dir_light = light_system_directional_light_get();
+        if (dir_light) {
+            MATERIAL_APPLY_OR_FAIL(shader_system_uniform_set_by_index(state_ptr->terrain_locations.dir_light, &dir_light->data));
+        } else {
+            directional_light_data data = {0};
+            MATERIAL_APPLY_OR_FAIL(shader_system_uniform_set_by_index(state_ptr->terrain_locations.dir_light, &data));
+        }
+
     } else if (shader_id == state_ptr->pbr_shader_id) {
         MATERIAL_APPLY_OR_FAIL(shader_system_uniform_set_by_index(state_ptr->pbr_locations.projection, projection));
         MATERIAL_APPLY_OR_FAIL(shader_system_uniform_set_by_index(state_ptr->pbr_locations.view, view));
@@ -711,9 +725,6 @@ b8 material_system_apply_instance(material* m, struct frame_data* p_frame_data, 
     if (needs_update) {
         if (m->shader_id == state_ptr->material_shader_id) {
             // Material shader
-            // material_phong_properties* test=(material_phong_properties*)m->properties;
-            // test->shininess=8.0f;
-            // test->diffuse_colour=vec4_one();
             MATERIAL_APPLY_OR_FAIL(shader_system_uniform_set_by_index(state_ptr->material_locations.properties, m->properties));
             //  KDEBUG("%f %f %f %f %f",test->diffuse_colour.x,test->diffuse_colour.y,test->diffuse_colour.z,test->diffuse_colour.w, test->shininess);
             MATERIAL_APPLY_OR_FAIL(shader_system_uniform_set_by_index(state_ptr->material_locations.diffuse_texture, &m->maps[0]));
@@ -755,7 +766,6 @@ b8 material_system_apply_instance(material* m, struct frame_data* p_frame_data, 
             m->maps[SAMP_IRRADIANCE_MAP].texture = m->irradiance_texture ? m->irradiance_texture : state_ptr->irradiance_cube_texture;
             MATERIAL_APPLY_OR_FAIL(shader_system_uniform_set_by_index(state_ptr->pbr_locations.ibl_cube_texture, &m->maps[SAMP_IRRADIANCE_MAP]));
 
-            // TODO: Duplicating above... move this to its own function, perhaps.
             // Directional light.
             directional_light* dir_light = light_system_directional_light_get();
             if (dir_light) {
@@ -787,7 +797,6 @@ b8 material_system_apply_instance(material* m, struct frame_data* p_frame_data, 
             }
 
             // NOTE: apply other maps separately.
-
             // Shadow map
             m->maps[SAMP_TERRAIN_SHADOW_MAP].texture = state_ptr->shadow_texture ? state_ptr->shadow_texture : texture_system_get_default_diffuse_texture();
             MATERIAL_APPLY_OR_FAIL(shader_system_uniform_set_by_index(state_ptr->terrain_locations.shadow_texture, &m->maps[SAMP_TERRAIN_SHADOW_MAP]));
@@ -800,14 +809,7 @@ b8 material_system_apply_instance(material* m, struct frame_data* p_frame_data, 
             shader_system_uniform_set_by_index(state_ptr->terrain_locations.properties, m->properties);
 
             // TODO: Duplicating above... move this to its own function, perhaps.
-            // Directional light.
-            directional_light* dir_light = light_system_directional_light_get();
-            if (dir_light) {
-                MATERIAL_APPLY_OR_FAIL(shader_system_uniform_set_by_index(state_ptr->terrain_locations.dir_light, &dir_light->data));
-            } else {
-                directional_light_data data = {0};
-                MATERIAL_APPLY_OR_FAIL(shader_system_uniform_set_by_index(state_ptr->terrain_locations.dir_light, &data));
-            }
+
             // Point lights.
             u32 p_light_count = light_system_point_light_count();
             if (p_light_count) {
@@ -1401,8 +1403,8 @@ static b8 create_default_terrain_material(material_system_state* state) {
     properties->num_materials = 1;
     properties->materials[0].diffuse_colour = vec4_one();  // white
     properties->materials[0].shininess = 8.0f;
-    state->default_terrain_material.maps = darray_reserve(texture_map,TERRAIN_SAMP_COUNT);
-    darray_length_set(state->default_terrain_material.maps,TERRAIN_SAMP_COUNT);
+    state->default_terrain_material.maps = darray_reserve(texture_map, TERRAIN_SAMP_COUNT);
+    darray_length_set(state->default_terrain_material.maps, TERRAIN_SAMP_COUNT);
     state->default_terrain_material.maps[SAMP_ALBEDO].texture = texture_system_get_default_texture();
     state->default_terrain_material.maps[SAMP_NORMAL].texture = texture_system_get_default_normal_texture();
     state->default_terrain_material.maps[SAMP_COMBINED].texture = texture_system_get_default_combined_texture();

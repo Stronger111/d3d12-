@@ -19,6 +19,7 @@ attribute=vec4,in_mat_weights
 # NOTE: For scope: 0=global, 1=instance, 2=local
 uniform=mat4,0,projection
 uniform=mat4,0,view
+uniform=mat4,0,light_space
 uniform=vec4,0,ambient_colour
 uniform=vec3,0,view_position
 uniform=u32,0,mode

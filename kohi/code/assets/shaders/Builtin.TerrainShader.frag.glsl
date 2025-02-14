@@ -26,9 +26,10 @@ const int MAX_TERRAIN_MATERIALS=4;
 layout(set = 0, binding = 0) uniform global_uniform_object {
     mat4 projection;
 	mat4 view;
-	vec4 ambient_colour;
-	vec3 view_position;
-	int mode;
+    mat4 light_space;
+    vec4 ambient_colour;
+    vec3 view_position;
+    int mode;
     directional_light dir_light;
 } global_ubo;
 
@@ -91,11 +92,26 @@ layout(location = 1) in struct dto {
 
 mat3 TBN;
 
+//Percentage_Closer Filtering 卷积  从纹理中获取到更多的样本数据
+float calculate_pcf(vec3 projected){
+    float shadow=0.0;
+    float bias=0;
+    vec2 texel_size=1.0/textureSize(samplers[SAMP_SHADOW_MAP],0).xy;
+    for(int x=-1;x<=1;x++){
+        for(int y=-1;y<=1;y++){
+           float pcf_depth=texture(samplers[SAMP_SHADOW_MAP],projected.xy+vec2(x,y)*texel_size).r;
+           shadow+=(projected.z-bias)>pcf_depth? 1.0:0.0;
+        }
+    }
+    shadow/=9;
+    return 1-shadow;
+}
+
 //Compare the fragment position against the depth buffer, and if it is further
 //back than the shadow map, its in shadow. 1.0 = in shadow ,0.0 =not
 float calculate_shadow(vec4 light_space_frag_pos){
     //NOTE:Can either use bias OR front-face culling to avoid peter-panning
-    float bias=0;
+    float bias=0.0;
 
    //Perspective divide - note that while this is pointless for ortho projection,
    //Perspective will require this.
@@ -104,16 +120,16 @@ float calculate_shadow(vec4 light_space_frag_pos){
    //Need to reverse y
    projected.y=1.0-projected.y;
 
-   //HACK: test
-   //projected=vec3(projected.x,1.0-projected.y,projected.z);
-
-   //Sample the shadow map.
-   float map_depth=texture(samplers[SAMP_SHADOW_MAP],projected.xy).r;
+   //NOTE:Transform to NDC not needed for Vulkan, but would be for OpenGL.
+   //projected.xy=projected.xy*0.5+0.5;
 
    //Depth along the z-axis.
    float projected_depth=projected.z;
+
+   //Sample the shadow map.
+   float map_depth=texture(samplers[SAMP_SHADOW_MAP],projected.xy).r;
    
-   float shadow=projected_depth-bias>map_depth? 0.0:1.0;
+   float shadow=(projected_depth-bias)>map_depth?0.0:1.0;
    return shadow;
 }
 
@@ -165,12 +181,6 @@ void main() {
          albedos[3]*in_dto.mat_weights[3];
     // Make sure albedo is fully opaque. Transparent terrains make no sense.
     albedo.a=1.0;
-    // vec3 n0 = (normals[0] * 2 - 1) * in_dto.mat_weights[0];
-    // vec3 n1 = (normals[1] * 2 - 1) * in_dto.mat_weights[1];
-    // vec3 n2 = (normals[2] * 2 - 1) * in_dto.mat_weights[2];
-    // vec3 n3 = (normals[3] * 2 - 1) * in_dto.mat_weights[3];
-    // normal = normalize(vec3(n0.xy + n1.xy + n2.xy + n3.xy, n0.z));
-    // normal = normal * 0.25 + 0.5;
     normal=
          normals[0]*in_dto.mat_weights[0] +
          normals[1]*in_dto.mat_weights[1] +
@@ -214,6 +224,11 @@ void main() {
         // Overall reflectance.
         vec3 total_reflectance=vec3(0.0);
 
+        //Generate shadow value based on current fragment position vs shadow map.
+        //Light and normal are also taken in the case that a bias is to be used.
+        //TODO: take point lights into account in shadows.
+        float shadow=calculate_shadow(in_dto.light_space_frag_pos);
+
         //Directional light radiance.
         {
             directional_light light = global_ubo.dir_light;
@@ -221,7 +236,7 @@ void main() {
             vec3 radiance=calculate_directional_light_radiance(light, view_direction);
 
             //Only directional light should be affected by shadow map.
-            total_reflectance+=calculate_reflectance(albedo.xyz, normal, view_direction, light_direction, metallic, roughness, base_reflectivity, radiance);
+            total_reflectance+=shadow*calculate_reflectance(albedo.xyz, normal, view_direction, light_direction, metallic, roughness, base_reflectivity, radiance);
         }
 
         for(int i = 0; i < instance_ubo.num_p_lights; ++i) {
@@ -234,15 +249,10 @@ void main() {
         //Irradiance holds all the scenes indirect diffuse light.Use the surface normal to sample from it.
         vec3 irradiance=texture(cube_samplers[SAMP_IRRADIENCE_OFFSET],normal).rgb;
 
-        //Generate shadow value based on current fragment position vs shadow map.
-        //Light and normal are also taken in the case that a bias is to be used.
-        //TODO: take point lights into account in shadows.
-
         //Combine irradiance with albedo and ambient occlusion.
         //Also add in total accumulated reflectance.
-        vec3 ambient=vec3(0.03)*albedo.xyz*ao;  //will be replaced by IBL
+        vec3 ambient=irradiance*albedo.xyz*ao;  //will be replaced by IBL
         vec3 colour=ambient+total_reflectance;
-
         //HDR tonemapping.
         colour=colour/(colour+vec3(1.0));
         //Gamma correction.

@@ -218,7 +218,7 @@ b8 scene_pass_execute(struct rendergraph_pass* self, struct frame_data* p_frame_
     vec4 ambient_colour = (vec4){0.25, 0.5, 0.75, 0.99};
 
     // HACK: remove inverse?
-    mat4 light_space = mat4_mul(ext_data->directional_light_projection, ext_data->directional_light_view);
+    mat4 light_space = mat4_mul(ext_data->directional_light_view,ext_data->directional_light_projection);
     material_system_directional_light_space_set(light_space);
     material_system_shadow_map_set(internal_data->shadowmap_source->textures[p_frame_data->render_target_index], 0);
     // Use the appropriate shader and apply the global uniforms.
@@ -267,7 +267,6 @@ b8 scene_pass_execute(struct rendergraph_pass* self, struct frame_data* p_frame_
     // Static geometries.
     u32 geometry_count = ext_data->geometry_count;
     if (geometry_count > 0) {
-
         if (!shader_system_use_by_id(internal_data->material_shader->id)) {
             KERROR("Failed to use material shader. Render frame failed.");
             return false;
@@ -281,8 +280,8 @@ b8 scene_pass_execute(struct rendergraph_pass* self, struct frame_data* p_frame_
             return false;
         }
 
-          // Update globals for material and PBR shader
-          if (!shader_system_use_by_id(internal_data->pbr_shader->id)) {
+        // Update globals for material and PBR shader
+        if (!shader_system_use_by_id(internal_data->pbr_shader->id)) {
             KERROR("Failed to use PBR shader.Render frame failed.");
             return false;
         }
@@ -390,6 +389,13 @@ b8 scene_pass_execute(struct rendergraph_pass* self, struct frame_data* p_frame_
 void scene_pass_destroy(struct rendergraph_pass* self) {
     if (self) {
         if (self->internal_data) {
+            scene_pass_internal_data* internal_data = self->internal_data;
+
+            // Destroy the texture maps/samplers.
+            for (u32 i = 0; i < internal_data->frame_count; ++i) {
+                renderer_texture_map_resources_release(&internal_data->shadowmaps[i]);
+            }
+
             // Destroy the pass.
             renderer_renderpass_destroy(&self->pass);
             kfree(self->internal_data, sizeof(scene_pass_internal_data), MEMORY_TAG_RENDERER);

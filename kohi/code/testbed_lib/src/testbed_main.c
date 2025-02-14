@@ -966,10 +966,10 @@ b8 application_prepare_frame(struct application* app_inst, struct frame_data* p_
             vec3 light_dir = vec3_normalized(vec3_from_vec4(state->main_scene.dir_light->data.direction));
             // NOTE:each pass for cascades will need to do this
             // Light direction is down (negative) so we need to go up
-            vec3 shadow_cam_pos = vec3_mul_scalar(light_dir, -100.0f);
+            vec3 shadow_cam_pos = vec3_add(vec3_zero(), vec3_mul_scalar(light_dir, -100.0f));
             // shadow_cam_pos.z*=-1.0f;
-            // shadow_cam_pos.x-=20.0f;
-            shadow_camera_lookat = ((mat4_look_at(shadow_cam_pos, vec3_zero(), vec3_up())));
+            // shadow_cam_pos.x+=2.0f;
+            shadow_camera_lookat = (mat4_look_at(shadow_cam_pos, vec3_zero(), vec3_up()));
 
             state->shadowmap_pass.pass_data.do_execute = true;
 
@@ -1049,28 +1049,28 @@ b8 application_prepare_frame(struct application* app_inst, struct frame_data* p_
             ext_data->geometry_count = darray_length(ext_data->geometries);
 
             // Add terrain(s)
-            u32 terrain_count = darray_length(scene->terrains);
-            ext_data->terrain_geometries = darray_reserve_with_allocator(geometry_render_data, 16, &p_frame_data->allocator);
-            ext_data->terrain_geometry_count = 0;
-            for (u32 i = 0; i < terrain_count; ++i) {
-                // TODO: Frustum culling
-                geometry_render_data data = {0};
-                data.model = transform_world_get(&scene->terrains[i].xform);
+            // u32 terrain_count = darray_length(scene->terrains);
+            // ext_data->terrain_geometries = darray_reserve_with_allocator(geometry_render_data, 16, &p_frame_data->allocator);
+            // ext_data->terrain_geometry_count = 0;
+            // for (u32 i = 0; i < terrain_count; ++i) {
+            //     // TODO: Frustum culling
+            //     geometry_render_data data = {0};
+            //     data.model = transform_world_get(&scene->terrains[i].xform);
 
-                geometry* g = &scene->terrains[i].geo;
-                data.material = g->material;
-                data.vertex_count = g->vertex_count;
-                data.vertex_buffer_offset = g->vertex_buffer_offset;
-                data.index_count = g->index_count;
-                data.index_buffer_offset = g->index_buffer_offset;
-                data.unique_id = scene->terrains[i].id.uniqueid;
+            //     geometry* g = &scene->terrains[i].geo;
+            //     data.material = g->material;
+            //     data.vertex_count = g->vertex_count;
+            //     data.vertex_buffer_offset = g->vertex_buffer_offset;
+            //     data.index_count = g->index_count;
+            //     data.index_buffer_offset = g->index_buffer_offset;
+            //     data.unique_id = scene->terrains[i].id.uniqueid;
 
-                darray_push(ext_data->terrain_geometries, data);
+            //     darray_push(ext_data->terrain_geometries, data);
 
-                // TODO: Counter for terrain geometries.
-                p_frame_data->drawn_mesh_count++;
-            }
-            ext_data->terrain_geometry_count = darray_length(ext_data->terrain_geometries);
+            //     // TODO: Counter for terrain geometries.
+            //     p_frame_data->drawn_mesh_count++;
+            // }
+            // ext_data->terrain_geometry_count = darray_length(ext_data->terrain_geometries);
 
             // end shadow map pass
         }

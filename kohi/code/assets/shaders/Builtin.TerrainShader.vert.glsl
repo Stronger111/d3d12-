@@ -61,12 +61,12 @@ void main() {
     // Copy the normal over.
    mat3 m3_model = mat3(u_push_constants.model);
    out_dto.normal = normalize(m3_model * in_normal);
-	out_dto.tangent = normalize(m3_model * in_tangent);
-	out_dto.ambient = global_ubo.ambient_colour;
-    out_dto.view_position = global_ubo.view_position;
-    out_dto.mat_weights = in_mat_weights;
-    gl_Position = global_ubo.projection * global_ubo.view *u_push_constants.model* vec4(in_position, 1.0);
-    out_mode=global_ubo.mode;
+   out_dto.tangent = normalize(m3_model * in_tangent);
+   out_dto.ambient = global_ubo.ambient_colour;
+   out_dto.view_position = global_ubo.view_position;
+   out_dto.mat_weights = in_mat_weights;
+   gl_Position = global_ubo.projection * global_ubo.view *u_push_constants.model* vec4(in_position, 1.0);
+   out_mode=global_ubo.mode;
     //Get a light-space-transformed fragment position. 世界空间转换到灯光空间
-    out_dto.light_space_frag_pos=(bias*global_ubo.light_space)*vec4(out_dto.frag_position,1.0);
+   out_dto.light_space_frag_pos=(bias*global_ubo.light_space)*vec4(out_dto.frag_position,1.0);
 }
