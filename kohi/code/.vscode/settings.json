@@ -188,7 +188,8 @@
         "rendergraph.h": "c",
         "sui_label.h": "c",
         "sui_panel.h": "c",
-        "*.rh": "c"
+        "*.rh": "c",
+        "ksort.h": "c"
     },
     // File copyright documentation tag.  Array of strings will be converted to one line per element.  Can template {year}.
     "doxdocgen.file.copyrightTag": [

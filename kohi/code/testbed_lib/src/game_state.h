@@ -14,6 +14,7 @@
 // TODO: temp
 #include <core/clock.h>
 #include <core/keymap.h>
+#include <resources/Kohidebug/debug_box3d.h>
 #include <resources/skybox.h>
 #include <standard_ui_system.h>
 #include <systems/light_system.h>
@@ -98,6 +99,9 @@ typedef struct testbed_game_state {
     struct audio_file* test_loop_audio_file;
     struct audio_file* test_music;
     audio_emitter test_emitter;
+
+    u32 proj_box_index;
+    u32 cam_proj_line_indices[24];
 
     struct sui_control test_panel;
     struct sui_control test_button;

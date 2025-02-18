@@ -28,9 +28,11 @@ layout(set = 0, binding = 0) uniform global_uniform_object {
 	mat4 view;
     mat4 light_space;
     vec4 ambient_colour;
+    directional_light dir_light;
     vec3 view_position;
     int mode;
-    directional_light dir_light;
+    int use_pcf;
+    float bias;
 } global_ubo;
 
 struct material_phong_properties
@@ -77,8 +79,10 @@ layout(set = 1, binding = 1) uniform sampler2D samplers[2+(3*MAX_TERRAIN_MATERIA
 layout(set = 1, binding = 1) uniform samplerCube cube_samplers[2+(3*MAX_TERRAIN_MATERIALS)];
 
 layout(location = 0) flat in int in_mode;
+layout(location = 1) flat in int use_pcf;
+
 // Data Transfer Object
-layout(location = 1) in struct dto {
+layout(location = 2) in struct dto {
     vec4 light_space_frag_pos;
     vec4 ambient;
 	vec2 tex_coord;
@@ -88,6 +92,8 @@ layout(location = 1) in struct dto {
     vec4 colour;
     vec3 tangent;
     vec4 mat_weights;
+    float bias;
+    vec3 padding;
 } in_dto;
 
 mat3 TBN;
@@ -100,19 +106,25 @@ float calculate_pcf(vec3 projected){
     for(int x=-1;x<=1;x++){
         for(int y=-1;y<=1;y++){
            float pcf_depth=texture(samplers[SAMP_SHADOW_MAP],projected.xy+vec2(x,y)*texel_size).r;
-           shadow+=(projected.z-bias)>pcf_depth? 1.0:0.0;
+           shadow+=(projected.z-in_dto.bias)>pcf_depth? 1.0:0.0;
         }
     }
     shadow/=9;
     return 1-shadow;
 }
 
+float calculate_unfiltered(vec3 projected){
+   //Sample the shadow map.
+   float map_depth=texture(samplers[SAMP_SHADOW_MAP],projected.xy).r;
+   
+   float shadow=projected.z-in_dto.bias>map_depth?0.0:1.0;
+   
+   return shadow;
+}
+
 //Compare the fragment position against the depth buffer, and if it is further
 //back than the shadow map, its in shadow. 1.0 = in shadow ,0.0 =not
 float calculate_shadow(vec4 light_space_frag_pos){
-    //NOTE:Can either use bias OR front-face culling to avoid peter-panning
-    float bias=0.0;
-
    //Perspective divide - note that while this is pointless for ortho projection,
    //Perspective will require this.
    vec3 projected=light_space_frag_pos.xyz/light_space_frag_pos.w;
@@ -120,17 +132,11 @@ float calculate_shadow(vec4 light_space_frag_pos){
    //Need to reverse y
    projected.y=1.0-projected.y;
 
-   //NOTE:Transform to NDC not needed for Vulkan, but would be for OpenGL.
-   //projected.xy=projected.xy*0.5+0.5;
-
-   //Depth along the z-axis.
-   float projected_depth=projected.z;
-
-   //Sample the shadow map.
-   float map_depth=texture(samplers[SAMP_SHADOW_MAP],projected.xy).r;
-   
-   float shadow=(projected_depth-bias)>map_depth?0.0:1.0;
-   return shadow;
+   if(use_pcf==1){
+       return calculate_pcf(projected);
+   }else{
+       return calculate_unfiltered(projected);
+   }
 }
 
 // Based on a combination of GGX and Schlick-Beckmann approximation to calculate probability

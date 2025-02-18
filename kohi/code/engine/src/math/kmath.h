@@ -34,6 +34,10 @@
 // Smallest positive number where 1.0 + FLOAT_EPSILON != 0
 #define K_FLOAT_EPSILON 1.192092896e-07f
 
+#define K_FLOAT_MIN -3.40282e+38F
+
+#define K_FLOAT_MAX 3.40282e+38F
+
 // ------------------------------------------
 // General math functions
 // ------------------------------------------
@@ -70,7 +74,27 @@ KINLINE f32 kstep(f32 edge, f32 x) {
 KAPI f32 ksin(f32 x);
 KAPI f32 kcos(f32 x);
 KAPI f32 ktan(f32 x);
+/**
+ * @brief Calculates the arctangent of x.
+ *
+ * @param x The number to calculate the arctangent of.
+ * @return The arctangent of x.
+ */
+KAPI f32 katan(f32 x);
+
+/**
+ * @brief Calculates the arc cosine of x.
+ *
+ * @param x The number to calculate the arc cosine of.
+ * @return The arc cosine of x.
+ */
 KAPI f32 kacos(f32 x);
+/**
+ * @brief Calculates the square root of x.
+ *
+ * @param x The number to calculate the square root of.
+ * @return The square root of x.
+ */
 KAPI f32 ksqrt(f32 x);
 /**
  * @brief Calculates the absolute value of x.
@@ -86,6 +110,14 @@ KAPI f32 kabs(f32 x);
  * @return the largest integer value less than or equal to x.
  */
 KAPI f32 kfloor(f32 x);
+
+/**
+ * @brief Returns the smallest integer value greater than or equal to x.
+ *
+ * @param x The value to be examined.
+ * @return the smallest integer value greater than or equal to x.
+ */
+KAPI f32 kceil(f32 x);
 
 /**
  * @brief Computes the base-2 logarithm of x (i.e. how many times x can be divided by 2).
@@ -143,7 +175,7 @@ KINLINE f32 ksmoothstep(f32 edge_0, f32 edge_1, f32 x) {
  * @param x The value to attenuate.
  * @return The attenuation of x based on distance of the midpoint of min and max.
  */
-KAPI f32 kattenuation_min_max(f32 min,f32 max,f32 x);
+KAPI f32 kattenuation_min_max(f32 min, f32 max, f32 x);
 
 /**
  * @brief Compares the two floats and returns true if both are less
@@ -558,6 +590,14 @@ KINLINE vec3 vec3_div(vec3 vector_0, vec3 vector_1) {
         vector_0.z / vector_1.z};
 }
 
+KINLINE vec3 vec3_div_scalar(vec3 vector_0, f32 scalar) {
+    vec3 result;
+    for (u64 i = 0; i < 3; ++i) {
+        result.elements[i] = vector_0.elements[i] / scalar;
+    }
+    return result;
+}
+
 /**
  * @brief Returns the squared length of the provided vector.
  *
@@ -856,6 +896,14 @@ KINLINE vec4 vec4_div(vec4 vector_0, vec4 vector_1) {
     return result;
 }
 
+KINLINE vec4 vec4_div_scalar(vec4 vector_0, f32 scalar) {
+    vec4 result;
+    for (u64 i = 0; i < 4; ++i) {
+        result.elements[i] = vector_0.elements[i] / scalar;
+    }
+    return result;
+}
+
 /**
  * @brief Returns the squared length of the provided vector.
  *
@@ -1017,6 +1065,14 @@ KINLINE mat4 mat4_orthographic(f32 left, f32 right, f32 bottom, f32 top, f32 nea
     out_matrix.data[12] = (left + right) * lr;
     out_matrix.data[13] = (top + bottom) * bt;
     out_matrix.data[14] = (far_clip + near_clip) * nf;
+
+    // out_matrix.data[0] = 2.0f / (right - left);
+    // out_matrix.data[5] = 2.0f / (bottom - top);
+    // out_matrix.data[10] = 1.0f / (near_clip - far_clip);
+
+    // out_matrix.data[12] = -(right + left) / (right - left);
+    // out_matrix.data[13] = -(bottom + top) / (bottom - top);
+    // out_matrix.data[14] = near_clip/(near_clip-far_clip);
     return out_matrix;
 }
 
@@ -1740,6 +1796,17 @@ KAPI plane_3d plane_3d_create(vec3 p1, vec3 norm);
  * @return A shiny new frustum.
  */
 KAPI frustum frustum_create(const vec3* position, const vec3* forward, const vec3* right, const vec3* up, f32 aspect, f32 fov, f32 near, f32 far);
+
+KAPI frustum frustum_from_view_projection(mat4 view_projection);
+
+/**
+ * Calculate the corner points of the provided frustum in world space, using
+ * the given projection and view matrices.
+ *
+ * @param projection_view The combined projection/view matrix from the active camera.
+ * @param corners An array of 8 vec4s to hold the caluclated points.
+ */
+KAPI void frustum_corner_points_world_space(mat4 projection_view, vec4 corners[8]);
 
 /**
  * @brief Obtains the signed distance between the plane p and the provided postion.

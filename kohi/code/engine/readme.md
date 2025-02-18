@@ -4,7 +4,7 @@
     a:渲染前端
       Meshs，Textures,Materials, Render Passes,Render Graph
     b:渲染后端
-      Renderer APIs Vulkan OpenGL  GPU upload GPU上传 Draw Calls 
+      Renderer APIs Vulkan OpenGL  GPU upload GPU上传 DPaw Calls 
       Vulkan Extensions, Validation Layers, Debugger 
       Vulkan 逻辑设备和队列
       同步对象和信号量  vulkan FrameBuffer
@@ -17,6 +17,7 @@
 9:game/editor logic library (dll/.so) hot reload    -------- kvars(configurable 'global' settings)  --- engline configuration  ---- timeline system  --- skeletal animation sysytem 
 -KSM 文件格式从Obj转换  和引擎数据格式高度吻合
 -可写纹理不会自动释放 引用计数为0 不会释放
+-困难的部分是思考内存和数据结构,以及写的逻辑如何改变数据和如何操作内存
 -批处理
  PUSHD 更换当前目录
 
@@ -32,7 +33,7 @@ Renderer:
 - PBR
   Phone光照模型 PBR ->Albedo Normal Metalle Roughness AO IBL 间接漫反射
   R通道 金属度 G通道 粗糙度 B通道 ao
-  Shadow Map
+  Shadow Map -> Cascade Shadow Map
 # 引擎待完成
 # Math
   Alt+41420 根号 Alt+178 平方号  1:44:25
@@ -50,6 +51,7 @@ Renderer:
 - filesystem_read_all_text 文件 
 - Debug root->children,10 打印数组的10个元素. ,6 可以打印数组元素
 - 模版测试-裁剪输入框外部的内容 模版需要clear
+- 可视化Debug 以及特殊情况 来验证计算的正确性
 
 
 -Feature特性

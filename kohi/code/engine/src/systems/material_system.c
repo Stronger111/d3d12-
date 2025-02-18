@@ -2,12 +2,13 @@
 
 #include "containers/darray.h"
 #include "containers/hashtable.h"
+#include "core/event.h"
 #include "core/frame_data.h"
 #include "core/kmemory.h"
 #include "core/kstring.h"
 #include "core/logger.h"
+#include "core/kvar.h"
 #include "defines.h"
-
 #include "math/kmath.h"
 #include "renderer/renderer_frontend.h"
 #include "resources/resource_types.h"
@@ -63,6 +64,8 @@ typedef struct pbr_shader_uniform_locations {
     u16 light_space;
     u16 model;
     u16 render_mode;
+    u16 use_pcf;
+    u16 bias;
     u16 dir_light;
     u16 p_lights;
     u16 num_p_lights;
@@ -93,6 +96,8 @@ typedef struct terrain_shader_locations {
     u16 ibl_cube_texture;
     u16 shadow_texture;
     u16 samplers[TERRAIN_MAX_MATERIAL_COUNT * 3];  // albedo, normal,combined 金属度 粗糙度 Ao
+    u16 use_pcf;
+    u16 bias;
 } terrain_shader_locations;
 
 typedef struct material_system_state {
@@ -127,6 +132,8 @@ typedef struct material_system_state {
     texture* shadow_texture;
 
     mat4 directional_light_space;
+
+    i32 use_pcf;
 } material_system_state;
 
 typedef struct material_reference {
@@ -144,6 +151,15 @@ b8 load_material(material_config* config, material* m);
 void destroy_material(material* m);
 
 static b8 assign_map(texture_map* map, const material_map* config, const char* material_name, texture* default_tex);
+static b8 material_system_on_event(u16 code, void* sender, void* listener_inst, event_context context) {
+    if (code == EVENT_CODE_KVAR_CHANGED) {
+        if (strings_equali("use_pcf", context.data.c)) {
+            kvar_int_get("use_pcf", &state_ptr->use_pcf);  // Console 输入的值
+            return true;
+        }
+    }
+    return false;
+}
 
 b8 material_system_initialize(u64* memory_requirement, void* state, void* config) {
     material_system_config* typed_config = (material_system_config*)config;
@@ -190,6 +206,8 @@ b8 material_system_initialize(u64* memory_requirement, void* state, void* config
     state_ptr->pbr_locations.model = INVALID_ID_U16;
     state_ptr->pbr_locations.render_mode = INVALID_ID_U16;
     state_ptr->pbr_locations.light_space = INVALID_ID_U16;
+    state_ptr->pbr_locations.bias = INVALID_ID_U16;
+    state_ptr->pbr_locations.use_pcf = INVALID_ID_U16;
 
     state_ptr->terrain_locations.projection = INVALID_ID_U16;
     state_ptr->terrain_locations.view = INVALID_ID_U16;
@@ -204,6 +222,8 @@ b8 material_system_initialize(u64* memory_requirement, void* state, void* config
     state_ptr->terrain_locations.ibl_cube_texture = INVALID_ID_U16;
     state_ptr->terrain_locations.shadow_texture = INVALID_ID_U16;
     state_ptr->terrain_locations.light_space = INVALID_ID_U16;
+    state_ptr->terrain_locations.use_pcf=INVALID_ID_U16;
+    state_ptr->terrain_locations.bias = INVALID_ID_U16; 
 
     for (u32 i = 0; i < 3 * TERRAIN_MAX_MATERIAL_COUNT; ++i) {
         state_ptr->terrain_locations.samplers[i] = INVALID_ID_U16;
@@ -284,6 +304,8 @@ b8 material_system_initialize(u64* memory_requirement, void* state, void* config
     state_ptr->pbr_locations.dir_light = shader_system_uniform_index(s, "dir_light");
     state_ptr->pbr_locations.p_lights = shader_system_uniform_index(s, "p_lights");
     state_ptr->pbr_locations.num_p_lights = shader_system_uniform_index(s, "num_p_lights");
+    state_ptr->pbr_locations.use_pcf = shader_system_uniform_index(s, "use_pcf");
+    state_ptr->pbr_locations.bias = shader_system_uniform_index(s, "bias");
 
     s = shader_system_get("Shader.Builtin.Terrain");
     state_ptr->terrain_shader_id = s->id;
@@ -297,6 +319,8 @@ b8 material_system_initialize(u64* memory_requirement, void* state, void* config
     state_ptr->terrain_locations.dir_light = shader_system_uniform_index(s, "dir_light");
     state_ptr->terrain_locations.p_lights = shader_system_uniform_index(s, "p_lights");
     state_ptr->terrain_locations.num_p_lights = shader_system_uniform_index(s, "num_p_lights");
+    state_ptr->terrain_locations.use_pcf = shader_system_uniform_index(s, "use_pcf");
+    state_ptr->terrain_locations.bias = shader_system_uniform_index(s, "bias");
 
     state_ptr->terrain_locations.properties = shader_system_uniform_index(s, "properties");
     state_ptr->terrain_locations.ibl_cube_texture = shader_system_uniform_index(s, "ibl_cube_texture");
@@ -327,12 +351,19 @@ b8 material_system_initialize(u64* memory_requirement, void* state, void* config
     // 设置一些默认值
     state_ptr->directional_light_space = mat4_identity();
 
+    // Add a kvar to track PCF filtering enabled/disabled
+    kvar_int_create("use_pcf", 1);  // on by default
+    kvar_int_get("use_pcf", &state_ptr->use_pcf);
+
+    event_register(EVENT_CODE_KVAR_CHANGED, 0, material_system_on_event);
     return true;
 }
 
 void material_system_shutdown(void* state) {
     material_system_state* s = (material_system_state*)state;
     if (s) {
+        event_unregister(EVENT_CODE_KVAR_CHANGED, 0, material_system_on_event);
+
         // Invalidate all materials in the array.
         u32 count = s->config.max_material_count;
         for (u32 i = 0; i < count; ++i) {
@@ -699,6 +730,12 @@ b8 material_system_apply_global(u32 shader_id, const struct frame_data* p_frame_
             directional_light_data data = {0};
             MATERIAL_APPLY_OR_FAIL(shader_system_uniform_set_by_index(state_ptr->terrain_locations.dir_light, &data));
         }
+        // Global Shader Options
+        MATERIAL_APPLY_OR_FAIL(shader_system_uniform_set_by_index(state_ptr->terrain_locations.use_pcf, &state_ptr->use_pcf));
+
+        // HACK:Read this is from somewhere (or have global setter?)
+        f32 bias = 0.005;
+        MATERIAL_APPLY_OR_FAIL(shader_system_uniform_set_by_index(state_ptr->terrain_locations.bias, &bias));
 
     } else if (shader_id == state_ptr->pbr_shader_id) {
         MATERIAL_APPLY_OR_FAIL(shader_system_uniform_set_by_index(state_ptr->pbr_locations.projection, projection));
@@ -708,6 +745,12 @@ b8 material_system_apply_global(u32 shader_id, const struct frame_data* p_frame_
         MATERIAL_APPLY_OR_FAIL(shader_system_uniform_set_by_index(state_ptr->pbr_locations.render_mode, &render_mode));
         // Light space for shadow mapping.
         MATERIAL_APPLY_OR_FAIL(shader_system_uniform_set_by_index(state_ptr->pbr_locations.light_space, &state_ptr->directional_light_space));
+        // Global Shader Options
+        MATERIAL_APPLY_OR_FAIL(shader_system_uniform_set_by_index(state_ptr->pbr_locations.use_pcf, &state_ptr->use_pcf));
+
+        // HACK:Read this is from somewhere (or have global setter?)
+        f32 bias = 0.005;
+        MATERIAL_APPLY_OR_FAIL(shader_system_uniform_set_by_index(state_ptr->pbr_locations.bias, &bias));
     } else {
         KERROR("material_system_apply_global(): Unrecognized shader id '%d' ", shader_id);
         return false;

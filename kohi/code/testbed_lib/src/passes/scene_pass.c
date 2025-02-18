@@ -217,7 +217,6 @@ b8 scene_pass_execute(struct rendergraph_pass* self, struct frame_data* p_frame_
     // HACK: here until ambient colour is removed.
     vec4 ambient_colour = (vec4){0.25, 0.5, 0.75, 0.99};
 
-    // HACK: remove inverse?
     mat4 light_space = mat4_mul(ext_data->directional_light_view,ext_data->directional_light_projection);
     material_system_directional_light_space_set(light_space);
     material_system_shadow_map_set(internal_data->shadowmap_source->textures[p_frame_data->render_target_index], 0);
@@ -245,7 +244,9 @@ b8 scene_pass_execute(struct rendergraph_pass* self, struct frame_data* p_frame_
             // either way, so this check result gets passed to the backend which either
             // updates the internal shader bindings and binds them, or only binds them.
             // Also need to check against the renderer draw index.
-
+            //TODO: At least for now,the entire terrain shares one material, so a lot of this
+            //Should probably be moved to global (i.e texture maps and surface properties), but
+            //leave lighting at the instance level.
             b8 needs_update = m->render_frame_number != p_frame_data->renderer_frame_number || m->render_draw_index != p_frame_data->draw_index;
             if (!material_system_apply_instance(m, p_frame_data, needs_update)) {
                 KWARN("Failed to apply terrain material '%s'. Skipping draw.", m->name);

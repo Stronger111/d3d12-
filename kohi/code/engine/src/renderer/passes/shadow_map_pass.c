@@ -22,13 +22,14 @@ typedef struct shadow_map_shader_locations {
 } shadow_map_shader_locations;
 
 typedef struct shadow_map_pass_internal_data {
+    shadow_map_pass_config config;
+
     shader* s;
     shadow_map_shader_locations locations;
 
     // Custom projection matrix for shadow pass.
-    mat4 projection_matrix;
     viewport camera_viewport;
-    u16 resolution;
+
     texture* depth_textures;
     texture* colour_textures;  // Rendering out to the colour pass.
     // Track instance updates per frame
@@ -51,14 +52,13 @@ typedef struct shadow_map_pass_internal_data {
 
 b8 shadow_map_pass_create(rendergraph_pass* self, void* config) {
     if (!self || !config) {
+        KERROR("shadow_map_pass_create requires both a pointer to self and a valid config.");
         return false;
     }
 
-    shadow_map_pass_config* typed_config = config;
-
     self->internal_data = kallocate(sizeof(shadow_map_pass_internal_data), MEMORY_TAG_RENDERER);
     shadow_map_pass_internal_data* internal_data = self->internal_data;
-    internal_data->resolution = typed_config->resolution;
+    internal_data->config = *((shadow_map_pass_config*)config);
 
     self->pass_data.ext_data = kallocate(sizeof(shadow_map_pass_extended_data), MEMORY_TAG_RENDERER);
 
@@ -83,9 +83,9 @@ b8 shadow_map_pass_initialize(rendergraph_pass* self) {
         // Colour
         texture* t = &internal_data->colour_textures[i];
         t->flags |= TEXTURE_FLAG_IS_WRITEABLE;
-        t->width = internal_data->resolution;
-        t->height = internal_data->resolution;
-        string_format(t->name, "shadowmap_pass_%u_%u_colour_texture", internal_data->resolution);
+        t->width = internal_data->config.resolution;
+        t->height = internal_data->config.resolution;
+        string_format(t->name, "shadowmap_pass_%u_%u_colour_texture", internal_data->config.resolution);
         t->mip_levels = 1;
         t->channel_count = 4;
         t->generation = INVALID_ID;
@@ -94,9 +94,9 @@ b8 shadow_map_pass_initialize(rendergraph_pass* self) {
         // Depth
         texture* dt = &internal_data->depth_textures[i];
         dt->flags |= TEXTURE_FLAG_DEPTH | TEXTURE_FLAG_IS_WRITEABLE;  // flags VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT 深度格式
-        dt->width = internal_data->resolution;
-        dt->height = internal_data->resolution;
-        string_format(dt->name, "shadowmap_pass_%u_%u_depth_texture", internal_data->resolution);
+        dt->width = internal_data->config.resolution;
+        dt->height = internal_data->config.resolution;
+        string_format(dt->name, "shadowmap_pass_%u_%u_depth_texture", internal_data->config.resolution);
         dt->mip_levels = 1;
         dt->channel_count = 4;
         dt->generation = INVALID_ID;
@@ -226,32 +226,14 @@ b8 shadow_map_pass_load_resources(rendergraph_pass* self) {
     texture_map* terrain_maps[1] = {&internal_data->default_terrain_colour_map};
     renderer_shader_instance_resources_acquire(internal_data->ts, 1, terrain_maps, &internal_data->terrain_instance_id);
 
-    // Calculate viewport.
-    // HACK:Defaulting to ortho viewport. Point lights need perspective and a FOV.
-    // TODO: read in properties for near/far clip.
-    f32 near_clip = 1.0f;
-    f32 far_clip = 150.0f;
-    f32 fov = 0;  // NOTE: orthographic viewports have a 0 FOV.
-    vec4 viewport_rect = {0, 0, internal_data->resolution, internal_data->resolution};
-    if (!viewport_create(viewport_rect, fov, near_clip, far_clip, RENDERER_PROJECTION_MATRIX_TYPE_ORTHOGRAPHIC, &internal_data->camera_viewport)) {
+    // NOTE: Setup a default viewport. The only component that is used for this is the underlying
+    // viewport rect, but is required to be set by the renderer before beginning a renderpass.
+    // The projection matrix within this is not used,therefore the fov and clip planes do not matter.
+    vec4 viewport_rect = {0, 0, internal_data->config.resolution, internal_data->config.resolution};
+    if (!viewport_create(viewport_rect, 0.0f, 0.0f, 0.0f, RENDERER_PROJECTION_MATRIX_TYPE_ORTHOGRAPHIC, &internal_data->camera_viewport)) {
         KERROR("Failed to create viewport for shadow map pass.");
         return false;
     }
-
-    // NOTE:for cascading,might need several.
-    // NOTE: Donot use the viewport projection matrix,as this will result in really small objects.
-    // TODO: Create the projection matrix based on the extents of all visible shadow-casting/recieving objects.
-    f32 area = 20.0f;
-    internal_data->projection_matrix = mat4_orthographic(-area, area, -area, area, near_clip, far_clip);
-    internal_data->camera_viewport.projection = internal_data->projection_matrix;
-    // f32 mod=0.015f; //fov
-    // internal_data->projection_matrix=mat4_orthographic(-area*mod, area*mod, -area*mod, area*mod,near_clip,far_clip);
-    // Save off the viewport rect to the pass data to be raad by the app.
-    self->pass_data.vp = &internal_data->camera_viewport;
-
-    // Save off the projection matrix to extended data to be read by the app.
-    shadow_map_pass_extended_data* ext_data = self->pass_data.ext_data;
-    ext_data->projection = internal_data->projection_matrix;
 
     return true;
 }
@@ -264,8 +246,8 @@ b8 shadow_map_pass_execute(rendergraph_pass* self, frame_data* p_frame_data) {
     shadow_map_pass_internal_data* internal_data = self->internal_data;
     shadow_map_pass_extended_data* ext_data = self->pass_data.ext_data;
 
-    // Bind the viewport
-    renderer_active_viewport_set(self->pass_data.vp);
+    // Bind the internal viewport - do not use one provided in pass data.
+    renderer_active_viewport_set(&internal_data->camera_viewport);
 
     if (!renderer_renderpass_begin(&self->pass, &self->pass.targets[p_frame_data->render_target_index])) {
         KERROR("Shadowmap pass failed to start.");
@@ -274,13 +256,9 @@ b8 shadow_map_pass_execute(rendergraph_pass* self, frame_data* p_frame_data) {
 
     shader_system_use_by_id(internal_data->s->id);
 
-    // HACK: Invert because ortho is wrong/backwards inverted handedness.
-    renderer_winding_set(RENDERER_WINDING_COUNTER_CLOCKWISE);
-
     // Apply globals
     renderer_shader_bind_globals(internal_data->s);
-    // NOTE:using the internal projection matrix，not one passed in.
-    if (!shader_system_uniform_set_by_index(internal_data->locations.projection_location, &internal_data->projection_matrix)) {
+    if (!shader_system_uniform_set_by_index(internal_data->locations.projection_location, &self->pass_data.projection_matrix)) {
         KERROR("Failed to apply shadowmap projection uniform.");
         return false;
     }
@@ -373,9 +351,7 @@ b8 shadow_map_pass_execute(rendergraph_pass* self, frame_data* p_frame_data) {
 
         // Invert if needed
         if (ext_data->geometries[i].winding_inverted) {
-            // renderer_winding_set(RENDERER_WINDING_CLOCKWISE);
-            // HACK: reversed
-            renderer_winding_set(RENDERER_WINDING_COUNTER_CLOCKWISE);
+            renderer_winding_set(RENDERER_WINDING_CLOCKWISE);
         }
 
         // Draw it
@@ -383,113 +359,108 @@ b8 shadow_map_pass_execute(rendergraph_pass* self, frame_data* p_frame_data) {
 
         // Change back if needed
         if (ext_data->geometries[i].winding_inverted) {
-            // renderer_winding_set(RENDERER_WINDING_CLOCKWISE);
-            // HACK: reversed
-            renderer_winding_set(RENDERER_WINDING_CLOCKWISE);
+            renderer_winding_set(RENDERER_WINDING_COUNTER_CLOCKWISE);
         }
     }
 
-    // Terrain
+    // Terrain - use the special terrain shader.
     // shader_system_use_by_id(internal_data->ts->id);
 
     // // Apply globals
     // renderer_shader_bind_globals(internal_data->ts);
     // // NOTE: using the internal projection matrix,not one passed on
-    // if (!shader_system_uniform_set_by_index(internal_data->terrain_locations.projection_location, &internal_data->projection_matrix)) {
-    //     KERROR("Failed to apply terrain shadowmap projection uniform.");
-    //     return false;
-    // }
+    //if (!shader_system_uniform_set_by_index(internal_data->terrain_locations.projection_location, &self->pass_data.projection_matrix)) {
+        //     KERROR("Failed to apply terrain shadowmap projection uniform.");
+        //     return false;
+        // }
 
-    // if (!shader_system_uniform_set_by_index(internal_data->terrain_locations.view_location, &self->pass_data.view_matrix)) {
-    //     KERROR("Failed to apply terrain shadowmap view uniform.");
-    //     return false;
-    // }
-    // shader_system_apply_global(true);
+        // if (!shader_system_uniform_set_by_index(internal_data->terrain_locations.view_location, &self->pass_data.view_matrix)) {
+        //     KERROR("Failed to apply terrain shadowmap view uniform.");
+        //     return false;
+        // }
+        // shader_system_apply_global(true);
 
-    // for (u32 i = 0; i < terrain_geometry_count; ++i) {
-    //     geometry_render_data* terrain = &ext_data->terrain_geometries[i];
+        // for (u32 i = 0; i < terrain_geometry_count; ++i) {
+        //     geometry_render_data* terrain = &ext_data->terrain_geometries[i];
 
-    //     // Just draw these using the default instance and texture map.
-    //     texture_map* bind_map = &internal_data->default_terrain_colour_map;
-    //     u64* render_number = &internal_data->terrain_instance_frame_number;
-    //     u8* draw_index = &internal_data->terrain_instance_draw_index;
+        //     // Just draw these using the default instance and texture map.
+        //     texture_map* bind_map = &internal_data->default_terrain_colour_map;
+        //     u64* render_number = &internal_data->terrain_instance_frame_number;
+        //     u8* draw_index = &internal_data->terrain_instance_draw_index;
 
-    //     b8 needs_update = *render_number != p_frame_data->renderer_frame_number || *draw_index != p_frame_data->draw_index;
+        //     b8 needs_update = *render_number != p_frame_data->renderer_frame_number || *draw_index != p_frame_data->draw_index;
 
-    //     shader_system_bind_instance(internal_data->terrain_instance_id);
-    //     if (!shader_system_uniform_set_by_index(internal_data->locations.colour_map_location, bind_map)) {
-    //         KERROR("Failed to apply shadowmap color_map uniform to terrain geometry.");
-    //         return false;
-    //     }
-    //     shader_system_apply_instance(needs_update);
+        //     shader_system_bind_instance(internal_data->terrain_instance_id);
+        //     if (!shader_system_uniform_set_by_index(internal_data->locations.colour_map_location, bind_map)) {
+        //         KERROR("Failed to apply shadowmap color_map uniform to terrain geometry.");
+        //         return false;
+        //     }
+        //     shader_system_apply_instance(needs_update);
 
-    //     // Sync the frame number and draw index.
-    //     *render_number = p_frame_data->renderer_frame_number;
-    //     *draw_index = p_frame_data->draw_index;
+        //     // Sync the frame number and draw index.
+        //     *render_number = p_frame_data->renderer_frame_number;
+        //     *draw_index = p_frame_data->draw_index;
 
-    //     // Apply the locals
-    //     shader_system_uniform_set_by_index(internal_data->terrain_locations.model_location, &terrain->model);
+        //     // Apply the locals
+        //     shader_system_uniform_set_by_index(internal_data->terrain_locations.model_location, &terrain->model);
 
-    //     // Draw it.
-    //     renderer_geometry_draw(terrain);
-    // }
+        //     // Draw it.
+        //     renderer_geometry_draw(terrain);
+        // }
 
-    // HACK: set back for the next pass.
-    renderer_winding_set(RENDERER_WINDING_COUNTER_CLOCKWISE);
-
-    if (!renderer_renderpass_end(&self->pass)) {
-        KERROR("Shadowmap pass failed to end.");
+        if (!renderer_renderpass_end(&self->pass)) {
+            KERROR("Shadowmap pass failed to end.");
+        }
+        return true;
     }
-    return true;
-}
 
-void shadow_map_pass_destroy(rendergraph_pass* self) {
-    if (self) {
-        if (self->internal_data) {
-            shadow_map_pass_internal_data* internal_data = self->internal_data;
+    void shadow_map_pass_destroy(rendergraph_pass * self) {
+        if (self) {
+            if (self->internal_data) {
+                shadow_map_pass_internal_data* internal_data = self->internal_data;
 
-            // Destroy the attachments,one per frame.
-            u8 attachment_count = renderer_window_attachment_count_get();
+                // Destroy the attachments,one per frame.
+                u8 attachment_count = renderer_window_attachment_count_get();
 
-            // Renderpass attachments.
-            for (u8 i = 0; i < attachment_count; ++i) {
-                renderer_texture_destroy(&internal_data->colour_textures[i]);
-                renderer_texture_destroy(&internal_data->depth_textures[i]);
+                // Renderpass attachments.
+                for (u8 i = 0; i < attachment_count; ++i) {
+                    renderer_texture_destroy(&internal_data->colour_textures[i]);
+                    renderer_texture_destroy(&internal_data->depth_textures[i]);
+                }
+                kfree(internal_data->colour_textures, sizeof(texture) * attachment_count, MEMORY_TAG_ARRAY);
+                kfree(internal_data->depth_textures, sizeof(texture) * attachment_count, MEMORY_TAG_ARRAY);
+
+                renderer_texture_map_resources_release(&internal_data->default_colour_map);
+                renderer_texture_map_resources_release(&internal_data->default_terrain_colour_map);
+                renderer_shader_instance_resources_release(internal_data->s, internal_data->default_instance_id);
+                renderer_shader_instance_resources_release(internal_data->ts, internal_data->terrain_instance_id);
+
+                // Destroy the extended data.
+                if (self->pass_data.ext_data) {
+                    kfree(self->pass_data.ext_data, sizeof(shadow_map_pass_extended_data), MEMORY_TAG_RENDERER);
+                    self->pass_data.ext_data = 0;
+                }
+
+                // Destroy the pass.
+                renderer_renderpass_destroy(&self->pass);
+                kfree(self->internal_data, sizeof(shadow_map_pass_internal_data), MEMORY_TAG_RENDERER);
+                self->internal_data = 0;
             }
-            kfree(internal_data->colour_textures, sizeof(texture) * attachment_count, MEMORY_TAG_ARRAY);
-            kfree(internal_data->depth_textures, sizeof(texture) * attachment_count, MEMORY_TAG_ARRAY);
-
-            renderer_texture_map_resources_release(&internal_data->default_colour_map);
-            renderer_texture_map_resources_release(&internal_data->default_terrain_colour_map);
-            renderer_shader_instance_resources_release(internal_data->s, internal_data->default_instance_id);
-            renderer_shader_instance_resources_release(internal_data->ts, internal_data->terrain_instance_id);
-
-            // Destroy the extended data.
-            if (self->pass_data.ext_data) {
-                kfree(self->pass_data.ext_data, sizeof(shadow_map_pass_extended_data), MEMORY_TAG_RENDERER);
-                self->pass_data.ext_data = 0;
-            }
-
-            // Destroy the pass.
-            renderer_renderpass_destroy(&self->pass);
-            kfree(self->internal_data, sizeof(shadow_map_pass_internal_data), MEMORY_TAG_RENDERER);
-            self->internal_data = 0;
         }
     }
-}
 
-texture* shadow_map_pass_attachment_texture_get(rendergraph_pass* self, render_target_attachment_type attachment_type, u8 frame_number) {
-    if (!self) {
+    texture* shadow_map_pass_attachment_texture_get(rendergraph_pass * self, render_target_attachment_type attachment_type, u8 frame_number) {
+        if (!self) {
+            return 0;
+        }
+
+        shadow_map_pass_internal_data* internal_data = self->internal_data;
+        if (attachment_type == RENDER_TARGET_ATTACHMENT_TYPE_COLOUR) {
+            return &internal_data->colour_textures[frame_number];
+        } else if (attachment_type & RENDER_TARGET_ATTACHMENT_TYPE_DEPTH) {
+            return &internal_data->depth_textures[frame_number];
+        }
+
+        KERROR("shadow map pass attachment of type 0x%x does not exist,Null is returned.", attachment_type);
         return 0;
     }
-
-    shadow_map_pass_internal_data* internal_data = self->internal_data;
-    if (attachment_type == RENDER_TARGET_ATTACHMENT_TYPE_COLOUR) {
-        return &internal_data->colour_textures[frame_number];
-    } else if (attachment_type & RENDER_TARGET_ATTACHMENT_TYPE_DEPTH) {
-        return &internal_data->depth_textures[frame_number];
-    }
-
-    KERROR("shadow map pass attachment of type 0x%x does not exist,Null is returned.", attachment_type);
-    return 0;
-}

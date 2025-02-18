@@ -20,6 +20,12 @@ direction=0.1 -1.0 0.1 1.0
 [/DirectionalLight]
 
 [Mesh]
+name=sponza
+resource_name=sponza
+transform=0.0 -1.0 0.0 0.0 0.0 0.0 1.0 0.01 0.01 0.01
+[/Mesh]
+
+[Mesh]
 name=falcon
 resource_name=falcon
 transform=9.4 0.8 14.0 0.0 0.0 0.0 1.0 0.35 0.35 0.35

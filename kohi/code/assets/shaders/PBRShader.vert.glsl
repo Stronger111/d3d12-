@@ -13,6 +13,9 @@ layout(set = 0, binding = 0) uniform global_uniform_object {
     vec4 ambient_colour;
     vec3 view_position;
     int mode;
+    int use_pcf;
+    float bias;
+    vec2 padding;
 } global_ubo;
 
 layout(push_constant) uniform push_constants {
@@ -22,9 +25,10 @@ layout(push_constant) uniform push_constants {
 } u_push_constants;
 
 layout(location = 0) out int out_mode;
+layout(location = 1) out int use_pcf;
 
 //Data Transfer Object
-layout(location=1) out struct dto
+layout(location=2) out struct dto
 {
    vec4 light_space_frag_pos;
    vec4 ambient;
@@ -34,6 +38,8 @@ layout(location=1) out struct dto
    vec3 frag_position;
    vec4 colour;
    vec3 tangent;
+   float bias;
+   vec3 padding;
 }out_dto;
 
 //Vulkan's Y axis is flipped and z range is halved
@@ -60,4 +66,6 @@ void main() {
     //Get a light-space-transformed fragment position. 世界空间转换到灯光空间
     out_dto.light_space_frag_pos=(bias*global_ubo.light_space)*vec4(out_dto.frag_position,1.0);
     out_mode=global_ubo.mode;
+    use_pcf=global_ubo.use_pcf;
+    out_dto.bias=global_ubo.bias;
 }
