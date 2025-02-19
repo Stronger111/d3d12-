@@ -34,6 +34,7 @@ Renderer:
   Phone光照模型 PBR ->Albedo Normal Metalle Roughness AO IBL 间接漫反射
   R通道 金属度 G通道 粗糙度 B通道 ao
   Shadow Map -> Cascade Shadow Map
+   RenderGraph LoadResource 加载完Graph资源 在加载具体 Pass内部的资源
 # 引擎待完成
 # Math
   Alt+41420 根号 Alt+178 平方号  1:44:25
@@ -67,6 +68,7 @@ Renderer:
   地形分块和LOD 使用Compute Shader进行计算和粒子
 -多视口系统ViewPort
 -Gizmo系统->数学 射线和平面 AABB,OBB求交检测拾取对象,交互鼠标事件
+-Unity程序化绘制 可以获取ComputeBuffer数据 无需顶点Buffer和VBO绑定数据 以及DrawCall数据 无法专递顶点色 法线 切线等数据  
 
 The audio plugin requires an installatiion of OpenAL.
  - Linux: use a package manager to install OpenAL, if not already installed (i.e. `sudo apt install openal` for Ubuntu or `sudo pacman -S openal` on Arch)

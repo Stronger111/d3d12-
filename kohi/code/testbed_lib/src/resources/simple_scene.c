@@ -1255,7 +1255,6 @@ b8 simple_scene_mesh_render_data_query(const simple_scene* scene, const frustum*
                         kabs(extents_max.y - center.y),
                         kabs(extents_max.z - center.z),
                     };
-
                     if (!f || frustum_intersects_aabb(f, &center, &half_extents)) {
                         // Add it to the list to be rendered.
                         geometry_render_data data = {0};

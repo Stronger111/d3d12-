@@ -127,6 +127,8 @@ KAPI f32 kceil(f32 x);
  */
 KAPI f32 klog2(f32 x);
 
+KAPI f32 kpow(f32 x, f32 y);
+
 /**
  * Indicates if the value is a power of 2. 0 is considered _not_ a power of 2.
  * @param value The value to be interpreted.

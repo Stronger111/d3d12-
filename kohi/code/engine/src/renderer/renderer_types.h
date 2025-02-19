@@ -40,7 +40,8 @@ typedef struct geometry_render_data {
 typedef enum renderer_debug_view_mode {
     RENDERER_VIEW_MODE_DEFAULT = 0,
     RENDERER_VIEW_MODE_LIGHTING = 1,
-    RENDERER_VIEW_MODE_NORMALS = 2
+    RENDERER_VIEW_MODE_NORMALS = 2,
+    RENDERER_VIEW_MODE_CASCADES = 3,
 } renderer_debug_view_mode;
 
 typedef enum render_target_attachment_type {
@@ -51,7 +52,7 @@ typedef enum render_target_attachment_type {
 
 typedef enum render_target_attachment_source {
     RENDER_TARGET_ATTACHMENT_SOURCE_DEFAULT = 0x1,
-    //渲染目标是自身Pass设置的RT
+    // 渲染目标是自身Pass设置的RT
     RENDER_TARGET_ATTACHMENT_SOURCE_SELF = 0x2
 } render_target_attachment_source;
 

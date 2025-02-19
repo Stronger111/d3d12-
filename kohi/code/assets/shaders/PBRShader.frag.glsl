@@ -21,6 +21,7 @@ struct point_light
 };
 
 const int MAX_POINT_LIGHTS = 10;
+const int MAX_SHADOW_CASCADES=4;
 
 struct pbr_properties {
     vec4 diffuse_colour;
@@ -28,8 +29,21 @@ struct pbr_properties {
     float shininess;
 };
 
+layout(set = 0, binding = 0) uniform global_uniform_object {
+    mat4 projection;
+	mat4 view;
+    mat4 light_space[MAX_SHADOW_CASCADES];
+    vec4 cascade_splits; //NOTE:4 splits
+    vec3 view_position;
+    int mode;
+    int use_pcf;
+    float bias;
+    vec2 padding;
+} global_ubo;
+
+
 layout(set = 1, binding = 0) uniform instance_uniform_object {
-    directional_light dir_light; // TODO: make global;
+    directional_light dir_light;
     point_light p_lights[MAX_POINT_LIGHTS]; // TODO: move after props
     pbr_properties properties;
     int num_p_lights;
@@ -41,24 +55,28 @@ const int SAMP_ALBEDO = 0;
 const int SAMP_NORMAL=1;
 const int SAMP_COMBINED = 2;
 const int SAMP_SHADOW_MAP=3;
-const int SAMP_IBL_CUBE = 4;
+const int SAMP_SHADOW_MAP_1=4;
+const int SAMP_SHADOW_MAP_2=5;
+const int SAMP_SHADOW_MAP_3=6;
+const int SAMP_IBL_CUBE = 7;
+
 
 const float PI= 3.14159265359;
 
 //Samplers, albedo,normal,combined,Shadowmap IBL_cubemap
-layout(set = 1, binding = 1) uniform sampler2D samplers[5];
+layout(set = 1, binding = 1) uniform sampler2D samplers[8];
 
 //Environment map is at the last index.
 //IBL - Alias to get cube samplers
-layout(set = 1, binding = 1) uniform samplerCube cube_samplers[5]; //Alias to get cube samplers
+layout(set = 1, binding = 1) uniform samplerCube cube_samplers[8]; //Alias to get cube samplers
 
 layout(location = 0) flat in int in_mode;
 layout(location = 1) flat in int use_pcf; //离散值
 
 // Data Transfer Object
 layout(location = 2) in struct dto {
-    vec4 light_space_frag_pos;
-    vec4 ambient;
+    vec4 light_space_frag_pos[MAX_SHADOW_CASCADES];
+    vec4 cascade_splits;
 	vec2 tex_coord;
     vec3 normal;
     vec3 view_position;
@@ -72,12 +90,12 @@ layout(location = 2) in struct dto {
 mat3 TBN;
 
 //Percentage_Closer Filtering 卷积  从纹理中获取到更多的样本数据
-float calculate_pcf(vec3 projected){
+float calculate_pcf(vec3 projected,int cascade_index){
     float shadow=0.0;
-    vec2 texel_size=1.0/textureSize(samplers[SAMP_SHADOW_MAP],0).xy;
+    vec2 texel_size=1.0/textureSize(samplers[SAMP_SHADOW_MAP+cascade_index],0).xy;
     for(int x=-1;x<=1;x++){
         for(int y=-1;y<=1;y++){
-           float pcf_depth=texture(samplers[SAMP_SHADOW_MAP],projected.xy+vec2(x,y)*texel_size).r;
+           float pcf_depth=texture(samplers[SAMP_SHADOW_MAP+cascade_index],projected.xy+vec2(x,y)*texel_size).r;
            shadow+=(projected.z-in_dto.bias)>pcf_depth? 1.0:0.0;
         }
     }
@@ -85,9 +103,9 @@ float calculate_pcf(vec3 projected){
     return 1-shadow;
 }
 
-float calculate_unfiltered(vec3 projected){
+float calculate_unfiltered(vec3 projected,int cascade_index){
    //Sample the shadow map.
-   float map_depth=texture(samplers[SAMP_SHADOW_MAP],projected.xy).r;
+   float map_depth=texture(samplers[SAMP_SHADOW_MAP+cascade_index],projected.xy).r;
    
    float shadow=projected.z-in_dto.bias>map_depth?0.0:1.0;
    
@@ -96,7 +114,7 @@ float calculate_unfiltered(vec3 projected){
 
 //Compare the fragment position against the depth buffer, and if it is further
 //back than the shadow map, its in shadow. 1.0 = in shadow ,0.0 =not
-float calculate_shadow(vec4 light_space_frag_pos){
+float calculate_shadow(vec4 light_space_frag_pos,vec3 normal,directional_light light,int cascade_index){
    //Perspective divide - note that while this is pointless for ortho projection,
    //Perspective will require this.
    vec3 projected=light_space_frag_pos.xyz/light_space_frag_pos.w;
@@ -105,9 +123,9 @@ float calculate_shadow(vec4 light_space_frag_pos){
    projected.y=1.0-projected.y;
 
    if(use_pcf==1){
-       return calculate_pcf(projected);
+       return calculate_pcf(projected,cascade_index);
    }else{
-       return calculate_unfiltered(projected);
+       return calculate_unfiltered(projected,cascade_index);
    }
 }
 
@@ -148,7 +166,7 @@ void main() {
     vec3 base_reflectivity =vec3(0.04);
     base_reflectivity = mix(base_reflectivity, albedo, metallic);
 
-     if(in_mode == 0 || in_mode == 1) {
+     if(in_mode == 0 || in_mode == 1||in_mode==3) {
         vec3 view_direction = normalize(in_dto.view_position - in_dto.frag_position);
         // Don't include albedo in mode 1 (lighting-only). Do this by using white 
         // multiplied by mode (mode 1 will result in white, mode 0 will be black),
@@ -164,8 +182,21 @@ void main() {
 
         // Overall reflectance.
         vec3 total_reflectance=vec3(0.0);
-          //Shadow
-        float shadow=calculate_shadow(in_dto.light_space_frag_pos);
+
+        vec4 frag_position_view_space=global_ubo.view*vec4(in_dto.frag_position,1.0); //片段在view空间的位置
+        float depth=abs(frag_position_view_space).z;
+        //Get the cascade index from the current fragments position.
+        int cascade_index=-1;
+        for(int i=0;i<MAX_SHADOW_CASCADES;++i){
+            if(depth<in_dto.cascade_splits[i]){
+               cascade_index=i;
+               break;
+            }
+        }
+        if(cascade_index==-1){
+           cascade_index=MAX_SHADOW_CASCADES;
+        }
+        float shadow=calculate_shadow(in_dto.light_space_frag_pos[cascade_index],normal,instance_ubo.dir_light,cascade_index);
 
         //Directional light radiance.
         {
@@ -196,6 +227,22 @@ void main() {
         //Gamma correction.
         colour=pow(colour,vec3(1.0/2.2));
 
+        if(in_mode==3){
+           switch(cascade_index){
+              case 0:
+              colour*=vec3(1.0,0.25,0.25);
+              break;
+              case 1:
+              colour*=vec3(0.25,1.0,0.25);
+              break;
+              case 2:
+              colour*=vec3(0.25,0.25,1.0);
+              break;
+              case 3:
+              colour*=vec3(1.0,1.0,0.25);
+              break;
+           }
+        }
         //Ensure the alpha is based on the albedos original alpha value.
         out_colour = vec4(colour, albedo_samp.a);
        

@@ -416,7 +416,7 @@ b8 rendergraph_load_resources(rendergraph* graph) {
         // Before loading resources, ensure any self-sourced have textures loaded.
         u32 source_count = darray_length(pass->sources);
         for (u32 j = 0; j < source_count; ++j) {
-            rendergraph_source* source = &pass->sources[i];
+            rendergraph_source* source = &pass->sources[j];
             if (source->origin == RENDERGRAPH_SOURCE_ORIGIN_SELF) {
                 // If the origin is self,hook up the textures to the source.
                 if (pass->attachment_texture_get) {
@@ -425,6 +425,7 @@ b8 rendergraph_load_resources(rendergraph* graph) {
                     source->textures = kallocate(sizeof(texture*) * frame_count, MEMORY_TAG_ARRAY);
                     for (u32 ti = 0; ti < frame_count; ti++) {
                         source->textures[ti] = pass->attachment_texture_get(pass, texture_type, ti);
+
                     }
                 } else {
                     KERROR("Rendergraph pass '%s':source '%s' is set to RENDERGRAPH_SOURCE_ORIGIN_SELF but does not have attachment_texture_get defined.");
