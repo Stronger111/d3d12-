@@ -23,6 +23,7 @@ struct point_light
 const int POINT_LIGHT_MAX = 10;
 const int MAX_TERRAIN_MATERIALS=4;
 const int MAX_SHADOW_CASCADES=4;
+const int TERRAIN_PER_MATERIAL_COUNT=3;
 
 layout(set = 0, binding = 0) uniform global_uniform_object {
     mat4 projection;
@@ -34,6 +35,7 @@ layout(set = 0, binding = 0) uniform global_uniform_object {
     int mode;
     int use_pcf;
     float bias;
+    vec2 padding;
 } global_ubo;
 
 struct material_phong_properties
@@ -64,23 +66,15 @@ const int SAMP_ALBEDO_OFFSET = 0;
 const int SAMP_NORMAL_OFFSET = 1;
 const int SAMP_COMBINED_OFFSET=2;
 
-//Shadow map comes after all materials
-const int SAMP_SHADOW_MAP=12;
-const int SAMP_SHADOW_MAP_1=13;
-const int SAMP_SHADOW_MAP_2=14;
-const int SAMP_SHADOW_MAP_3=15;
-
-//Irradience cube comes after all material textures.
-const int SAMP_IRRADIENCE_OFFSET =16; //SAMP_SHADOW_MAP+4
-
 const float PI = 3.14159265359;
 
-//Samplers,albedo, normal,combineTex, etc...
+//Material textures:albedo, normal,combineTex(metallic,roughness,ao)...
 //One more sampler2D is at the end,which is the shadow map.
-layout(set = 1, binding = 1) uniform sampler2D samplers[5+(3*MAX_TERRAIN_MATERIALS)];
-//Environment map is at the last index.
-//IBL - Alias to get cube samples
-layout(set = 1, binding = 1) uniform samplerCube cube_samplers[5+(3*MAX_TERRAIN_MATERIALS)];
+layout(set = 1, binding = 1) uniform sampler2DArray material_textures;
+//Shadow maps
+layout(set = 1, binding = 2) uniform sampler2DArray shadow_texture;
+//IBL irradiance
+layout(set = 1, binding = 3) uniform samplerCube irradiance_texture;
 
 layout(location = 0) flat in int in_mode;
 layout(location = 1) flat in int use_pcf;
@@ -105,21 +99,22 @@ mat3 TBN;
 //Percentage_Closer Filtering 卷积  从纹理中获取到更多的样本数据
 float calculate_pcf(vec3 projected,int cascade_index){
     float shadow=0.0;
-    vec2 texel_size=1.0/textureSize(samplers[SAMP_SHADOW_MAP+cascade_index],0).xy;
+    vec2 texel_size=1.0/textureSize(shadow_texture,0).xy;
     for(int x=-1;x<=1;x++){
         for(int y=-1;y<=1;y++){
-           float pcf_depth=texture(samplers[SAMP_SHADOW_MAP+cascade_index],projected.xy+vec2(x,y)*texel_size).r;
+           float pcf_depth=texture(shadow_texture,vec3(projected.xy+vec2(x,y)*texel_size,cascade_index)).r;
            shadow+=(projected.z-in_dto.bias)>pcf_depth? 1.0:0.0;
         }
     }
-    shadow/=9;
-    return 1-shadow;
+    shadow/=9.0;
+    return 1.0-shadow;
 }
 
 float calculate_unfiltered(vec3 projected,int cascade_index){
    //Sample the shadow map.
-   float map_depth=texture(samplers[SAMP_SHADOW_MAP+cascade_index],projected.xy).r;
+   float map_depth=texture(shadow_texture,vec3(projected.xy,cascade_index)).r;
    
+   //TODO: cast/get rid of branch
    float shadow=projected.z-in_dto.bias>map_depth?0.0:1.0;
    
    return shadow;
@@ -171,12 +166,13 @@ void main() {
     //Sample each material
     for(int m=0;m<instance_ubo.properties.num_materials;++m)
     {
-        int m_element=(m*3);
-        albedos[m]= texture(samplers[m_element + SAMP_ALBEDO_OFFSET], in_dto.tex_coord);
+        int m_element=(m*TERRAIN_PER_MATERIAL_COUNT);
+        albedos[m]= texture(material_textures,vec3(in_dto.tex_coord,m_element+SAMP_ALBEDO_OFFSET));
         albedos[m]=vec4(pow(albedos[m].rgb,vec3(2.2)),albedos[m].a);
-        vec3 local_normal=2.0 * texture(samplers[m_element + SAMP_NORMAL_OFFSET], in_dto.tex_coord).rgb - 1.0;
-        normals[m] = normalize(TBN * local_normal);
-        vec4 combined= texture(samplers[m_element + SAMP_COMBINED_OFFSET], in_dto.tex_coord);
+        //Just sample these for now, will blend and apply surface normal later.
+        normals[m] =  texture(material_textures,vec3(in_dto.tex_coord,m_element + SAMP_NORMAL_OFFSET)).rgb;
+
+        vec4 combined= texture(material_textures,vec3(in_dto.tex_coord,m_element + SAMP_COMBINED_OFFSET));
         metallics[m]= combined.r;
         roughnesses[m]=combined.g;
         aos[m]= combined.b;
@@ -190,11 +186,23 @@ void main() {
          albedos[3]*in_dto.mat_weights[3];
     // Make sure albedo is fully opaque. Transparent terrains make no sense.
     albedo.a=1.0;
+
+    // vec3 n0 = (normals[0] * 2 - 1) * in_dto.mat_weights[0];
+    // vec3 n1 = (normals[1] * 2 - 1) * in_dto.mat_weights[1];
+    // vec3 n2 = (normals[2] * 2 - 1) * in_dto.mat_weights[2];
+    // vec3 n3 = (normals[3] * 2 - 1) * in_dto.mat_weights[3];
+    // normal = normalize(vec3(n0.xy + n1.xy + n2.xy + n3.xy, n0.z));
+    // normal = normal * 0.25 + 0.5;
+
     normal=
          normals[0]*in_dto.mat_weights[0] +
          normals[1]*in_dto.mat_weights[1] +
          normals[2]*in_dto.mat_weights[2] +
          normals[3]*in_dto.mat_weights[3];
+    normal=normalize(normal);
+
+    vec3 local_normal=2.0*normal-1.0;
+    normal=normalize(TBN * local_normal);
     
     float metallic = metallics[0] * in_dto.mat_weights[0] +
         metallics[1] * in_dto.mat_weights[1] +
@@ -210,6 +218,24 @@ void main() {
         aos[1] * in_dto.mat_weights[1] +
         aos[2] * in_dto.mat_weights[2] +
         aos[3] * in_dto.mat_weights[3];
+
+    
+    //Generate shadow value based on current fragment position vs shadow map.
+    //Light and normal are also taken in the case that a bias is to be used.
+    vec4 frag_position_view_space=global_ubo.view*vec4(in_dto.frag_position,1.0); //片段在view空间的位置
+    float depth=abs(frag_position_view_space).z;
+    //Get the cascade index from the current fragments position.
+    int cascade_index=-1;
+    for(int i=0;i<MAX_SHADOW_CASCADES;++i){
+        if(depth<in_dto.cascade_splits[i]){
+            cascade_index=i;
+            break;
+        }
+    }
+    if(cascade_index==-1){
+        cascade_index=MAX_SHADOW_CASCADES;
+    }
+    float shadow=calculate_shadow(in_dto.light_space_frag_pos[cascade_index],normal,global_ubo.dir_light,cascade_index);
     
     // calculate reflectance at normal incidence; if dia-electric (like plastic) use base_reflectivity 
     // of 0.04 and if it's a metal, use the albedo color as base_reflectivity (metallic workflow)   
@@ -233,24 +259,6 @@ void main() {
         // Overall reflectance.
         vec3 total_reflectance=vec3(0.0);
 
-        //Generate shadow value based on current fragment position vs shadow map.
-        //Light and normal are also taken in the case that a bias is to be used.
-        //TODO: take point lights into account in shadows.
-        vec4 frag_position_view_space=global_ubo.view*vec4(in_dto.frag_position,1.0); //片段在view空间的位置
-        float depth=abs(frag_position_view_space).z;
-        //Get the cascade index from the current fragments position.
-        int cascade_index=-1;
-        for(int i=0;i<MAX_SHADOW_CASCADES;++i){
-            if(depth<in_dto.cascade_splits[i]){
-               cascade_index=i;
-               break;
-            }
-        }
-        if(cascade_index==-1){
-           cascade_index=MAX_SHADOW_CASCADES;
-        }
-        float shadow=calculate_shadow(in_dto.light_space_frag_pos[cascade_index],normal,global_ubo.dir_light,cascade_index);
-
         //Directional light radiance.
         {
             directional_light light = global_ubo.dir_light;
@@ -258,7 +266,7 @@ void main() {
             vec3 radiance=calculate_directional_light_radiance(light, view_direction);
 
             //Only directional light should be affected by shadow map.
-            total_reflectance+=shadow*calculate_reflectance(albedo.xyz, normal, view_direction, light_direction, metallic, roughness, base_reflectivity, radiance);
+            total_reflectance+=(shadow*calculate_reflectance(albedo.xyz, normal, view_direction, light_direction, metallic, roughness, base_reflectivity, radiance));
         }
 
         for(int i = 0; i < instance_ubo.num_p_lights; ++i) {
@@ -269,7 +277,7 @@ void main() {
         }
 
         //Irradiance holds all the scenes indirect diffuse light.Use the surface normal to sample from it.
-        vec3 irradiance=texture(cube_samplers[SAMP_IRRADIENCE_OFFSET],normal).rgb;
+        vec3 irradiance=texture(irradiance_texture,normal).rgb;
 
         //Combine irradiance with albedo and ambient occlusion.
         //Also add in total accumulated reflectance.

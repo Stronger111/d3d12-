@@ -36,6 +36,8 @@ The items in this list are not in any particular order. This list will be update
 - [ ] quadtrees/octrees
 - [x] Threads 
 - [x] Job system
+-  [] Job dependencies
+-  [] Job semaphores/signaling
 - [ ] Multi-threaded logger
 - [x] Textures 
   - [ ] binary file format (.kbt)

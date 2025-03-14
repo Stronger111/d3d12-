@@ -190,7 +190,10 @@
         "sui_panel.h": "c",
         "*.rh": "c",
         "ksort.h": "c",
-        "shadow_map_pass.h": "c"
+        "shadow_map_pass.h": "c",
+        "renderer_utils.h": "c",
+        "functional": "c",
+        "optional": "c"
     },
     // File copyright documentation tag.  Array of strings will be converted to one line per element.  Can template {year}.
     "doxdocgen.file.copyrightTag": [

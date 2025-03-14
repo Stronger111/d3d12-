@@ -1017,7 +1017,7 @@ static b8 write_kmt_file(const char *mtl_file_path, material_config *config) {
                               config->properties[i].value_mat4.data[14],
                               config->properties[i].value_mat4.data[15]);
                 break;
-            case SHADER_UNIFORM_TYPE_SAMPLER:
+            //case SHADER_UNIFORM_TYPE_SAMPLER:
             case SHADER_UNIFORM_TYPE_CUSTOM:
             default:
                 KERROR("Unsupported material property type.");

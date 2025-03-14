@@ -13,6 +13,7 @@
 
 #pragma once
 
+#include "core/frame_data.h"
 #include "renderer_types.h"
 
 struct shader;
@@ -297,12 +298,9 @@ KAPI b8 renderer_renderpass_end(renderpass* pass);
  * @param s A pointer to the shader.
  * @param config A constant pointer to the shader config.
  * @param pass A pointer to the renderpass to be associated with the shader.
- * @param stage_count The total number of stages.
- * @param stage_filenames An array of shader stage filenames to be loaded. Should align with stages array.
- * @param stages A array of shader_stages indicating what render stages (vertex, fragment, etc.) used in this shader.
  * @return b8 True on success; otherwise false.
  */
-KAPI b8 renderer_shader_create(struct shader* s, const shader_config* config, renderpass* pass, u8 stage_count, const char** stage_filenames, shader_stage* stages);
+KAPI b8 renderer_shader_create(struct shader* s, const shader_config* config, renderpass* pass);
 
 /**
  * @brief Destroys the given shader and releases any resources held by it.
@@ -346,14 +344,12 @@ KAPI b8 renderer_shader_bind_globals(struct shader* s);
 KAPI b8 renderer_shader_bind_instance(struct shader* s, u32 instance_id);
 
 /**
- * @brief Sets the uniform of the given shader to the provided value.
+ * @brief Binds local resources for use and updating.
  *
- * @param s A ponter to the shader.
- * @param uniform A constant pointer to the uniform.
- * @param value A pointer to the value to be set.
- * @return b8 True on success; otherwise false.
+ * @param s A pointer to the shader whose local resources are to be bound.
+ * @return True on success; otherwise false.
  */
-KAPI b8 renderer_shader_uniform_set(struct shader* s, struct shader_uniform* uniform, const void* value);
+KAPI b8 renderer_shader_bind_local(struct shader* s);
 
 /**
  * @brief Applies global data to the uniform buffer.
@@ -362,7 +358,7 @@ KAPI b8 renderer_shader_uniform_set(struct shader* s, struct shader_uniform* uni
  *  @param needs_update Indicates if the shader uniforms need to be updated or just bound.
  * @return True on success; otherwise false.
  */
-KAPI b8 renderer_shader_apply_globals(struct shader* s, b8 needs_update);
+KAPI b8 renderer_shader_apply_globals(struct shader* s, b8 needs_update,frame_data* p_frame_data);
 
 /**
  * @brief Applies data for the currently bound instance.
@@ -371,18 +367,34 @@ KAPI b8 renderer_shader_apply_globals(struct shader* s, b8 needs_update);
  * @param needs_update Indicates if shader internals need an update, or if they should just be bound.
  * @return True on success; otherwise false.
  */
-KAPI b8 renderer_shader_apply_instance(struct shader* s, b8 needs_update);
+KAPI b8 renderer_shader_apply_instance(struct shader* s, b8 needs_update,frame_data* p_frame_data);
+
+/**
+ * @brief Sets the uniform of the given shader to the provided value.
+ *
+ * @param s A ponter to the shader.
+ * @param uniform A constant pointer to the uniform.
+ * @param array_index The index of the uniform array to be set, if it is an array. For non-array types, this value is ignored.
+ * @param value A pointer to the value to be set.
+ * @return b8 True on success; otherwise false.
+ */
+KAPI b8 renderer_shader_uniform_set(struct shader* s, struct shader_uniform* uniform, u32 array_index, const void* value);
+
+/**
+ * @brief Triggers the upload of local uniform data to the GPU.
+ * @param s A ponter to the shader.
+ */
+KAPI b8 renderer_shader_apply_local(struct shader* s, frame_data* p_frame_data);
 
 /**
  * @brief Acquires internal instance-level resources and provides an instance id.
  *
  * @param s A pointer to the shader to acquire resources from.
- * @param texture_map_count The number of texture maps used.
- * @param maps An array of texture map pointers. Must be one per texture in the instance.
+ * @param config A constant pointer to the configuration of the instance to be used while acquiring resources.
  * @param out_instance_id A pointer to hold the new instance identifier.
  * @return True on success; otherwise false.
  */
-KAPI b8 renderer_shader_instance_resources_acquire(struct shader* s, u32 texture_map_count, texture_map** maps, u32* out_instance_id);
+KAPI b8 renderer_shader_instance_resources_acquire(struct shader* s,const shader_instance_resource_config* config, u32* out_instance_id);
 
 /**
  * @brief Releases internal instance-level resources for the given instance id.
@@ -416,9 +428,10 @@ KAPI void renderer_texture_map_resources_release(struct texture_map* map);
  * @param renderpass A pointer to the renderpass the render target is associated with.
  * @param width The width of the render target in pixels.
  * @param height The height of the render target in pixels.
+ * @param layer_index The index of the layer to use for the attachment, if the image is a array texture.
  * @param out_target A pointer to hold the newly created render target.
  */
-KAPI void renderer_render_target_create(u8 attachment_count, render_target_attachment* attachments, renderpass* renderpass, u32 width, u32 height, render_target* out_target);
+KAPI void renderer_render_target_create(u8 attachment_count, render_target_attachment* attachments, renderpass* renderpass, u32 width, u32 height, u16 layer_index, render_target* out_target);
 
 /**
  * @brief Destroys the provided render target.

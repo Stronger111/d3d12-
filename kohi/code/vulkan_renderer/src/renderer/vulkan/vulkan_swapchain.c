@@ -196,8 +196,8 @@ static void create(vulkan_context* context, u32 width, u32 height, renderer_conf
     if (!swapchain->depth_textures) {
         swapchain->depth_textures = (texture*)kallocate(sizeof(texture) * swapchain->image_count, MEMORY_TAG_RENDERER);
     }
-    
-    //Create depth/stencil images and its view
+
+    // Create depth/stencil images and its view
     for (u32 i = 0; i < context->swapchain.image_count; ++i) {
         char formatted_name[TEXTURE_NAME_MAX_LENGTH] = {0};
         string_format(formatted_name, "__kohi_default_depth_stencil_texture_%u", i);
@@ -208,6 +208,7 @@ static void create(vulkan_context* context, u32 width, u32 height, renderer_conf
             TEXTURE_TYPE_2D,
             swapchain_extent.width,
             swapchain_extent.height,
+            1,
             context->device.depth_format,
             VK_IMAGE_TILING_OPTIMAL,
             VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,

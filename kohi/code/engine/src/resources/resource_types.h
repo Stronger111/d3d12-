@@ -120,20 +120,33 @@ typedef u8 texture_flag_bits;
 typedef enum texture_type {
     /** @brief A standard two-dimensional texture. */
     TEXTURE_TYPE_2D,
+    /** @brief A 2d array texture. */
+    TEXTURE_TYPE_2D_ARRAY,
     /** @brief A cube texture, used for cubemaps. */
-    TEXTURE_TYPE_CUBE
+    TEXTURE_TYPE_CUBE,
+    TEXTURE_TYPE_CUBE_ARRAY,
+    TEXTURE_TYPE_COUNT
 } texture_type;
 
 typedef struct texture {
+    /** @brief The unique texture identifier. */
     u32 id;
     /** @brief The texture type. */
     texture_type type;
+    /** @brief The texture width. */
     u32 width;
+    /** @brief The texture height. */
     u32 height;
+    /** @brief The number of channels in the texture. */
     u8 channel_count;
+    /** @brief For arrayed textures, how many "layers" there are. Otherwise this is 1. */
+    u16 array_size;
     /** @brief Holds various flags for this texture. */
     texture_flag_bits flags;
+    /** @brief The texture generation. Incremented every time the data is
+     * reloaded. */
     u32 generation;
+    /** @brief The texture name. */
     char name[TEXTURE_NAME_MAX_LENGTH];
     /** @brief The raw texture data (pixels).---->Vulkan_image */
     void* internal_data;
@@ -321,6 +334,14 @@ typedef enum shader_stage {
     SHADER_STAGE_COMPUTE = 0x0000008
 } shader_stage;
 
+typedef struct shader_stage_config {
+    shader_stage stage;
+    const char* name;
+    const char* filename;
+    u32 source_length;
+    char* source;
+} shader_stage_config;
+
 /** @brief Available attribute types. */
 typedef enum shader_attribute_type {
     SHADER_ATTRIB_TYPE_FLOAT32 = 0U,
@@ -349,7 +370,13 @@ typedef enum shader_uniform_type {
     SHADER_UNIFORM_TYPE_INT32 = 8U,
     SHADER_UNIFORM_TYPE_UINT32 = 9U,
     SHADER_UNIFORM_TYPE_MATRIX_4 = 10U,
-    SHADER_UNIFORM_TYPE_SAMPLER = 11U,
+    SHADER_UNIFORM_TYPE_SAMPLER_1D = 11U,
+    SHADER_UNIFORM_TYPE_SAMPLER_2D = 12U,
+    SHADER_UNIFORM_TYPE_SAMPLER_3D = 13U,
+    SHADER_UNIFORM_TYPE_SAMPLER_CUBE = 14U,
+    SHADER_UNIFORM_TYPE_SAMPLER_1D_ARRAY = 15U,
+    SHADER_UNIFORM_TYPE_SAMPLER_2D_ARRAY = 16U,
+    SHADER_UNIFORM_TYPE_SAMPLER_CUBE_ARRAY = 17U,
     SHADER_UNIFORM_TYPE_CUSTOM = 255U
 } shader_uniform_type;
 /**
@@ -389,6 +416,8 @@ typedef struct shader_uniform_config {
     u32 location;
     /** @brief The type of the uniform. */
     shader_uniform_type type;
+    /** @brief The array length, if uniform is an array. */
+    u32 array_length;
     /** @brief The scope of the uniform. */
     shader_scope scope;
 } shader_uniform_config;
@@ -418,12 +447,11 @@ typedef struct shader_config {
     shader_uniform_config* uniforms;
     /** @brief The number of stages present in the shader. */
     u8 stage_count;
-    /** @brief The collection of stages. Darray. */
-    shader_stage* stages;
-    /** @brief The collection of stage names. Must align with stages array. Darray. */
-    char** stage_names;
-    /** @brief The collection of stage file names to be loaded (one per stage). Must align with stages array. Darray. */
-    char** stage_filenames;
+    /** @brief The collection of stage configs. */
+    shader_stage_config* stage_configs;
+
+    /** @brief The maximum number of instances allowed. */
+    u32 max_instances;
 
     /** @brief The flags set for this shader. */
     u32 flags;
@@ -432,7 +460,6 @@ typedef struct shader_config {
 typedef enum material_type {
     // Invalid
     MATERIAL_TYPE_UNKNOWN = 0,
-    MATERIAL_TYPE_PHONG = 1,
     MATERIAL_TYPE_PBR = 2,
     MATERIAL_TYPE_UI = 3,
     MATERIAL_TYPE_TERRAIN = 4,

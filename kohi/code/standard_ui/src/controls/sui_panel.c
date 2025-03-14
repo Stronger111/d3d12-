@@ -54,7 +54,7 @@ b8 sui_panel_control_load(struct sui_control* self) {
 
     // Create a simple plane.
     geometry_config ui_config = {0};
-    //生成网格数据
+    // 生成网格数据
     generate_quad_2d(self->name, typed_data->rect.width, typed_data->rect.height, xmin, xmax, ymin, ymax, &ui_config);
     // Get UI geometry from config. NOTE:this upload to GPU.
     typed_data->g = geometry_system_acquire_from_config(ui_config, true);
@@ -64,7 +64,18 @@ b8 sui_panel_control_load(struct sui_control* self) {
     // Acquire instance resources for this control.
     texture_map* maps[1] = {&typed_state->ui_atlas};
     shader* s = shader_system_get("Shader.StandardUI");
-    renderer_shader_instance_resources_acquire(s, 1, maps, &typed_data->instance_id);
+    u16 atlas_location = s->uniforms[s->instance_sampler_indices[0]].index;
+    shader_instance_resource_config instance_resource_config = {0};
+    // Map count for this type is known.
+    shader_instance_uniform_texture_config atlas_texture = {0};
+    atlas_texture.uniform_location = atlas_location;
+    atlas_texture.texture_map_count = 1;
+    atlas_texture.texture_maps = maps;
+
+    instance_resource_config.uniform_config_count = 1;
+    instance_resource_config.uniform_configs = &atlas_texture;
+
+    renderer_shader_instance_resources_acquire(s, &instance_resource_config, &typed_data->instance_id);
 
     return true;
 }
@@ -96,7 +107,7 @@ b8 sui_panel_control_render(struct sui_control* self, struct frame_data* p_frame
         renderable.render_data.index_count = typed_data->g->index_count;
         renderable.render_data.index_element_size = typed_data->g->index_element_size;
         renderable.render_data.index_buffer_offset = typed_data->g->index_buffer_offset;
-        renderable.render_data.model=transform_world_get(&self->xform);
+        renderable.render_data.model = transform_world_get(&self->xform);
         renderable.render_data.diffuse_colour = typed_data->colour;
 
         renderable.instance_id = &typed_data->instance_id;

@@ -49,26 +49,19 @@ layout(set = 1, binding = 0) uniform instance_uniform_object {
     int num_p_lights;
 } instance_ubo;
 
-
+const int PBR_MATERIAL_TEXTURE_COUNT=3;
 // Samplers
 const int SAMP_ALBEDO = 0;
 const int SAMP_NORMAL=1;
 const int SAMP_COMBINED = 2;
-const int SAMP_SHADOW_MAP=3;
-const int SAMP_SHADOW_MAP_1=4;
-const int SAMP_SHADOW_MAP_2=5;
-const int SAMP_SHADOW_MAP_3=6;
-const int SAMP_IBL_CUBE = 7;
-
 
 const float PI= 3.14159265359;
-
-//Samplers, albedo,normal,combined,Shadowmap IBL_cubemap
-layout(set = 1, binding = 1) uniform sampler2D samplers[8];
-
+//Samplers, albedo,normal,combined (metallic,roughness,ao)
+layout(set = 1, binding = 1) uniform sampler2D material_textures[3];
+//Shadow maps
+layout(set = 1, binding = 2) uniform sampler2DArray shadow_texture;
 //Environment map is at the last index.
-//IBL - Alias to get cube samplers
-layout(set = 1, binding = 1) uniform samplerCube cube_samplers[8]; //Alias to get cube samplers
+layout(set = 1, binding = 3) uniform samplerCube irradiance_texture;
 
 layout(location = 0) flat in int in_mode;
 layout(location = 1) flat in int use_pcf; //离散值
@@ -92,20 +85,20 @@ mat3 TBN;
 //Percentage_Closer Filtering 卷积  从纹理中获取到更多的样本数据
 float calculate_pcf(vec3 projected,int cascade_index){
     float shadow=0.0;
-    vec2 texel_size=1.0/textureSize(samplers[SAMP_SHADOW_MAP+cascade_index],0).xy;
+    vec2 texel_size=1.0/textureSize(shadow_texture,0).xy;
     for(int x=-1;x<=1;x++){
         for(int y=-1;y<=1;y++){
-           float pcf_depth=texture(samplers[SAMP_SHADOW_MAP+cascade_index],projected.xy+vec2(x,y)*texel_size).r;
+           float pcf_depth=texture(shadow_texture,vec3(projected.xy+vec2(x,y)*texel_size,cascade_index)).r;
            shadow+=(projected.z-in_dto.bias)>pcf_depth? 1.0:0.0;
         }
     }
-    shadow/=9;
-    return 1-shadow;
+    shadow/=9.0;
+    return 1.0-shadow;
 }
 
 float calculate_unfiltered(vec3 projected,int cascade_index){
    //Sample the shadow map.
-   float map_depth=texture(samplers[SAMP_SHADOW_MAP+cascade_index],projected.xy).r;
+   float map_depth=texture(shadow_texture,vec3(projected.xy,cascade_index)).r;
    
    float shadow=projected.z-in_dto.bias>map_depth?0.0:1.0;
    
@@ -149,17 +142,34 @@ void main() {
     TBN = mat3(tangent, bitangent, normal);
 
     // Update the normal to use a sample from the normal map.
-    vec3 localNormal = 2.0 * texture(samplers[SAMP_NORMAL], in_dto.tex_coord).rgb - 1.0;
+    vec3 localNormal = 2.0 * texture(material_textures[SAMP_NORMAL], in_dto.tex_coord).rgb - 1.0;
     normal = normalize(TBN * localNormal);
 
     //diffuse color
-    vec4 albedo_samp=texture(samplers[SAMP_ALBEDO],in_dto.tex_coord);
+    vec4 albedo_samp=texture(material_textures[SAMP_ALBEDO],in_dto.tex_coord);
     vec3 albedo=pow(albedo_samp.rgb,vec3(2.2));
     
-    vec4 combined=texture(samplers[SAMP_COMBINED], in_dto.tex_coord);
+    vec4 combined=texture(material_textures[SAMP_COMBINED], in_dto.tex_coord);
     float metallic=combined.r;
     float roughness=combined.g;
     float ao=combined.b;
+
+    // Generate shadow value based on current fragment position vs shadow map.
+    // Light and normal are also taken in the case that a bias is to be used.
+    vec4 frag_position_view_space=global_ubo.view*vec4(in_dto.frag_position,1.0); //片段在view空间的位置
+    float depth=abs(frag_position_view_space).z;
+    //Get the cascade index from the current fragments position.
+    int cascade_index=-1;
+    for(int i=0;i<MAX_SHADOW_CASCADES;++i){
+            if(depth<in_dto.cascade_splits[i]){
+               cascade_index=i;
+               break;
+        }
+    }
+    if(cascade_index==-1){
+           cascade_index=MAX_SHADOW_CASCADES;
+    }
+    float shadow=calculate_shadow(in_dto.light_space_frag_pos[cascade_index],normal,instance_ubo.dir_light,cascade_index);
 
     // calculate reflectance at normal incidence; if dia-electric (like plastic) use base_reflectivity 
     // of 0.04 and if it's a metal, use the albedo color as base_reflectivity (metallic workflow)   
@@ -183,21 +193,6 @@ void main() {
         // Overall reflectance.
         vec3 total_reflectance=vec3(0.0);
 
-        vec4 frag_position_view_space=global_ubo.view*vec4(in_dto.frag_position,1.0); //片段在view空间的位置
-        float depth=abs(frag_position_view_space).z;
-        //Get the cascade index from the current fragments position.
-        int cascade_index=-1;
-        for(int i=0;i<MAX_SHADOW_CASCADES;++i){
-            if(depth<in_dto.cascade_splits[i]){
-               cascade_index=i;
-               break;
-            }
-        }
-        if(cascade_index==-1){
-           cascade_index=MAX_SHADOW_CASCADES;
-        }
-        float shadow=calculate_shadow(in_dto.light_space_frag_pos[cascade_index],normal,instance_ubo.dir_light,cascade_index);
-
         //Directional light radiance.
         {
             directional_light light = instance_ubo.dir_light;
@@ -216,7 +211,7 @@ void main() {
         }
 
         //Irradiance holds all the scenes indirect diffuse light.Use the surface normal to sample from it.
-        vec3 irradiance=texture(cube_samplers[SAMP_IBL_CUBE],normal).rgb;
+        vec3 irradiance=texture(irradiance_texture,normal).rgb;
 
         //Combine irradiance with albedo and ambient occlusion.Also add in total accumulated reflectance.
         vec3 ambient=irradiance*albedo*ao; 

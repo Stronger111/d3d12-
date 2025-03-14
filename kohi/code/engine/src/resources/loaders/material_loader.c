@@ -10,19 +10,17 @@
 #include "resources/resource_types.h"
 #include "systems/resource_system.h"
 
-typedef enum material_parse_mode
-{
+typedef enum material_parse_mode {
     MATERIAL_PARSE_MODE_GLOBAL,
     MATERIAL_PARSE_MODE_MAP,
     MATERIAL_PARSE_MODE_PROPERTY
-}material_parse_mode;
+} material_parse_mode;
 
 #define MATERIAL_PARSE_VERIFY_MODE(expected_mode, actual_mode, var_name, expected_mode_str)                                   \
     if (actual_mode != expected_mode) {                                                                                       \
         KERROR("Format error: unexpected variable '%s', should only exist inside a '%s' node.", var_name, expected_mode_str); \
         return false;                                                                                                         \
     }
-
 
 static b8 material_parse_filter(const char *trimmed_value, const char *trimmed_var_name, material_parse_mode parse_mode, texture_filter *filter) {
     MATERIAL_PARSE_VERIFY_MODE(MATERIAL_PARSE_MODE_MAP, parse_mode, trimmed_var_name, "map");
@@ -112,7 +110,6 @@ static void material_prop_assign_value(material_config_prop *prop, const char *v
             string_to_mat4(value, &prop->value_mat4);
             prop->size = sizeof(mat4);
             break;
-        case SHADER_UNIFORM_TYPE_SAMPLER:
         case SHADER_UNIFORM_TYPE_CUSTOM:
         default:
             prop->size = 0;
@@ -158,7 +155,7 @@ static shader_uniform_type material_parse_prop_type(const char *strval) {
     }
 }
 
-static b8 material_loader_load(struct resource_loader* self, const char* name, void* params, resource* out_resource) {
+static b8 material_loader_load(struct resource_loader *self, const char *name, void *params, resource *out_resource) {
     if (!self || !name || !out_resource) {
         return false;
     }
@@ -178,7 +175,7 @@ static b8 material_loader_load(struct resource_loader* self, const char* name, v
 
     material_config *resource_data = kallocate(sizeof(material_config), MEMORY_TAG_RESOURCE);
     // Set some defaults.
-    resource_data->shader_name = "Shader.Builtin.Material";  // Default material.
+    resource_data->shader_name = "Shader.PBRMaterial";  // Default material are PBR.
     resource_data->auto_release = true;
     resource_data->maps = darray_create(material_map);
     resource_data->properties = darray_create(material_config_prop);
@@ -349,13 +346,11 @@ static b8 material_loader_load(struct resource_loader* self, const char* name, v
             if (resource_data->version >= 2) {
                 if (parse_mode == MATERIAL_PARSE_MODE_GLOBAL) {
                     if (strings_equali(trimmed_value, "phong")) {
-                        resource_data->type = MATERIAL_TYPE_PHONG;
+                        KERROR("Phong materials are no longer supported. Attempting to convert to PBR.");
+                        resource_data->type = MATERIAL_TYPE_PBR;
                     } else if (strings_equali(trimmed_value, "pbr")) {
                         resource_data->type = MATERIAL_TYPE_PBR;
-                        resource_data->shader_name = string_duplicate("Shader.PBRMaterial");
-                    } else if (strings_equali(trimmed_value, "ui")) {
-                        resource_data->type = MATERIAL_TYPE_UI;
-                    } else if (strings_equali(trimmed_value, "terrain")){
+                    } else if (strings_equali(trimmed_value, "terrain")) {
                         resource_data->type = MATERIAL_TYPE_TERRAIN;
                     } else if (strings_equali(trimmed_value, "custom")) {
                         resource_data->type = MATERIAL_TYPE_CUSTOM;
@@ -408,9 +403,9 @@ static b8 material_loader_load(struct resource_loader* self, const char* name, v
         line_number++;
     }
 
-    // If version 1 and unknown material type, default to "phong"
+    // If version 1 and unknown material type, default to "PBR"
     if (resource_data->version == 1 && resource_data->type == MATERIAL_TYPE_UNKNOWN) {
-        resource_data->type = MATERIAL_TYPE_PHONG;
+        resource_data->type = MATERIAL_TYPE_PBR;
     }
 
     filesystem_close(&f);
@@ -422,7 +417,7 @@ static b8 material_loader_load(struct resource_loader* self, const char* name, v
     return true;
 }
 
-static void material_loader_unload(struct resource_loader* self, resource* resource) {
+static void material_loader_unload(struct resource_loader *self, resource *resource) {
     if (!resource_unload(self, resource, MEMORY_TAG_RESOURCE)) {
         KWARN("material_loader_unload called with nullptr for self or resource.");
     }

@@ -56,6 +56,8 @@ typedef int b32;
 /** @brief 8-bit boolean type */
 typedef _Bool b8;
 
+#define UINT64_MAX_T  0xffffffffffffffffull
+
 /** @brief A range, typically of memory */
 typedef struct range {
     /** @brief The offset in bytes. */

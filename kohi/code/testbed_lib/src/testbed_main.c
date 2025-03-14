@@ -5,7 +5,7 @@
 #include <core/event.h>
 #include <core/frame_data.h>
 #include <core/input.h>
-#include <core/clock.h>
+#include <core/kclock.h>
 #include <core/kmemory.h>
 #include <core/kstring.h>
 #include <core/logger.h>
@@ -472,6 +472,12 @@ b8 application_boot(struct application* game_inst) {
         return false;
     }
 
+    testbed_game_state* state=(testbed_game_state*)game_inst->state;
+    if(!rendergraph_finalize(&state->frame_graph)){
+       KERROR("Failed to finalize rendergraph. See log for details.");
+       return false;
+    }
+
     // 按键映射
     game_setup_keymaps(game_inst);
     // 控制台命令
@@ -674,10 +680,10 @@ b8 application_initialize(struct application* game_inst) {
 
     // kzero_memory(&game_inst->frame_data, sizeof(app_frame_data));
 
-    kzero_memory(&state->update_clock, sizeof(clock));
-    kzero_memory(&state->prepare_clock, sizeof(clock));
-    kzero_memory(&state->render_clock, sizeof(clock));
-    kzero_memory(&state->present_clock, sizeof(clock));
+    kzero_memory(&state->update_clock, sizeof(kclock));
+    kzero_memory(&state->prepare_clock, sizeof(kclock));
+    kzero_memory(&state->render_clock, sizeof(kclock));
+    kzero_memory(&state->present_clock, sizeof(kclock));
 
     // Load up a test audio file.
     state->test_audio_file = audio_system_chunk_load("Test.ogg");
@@ -718,43 +724,43 @@ b8 application_initialize(struct application* game_inst) {
 
     // HACK: Begin frustum visualizations for the camera and the shadow "camera".
     // Note that things in this block are not needed otherwise.
-    {
-        // A box visualize the center point of the perspective projection matrix.
-        debug_box3d centerbox;
-        debug_box3d_create((vec3){1.0f, 1.0f, 1.0f}, 0, &centerbox);
-        debug_box3d_colour_set(&centerbox, (vec4){0.0f, 0.0f, 1.0f, 1.0f});
-        debug_box3d_initialize(&centerbox);
-        debug_box3d_load(&centerbox);
-        darray_push(state->test_boxes, centerbox);
-        u32 box_count = darray_length(state->test_boxes);
-        state->proj_box_index = box_count - 1;
+    // {
+    //     // A box visualize the center point of the perspective projection matrix.
+    //     debug_box3d centerbox;
+    //     debug_box3d_create((vec3){1.0f, 1.0f, 1.0f}, 0, &centerbox);
+    //     debug_box3d_colour_set(&centerbox, (vec4){0.0f, 0.0f, 1.0f, 1.0f});
+    //     debug_box3d_initialize(&centerbox);
+    //     debug_box3d_load(&centerbox);
+    //     darray_push(state->test_boxes, centerbox);
+    //     u32 box_count = darray_length(state->test_boxes);
+    //     state->proj_box_index = box_count - 1;
 
-        // Create debug lines for the perspective and shadow cameras.
-        // 12 lines each - 4 for the near clip, 4 for the far clip ,4 connectors.
-        // Perspective lines first, then shadow.
-        for (u32 j = 0; j < 2; ++j) {
-            for (u32 i = 0; i < 12; i++) {
-                vec4 colour = (vec4){0.0f, 1.0f, 0.0f, 1.0f};
-                if (i > 3 && i < 8) {
-                    colour.r = 1.0f;
-                    colour.g = 0.0f;
-                    colour.b = 0.0f;
-                } else if (i > 7) {
-                    colour.r = 1.0f;
-                    colour.g = 1.0f;
-                    colour.b = 0.0f;
-                }
+    //     // Create debug lines for the perspective and shadow cameras.
+    //     // 12 lines each - 4 for the near clip, 4 for the far clip ,4 connectors.
+    //     // Perspective lines first, then shadow.
+    //     for (u32 j = 0; j < 2; ++j) {
+    //         for (u32 i = 0; i < 12; i++) {
+    //             vec4 colour = (vec4){0.0f, 1.0f, 0.0f, 1.0f};
+    //             if (i > 3 && i < 8) {
+    //                 colour.r = 1.0f;
+    //                 colour.g = 0.0f;
+    //                 colour.b = 0.0f;
+    //             } else if (i > 7) {
+    //                 colour.r = 1.0f;
+    //                 colour.g = 1.0f;
+    //                 colour.b = 0.0f;
+    //             }
 
-                debug_line3d line;
-                debug_line3d_create(vec3_zero(), vec3_one(), 0, &line);
-                debug_line3d_colour_set(&line, colour);
-                debug_line3d_initialize(&line);
-                debug_line3d_load(&line);
-                darray_push(state->test_lines, line);
-                state->cam_proj_line_indices[(12 * j) + i] = darray_length(state->test_lines) - 1;
-            }
-        }
-    }
+    //             debug_line3d line;
+    //             debug_line3d_create(vec3_zero(), vec3_one(), 0, &line);
+    //             debug_line3d_colour_set(&line, colour);
+    //             debug_line3d_initialize(&line);
+    //             debug_line3d_load(&line);
+    //             darray_push(state->test_lines, line);
+    //             state->cam_proj_line_indices[(12 * j) + i] = darray_length(state->test_lines) - 1;
+    //         }
+    //     }
+    // }
     // HACK: End frustum visualizations.
 
     state->running = true;
@@ -772,7 +778,7 @@ b8 application_update(application* game_inst, struct frame_data* p_frame_data) {
     if (!state->running) {
         return true;
     }
-    clock_start(&state->update_clock);
+    kclock_start(&state->update_clock);
 
     // TODO: testing resize
     static f32 button_height = 50.0f;
@@ -901,7 +907,7 @@ VSync: %s Drawn: %-5u (%-5u shadow pass) Hovered: %s%u",
     vec3 up = camera_up(state->world_camera);
     audio_system_listener_orientation_set(pos, forward, up);
 
-    clock_update(&state->update_clock);
+    kclock_update(&state->update_clock);
     state->last_update_elapsed = state->update_clock.elapsed;
     return true;
 }
@@ -911,8 +917,8 @@ b8 application_prepare_frame(struct application* app_inst, struct frame_data* p_
     if (!state->running) {
         return false;
     }
-
-    clock_start(&state->prepare_clock);
+    
+    kclock_start(&state->prepare_clock);
 
     // Skybox pass. This pass must always run, as it is what clears the screen.
     skybox_pass_extended_data* skybox_pass_ext_data = state->skybox_pass.pass_data.ext_data;
@@ -958,27 +964,33 @@ b8 application_prepare_frame(struct application* app_inst, struct frame_data* p_
         // These are required because the scene pass needs them.
         mat4 shadow_camera_lookats[MAX_SHADOW_CASCADE_COUNT];
         mat4 shadow_camera_projections[MAX_SHADOW_CASCADE_COUNT];
+        vec3 shadow_camera_positions[MAX_SHADOW_CASCADE_COUNT];
         for (u32 i = 0; i < MAX_SHADOW_CASCADE_COUNT; ++i) {
             shadow_camera_lookats[i] = mat4_identity();
             shadow_camera_projections[i] = mat4_identity();
+            shadow_camera_positions[i] = vec3_zero();
         }
 
         // Shadowmap pass -only runs if there is a directional light.
         if (state->main_scene.dir_light) {
             f32 last_split_dist = 0.0f;
+            rendergraph_pass* pass = &state->shadowmap_pass;
+            // Mark this pass as executable.
+            pass->pass_data.do_execute = true;
+            // Obtain the light direction.
+            vec3 light_dir = vec3_normalized(vec3_from_vec4(state->main_scene.dir_light->data.direction));
+
+            // Setup the extended data for the pass.
+            shadow_map_pass_extended_data* ext_data = pass->pass_data.ext_data;
+            ext_data->light = state->main_scene.dir_light;
+
+            // fustum culling frustum
+            vec3 culling_center;
+            f32 culling_radius;
+
             for (u32 c = 0; c < MAX_SHADOW_CASCADE_COUNT; c++) {
-                rendergraph_pass* cascade = &state->shadowmap_passes[c];
-                // Mark this pass as executable.
-                cascade->pass_data.do_execute = true;
-
-                // Obtain the light direction.
-                vec3 light_dir = vec3_normalized(vec3_from_vec4(state->main_scene.dir_light->data.direction));
-
-                // Setup the extended data for the pass.
-                shadow_map_pass_extended_data* ext_data = cascade->pass_data.ext_data;
-                ext_data->light = state->main_scene.dir_light;
-                ext_data->cascade_index = c;
-
+                shadow_map_cascade_data* cascade = &ext_data->cascades[c];
+                cascade->cascade_index = c;
                 // NOTE: Each pass for cascades will need to do the following process.
                 // The only real difference will be that the near/far clip will be adjusted for each.
 
@@ -1005,18 +1017,19 @@ b8 application_prepare_frame(struct application* app_inst, struct frame_data* p_
                     center = vec3_add(center, vec3_from_vec4(corners[i]));
                 }
                 center = vec3_div_scalar(center, 8.0);  // size
-                // if (c == MAX_SHADOW_CASCADE_COUNT - 1) {
-                //     cull
-                // }
+                if (c == MAX_SHADOW_CASCADE_COUNT - 1) {
+                    culling_center = center;
+                }
+
                 // Get the furthest-out point from the center and use that as the extents.
                 f32 radius = 0.0f;
                 for (u32 i = 0; i < 8; ++i) {
                     f32 distance = vec3_distance(vec3_from_vec4(corners[i]), center);
                     radius = KMAX(radius, distance);
                 }
-                // if (c == MAX_SHADOW_CASCADE_COUNT - 1) {
-                //     cull
-                // }
+                if (c == MAX_SHADOW_CASCADE_COUNT - 1) {
+                    culling_radius = radius;
+                }
 
                 // Calculate the extents by using the raduis from above.
                 extents_3d extents;
@@ -1042,65 +1055,70 @@ b8 application_prepare_frame(struct application* app_inst, struct frame_data* p_
                 // Generate lookat by moving along the opposite direction of teh directional light by the
                 // minimum extents. This is negated because the directional light points "down" and the camera
                 // needs to be "up".
-                vec3 shadow_camera_position = vec3_sub(center, vec3_mul_scalar(light_dir, -extents.min.z));
-                shadow_camera_lookats[c] = mat4_look_at(shadow_camera_position, center, vec3_up());
+                shadow_camera_positions[c] = vec3_sub(center, vec3_mul_scalar(light_dir, -extents.min.z));
+                shadow_camera_lookats[c] = mat4_look_at(shadow_camera_positions[c], center, vec3_up());
 
                 // Generate ortho projection based on extents.
                 shadow_camera_projections[c] = mat4_orthographic(extents.min.x, extents.max.x, extents.min.y, extents.max.y, extents.min.z, extents.max.z - extents.min.z);
 
                 // Save these off to the pass data.
-                cascade->pass_data.view_matrix = shadow_camera_lookats[c];
-                cascade->pass_data.projection_matrix = shadow_camera_projections[c];
+                cascade->view = shadow_camera_lookats[c];
+                cascade->projection = shadow_camera_projections[c];
 
                 // Store the split depth on the pass.
-                ext_data->split_depth = (near + split_dist * clip_range) * 1.0f;
+                cascade->split_depth = (near + split_dist * clip_range) * 1.0f;
 
                 last_split_dist = split_dist;
+            }
 
-                // HACK: Begin frustum visualization for the camera and shadow "camera".
-                // Note that things in this block are not needed otherwise.
-                {
-                    // Shadow 矩阵
-                    mat4 shadow_proj_view = mat4_transposed(mat4_mul(shadow_camera_lookats[c], shadow_camera_projections[c]));
+            // HACK: Begin frustum visualization for the camera and shadow "camera".
+            // Note that things in this block are not needed otherwise.
+            // {
+            // Shadow 矩阵
+            // mat4 shadow_proj_view = mat4_transposed(mat4_mul(shadow_camera_lookats[c], shadow_camera_projections[c]));
 
-                    vec4 shadow_corners[8] = {0};
-                    frustum_corner_points_world_space(shadow_proj_view, shadow_corners);
+            // vec4 shadow_corners[8] = {0};
+            // frustum_corner_points_world_space(shadow_proj_view, shadow_corners);
 
-                    // Place corners from both frustums in a 2d array for an indexable loop.
-                    vec4 all_corners[2][8];
-                    kcopy_memory(all_corners[0], corners, sizeof(vec4) * 8);
-                    kcopy_memory(all_corners[1], shadow_corners, sizeof(vec4) * 8);
-                    for (u32 j = 0; j < 2; ++j) {
-                        for (u32 i = 0; i < 4; ++i) {
-                            vec3 p0, p1;
-                            u32 i1, i2;
-                            // near
-                            i1 = i;
-                            i2 = (i + 1) % 4;
-                            p0 = vec3_from_vec4(all_corners[j][i1]);
-                            p1 = vec3_from_vec4(all_corners[j][i2]);
-                            debug_line3d_points_set(&state->test_lines[state->cam_proj_line_indices[(12 * j) + i]], p0, p1);
+            // // Place corners from both frustums in a 2d array for an indexable loop.
+            // vec4 all_corners[2][8];
+            // kcopy_memory(all_corners[0], corners, sizeof(vec4) * 8);
+            // kcopy_memory(all_corners[1], shadow_corners, sizeof(vec4) * 8);
+            // for (u32 j = 0; j < 2; ++j) {
+            //     for (u32 i = 0; i < 4; ++i) {
+            //         vec3 p0, p1;
+            //         u32 i1, i2;
+            //         // near
+            //         i1 = i;
+            //         i2 = (i + 1) % 4;
+            //         p0 = vec3_from_vec4(all_corners[j][i1]);
+            //         p1 = vec3_from_vec4(all_corners[j][i2]);
+            //         debug_line3d_points_set(&state->test_lines[state->cam_proj_line_indices[(12 * j) + i]], p0, p1);
 
-                            // far
-                            i1 = (i + 4);
-                            i2 = (i + 1) % 4 + 4;
-                            p0 = vec3_from_vec4(all_corners[j][i1]);
-                            p1 = vec3_from_vec4(all_corners[j][i2]);
-                            debug_line3d_points_set(&state->test_lines[state->cam_proj_line_indices[(12 * j) + i + 4]], p0, p1);
+            //         // far
+            //         i1 = (i + 4);
+            //         i2 = (i + 1) % 4 + 4;
+            //         p0 = vec3_from_vec4(all_corners[j][i1]);
+            //         p1 = vec3_from_vec4(all_corners[j][i2]);
+            //         debug_line3d_points_set(&state->test_lines[state->cam_proj_line_indices[(12 * j) + i + 4]], p0, p1);
 
-                            // connectors
-                            i1 = i;
-                            i2 = (i + 4) % 8;
-                            p0 = vec3_from_vec4(all_corners[j][i1]);
-                            p1 = vec3_from_vec4(all_corners[j][i2]);
-                            debug_line3d_points_set(&state->test_lines[state->cam_proj_line_indices[(12 * j) + i + 8]], p0, p1);
-                        }
-                    }
+            //         // connectors
+            //         i1 = i;
+            //         i2 = (i + 4) % 8;
+            //         p0 = vec3_from_vec4(all_corners[j][i1]);
+            //         p1 = vec3_from_vec4(all_corners[j][i2]);
+            //         debug_line3d_points_set(&state->test_lines[state->cam_proj_line_indices[(12 * j) + i + 8]], p0, p1);
+            //     }
+            // }
 
-                    // Also update a box visualization for the center of the perspective projection matrix.
-                    state->test_boxes[state->proj_box_index].xform = transform_from_position(center);
-                }
-                // HACK: End frustum visualization.
+            // Also update a box visualization for the center of the perspective projection matrix.
+            // state->test_boxes[state->proj_box_index].xform = transform_from_position(center);
+            // }
+            // HACK: End frustum visualization.
+
+            // Gather the geometries to be rendered.
+            for (u32 c = 0; c < MAX_SHADOW_CASCADE_COUNT; ++c) {
+                shadow_map_cascade_data* cascade = &ext_data->cascades[c];
 
                 // shadow frustum culling and count
                 mat4 shadow_view = mat4_mul(shadow_camera_lookats[c], shadow_camera_projections[c]);
@@ -1109,38 +1127,42 @@ b8 application_prepare_frame(struct application* app_inst, struct frame_data* p_
                 simple_scene* scene = &state->main_scene;
 
                 // Iterate the scene and get a list of all geometries within the view of the light.
-                ext_data->geometries = darray_reserve_with_allocator(geometry_render_data, 512, &p_frame_data->allocator);
+                cascade->geometries = darray_reserve_with_allocator(geometry_render_data, 512, &p_frame_data->allocator);
 
-                b8 shadow_clipping_enabled = false;
-                // Query the scene for static meshes using the shadow frustum.
-                if (!simple_scene_mesh_render_data_query(scene,
-                                                         shadow_clipping_enabled ? &shadow_frustum : 0,
-                                                         shadow_camera_position,
-                                                         p_frame_data,
-                                                         &ext_data->geometry_count,
-                                                         ext_data->geometries)) {
+                // b8 shadow_clipping_enabled = false;
+                // Query the scene for static meshes using the shadow frustum.  最远距离剔除
+                if (!simple_scene_mesh_render_data_query_from_line(
+                        scene,
+                        light_dir,
+                        culling_center,
+                        culling_radius,
+                        p_frame_data,
+                        &cascade->geometry_count,
+                        cascade->geometries)) {
                     KERROR("Failed to query shadow map pass meshes.");
                 }
 
                 // Track the number of meshes drawn in the shadow pass.
-                p_frame_data->drawn_shadow_mesh_count = ext_data->geometry_count;
+                p_frame_data->drawn_shadow_mesh_count = cascade->geometry_count;
 
                 // Add terain(s)
-                ext_data->terrain_geometries = darray_reserve_with_allocator(geometry_render_data, 16, &p_frame_data->allocator);
+                cascade->terrain_geometries = darray_reserve_with_allocator(geometry_render_data, 16, &p_frame_data->allocator);
                 // Query the scene for terrain meshes using the shadow frustum.
                 if (!simple_scene_terrain_render_data_query(
                         scene,
                         &shadow_frustum,
-                        shadow_camera_position,
+                        shadow_camera_positions[c],
                         p_frame_data,
-                        &ext_data->terrain_geometry_count, ext_data->terrain_geometries)) {
+                        &cascade->terrain_geometry_count, cascade->terrain_geometries)) {
                     KERROR("Failed to query shadow map pass terrain geometries.");
                 }
 
                 // TODO:Counter for terrain geo
-                p_frame_data->drawn_shadow_mesh_count += ext_data->terrain_geometry_count;
+                p_frame_data->drawn_shadow_mesh_count += cascade->terrain_geometry_count;
+
                 // end shadow map pass
-            }  // end cascade
+                // end cascade
+            }
         }
 
         // Scene pass
@@ -1163,8 +1185,8 @@ b8 application_prepare_frame(struct application* app_inst, struct frame_data* p_
                 ext_data->directional_light_views[c] = shadow_camera_lookats[c];
                 ext_data->directional_light_projections[c] = shadow_camera_projections[c];
 
-                shadow_map_pass_extended_data* sp_ext_data = state->shadowmap_passes[c].pass_data.ext_data;
-                ext_data->cascade_splits.elements[c] = sp_ext_data->split_depth;
+                shadow_map_pass_extended_data* sp_ext_data = state->shadowmap_pass.pass_data.ext_data;
+                ext_data->cascade_splits.elements[c] = sp_ext_data->cascades[c].split_depth;
             }
 
             ext_data->render_mode = state->render_mode;
@@ -1339,9 +1361,7 @@ b8 application_prepare_frame(struct application* app_inst, struct frame_data* p_
     } else {
         // Do not run these passes if the scene is not loaded.
         state->scene_pass.pass_data.do_execute = false;
-        for (u32 i = 0; i < MAX_SHADOW_CASCADE_COUNT; ++i) {
-            state->shadowmap_passes[i].pass_data.do_execute = false;
-        }
+        state->shadowmap_pass.pass_data.do_execute = false;
         state->editor_pass.pass_data.do_execute = false;
     }
 
@@ -1382,7 +1402,7 @@ b8 application_prepare_frame(struct application* app_inst, struct frame_data* p_
     }*/
     // TODO: end temp
 
-    clock_update(&state->prepare_clock);
+    kclock_update(&state->prepare_clock);
     return true;
 }
 
@@ -1392,7 +1412,7 @@ b8 application_render_frame(struct application* game_inst, struct frame_data* p_
         return true;
     }
 
-    clock_start(&state->render_clock);
+    kclock_start(&state->render_clock);
     // Start the frame
     if (!renderer_begin(p_frame_data)) {
         //
@@ -1404,15 +1424,15 @@ b8 application_render_frame(struct application* game_inst, struct frame_data* p_
     }
     renderer_end(p_frame_data);
     // NOTE: Stopping the timer before presentation since that can greatly impact this timing.
-    clock_update(&state->render_clock);
+    kclock_update(&state->render_clock);
 
-    clock_start(&state->present_clock);
+    kclock_start(&state->present_clock);
 
     if (!renderer_present(p_frame_data)) {
         KERROR("The call to renderer_present failed. This is likely unrecoverable.Shutting down.");
         return false;
     }
-    clock_update(&state->present_clock);
+    kclock_update(&state->present_clock);
     return true;
 }
 
@@ -1564,13 +1584,11 @@ static void refresh_rendergraph_pfns(application* app) {
     state->skybox_pass.execute = skybox_pass_execute;
     state->skybox_pass.destroy = skybox_pass_destroy;
 
-    for (u32 i = 0; i < MAX_SHADOW_CASCADE_COUNT; ++i) {
-        state->shadowmap_passes[i].initialize = shadow_map_pass_initialize;
-        state->shadowmap_passes[i].execute = shadow_map_pass_execute;
-        state->shadowmap_passes[i].destroy = shadow_map_pass_destroy;
-        state->shadowmap_passes[i].load_resources = shadow_map_pass_load_resources;
-        state->shadowmap_passes[i].attachment_texture_get = shadow_map_pass_attachment_texture_get;
-    }
+    state->shadowmap_pass.initialize = shadow_map_pass_initialize;
+    state->shadowmap_pass.execute = shadow_map_pass_execute;
+    state->shadowmap_pass.destroy = shadow_map_pass_destroy;
+    state->shadowmap_pass.load_resources = shadow_map_pass_load_resources;
+    state->shadowmap_pass.source_populate = shadow_map_pass_source_populate;
 
     state->scene_pass.initialize = scene_pass_initialize;
     state->scene_pass.execute = scene_pass_execute;
@@ -1611,33 +1629,22 @@ static b8 configure_rendergraph(application* app) {
                                          RENDERGRAPH_SOURCE_ORIGIN_OTHER));
     RG_CHECK(rendergraph_pass_set_sink_linkage(&state->frame_graph, "skybox", "colourbuffer", 0, "colourbuffer"));
 
-    // Shadowmap pass - one per cascade.
-    for (u32 i = 0; i < MAX_SHADOW_CASCADE_COUNT; ++i) {
-        char name_buffer[256] = {0};
-        string_format(name_buffer, "shadowmap_pass_%u", i);
-        shadow_map_pass_config shadow_pass_config = {0};
-        shadow_pass_config.resolution = 2048;
-        RG_CHECK(rendergraph_pass_create(&state->frame_graph, name_buffer, shadow_map_pass_create, &shadow_pass_config, &state->shadowmap_passes[i]));
-        RG_CHECK(rendergraph_pass_source_add(&state->frame_graph, name_buffer, "colourbuffer", RENDERGRAPH_SOURCE_TYPE_RENDER_TARGET_COLOUR, RENDERGRAPH_SOURCE_ORIGIN_SELF));
-        RG_CHECK(rendergraph_pass_source_add(&state->frame_graph, name_buffer, "depthbuffer", RENDERGRAPH_SOURCE_TYPE_RENDER_TARGET_DEPTH_STENCIL, RENDERGRAPH_SOURCE_ORIGIN_SELF));
-    }
-
+    // Shadowmap pass
+    const char* shadowmap_pass_name = "shadowmap_pass";
+    shadow_map_pass_config shadow_pass_config = {0};
+    shadow_pass_config.resolution = 2048;
+    RG_CHECK(rendergraph_pass_create(&state->frame_graph, shadowmap_pass_name, shadow_map_pass_create, &shadow_pass_config, &state->shadowmap_pass));
+    RG_CHECK(rendergraph_pass_source_add(&state->frame_graph, shadowmap_pass_name, "depthbuffer", RENDERGRAPH_SOURCE_TYPE_RENDER_TARGET_DEPTH_STENCIL, RENDERGRAPH_SOURCE_ORIGIN_SELF));
     // Scene pass
     RG_CHECK(rendergraph_pass_create(&state->frame_graph, "scene", scene_pass_create, 0, &state->scene_pass));
     RG_CHECK(rendergraph_pass_sink_add(&state->frame_graph, "scene", "colourbuffer"));
     RG_CHECK(rendergraph_pass_sink_add(&state->frame_graph, "scene", "depthbuffer"));
-    RG_CHECK(rendergraph_pass_sink_add(&state->frame_graph, "scene", "shadowmap_0"));
-    RG_CHECK(rendergraph_pass_sink_add(&state->frame_graph, "scene", "shadowmap_1"));
-    RG_CHECK(rendergraph_pass_sink_add(&state->frame_graph, "scene", "shadowmap_2"));
-    RG_CHECK(rendergraph_pass_sink_add(&state->frame_graph, "scene", "shadowmap_3"));
+    RG_CHECK(rendergraph_pass_sink_add(&state->frame_graph, "scene", "shadowmap"));
     RG_CHECK(rendergraph_pass_source_add(&state->frame_graph, "scene", "colourbuffer", RENDERGRAPH_SOURCE_TYPE_RENDER_TARGET_COLOUR, RENDERGRAPH_SOURCE_ORIGIN_OTHER));
     RG_CHECK(rendergraph_pass_source_add(&state->frame_graph, "scene", "depthbuffer", RENDERGRAPH_SOURCE_TYPE_RENDER_TARGET_DEPTH_STENCIL, RENDERGRAPH_SOURCE_ORIGIN_GLOBAL));
     RG_CHECK(rendergraph_pass_set_sink_linkage(&state->frame_graph, "scene", "colourbuffer", "skybox", "colourbuffer"));
     RG_CHECK(rendergraph_pass_set_sink_linkage(&state->frame_graph, "scene", "depthbuffer", 0, "depthbuffer"));
-    RG_CHECK(rendergraph_pass_set_sink_linkage(&state->frame_graph, "scene", "shadowmap_0", "shadowmap_pass_0", "depthbuffer"));
-    RG_CHECK(rendergraph_pass_set_sink_linkage(&state->frame_graph, "scene", "shadowmap_1", "shadowmap_pass_1", "depthbuffer"));
-    RG_CHECK(rendergraph_pass_set_sink_linkage(&state->frame_graph, "scene", "shadowmap_2", "shadowmap_pass_2", "depthbuffer"));
-    RG_CHECK(rendergraph_pass_set_sink_linkage(&state->frame_graph, "scene", "shadowmap_3", "shadowmap_pass_3", "depthbuffer"));
+    RG_CHECK(rendergraph_pass_set_sink_linkage(&state->frame_graph, "scene", "shadowmap", "shadowmap_pass", "depthbuffer"));
 
     // Editor pass
     RG_CHECK(rendergraph_pass_create(&state->frame_graph, "editor", editor_pass_create, 0, &state->editor_pass));
@@ -1650,23 +1657,19 @@ static b8 configure_rendergraph(application* app) {
 
     // UI pass
     RG_CHECK(rendergraph_pass_create(&state->frame_graph, "ui", ui_pass_create, 0, &state->ui_pass));
-
     RG_CHECK(rendergraph_pass_sink_add(&state->frame_graph, "ui", "colourbuffer"));
-
     RG_CHECK(rendergraph_pass_sink_add(&state->frame_graph, "ui", "depthbuffer"));
     RG_CHECK(rendergraph_pass_source_add(&state->frame_graph, "ui", "colourbuffer", RENDERGRAPH_SOURCE_TYPE_RENDER_TARGET_COLOUR, RENDERGRAPH_SOURCE_ORIGIN_OTHER));
-
     RG_CHECK(rendergraph_pass_source_add(&state->frame_graph, "ui", "depthbuffer", RENDERGRAPH_SOURCE_TYPE_RENDER_TARGET_DEPTH_STENCIL, RENDERGRAPH_SOURCE_ORIGIN_GLOBAL));
     RG_CHECK(rendergraph_pass_set_sink_linkage(&state->frame_graph, "ui", "colourbuffer", "editor", "colourbuffer"));
-
     RG_CHECK(rendergraph_pass_set_sink_linkage(&state->frame_graph, "ui", "depthbuffer", 0, "depthbuffer"));
 
     refresh_rendergraph_pfns(app);
 
-    if (!rendergraph_finalize(&state->frame_graph)) {
-        KERROR("Failed to finalize rendergraph.See log for details.");
-        return false;
-    }
+    // if (!rendergraph_finalize(&state->frame_graph)) {
+    //     KERROR("Failed to finalize rendergraph.See log for details.");
+    //     return false;
+    // }
     return true;
 }
 

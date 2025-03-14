@@ -18,8 +18,13 @@
 -KSM 文件格式从Obj转换  和引擎数据格式高度吻合
 -可写纹理不会自动释放 引用计数为0 不会释放
 -困难的部分是思考内存和数据结构,以及写的逻辑如何改变数据和如何操作内存
+-引擎多种描述符问题 纹理数组
+-着色器反射系统
 -批处理
  PUSHD 更换当前目录
+
+# 数学
+ * 三维空间中点到直线的最短距离(几何意义:叉积的模长代表平行四边形的面积,除于底边长度(方向向量模长)得到高,即点到直线的垂直距离)
 
 Renderer:
 - renderable texture support
@@ -30,10 +35,13 @@ Renderer:
 - Gizmo系統
 - Intel VTune Profiler 性能分析工具
 - 插件形式添加模块代码
+- Mac Os molten VK
+- 描述符
+  根据更新频率对描述符集进行分组  Shader和描述符池一起使用
 - PBR
-  Phone光照模型 PBR ->Albedo Normal Metalle Roughness AO IBL 间接漫反射
+  Phone光照模型 PBR ->Albedo Normal Metalle Roughness AO IBL 间接漫反射 ->Roughness AO Metallic合并一张
   R通道 金属度 G通道 粗糙度 B通道 ao
-  Shadow Map -> Cascade Shadow Map
+  Shadow Map -> Cascade Shadow Map 
    RenderGraph LoadResource 加载完Graph资源 在加载具体 Pass内部的资源
 # 引擎待完成
 # Math
@@ -54,6 +62,10 @@ Renderer:
 - 模版测试-裁剪输入框外部的内容 模版需要clear
 - 可视化Debug 以及特殊情况 来验证计算的正确性
 
+# 工具
+  * Rendoc Pro 
+    https://www.renderdoc.net/download/
+# 流程
 
 -Feature特性
 -JobSystem

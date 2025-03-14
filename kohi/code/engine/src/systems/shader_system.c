@@ -1,11 +1,14 @@
 #include "shader_system.h"
 
 #include "containers/darray.h"
+#include "core/frame_data.h"
 #include "core/kmemory.h"
 #include "core/kstring.h"
 #include "core/logger.h"
-
+#include "defines.h"
 #include "renderer/renderer_frontend.h"
+#include "renderer/renderer_utils.h"
+#include "resources/resource_types.h"
 #include "systems/texture_system.h"
 
 // The internal shader system state.
@@ -25,15 +28,13 @@ typedef struct shader_system_state {
 // A pointer to hold the internal system state.
 static shader_system_state* state_ptr = 0;
 
-b8 add_attribute(shader* shader, const shader_attribute_config* config);
-b8 add_sampler(shader* shader, const shader_uniform_config* config);
-b8 add_uniform(shader* shader, const shader_uniform_config* config);
-u32 get_shader_id(const char* shader_name);
-u32 new_shader_id(void);
-b8 uniform_add(shader* shader, const char* uniform_name, u32 size, shader_uniform_type type, shader_scope scope, u32 set_location, b8 is_sampler);
-b8 uniform_name_valid(shader* shader, const char* uniform_name);
-b8 shader_uniform_add_state_valid(shader* shader);
-void shader_destroy(shader* s);
+static b8 internal_attribute_add(shader* shader, const shader_attribute_config* config);
+static b8 internal_sampler_add(shader* shader, const shader_uniform_config* config);
+static u32 generate_new_shader_id(void);
+static b8 internal_uniform_add(shader* shader, const shader_uniform_config* config, u32 location);
+static b8 uniform_name_valid(shader* shader, const char* uniform_name);
+static b8 shader_uniform_add_state_valid(shader* shader);
+static void internal_shader_destroy(shader* s);
 ///////////////////////
 b8 shader_system_initialize(u64* memory_requirement, void* memory, void* config) {
     shader_system_config* typed_config = (shader_system_config*)config;
@@ -69,7 +70,7 @@ b8 shader_system_initialize(u64* memory_requirement, void* memory, void* config)
 
     // Invalidate all shader ids.
     for (u32 i = 0; i < typed_config->max_shader_count; ++i) {
-        state_ptr->shaders[i].id = new_shader_id();
+        state_ptr->shaders[i].id = INVALID_ID;
         state_ptr->shaders[i].render_frame_number = INVALID_ID_U64;
     }
     // Fill the table with invalid ids.
@@ -92,7 +93,7 @@ void shader_system_shutdown(void* state) {
         for (u32 i = 0; i < st->config.max_shader_count; ++i) {
             shader* s = &st->shaders[i];
             if (s->id != INVALID_ID) {
-                shader_destroy(s);
+                internal_shader_destroy(s);
             }
         }
         hashtable_destroy(&st->lookup);
@@ -101,8 +102,8 @@ void shader_system_shutdown(void* state) {
     state_ptr = 0;
 }
 
-KAPI b8 shader_system_create(renderpass* pass, const shader_config* config) {
-    u32 id = new_shader_id();
+b8 shader_system_create(renderpass* pass, const shader_config* config) {
+    u32 id = generate_new_shader_id();
     shader* out_shader = &state_ptr->shaders[id];
     kzero_memory(out_shader, sizeof(shader));
     out_shader->id = id;
@@ -112,8 +113,9 @@ KAPI b8 shader_system_create(renderpass* pass, const shader_config* config) {
     }
     out_shader->state = SHADER_STATE_NOT_CREATED;
     out_shader->name = string_duplicate(config->name);
-    out_shader->push_constant_range_count = 0;
-    kzero_memory(out_shader->push_constant_ranges, sizeof(range) * 32);
+    out_shader->local_ubo_offset = 0;
+    out_shader->local_ubo_size = 0;
+    out_shader->local_ubo_stride = 0;
     out_shader->bound_instance_id = INVALID_ID;
     out_shader->attribute_stride = 0;
 
@@ -125,8 +127,8 @@ KAPI b8 shader_system_create(renderpass* pass, const shader_config* config) {
     // Create a hashtable to store uniform array indexes. This provides a direct index into the
     // 'uniforms' array stored in the shader for quick lookups by name.
     u64 element_size = sizeof(u16);  // Indexes are stored as u16s.
-    //哈希表数组容量是质数
-    u64 element_count = 1023;        // This is more uniforms than we will ever need, but a bigger table reduces collision chance.
+    // 哈希表数组容量是质数
+    u64 element_count = 1023;  // This is more uniforms than we will ever need, but a bigger table reduces collision chance.
     out_shader->hashtable_block = kallocate(element_size * element_count, MEMORY_TAG_HASHTABLE);
     hashtable_create(element_size, element_count, out_shader->hashtable_block, false, &out_shader->uniform_lookup);
 
@@ -142,13 +144,12 @@ KAPI b8 shader_system_create(renderpass* pass, const shader_config* config) {
     // This is hard-coded because the Vulkan spec only guarantees that a _minimum_ 128 bytes of space are available,
     // and it's up to the driver to determine how much is available. Therefore, to avoid complexity, only the
     // lowest common denominator of 128B will be used.
-    out_shader->push_constant_stride = 128;
-    out_shader->push_constant_size = 0;
+    out_shader->local_ubo_stride = 128;
 
     // Take a copy of the  flags.
     out_shader->flags = config->flags;
 
-    if (!renderer_shader_create(out_shader, config, pass, config->stage_count, (const char**)config->stage_filenames, config->stages)) {
+    if (!renderer_shader_create(out_shader, config, pass)) {
         KERROR("Error creating shader.");
         return false;
     }
@@ -158,14 +159,26 @@ KAPI b8 shader_system_create(renderpass* pass, const shader_config* config) {
 
     // Process attributes
     for (u32 i = 0; i < config->attribute_count; ++i) {
-        add_attribute(out_shader, &config->attributes[i]);
+        shader_attribute_config* ac = &config->attributes[i];
+        if (!internal_attribute_add(out_shader, ac)) {
+            KERROR("Failed to add attribute '%s' to shader '%s.'", ac->name, config->name);
+            return false;
+        }
     }
+
     // Process uniforms
     for (u32 i = 0; i < config->uniform_count; ++i) {
-        if (config->uniforms[i].type == SHADER_UNIFORM_TYPE_SAMPLER) {
-            add_sampler(out_shader, &config->uniforms[i]);
+        shader_uniform_config* uc = &config->uniforms[i];
+        if (uniform_type_is_sampler(uc->type)) {
+            if (!internal_sampler_add(out_shader, uc)) {
+                KERROR("Failed to add sampler '%s' to shader '%s.'", uc->name, config->name);
+                return false;
+            }
         } else {
-            add_uniform(out_shader, &config->uniforms[i]);
+            if (!internal_uniform_add(out_shader, uc, INVALID_ID)) {
+                KERROR("Failed to add uniform '%s' to shader '%s.'", uc->name, config->name);
+                return false;
+            }
         }
     }
 
@@ -187,115 +200,44 @@ KAPI b8 shader_system_create(renderpass* pass, const shader_config* config) {
     return true;
 }
 
-KAPI u32 shader_system_get_id(const char* shader_name) {
-    return get_shader_id(shader_name);
+u32 shader_system_get_id(const char* shader_name) {
+    u32 shader_id = INVALID_ID;
+    if (!hashtable_get(&state_ptr->lookup, shader_name, &shader_id)) {
+        KERROR("There is no shader registered named '%s'.", shader_name);
+        return INVALID_ID;
+    }
+    // KTRACE("Got id %u for shader named '%s'.", shader_id, shader_name);
+    return shader_id;
 }
 
-KAPI shader* shader_system_get_by_id(u32 shader_id) {
-    if (shader_id >= state_ptr->config.max_shader_count || state_ptr->shaders[shader_id].id == INVALID_ID) {
+shader* shader_system_get_by_id(u32 shader_id) {
+    if (shader_id == INVALID_ID) {
+        KERROR("shader_system_get_by_id was passed INVALID_ID. Null will be returned.");
+        return 0;
+    }
+
+    if (state_ptr->shaders[shader_id].id == INVALID_ID) {
+        KERROR("shader_system_get_by_id was passed an invalid id (%u. Null will be returned.)", shader_id);
+        return 0;
+    }
+
+    if (shader_id >= state_ptr->config.max_shader_count) {
+        KERROR("shader_system_get_by_id was passed an id (%u) out of range (0-%u). Null will be returned.", shader_id, state_ptr->config.max_shader_count);
         return 0;
     }
 
     return &state_ptr->shaders[shader_id];
 }
 
-KAPI shader* shader_system_get(const char* shader_name) {
-    u32 shader_id = get_shader_id(shader_name);
+shader* shader_system_get(const char* shader_name) {
+    u32 shader_id = shader_system_get_id(shader_name);
     if (shader_id != INVALID_ID) {
         return shader_system_get_by_id(shader_id);
     }
     return 0;
 }
 
-KAPI b8 shader_system_use(const char* shader_name) {
-    u32 next_shader_id = get_shader_id(shader_name);
-    if (next_shader_id == INVALID_ID) {
-        return false;
-    }
-    return shader_system_use_by_id(next_shader_id);
-}
-
-KAPI b8 shader_system_use_by_id(u32 shader_id) {
-    // Only perform the use if the shader id is different.
-    // if (state_ptr->current_shader_id != shader_id) {
-    shader* next_shader = shader_system_get_by_id(shader_id);
-    state_ptr->current_shader_id = shader_id;
-    if (!renderer_shader_use(next_shader)) {
-        KERROR("Failed to use shader '%s'.", next_shader->name);
-        return false;
-    }
-    if (!renderer_shader_bind_globals(next_shader)) {
-        KERROR("Failed to bind globals for shader '%s'.", next_shader->name);
-        return false;
-    }
-    // }
-    return true;
-}
-
-KAPI u16 shader_system_uniform_index(shader* s, const char* uniform_name) {
-    if (!s || s->id == INVALID_ID) {
-        KERROR("shader_system_uniform_location called with invalid shader.");
-        return INVALID_ID_U16;
-    }
-
-    u16 index = INVALID_ID_U16;
-    if (!hashtable_get(&s->uniform_lookup, uniform_name, &index) || index == INVALID_ID_U16) {
-        KERROR("Shader '%s' does not have a registered uniform named '%s'", s->name, uniform_name);
-        return INVALID_ID_U16;
-    }
-    return s->uniforms[index].index;
-}
-
-KAPI b8 shader_system_uniform_set(const char* uniform_name, const void* value) {
-    if (state_ptr->current_shader_id == INVALID_ID) {
-        KERROR("shader_system_uniform_set called without a shader in use.");
-        return false;
-    }
-    shader* s = &state_ptr->shaders[state_ptr->current_shader_id];
-    u16 index = shader_system_uniform_index(s, uniform_name);
-    // 设置Uniform 值？
-    return shader_system_uniform_set_by_index(index, value);
-}
-
-KAPI b8 shader_system_sampler_set(const char* sampler_name, const texture* t) {
-    return shader_system_uniform_set(sampler_name, t);
-}
-
-KAPI b8 shader_system_uniform_set_by_index(u16 index, const void* value) {
-    shader* shader = &state_ptr->shaders[state_ptr->current_shader_id];
-    shader_uniform* uniform = &shader->uniforms[index];
-    if (shader->bound_scope != uniform->scope) {
-        if (uniform->scope == SHADER_SCOPE_GLOBAL) {
-            renderer_shader_bind_globals(shader);
-        } else if (uniform->scope == SHADER_SCOPE_INSTANCE) {
-            renderer_shader_bind_instance(shader, shader->bound_instance_id);
-        } else {
-            // NOTE: Nothing to do here for locals, just set the uniform.
-        }
-        shader->bound_scope = uniform->scope;
-    }
-    return renderer_shader_uniform_set(shader, uniform, value);
-}
-
-KAPI b8 shader_system_sampler_set_by_index(u16 index, const texture* t) {
-    return shader_system_uniform_set_by_index(index, t);
-}
-
-KAPI b8 shader_system_apply_global(b8 needs_update) {
-    return renderer_shader_apply_globals(&state_ptr->shaders[state_ptr->current_shader_id],needs_update);
-}
-
-KAPI b8 shader_system_apply_instance(b8 needs_update) {
-    return renderer_shader_apply_instance(&state_ptr->shaders[state_ptr->current_shader_id], needs_update);
-}
-
-KAPI b8 shader_system_bind_instance(u32 instance_id) {
-    shader* s = &state_ptr->shaders[state_ptr->current_shader_id];
-    s->bound_instance_id = instance_id;
-    return renderer_shader_bind_instance(s, instance_id);
-}
-
-void shader_destroy(shader* s) {
+static void internal_shader_destroy(shader* s) {
     renderer_shader_destroy(s);
 
     // Set it to be unusable right away.
@@ -316,17 +258,147 @@ void shader_destroy(shader* s) {
 }
 
 void shader_system_destroy(const char* shader_name) {
-    u32 shader_id = get_shader_id(shader_name);
+    u32 shader_id = shader_system_get_id(shader_name);
     if (shader_id == INVALID_ID) {
         return;
     }
 
     shader* s = &state_ptr->shaders[shader_id];
 
-    shader_destroy(s);
+    internal_shader_destroy(s);
 }
 
-b8 add_attribute(shader* shader, const shader_attribute_config* config) {
+b8 shader_system_use(const char* shader_name) {
+    u32 next_shader_id = shader_system_get_id(shader_name);
+    if (next_shader_id == INVALID_ID) {
+        return false;
+    }
+    return shader_system_use_by_id(next_shader_id);
+}
+
+b8 shader_system_use_by_id(u32 shader_id) {
+    // Only perform the use if the shader id is different.
+    // if (state_ptr->current_shader_id != shader_id) {
+    shader* next_shader = shader_system_get_by_id(shader_id);
+    state_ptr->current_shader_id = shader_id;
+    if (!renderer_shader_use(next_shader)) {
+        KERROR("Failed to use shader '%s'.", next_shader->name);
+        return false;
+    }
+    if (!renderer_shader_bind_globals(next_shader)) {
+        KERROR("Failed to bind globals for shader '%s'.", next_shader->name);
+        return false;
+    }
+    // }
+    return true;
+}
+
+u16 shader_system_uniform_location(shader* s, const char* uniform_name) {
+    if (!s || s->id == INVALID_ID) {
+        KERROR("shader_system_uniform_location called with invalid shader.");
+        return INVALID_ID_U16;
+    }
+
+    u16 index = INVALID_ID_U16;
+    if (!hashtable_get(&s->uniform_lookup, uniform_name, &index) || index == INVALID_ID_U16) {
+        KERROR("Shader '%s' does not have a registered uniform named '%s'", s->name, uniform_name);
+        return INVALID_ID_U16;
+    }
+    return s->uniforms[index].index;
+}
+
+b8 shader_system_uniform_set(const char* uniform_name, const void* value) {
+    return shader_system_uniform_set_arrayed(uniform_name, 0, value);
+}
+
+b8 shader_system_uniform_set_arrayed(const char* uniform_name, u32 array_index, const void* value) {
+    if (state_ptr->current_shader_id == INVALID_ID) {
+        KERROR("shader_system_uniform_set called without a shader in use.");
+        return false;
+    }
+    shader* s = &state_ptr->shaders[state_ptr->current_shader_id];
+    u16 index = shader_system_uniform_location(s, uniform_name);
+    // 设置Uniform 值？
+    return shader_system_uniform_set_by_location_arrayed(index, array_index, value);
+}
+
+b8 shader_system_sampler_set(const char* sampler_name, const texture* t) {
+    return shader_system_sampler_set_arrayed(sampler_name, 0, t);
+}
+
+b8 shader_system_sampler_set_arrayed(const char* sampler_name, u32 array_index, const texture* t) {
+    return shader_system_uniform_set_arrayed(sampler_name, array_index, t);
+}
+// lcoation 函数
+b8 shader_system_sampler_set_by_location(u16 location, const texture* t) {
+    return shader_system_uniform_set_by_location_arrayed(location, 0, t);
+}
+
+b8 shader_system_uniform_set_by_location(u16 location, const void* value) {
+    return shader_system_uniform_set_by_location_arrayed(location, 0, value);
+}
+
+b8 shader_system_uniform_set_by_location_arrayed(u16 location, u32 array_index, const void* value) {
+    shader* shader = &state_ptr->shaders[state_ptr->current_shader_id];
+    shader_uniform* uniform = &shader->uniforms[location];
+    if (shader->bound_scope != uniform->scope) {
+        if (uniform->scope == SHADER_SCOPE_GLOBAL) {
+            renderer_shader_bind_globals(shader);
+        } else if (uniform->scope == SHADER_SCOPE_INSTANCE) {
+            renderer_shader_bind_instance(shader, shader->bound_instance_id);
+        } else {
+            // NOTE: Nothing to do here for locals, just set the uniform.
+        }
+        shader->bound_scope = uniform->scope;
+    }
+    return renderer_shader_uniform_set(shader, uniform, array_index, value);
+}
+
+b8 shader_system_uniform_set_by_index(u16 index, const void* value) {
+    shader* shader = &state_ptr->shaders[state_ptr->current_shader_id];
+    shader_uniform* uniform = &shader->uniforms[index];
+    if (shader->bound_scope != uniform->scope) {
+        if (uniform->scope == SHADER_SCOPE_GLOBAL) {
+            renderer_shader_bind_globals(shader);
+        } else if (uniform->scope == SHADER_SCOPE_INSTANCE) {
+            renderer_shader_bind_instance(shader, shader->bound_instance_id);
+        } else {
+            // NOTE: Nothing to do here for locals, just set the uniform.
+        }
+        shader->bound_scope = uniform->scope;
+    }
+    return renderer_shader_uniform_set(shader, uniform, 0, value);
+}
+
+b8 shader_system_sampler_set_by_index(u16 index, const texture* t) {
+    return shader_system_uniform_set_by_index(index, t);
+}
+
+b8 shader_system_apply_global(b8 needs_update, frame_data* p_frame_data) {
+    return renderer_shader_apply_globals(&state_ptr->shaders[state_ptr->current_shader_id], needs_update, p_frame_data);
+}
+
+b8 shader_system_apply_instance(b8 needs_update, frame_data* p_frame_data) {
+    return renderer_shader_apply_instance(&state_ptr->shaders[state_ptr->current_shader_id], needs_update, p_frame_data);
+}
+
+b8 shader_system_bind_instance(u32 instance_id) {
+    shader* s = &state_ptr->shaders[state_ptr->current_shader_id];
+    s->bound_instance_id = instance_id;
+    return renderer_shader_bind_instance(s, instance_id);
+}
+
+b8 shader_system_apply_local(struct frame_data* p_frame_data) {
+    shader* s = &state_ptr->shaders[state_ptr->current_shader_id];
+    return renderer_shader_apply_local(s, p_frame_data);
+}
+
+b8 shader_system_bind_local(void) {
+    shader* s = &state_ptr->shaders[state_ptr->current_shader_id];
+    return renderer_shader_bind_local(s);
+}
+
+static b8 internal_attribute_add(shader* shader, const shader_attribute_config* config) {
     u32 size = 0;
     switch (config->type) {
         case SHADER_ATTRIB_TYPE_INT8:
@@ -369,7 +441,7 @@ b8 add_attribute(shader* shader, const shader_attribute_config* config) {
     return true;
 }
 
-b8 add_sampler(shader* shader, const shader_uniform_config* config) {
+static b8 internal_sampler_add(shader* shader, const shader_uniform_config* config) {
     // Samples can't be used for push constants.
     if (config->scope == SHADER_SCOPE_LOCAL) {
         KERROR("add_sampler cannot add a sampler at local scope.");
@@ -422,7 +494,7 @@ b8 add_sampler(shader* shader, const shader_uniform_config* config) {
     // hashtable entry's 'location' field value directly, and is then set to the index of the uniform array.
     // This allows location lookups for samplers as if they were uniforms as well (since technically they are).
     // TODO: might need to store this elsewhere
-    if (!uniform_add(shader, config->name, 0, config->type, config->scope, location, true)) {
+    if (!internal_uniform_add(shader, config, location)) {
         KERROR("Unable to add sampler uniform.");
         return false;
     }
@@ -430,24 +502,7 @@ b8 add_sampler(shader* shader, const shader_uniform_config* config) {
     return true;
 }
 
-b8 add_uniform(shader* shader, const shader_uniform_config* config) {
-    if (!shader_uniform_add_state_valid(shader) || !uniform_name_valid(shader, config->name)) {
-        return false;
-    }
-    return uniform_add(shader, config->name, config->size, config->type, config->scope, 0, false);
-}
-
-u32 get_shader_id(const char* shader_name) {
-    u32 shader_id = INVALID_ID;
-    if (!hashtable_get(&state_ptr->lookup, shader_name, &shader_id)) {
-        KERROR("There is no shader registered named '%s'.", shader_name);
-        return INVALID_ID;
-    }
-    // KTRACE("Got id %u for shader named '%s'.", shader_id, shader_name);
-    return shader_id;
-}
-
-u32 new_shader_id(void) {
+static u32 generate_new_shader_id(void) {
     for (u32 i = 0; i < state_ptr->config.max_shader_count; ++i) {
         if (state_ptr->shaders[i].id == INVALID_ID) {
             return i;  // 数组索引
@@ -456,45 +511,38 @@ u32 new_shader_id(void) {
     return INVALID_ID;
 }
 
-b8 uniform_add(shader* shader, const char* uniform_name, u32 size, shader_uniform_type type, shader_scope scope, u32 set_location, b8 is_sampler) {
+static b8 internal_uniform_add(shader* shader, const shader_uniform_config* config, u32 location) {
     u32 uniform_count = darray_length(shader->uniforms);
     if (uniform_count + 1 > state_ptr->config.max_uniform_count) {
         KERROR("A shader can only accept a combined maximum of %d uniforms and samplers at global, instance and local scopes.", state_ptr->config.max_uniform_count);
         return false;
     }
+    b8 is_sampler = uniform_type_is_sampler(config->type);
     shader_uniform entry;
     entry.index = uniform_count;  // Index is saved to the hashtable for lookups.
-    entry.scope = scope;
-    entry.type = type;
-    b8 is_global = (scope == SHADER_SCOPE_GLOBAL);
+    entry.scope = config->scope;
+    entry.type = config->type;
+    entry.array_length = config->array_length;
+    b8 is_global = (config->scope == SHADER_SCOPE_GLOBAL);
     if (is_sampler) {
         // Just use the passed in location
-        entry.location = set_location;
+        entry.location = location;
     } else {
         entry.location = entry.index;
     }
 
-    if (scope != SHADER_SCOPE_LOCAL) {
-        entry.set_index = (u32)scope;
+    // Local 变量
+    if (config->scope == SHADER_SCOPE_LOCAL) {
+        entry.set_index = 2;  // NOTE: set 2 doesn't exist in Vulkan, it's a push constant.
+        entry.offset = shader->local_ubo_size;
+        entry.size = config->size;
+    } else {
+        entry.set_index = (u32)config->scope;
         entry.offset = is_sampler ? 0 : is_global ? shader->global_ubo_size
                                                   : shader->ubo_size;
-        entry.size = is_sampler ? 0 : size;
-    } else {
-        // Push a new aligned range (align to 4, as required by Vulkan spec)
-        entry.set_index = INVALID_ID_U8;
-        range r = get_aligned_range(shader->push_constant_size, size, 4);
-        // utilize the aligned offset/range
-        entry.offset = r.offset;
-        entry.size = r.size;
-
-        // Track in configuration for use in initialization.
-        shader->push_constant_ranges[shader->push_constant_range_count] = r;
-        shader->push_constant_range_count++;
-
-        // Increase the push constant's size by the total value.
-        shader->push_constant_size += r.size;
+        entry.size = is_sampler ? 0 : config->size;
     }
-    if (!hashtable_set(&shader->uniform_lookup, uniform_name, &entry.index)) {
+    if (!hashtable_set(&shader->uniform_lookup, config->name, &entry.index)) {
         KERROR("Failed to add uniform.");
         return false;
     }
@@ -502,16 +550,18 @@ b8 uniform_add(shader* shader, const char* uniform_name, u32 size, shader_unifor
 
     if (!is_sampler) {
         if (entry.scope == SHADER_SCOPE_GLOBAL) {
-            shader->global_ubo_size += entry.size;
+            shader->global_ubo_size += (entry.size * entry.array_length);
         } else if (entry.scope == SHADER_SCOPE_INSTANCE) {
-            shader->ubo_size += entry.size;
+            shader->ubo_size += (entry.size * entry.array_length);
+        } else if (entry.scope == SHADER_SCOPE_LOCAL) {
+            shader->local_ubo_size += (entry.size * entry.array_length);  // local_ubo_size PushConstant shader类型
         }
     }
 
     return true;
 }
 
-b8 uniform_name_valid(shader* shader, const char* uniform_name) {
+static b8 uniform_name_valid(shader* shader, const char* uniform_name) {
     if (!uniform_name || !string_length(uniform_name)) {
         KERROR("Uniform name must exist.");
         return false;
@@ -524,7 +574,7 @@ b8 uniform_name_valid(shader* shader, const char* uniform_name) {
     return true;
 }
 
-b8 shader_uniform_add_state_valid(shader* shader) {
+static b8 shader_uniform_add_state_valid(shader* shader) {
     if (shader->state != SHADER_STATE_UNINITIALIZED) {
         KERROR("Uniforms may only be added to shaders before initialization.");
         return false;
