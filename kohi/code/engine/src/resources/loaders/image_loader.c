@@ -136,7 +136,7 @@ b8 image_loader_query_properties(const char* image_name, i32* out_width, i32* ou
         return false;
     }
 
-    char* format_str = "%s/%s/%s";
+    char* format_str = "%s/%s%s";
     stbi_set_flip_vertically_on_load_thread(true);
     char full_file_path[512];
 

@@ -434,7 +434,7 @@ material* material_system_acquire_terrain_material(const char* material_name, u3
             // Exract the map names.
             for (u32 j = 0; j < PBR_MATERIAL_TEXTURE_COUNT; ++j) {
                 u32 index = (i * PBR_MATERIAL_TEXTURE_COUNT) + j;
-                texture_names[index] = string_duplicate(mat_config->maps[j].name);
+                texture_names[index] = string_duplicate(mat_config->maps[j].texture_name);
             }
             // Clean up the resource.
             resource_system_unload(&material_resource);

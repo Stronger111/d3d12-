@@ -1588,7 +1588,7 @@ static void refresh_rendergraph_pfns(application* app) {
     state->shadowmap_pass.execute = shadow_map_pass_execute;
     state->shadowmap_pass.destroy = shadow_map_pass_destroy;
     state->shadowmap_pass.load_resources = shadow_map_pass_load_resources;
-    state->shadowmap_pass.source_populate = shadow_map_pass_source_populate;
+    //state->shadowmap_pass.source_populate = shadow_map_pass_source_populate;
 
     state->scene_pass.initialize = scene_pass_initialize;
     state->scene_pass.execute = scene_pass_execute;

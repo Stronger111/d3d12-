@@ -535,11 +535,11 @@ b8 shadow_map_pass_execute(rendergraph_pass* self, frame_data* p_frame_data) {
         //     // Draw it.
         //     renderer_geometry_draw(terrain);
         // }
-    }
-
-    if (!renderer_renderpass_end(&self->pass)) {
-        KERROR("Shadowmap pass failed to end.");
-    }
+        if (!renderer_renderpass_end(&self->pass)) {
+            KERROR("Shadowmap pass failed to end.");
+        }
+    }  //End cascades pass
+  
     return true;
 }
 

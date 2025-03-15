@@ -118,7 +118,7 @@ b8 resource_system_load(const char* name, resource_type type, void* params, reso
 }
 
 const char* resource_system_base_path_for_type(resource_type type) {
-    if (!state_ptr && type != RESOURCE_TYPE_CUSTOM) {
+    if (state_ptr && type != RESOURCE_TYPE_CUSTOM) {
         // Select loader.
         u32 count = state_ptr->config.max_loader_count;
         for (u32 i = 0; i < count; ++i) {
