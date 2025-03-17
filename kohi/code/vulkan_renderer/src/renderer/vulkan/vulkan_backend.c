@@ -471,6 +471,9 @@ b8 vulkan_renderer_backend_initialize(renderer_plugin* plugin, const renderer_ba
         VK_CHECK(vkCreateFence(context->device.logical_device, &fence_create_info, context->allocator, &context->in_flight_fences[i]));
     }
 
+    // Samplers array.
+    context->samplers = darray_create(VkSampler);
+
     // Staging buffer.
     const u64 staging_buffer_size = 256 * 1000 * 1000;
     if (!renderer_renderbuffer_create("staging", RENDERBUFFER_TYPE_STAGING, staging_buffer_size, RENDERBUFFER_TRACK_TYPE_LINEAR, &context->staging)) {
@@ -729,7 +732,7 @@ b8 vulkan_renderer_end(renderer_plugin* plugin, struct frame_data* p_frame_data)
     // This gives an accurate picture of how long the render takes, including the
     // work submitted to the actual queue.
     // TODO: may want a semaphore here instead to monitor this.
-    //vkWaitForFences(context->device.logical_device, 1, &context->in_flight_fences[context->current_frame], true, UINT64_MAX);
+    // vkWaitForFences(context->device.logical_device, 1, &context->in_flight_fences[context->current_frame], true, UINT64_MAX);
     return true;
 }
 
@@ -751,7 +754,7 @@ b8 vulkan_renderer_present(renderer_plugin* plugin, struct frame_data* p_frame_d
     // signaled by the queue's completion after submission. And strangely, it's specifically the
     // _transfer_ queue, even though the one being used for presentation here is the present queue.
     // TODO: Need to dive a bit deeper on this to figure it out.
-    //vkQueueWaitIdle(context->device.transfer_queue);
+    // vkQueueWaitIdle(context->device.transfer_queue);
     VkResult result = vkQueuePresentKHR(context->device.present_queue, &present_info);
     if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
         // Swapchain is out of data, suboptimal or a framebuffer resize has occurred.Triggle swapchain recreation.
@@ -1112,7 +1115,7 @@ void vulkan_renderer_texture_create_writeable(renderer_plugin* plugin, texture* 
         image_format = channel_count_to_format(t->channel_count, VK_FORMAT_R8G8B8A8_UNORM);
     }
 
-    vulkan_image_create(context, t->type, t->width, t->height, t->array_size,image_format, VK_IMAGE_TILING_OPTIMAL, usage,
+    vulkan_image_create(context, t->type, t->width, t->height, t->array_size, image_format, VK_IMAGE_TILING_OPTIMAL, usage,
                         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, true, aspect, t->name, t->mip_levels, image);
 
     t->generation++;
@@ -1964,7 +1967,7 @@ b8 vulkan_renderer_shader_apply_globals(renderer_plugin* plugin, shader* s, b8 n
                     vulkan_image* image = (vulkan_image*)t->internal_data;
                     image_infos[d].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
                     image_infos[d].imageView = image->view;
-                    image_infos[d].sampler = (VkSampler)map->internal_data;
+                    image_infos[d].sampler = context->samplers[map->internal_id];
 
                     // TODO: change up descriptor state to handle this properly.
                     // Sync frame generation if not using a default texture.
@@ -2114,7 +2117,7 @@ b8 vulkan_renderer_shader_apply_instance(renderer_plugin* plugin, shader* s, b8 
                     vulkan_image* image = (vulkan_image*)t->internal_data;
                     image_infos[d].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
                     image_infos[d].imageView = image->view;
-                    image_infos[d].sampler = (VkSampler)map->internal_data;
+                    image_infos[d].sampler = context->samplers[map->internal_id];
 
                     // TODO: change up descriptor state to handle this properly.
                     // Sync frame generation if not using a default texture.
@@ -2229,29 +2232,47 @@ static b8 create_sampler(vulkan_context* context, texture_map* map, VkSampler* s
 
 b8 vulkan_renderer_texture_map_resources_acquire(renderer_plugin* plugin, texture_map* map) {
     vulkan_context* context = (vulkan_context*)plugin->internal_context;
-    if (!create_sampler(context, map, (VkSampler*)&map->internal_data)) {
+    // Find a free sampler.
+    u32 sampler_count = darray_length(context->samplers);
+    u32 selected_id = INVALID_ID;
+    for (u32 i = 0; i < sampler_count; ++i) {
+        if (context->samplers[i] == 0) {
+            selected_id = i;
+            break;
+        }
+    }
+    if (selected_id == INVALID_ID) {
+        // Push an empty entry into the array.
+        darray_push(context->samplers, 0);
+        selected_id = sampler_count;
+    }
+
+    if (!create_sampler(context, map, &context->samplers[selected_id])) {
         return false;
     }
 
     char formatted_name[TEXTURE_NAME_MAX_LENGTH] = {0};
     string_format(formatted_name, "%s_texmap_sampler", map->texture->name);
-    VK_SET_DEBUG_OBJECT_NAME(context, VK_OBJECT_TYPE_SAMPLER, (VkSampler)map->internal_data, formatted_name);
+    VK_SET_DEBUG_OBJECT_NAME(context, VK_OBJECT_TYPE_SAMPLER, context->samplers[selected_id], formatted_name);
+    map->internal_id = selected_id;
+    
     return true;
 }
 
 void vulkan_renderer_texture_map_resources_release(renderer_plugin* plugin, texture_map* map) {
     vulkan_context* context = (vulkan_context*)plugin->internal_context;
-    if (map && map->internal_data) {
+    if (map && map->internal_id != INVALID_ID) {
         // Make sure there's no way this is in use.
         vkDeviceWaitIdle(context->device.logical_device);
-        vkDestroySampler(context->device.logical_device, map->internal_data, context->allocator);
-        map->internal_data = 0;
+        vkDestroySampler(context->device.logical_device, context->samplers[map->internal_id], context->allocator);
+        context->samplers[map->internal_id] = 0;
+        map->internal_id = 0;
     }
 }
 
 b8 vulkan_renderer_texture_map_resources_refresh(renderer_plugin* plugin, texture_map* map) {
     vulkan_context* context = (vulkan_context*)plugin->internal_context;
-    if (map && map->internal_data) {
+    if (map && map->internal_id != INVALID_ID) {
         // Create a new sampler first.
         VkSampler new_sampler = 0;
         if (!create_sampler(context, map, &new_sampler)) {
@@ -2259,12 +2280,12 @@ b8 vulkan_renderer_texture_map_resources_refresh(renderer_plugin* plugin, textur
         }
 
         // Take a pointer to the current sampler.
-        VkSampler old_sampler = map->internal_data;
+        VkSampler old_sampler = context->samplers[map->internal_id];
 
         // Make sure there's no way this is in use.
         vkDeviceWaitIdle(context->device.logical_device);
         // Assign the new.
-        map->internal_data = new_sampler;
+        context->samplers[map->internal_id] = new_sampler;
         // Destroy the old.
         vkDestroySampler(context->device.logical_device, old_sampler, context->allocator);
     }
@@ -2472,7 +2493,6 @@ b8 vulkan_renderer_shader_apply_local(renderer_plugin* plugin, struct shader* s,
                        0, 128, internal->local_push_constant_block);
     return true;
 }
-
 
 static b8 create_shader_module(vulkan_context* context, shader* s, shader_stage_config* config, vulkan_shader_stage* out_stage) {
     shaderc_shader_kind shader_kind;

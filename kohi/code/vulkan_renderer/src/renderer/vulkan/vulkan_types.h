@@ -481,6 +481,9 @@ typedef struct vulkan_context {
     /** @brief Indicates if multi-threading is supported by this device. */
     b8 multithreading_enabled;
 
+    /** @brief Collection of samplers. darray */
+    VkSampler* samplers;
+
     /**
      * @brief A function pointer to find a memory index of the given type and with the given properties.
      * @param context A pointer to the renderer context.

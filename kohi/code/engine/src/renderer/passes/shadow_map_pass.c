@@ -195,7 +195,7 @@ b8 shadow_map_pass_initialize(rendergraph_pass* self) {
     internal_data->terrain_locations.projections_location = shader_system_uniform_location(internal_data->ts, "projections");
     internal_data->terrain_locations.views_location = shader_system_uniform_location(internal_data->ts, "views");
     internal_data->terrain_locations.model_location = shader_system_uniform_location(internal_data->ts, "model");
-    internal_data->terrain_locations.cascade_index_location = shader_system_uniform_location(internal_data->s, "cascade_index");
+    internal_data->terrain_locations.cascade_index_location = shader_system_uniform_location(internal_data->ts, "cascade_index");
     internal_data->terrain_locations.colour_map_location = shader_system_uniform_location(internal_data->ts, "colour_map");
 
     return true;
@@ -328,10 +328,6 @@ b8 shadow_map_pass_execute(rendergraph_pass* self, frame_data* p_frame_data) {
 
     for (u32 p = 0; p < MAX_SHADOW_CASCADE_COUNT; p++) {
         shadow_map_cascade_data* cascade = &ext_data->cascades[p];
-        // if (!renderer_renderpass_begin(&self->pass, &self->pass.targets[p_frame_data->render_target_index])) {
-        //     KERROR("Shadowmap pass failed to start.");
-        //     return false;
-        // }
 
         if (!renderer_renderpass_begin(&self->pass, &internal_data->cascades[p].targets[p_frame_data->render_target_index])) {
             KERROR("Shadowmap pass failed to start.");
@@ -358,10 +354,10 @@ b8 shadow_map_pass_execute(rendergraph_pass* self, frame_data* p_frame_data) {
             }
         }
 
-        shader_system_apply_global(needs_update,p_frame_data);
+        shader_system_apply_global(needs_update, p_frame_data);
 
         u32 geometry_count = cascade->geometry_count;
-        //u32 terrain_geometry_count = cascade->terrain_geometry_count;
+        u32 terrain_geometry_count = cascade->terrain_geometry_count;
 
         // Verify enough instance resources for this frame.
         // This is done by taking the highest material instance id
@@ -431,8 +427,11 @@ b8 shadow_map_pass_execute(rendergraph_pass* self, frame_data* p_frame_data) {
                 bind_id = g->material->internal_id + 1;
                 // Use the current materials diffuse/albedo map.
                 bind_map = &g->material->maps[0];
-                render_number = &internal_data->s->render_frame_number;
-                draw_index = &internal_data->s->draw_index;
+                // NOTE:can't update the _material's_ frame number/draw index becauese it still needs to be
+                //  used for the actual scene render.
+                shadow_shader_instance_data* instance = &internal_data->instances[g->material->internal_id + 1];
+                render_number = &instance->render_frame_number;
+                draw_index = &instance->render_draw_index;
             } else {
                 // use the default instance.
                 bind_id = internal_data->default_instance_id;
@@ -458,7 +457,7 @@ b8 shadow_map_pass_execute(rendergraph_pass* self, frame_data* p_frame_data) {
                 KERROR("Failed to apply shadowmap color_map uniform to static geometry.");
                 return false;
             }
-            shader_system_apply_instance(needs_update,p_frame_data);
+            shader_system_apply_instance(needs_update, p_frame_data);
 
             // Sync the frame number and draw index.
             *render_number = p_frame_data->renderer_frame_number;
@@ -484,62 +483,63 @@ b8 shadow_map_pass_execute(rendergraph_pass* self, frame_data* p_frame_data) {
         }
 
         // Terrain - use the special terrain shader.
-        // shader_system_use_by_id(internal_data->ts->id);
+        shader_system_use_by_id(internal_data->ts->id);
 
-        // // Apply globals
-        // renderer_shader_bind_globals(internal_data->ts);
-        // if (needs_update) {
-        //     for (u32 i = 0; i < MAX_SHADOW_CASCADE_COUNT; ++i) {
-        //         // NOTE: using the internal projection matrix,not one passed on
-        //         if (!shader_system_uniform_set_by_location_arrayed(internal_data->terrain_locations.projections_location, i, &self->pass_data.projection_matrix)) {
-        //             KERROR("Failed to apply terrain shadowmap projection uniform.");
-        //             return false;
-        //         }
+        // Apply globals
+        renderer_shader_bind_globals(internal_data->ts);
+        if (needs_update) {
+            for (u32 i = 0; i < MAX_SHADOW_CASCADE_COUNT; ++i) {
+                // NOTE: using the internal projection matrix,not one passed on
+                if (!shader_system_uniform_set_by_location_arrayed(internal_data->terrain_locations.projections_location, i, &self->pass_data.projection_matrix)) {
+                    KERROR("Failed to apply terrain shadowmap projection uniform.");
+                    return false;
+                }
 
-        //         if (!shader_system_uniform_set_by_location_arrayed(internal_data->terrain_locations.views_location, i, &self->pass_data.view_matrix)) {
-        //             KERROR("Failed to apply terrain shadowmap view uniform.");
-        //             return false;
-        //         }
-        //     }
-        // }
+                if (!shader_system_uniform_set_by_location_arrayed(internal_data->terrain_locations.views_location, i, &self->pass_data.view_matrix)) {
+                    KERROR("Failed to apply terrain shadowmap view uniform.");
+                    return false;
+                }
+            }
+        }
 
-        // shader_system_apply_global(needs_update,p_frame_data);
+        shader_system_apply_global(needs_update,p_frame_data);
 
-        // for (u32 i = 0; i < terrain_geometry_count; ++i) {
-        //     geometry_render_data* terrain = &cascade->terrain_geometries[i];
+        for (u32 i = 0; i < terrain_geometry_count; ++i) {
+            geometry_render_data* terrain = &cascade->terrain_geometries[i];
 
-        //     // Just draw these using the default instance and texture map.
-        //     texture_map* bind_map = &internal_data->default_terrain_colour_map;
-        //     u64* render_number = &internal_data->terrain_instance_frame_number;
-        //     u8* draw_index = &internal_data->terrain_instance_draw_index;
+            // Just draw these using the default instance and texture map.
+            texture_map* bind_map = &internal_data->default_terrain_colour_map;
+            u64* render_number = &internal_data->terrain_instance_frame_number;
+            u8* draw_index = &internal_data->terrain_instance_draw_index;
 
-        //     b8 needs_update = *render_number != p_frame_data->renderer_frame_number || *draw_index != p_frame_data->draw_index;
+            b8 needs_update = *render_number != p_frame_data->renderer_frame_number || *draw_index != p_frame_data->draw_index;
 
-        //     shader_system_bind_instance(internal_data->terrain_instance_id);
-        //     if (!shader_system_uniform_set_by_location(internal_data->locations.colour_map_location, bind_map)) {
-        //         KERROR("Failed to apply shadowmap color_map uniform to terrain geometry.");
-        //         return false;
-        //     }
-        //     shader_system_apply_instance(needs_update,p_frame_data);
+            shader_system_bind_instance(internal_data->terrain_instance_id);
+            if (!shader_system_uniform_set_by_location(internal_data->locations.colour_map_location, bind_map)) {
+                KERROR("Failed to apply shadowmap color_map uniform to terrain geometry.");
+                return false;
+            }
+            shader_system_apply_instance(needs_update,p_frame_data);
 
-        //     // Sync the frame number and draw index.
-        //     *render_number = p_frame_data->renderer_frame_number;
-        //     *draw_index = p_frame_data->draw_index;
+            // Sync the frame number and draw index.
+            *render_number = p_frame_data->renderer_frame_number;
+            *draw_index = p_frame_data->draw_index;
 
-        //     // Apply the locals
-        //     shader_system_bind_local();
-        //     shader_system_uniform_set_by_location(internal_data->terrain_locations.model_location, &terrain->model);
-        //     shader_system_uniform_set_by_location(internal_data->terrain_locations.cascade_index_location, &p);
-        //     shader_system_apply_local(p_frame_data);
+            // Apply the locals
+            shader_system_bind_local();
+            shader_system_uniform_set_by_location(internal_data->terrain_locations.model_location, &terrain->model);
+            shader_system_uniform_set_by_location(internal_data->terrain_locations.cascade_index_location, &p);
+            shader_system_apply_local(p_frame_data);
 
-        //     // Draw it.
-        //     renderer_geometry_draw(terrain);
-        // }
+            // Draw it.
+            renderer_geometry_draw(terrain);
+        }
+
         if (!renderer_renderpass_end(&self->pass)) {
             KERROR("Shadowmap pass failed to end.");
         }
-    }  //End cascades pass
-  
+    }  // End cascades pass
+
     return true;
 }
 

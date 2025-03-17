@@ -193,9 +193,8 @@ typedef struct texture_map {
     texture_repeat repeat_v;
     /** @brief The repeat mode on the W axis (or Z, or R) */
     texture_repeat repeat_w;
-    /** @brief A pointer to internal, render API-specific data. Typically the
-     * internal sampler. */
-    void* internal_data;
+    /** @brief An identifier used for internal resource lookups/management. */
+    u32 internal_id;
 } texture_map;
 
 typedef struct font_glyph {
