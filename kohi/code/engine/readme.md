@@ -33,11 +33,13 @@ Renderer:
 - 字体渲染 字库->图集  代码点->codePoint 1 2 3 4 字节  对象拾取 原理 pass 绘制 物体ID->rgba 取出鼠标位置 然后读取纹理 然后rgba 在转换为 物体ID 
 - 光追 PSO 多线程 hism
 - Gizmo系統
+- 地形分块和剔除
 - Intel VTune Profiler 性能分析工具
 - 插件形式添加模块代码
 - Mac Os molten VK
 - 描述符
   根据更新频率对描述符集进行分组  Shader和描述符池一起使用
+  OpenGL 不必处理管理描述符以及手动同步内存之类的事情
 - PBR
   Phone光照模型 PBR ->Albedo Normal Metalle Roughness AO IBL 间接漫反射 ->Roughness AO Metallic合并一张
   R通道 金属度 G通道 粗糙度 B通道 ao

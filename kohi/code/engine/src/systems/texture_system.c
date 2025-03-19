@@ -796,7 +796,7 @@ static void texture_load_layered_job_fail(void* result_data) {
     }
 }
 
-//在一个线程中处理加载组装TexturArray
+// 在一个线程中处理加载组装TexturArray
 static b8 texture_load_layered_job_start(void* params, void* result_data) {
     texture_load_layered_params* load_params = (texture_load_layered_params*)params;
     texture_load_layered_result* typed_result = result_data;
@@ -805,7 +805,7 @@ static b8 texture_load_layered_job_start(void* params, void* result_data) {
     // Channel count from the image is ignored.
     i32 first_width, first_height, channel_count;
     u32 mip_levels;
-    //保证纹理的尺寸相同
+    // 保证纹理的尺寸相同
     if (!image_loader_query_properties(load_params->layer_names[0], &first_width, &first_height, &channel_count, &mip_levels)) {
         typed_result->result_code = TEXTURE_LOAD_JOB_CODE_FIRST_QUERY_FAILED;
         return false;
@@ -861,7 +861,7 @@ static b8 texture_load_layered_job_start(void* params, void* result_data) {
         if (!has_transparency) {
             for (u64 i = 0; i < layer_size; i += typed_result->temp_texture.channel_count) {
                 u8 a = resource_data->pixels[i + 3];
-                //Alpha不是白色
+                // Alpha不是白色
                 if (a < 255) {
                     has_transparency = true;
                     break;
@@ -976,7 +976,7 @@ static b8 create_texture(texture* t, texture_type type, u32 width, u32 height, u
         // KTRACE("Load skipped for texture '%s'. This is expected behaviour.");
     } else {
         switch (t->type) {
-            case TEXTURE_TYPE_CUBE:
+            case TEXTURE_TYPE_CUBE: {
                 char texture_names[6][TEXTURE_NAME_MAX_LENGTH];
                 // +X,-X,+Y,-Y,+Z,-Z in _cubemap_ space, which is LH y-down
                 string_format(texture_names[0], "%s_r", t->name);  // Right texture
@@ -990,23 +990,24 @@ static b8 create_texture(texture* t, texture_type type, u32 width, u32 height, u
                     KERROR("Failed to load cube texture '%s'.", t->name);
                     return false;
                 }
-                break;
+            } break;
             case TEXTURE_TYPE_2D:
-            case TEXTURE_TYPE_2D_ARRAY:
+            case TEXTURE_TYPE_2D_ARRAY: {
                 if (!load_texture(t->name, t, layer_texture_names)) {
                     KERROR("Failed to load texture '%s'.", t->name);
                     return false;
                 }
-                break;
-            default:
+            } break;
+            default: {
                 KERROR("Unrecognized texture type %u. Cannot process texture reference.", t->type);
-                break;
+                return false;
+            }
         }
     }
     return true;
 }
 
-//处理纹理引用
+// 处理纹理引用
 static b8 process_texture_reference(const char* name, i8 reference_diff, b8 auto_release, u32* out_texture_id, b8* needs_creation) {
     *out_texture_id = INVALID_ID;
     *needs_creation = false;
