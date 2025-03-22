@@ -33,7 +33,8 @@ Renderer:
 - 字体渲染 字库->图集  代码点->codePoint 1 2 3 4 字节  对象拾取 原理 pass 绘制 物体ID->rgba 取出鼠标位置 然后读取纹理 然后rgba 在转换为 物体ID 
 - 光追 PSO 多线程 hism
 - Gizmo系統
-- 地形分块和剔除
+- 地形分块和剔除(Culling) 
+  地形LOD skirt_side 四叉树进行LOD OTree
 - Intel VTune Profiler 性能分析工具
 - 插件形式添加模块代码
 - Mac Os molten VK
