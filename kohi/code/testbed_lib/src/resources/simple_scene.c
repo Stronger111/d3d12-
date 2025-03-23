@@ -476,190 +476,6 @@ b8 simple_scene_update(simple_scene* scene, const struct frame_data* p_frame_dat
     return true;
 }
 
-b8 simple_scene_populate_render_packet(simple_scene* scene,
-                                       struct camera* current_camera,
-                                       viewport* v,
-                                       struct frame_data* p_frame_data,
-                                       struct render_packet* packet) {
-    /*if (!scene || !packet) {
-        return false;
-    }
-
-    // World render
-    {
-        render_view_packet* view_packet = &packet->views[TESTBED_PACKET_VIEW_WORLD];
-        const render_view* view = view_packet->view;
-        // Make sure to clear the world geometry array.
-        darray_clear(scene->world_data.world_geometries);
-        darray_clear(scene->world_data.terrain_geometries);
-        darray_clear(scene->world_data.debug_geometries);
-
-        // Skybox
-        scene->world_data.skybox_data.sb = scene->sb;
-
-        // Update the frustum
-        vec3 forward = camera_forward(current_camera);
-        vec3 right = camera_right(current_camera);
-        vec3 up = camera_up(current_camera);
-        // TODO: get camera fov, aspect, etc.
-        frustum f = frustum_create(&current_camera->position, &forward, &right,
-                                   &up, v->rect.width / v->rect.height, v->fov, v->near_clip, v->far_clip);
-
-        p_frame_data->drawn_mesh_count = 0;
-
-        u32 mesh_count = darray_length(scene->meshes);
-        for (u32 i = 0; i < mesh_count; ++i) {
-            mesh* m = &scene->meshes[i];
-            if (m->generation != INVALID_ID_U8) {
-                mat4 model = transform_world_get(&m->transform);
-                // GPT:一个矩阵的行列式为负，那么它表示的变换反转了物体的定向。在二维空间中，这就像是将一个物体翻转过来；
-                // 在三维空间中，这就像是将一个物体变成了它的镜像
-                b8 winding_inverted = m->transform.determinant < 0;
-
-                for (u32 j = 0; j < m->geometry_count; ++j) {
-                    geometry* g = m->geometries[j];
-
-                    // // Bounding sphere calculation.
-                    // {
-                    //     // Translate/scale the extents.
-                    //     vec3 extents_min = vec3_mul_mat4(g->extents.min, model);
-                    //     vec3 extents_max = vec3_mul_mat4(g->extents.max, model);
-
-                    //     f32 min = KMIN(KMIN(extents_min.x, extents_min.y), extents_min.z);
-                    //     f32 max = KMAX(KMAX(extents_max.x, extents_max.y), extents_max.z);
-                    //     f32 diff = kabs(max - min);
-                    //     f32 radius = diff * 0.5f;
-
-                    //     // Translate/scale the center.
-                    //     vec3 center = vec3_mul_mat4(g->center, model);
-
-                    //     if (frustum_intersects_sphere(&state->camera_frustum, &center, radius)) {
-                    //         // Add it to the list to be rendered.
-                    //         geometry_render_data data = {0};
-                    //         data.model = model;
-                    //         data.geometry = g;
-                    //         data.unique_id = m->unique_id;
-                    //         darray_push(game_inst->frame_data.world_geometries, data);
-
-                    //         draw_count++;
-                    //     }
-                    // }
-
-                    // AABB calculation
-                    {
-                        // Translate/scale the extents.
-                        // vec3 extents_min = vec3_mul_mat4(g->extents.min, model);
-                        vec3 extents_max = vec3_mul_mat4(g->extents.max, model);
-
-                        // Translate/scale the center.
-                        vec3 center = vec3_mul_mat4(g->center, model);
-                        vec3 half_extents = {
-                            kabs(extents_max.x - center.x),
-                            kabs(extents_max.y - center.y),
-                            kabs(extents_max.z - center.z),
-                        };
-
-                        if (frustum_intersects_aabb(&f, &center, &half_extents)) {
-                            // Add it to the list to be rendered.
-                            geometry_render_data data = {0};
-                            data.model = model;
-                            data.geometry = g;
-                            data.unique_id = m->unique_id;
-                            data.winding_inverted = winding_inverted;
-                            darray_push(scene->world_data.world_geometries, data);
-
-                            p_frame_data->drawn_mesh_count++;
-                        }
-                    }
-                }
-            }
-        }
-
-        // TODO:Add Terrain(s)
-        u32 terrain_count = darray_length(scene->terrains);
-        for (u32 i = 0; i < terrain_count; ++i) {
-            // TODO: Check terrain generation
-            // TODO: Frustum culling
-            //
-            geometry_render_data data = {0};
-            data.model = transform_world_get(&scene->terrains[i].xform);
-            data.geometry = &scene->terrains[i].geo;
-            data.unique_id = scene->terrains[i].unique_id;
-
-            darray_push(scene->world_data.terrain_geometries, data);
-
-            // TODO: Counter for terrain geometries
-            p_frame_data->drawn_mesh_count++;
-        }
-
-        // Debug geometry
-
-        // Grid
-        {
-            geometry_render_data data = {0};
-            data.model = mat4_identity();
-            data.geometry = &scene->grid.geo;
-            data.unique_id = INVALID_ID;
-            darray_push(scene->world_data.debug_geometries, data);
-        }
-
-        // Directional light.
-        {
-            if (scene->dir_light && scene->dir_light->debug_data) {
-                simple_scene_debug_data* debug = scene->dir_light->debug_data;
-
-                // Debug line 3d
-                geometry_render_data data = {0};
-                data.model = transform_world_get(&debug->line.xform);
-                data.geometry = &debug->line.geo;
-                data.unique_id = debug->line.unique_id;
-                darray_push(scene->world_data.debug_geometries, data);
-            }
-        }
-
-        // Point lights
-        {
-            u32 point_light_count = darray_length(scene->point_lights);
-            for (u32 i = 0; i < point_light_count; ++i) {
-                if (scene->point_lights[i].debug_data) {
-                    simple_scene_debug_data* debug = (simple_scene_debug_data*)scene->point_lights[i].debug_data;
-
-                    // Debug box 3d
-                    geometry_render_data data = {0};
-                    data.model = transform_world_get(&debug->box.xform);
-                    data.geometry = &debug->box.geo;
-                    data.unique_id = debug->box.unique_id;
-                    darray_push(scene->world_data.debug_geometries, data);
-                }
-            }
-        }
-
-        // Mesh debug shapes
-        {
-            u32 mesh_count = darray_length(scene->meshes);
-            for (u32 i = 0; i < mesh_count; ++i) {
-                if (scene->meshes[i].debug_data) {
-                    simple_scene_debug_data* debug = (simple_scene_debug_data*)scene->meshes[i].debug_data;
-
-                    // Debug box 3d
-                    geometry_render_data data = {0};
-                    data.model = transform_world_get(&debug->box.xform);
-                    data.geometry = &debug->box.geo;
-                    data.unique_id = debug->box.unique_id;
-                    darray_push(scene->world_data.debug_geometries, data);
-                }
-            }
-        }
-        // World
-        if (!render_view_system_packet_build(view, p_frame_data, v,current_camera, &scene->world_data, view_packet)) {
-            KERROR("Failed to build packet for view 'world'.");
-            return false;
-        }
-    }
-    */
-    return true;
-}
-
 b8 simple_scene_raycast(simple_scene* scene, const struct ray* r, struct raycast_result* out_result) {
     if (!scene || !r || !out_result || scene->state < SIMPLE_SCENE_STATE_LOADED) {
         return false;
@@ -1270,8 +1086,8 @@ b8 simple_scene_mesh_render_data_query_from_line(const simple_scene* scene, vec3
 
     // Sort transparent geometries, then add them to the ext_data->geometries array.
     u32 transparent_geometry_count = darray_length(transparent_geometries);
-    //TODO:Why does this segfault?
-    //kquick_sort(sizeof(geometry_distance), transparent_geometries, 0, transparent_geometry_count - 1, geometry_distance_compare);
+    // TODO:Why does this segfault?
+    // kquick_sort(sizeof(geometry_distance), transparent_geometries, 0, transparent_geometry_count - 1, geometry_distance_compare);
     for (u32 i = 0; i < transparent_geometry_count; ++i) {
         darray_push(out_geometries, transparent_geometries[i].g);
     }
@@ -1405,18 +1221,23 @@ b8 simple_scene_terrain_render_data_query(const simple_scene* scene, const frust
 
     u32 terrain_count = darray_length(scene->terrains);
     for (u32 i = 0; i < terrain_count; ++i) {
+        terrain* t = &scene->terrains[i];
         // TODO: Frustum culling
-        geometry_render_data data = {0};
-        data.model = transform_world_get(&scene->terrains[i].xform);
-        geometry* g = &scene->terrains[i].geo;
-        data.material = g->material;
-        data.vertex_count = g->vertex_count;
-        data.vertex_buffer_offset = g->vertex_buffer_offset;
-        data.index_count = g->index_count;
-        data.index_buffer_offset = g->index_buffer_offset;
-        data.unique_id = scene->terrains[i].id.uniqueid;
+        for (u32 c = 0; c < t->chunk_count; c++) {
+            geometry_render_data data = {0};
+            data.model = transform_world_get(&scene->terrains[i].xform);
+            geometry* g = &scene->terrains[i].chunks[c].geo;
+            data.material = g->material;
+            data.vertex_count = g->vertex_count;
+            data.vertex_buffer_offset = g->vertex_buffer_offset;
+            data.vertex_element_size=sizeof(terrain_vertex);
+            data.index_count = g->index_count;
+            data.index_buffer_offset = g->index_buffer_offset;
+            data.index_element_size=sizeof(u32);
+            data.unique_id = scene->terrains[i].id.uniqueid;
 
-        darray_push(out_terrain_geometries, data);
+            darray_push(out_terrain_geometries, data);
+        }
     }
 
     *out_count = darray_length(out_terrain_geometries);

@@ -318,10 +318,10 @@ b8 renderer_geometry_upload(geometry* g) {
     renderer_system_state* state_ptr = (renderer_system_state*)systems_manager_get_state(K_SYSTEM_TYPE_RENDERER);
 
     b8 is_reupload = g->generation != INVALID_ID_U16;
-    u32 vertex_size = g->vertex_element_size * g->vertex_count;
-    u32 vertex_offset = 0;
-    u32 index_size = g->index_element_size * g->index_count;
-    u32 index_offset = 0;
+    u64 vertex_size = (u64)(g->vertex_element_size * g->vertex_count);
+    u64 vertex_offset = 0;
+    u64 index_size = (u64)(g->index_element_size * g->index_count);
+    u64 index_offset = 0;
     // Vertex data.
     if (!is_reupload) {
         // Allocate space in the buffer.

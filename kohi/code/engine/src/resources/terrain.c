@@ -59,8 +59,8 @@ b8 terrain_create(const terrain_config *config, terrain *out_terrain) {
     for (u32 i = 0; i < out_terrain->chunk_count; ++i) {
         // 为每个块设置内存
         terrain_chunk *chunk = &out_terrain->chunks[i];
-        u32 chunk_size_sq = out_terrain->chunk_size * out_terrain->chunk_size;
-        chunk->vertex_count = chunk_size_sq * 4;
+        u32 chunk_size_sq = (out_terrain->chunk_size + 1) * (out_terrain->chunk_size + 1);
+        chunk->vertex_count = chunk_size_sq;
         chunk->vertices = kallocate(sizeof(terrain_vertex) * chunk->vertex_count, MEMORY_TAG_ARRAY);
 
         chunk->index_count = chunk_size_sq * 6;
@@ -142,8 +142,12 @@ void terrain_destroy(terrain *t) {
 }
 
 static void terrain_chunk_initialize(terrain *t, terrain_chunk *chunk, u32 chunk_index, u32 global_base_index, u32 chunk_row_count, u32 chunk_col_count) {
-    u32 x_offset = chunk_index % chunk_col_count;
-    u32 z_offset = chunk_index / chunk_col_count;
+    
+    u32 chunk_offset_x = chunk_index % chunk_col_count;
+    u32 chunk_offset_z = chunk_index / chunk_col_count;
+
+    f32 chunk_base_pos_x=chunk_offset_x*t->chunk_size*t->tile_scale_x;
+    f32 chunk_base_pos_z=
 
     f32 x_pos = x_offset * t->tile_scale_x;
     f32 z_pos = z_offset * t->tile_scale_z;
@@ -293,10 +297,10 @@ static b8 terrain_chunk_load(terrain *t, terrain_chunk *chunk) {
     // Calculate extents for this chunk.
     vec3 min = chunk->vertices[0].position;
     vec3 max = chunk->vertices[chunk->vertex_count - 1].position;
-    
-    g->center = t->origin;
-    g->extents.min = t->extents.min;
-    g->extents.max = t->extents.max;
+    vec3 center = vec3_add(min, vec3_mul_scalar(vec3_sub(max, min), 0.5f));
+    g->center = (vec3){center.x, t->origin.y, center.z};
+    g->extents.min = (vec3){min.x, t->extents.min.y, min.z};
+    g->extents.max = (vec3){max.x, t->extents.max.y, max.z};
     // TODO: offload generation increments to frontend. Also do this in geometry_system_create.
     g->generation++;
 
@@ -308,6 +312,8 @@ static b8 terrain_chunk_load(terrain *t, terrain_chunk *chunk) {
         KWARN("Failed to acquire terrain material. Using defualt instead.");
         g->material = material_system_get_default_terrain();
     }
+
+    return true;
 }
 
 b8 terrain_load(terrain *t) {
@@ -317,12 +323,37 @@ b8 terrain_load(terrain *t) {
     }
 
     t->id = identifier_create();
+
+    for (u32 i = 0; i < t->chunk_count; ++i) {
+        if (!terrain_chunk_load(t, &t->chunks[i])) {
+            // TODO: Clean up the failure...
+            KERROR("Terrain chunk failed to load,Thus the terrain cannot be loaded.");
+            return false;
+        }
+    }
     return true;
 }
 
 b8 terrain_unload(terrain *t) {
-    material_system_release(t->geo.material->name);
-    renderer_geometry_destroy(&t->geo);
+    // Unload all chunks.
+    for (u32 i = 0; i < t->chunk_count; ++i) {
+        terrain_chunk *chunk = &t->chunks[i];
+        material_system_release(chunk->geo.material->name);
+        chunk->geo.material = 0;
+
+        renderer_geometry_destroy(&chunk->geo);
+
+        if (chunk->vertices) {
+            kfree(chunk->vertices, sizeof(terrain_vertex) * chunk->vertex_count, MEMORY_TAG_ARRAY);
+        }
+        if (chunk->indices) {
+            kfree(chunk->indices, sizeof(u32) * chunk->index_count, MEMORY_TAG_ARRAY);
+        }
+    }
+
+    kfree(t->chunks, sizeof(terrain_chunk) * t->chunk_count, MEMORY_TAG_ARRAY);
+    t->chunks = 0;
+    t->chunk_count = 0;
 
     t->id.uniqueid = INVALID_ID_U64;
     return true;
