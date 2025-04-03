@@ -46,7 +46,8 @@ b8 vulkan_renderer_shader_create(renderer_plugin* backend, struct shader* shader
 void vulkan_renderer_shader_destroy(renderer_plugin* backend, struct shader* shader);
 
 b8 vulkan_renderer_shader_initialize(renderer_plugin* backend, struct shader* shader);
-b8 vulkan_renderer_shader_use(renderer_plugin* backend, struct shader* shader);
+b8 vulkan_renderer_shader_use(renderer_plugin* backend, struct shader* s);
+b8 vulkan_renderer_shader_supports_wireframe(const renderer_plugin* plugin,const struct shader* s);
 b8 vulkan_renderer_shader_bind_globals(renderer_plugin* backend, struct shader* s);
 b8 vulkan_renderer_shader_bind_instance(renderer_plugin* backend, struct shader* s, u32 instance_id);
 b8 vulkan_renderer_shader_bind_local(renderer_plugin* backend, struct shader* s);

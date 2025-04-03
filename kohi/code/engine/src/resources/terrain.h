@@ -56,22 +56,43 @@ typedef struct terrain_config {
     char **material_names;
 } terrain_config;
 
-typedef struct terrain_chunk {
-    u32 vertex_count;
-    terrain_vertex *vertices;
-
-    u32 index_count;
+typedef struct terrain_chunk_lod {
+    /** @brief The index count for the chunk surface. */
+    u32 surface_index_count;
+    /** @brief The total index count, including those for side skirts. */
+    u32 total_index_count;
+    /** @brief The index data. */
     u32 *indices;
+    /** @brief The offset from the beginning of the index buffer. */
+    u64 index_buffer_offset;
+} terrain_chunk_lod;
 
-    geometry geo;
+typedef struct terrain_chunk {
+    /** @brief The chunk generation. Incremented every time the geometry changes. */
+    u16 generation;
+    u32 surface_vertex_count;
+    u32 total_vertex_count;
+    terrain_vertex *vertices;
+    u64 vertex_buffer_offset;
 
+    terrain_chunk_lod *lods;
+    /** @brief The center of the geometry in local coordinates. */
+    vec3 center;
+    /** @brief The extents of the geometry in local coordinates. */
     extents_3d extents;
+
+    /** @brief A pointer to the material associated with this geometry.. */
+    struct material *material;
+
+    u8 current_lod;
 } terrain_chunk;
 
 typedef struct terrain {
     identifier id;
+    u32 generation;
     char *name;
     transform xform;
+    // X 轴像素的长度
     u32 tile_count_x;
     u32 tile_count_z;
     // How large each tile is on the x axis.
@@ -96,6 +117,8 @@ typedef struct terrain {
     // 8, 9, ...
     terrain_chunk *chunks;
 
+    u8 lod_count;
+
     u32 material_count;
     char **material_names;
 } terrain;
@@ -105,6 +128,8 @@ KAPI void terrain_destroy(terrain *t);
 
 KAPI b8 terrain_initialize(terrain *t);
 KAPI b8 terrain_load(terrain *t);
+KAPI b8 terrain_chunk_load(terrain *t, terrain_chunk *chunk);
 KAPI b8 terrain_unload(terrain *t);
+KAPI b8 terrain_chunk_unload(terrain *t, terrain_chunk *chunk);
 
 KAPI b8 terrain_update(terrain *t);

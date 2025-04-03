@@ -34,7 +34,9 @@ Renderer:
 - 光追 PSO 多线程 hism
 - Gizmo系統
 - 地形分块和剔除(Culling) 
-  地形LOD skirt_side 四叉树进行LOD OTree
+  地形LOD skirt_side 平滑LOD过渡  四叉树进行LOD OTree 地块动态加载和卸载 
+  线框shader pipeline
+  Shader 热重载
 - Intel VTune Profiler 性能分析工具
 - 插件形式添加模块代码
 - Mac Os molten VK

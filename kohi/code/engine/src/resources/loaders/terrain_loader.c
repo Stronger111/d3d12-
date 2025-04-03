@@ -146,8 +146,7 @@ static b8 terrain_loader_load(struct resource_loader *self, const char *name,
         }
 
         image_resource_data *image_data = (image_resource_data *)heightmap_image_resource.data;
-        u32 pixel_count = image_data->width * image_data->height;
-        resource_data->vertex_data_length = pixel_count;
+        resource_data->vertex_data_length = (image_data->width + 1) * (image_data->height + 1);
         resource_data->vertex_datas = darray_reserve(terrain_vertex_data, resource_data->vertex_data_length);
 
         resource_data->tile_count_x = image_data->width;
@@ -158,7 +157,28 @@ static b8 terrain_loader_load(struct resource_loader *self, const char *name,
             return false;
         }
 
-        for (u32 i = 0; i < pixel_count; ++i) {
+        u32 j = 0;
+        for (u32 y = 0, i = 0; y < image_data->height; ++y) {
+            for (u32 x = 0; x < image_data->width; ++x, ++i, ++j) {
+                u8 r = image_data->pixels[(i * 4) + 0];
+                u8 g = image_data->pixels[(i * 4) + 1];
+                u8 b = image_data->pixels[(i * 4) + 2];
+                // Need to base height off combined RGB value
+                // 这说明你的机器字长是32位的，其中有一位是符号位，7位是阶码，
+                // 剩下的24位是有效数字，而24位最大为FFFFFF,即2^24=16777216,即从0-16777215，所以16777215是最大的有效数。
+                u32 colour_int = 0;
+                rgbu_to_u32(r, g, b, &colour_int);
+                f32 height = (f32)colour_int / 16777215;
+
+                resource_data->vertex_datas[j].height = height;
+            }
+            // Use the previous pixel's height again for the last row.
+            resource_data->vertex_datas[j].height = resource_data->vertex_datas[j - 1].height;
+            ++j;
+        }
+
+        // Iterate the last row of the image and simple the height from there again for the last row of the terrain.
+        for (u32 i = image_data->width * (image_data->height - 1); i < (image_data->width * image_data->height); ++i, ++j) {
             u8 r = image_data->pixels[(i * 4) + 0];
             u8 g = image_data->pixels[(i * 4) + 1];
             u8 b = image_data->pixels[(i * 4) + 2];
@@ -168,8 +188,13 @@ static b8 terrain_loader_load(struct resource_loader *self, const char *name,
             u32 colour_int = 0;
             rgbu_to_u32(r, g, b, &colour_int);
             f32 height = (f32)colour_int / 16777215;
-            resource_data->vertex_datas[i].height = height;
+
+            resource_data->vertex_datas[j].height = height;
         }
+
+        //The final vertex also needs a copy of the previous height.
+        resource_data->vertex_datas[j].height = resource_data->vertex_datas[j - 1].height;
+        
         resource_system_unload(&heightmap_image_resource);
     } else {
         // For now, heightmaps are the only way to import terrains.
@@ -177,7 +202,7 @@ static b8 terrain_loader_load(struct resource_loader *self, const char *name,
         resource_data->tile_count_x = resource_data->tile_count_z = 128;
         resource_data->chunk_size = 16;
         resource_data->vertex_data_length = resource_data->tile_count_x * resource_data->tile_count_z;
-        resource_data->vertex_datas =darray_reserve(terrain_vertex_data, resource_data->vertex_data_length);
+        resource_data->vertex_datas = darray_reserve(terrain_vertex_data, resource_data->vertex_data_length);
     }
     out_resource->data = resource_data;
     out_resource->data_size = sizeof(shader_config);
@@ -191,7 +216,7 @@ static void terrain_loader_unload(struct resource_loader *self,
 
     darray_destroy(data->vertex_datas);
     if (data->name) {
-        kfree(data->name, sizeof(char) * (string_length(data->name) + 1),MEMORY_TAG_STRING);
+        kfree(data->name, sizeof(char) * (string_length(data->name) + 1), MEMORY_TAG_STRING);
     }
     kzero_memory(data, sizeof(shader_config));
 

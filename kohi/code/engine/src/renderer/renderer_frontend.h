@@ -327,6 +327,15 @@ KAPI b8 renderer_shader_initialize(struct shader* s);
 KAPI b8 renderer_shader_use(struct shader* s);
 
 /**
+ * @brief Attempts to set wireframe mode on the given shader. If the backend, or the shader
+ * does not support this , it will fail when attempting to enable. Disabling will always succeed.
+ *
+ * @param s A pointer to the shader to be used.
+ * @param wireframe_enabled Indicates if wireframe mode should be enabled.
+ * @return True on success; otherwise false.
+ */
+KAPI b8 renderer_shader_set_wireframe(struct shader* s,b8 wireframe_enabled);
+/**
  * @brief Binds global resources for use and updating.
  *
  * @param s A pointer to the shader whose globals are to be bound.
@@ -358,7 +367,7 @@ KAPI b8 renderer_shader_bind_local(struct shader* s);
  *  @param needs_update Indicates if the shader uniforms need to be updated or just bound.
  * @return True on success; otherwise false.
  */
-KAPI b8 renderer_shader_apply_globals(struct shader* s, b8 needs_update,frame_data* p_frame_data);
+KAPI b8 renderer_shader_apply_globals(struct shader* s, b8 needs_update, frame_data* p_frame_data);
 
 /**
  * @brief Applies data for the currently bound instance.
@@ -367,7 +376,7 @@ KAPI b8 renderer_shader_apply_globals(struct shader* s, b8 needs_update,frame_da
  * @param needs_update Indicates if shader internals need an update, or if they should just be bound.
  * @return True on success; otherwise false.
  */
-KAPI b8 renderer_shader_apply_instance(struct shader* s, b8 needs_update,frame_data* p_frame_data);
+KAPI b8 renderer_shader_apply_instance(struct shader* s, b8 needs_update, frame_data* p_frame_data);
 
 /**
  * @brief Sets the uniform of the given shader to the provided value.
@@ -394,7 +403,7 @@ KAPI b8 renderer_shader_apply_local(struct shader* s, frame_data* p_frame_data);
  * @param out_instance_id A pointer to hold the new instance identifier.
  * @return True on success; otherwise false.
  */
-KAPI b8 renderer_shader_instance_resources_acquire(struct shader* s,const shader_instance_resource_config* config, u32* out_instance_id);
+KAPI b8 renderer_shader_instance_resources_acquire(struct shader* s, const shader_instance_resource_config* config, u32* out_instance_id);
 
 /**
  * @brief Releases internal instance-level resources for the given instance id.

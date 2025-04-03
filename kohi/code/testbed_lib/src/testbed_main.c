@@ -145,6 +145,10 @@ b8 game_on_event(u16 code, void* sender, void* listener_inst, event_context cont
                     KDEBUG("Renderer mode set to cascades.");
                     state->render_mode = RENDERER_VIEW_MODE_CASCADES;
                     break;
+                case RENDERER_VIEW_MODE_WIREFRAME:
+                    KDEBUG("Renderer mode set to wireframe.");
+                    state->render_mode = RENDERER_VIEW_MODE_WIREFRAME;
+                    break;
             }
             return true;
         }
@@ -472,10 +476,10 @@ b8 application_boot(struct application* game_inst) {
         return false;
     }
 
-    testbed_game_state* state=(testbed_game_state*)game_inst->state;
-    if(!rendergraph_finalize(&state->frame_graph)){
-       KERROR("Failed to finalize rendergraph. See log for details.");
-       return false;
+    testbed_game_state* state = (testbed_game_state*)game_inst->state;
+    if (!rendergraph_finalize(&state->frame_graph)) {
+        KERROR("Failed to finalize rendergraph. See log for details.");
+        return false;
     }
 
     // 按键映射
@@ -917,7 +921,7 @@ b8 application_prepare_frame(struct application* app_inst, struct frame_data* p_
     if (!state->running) {
         return false;
     }
-    
+
     kclock_start(&state->prepare_clock);
 
     // Skybox pass. This pass must always run, as it is what clears the screen.
@@ -1121,8 +1125,8 @@ b8 application_prepare_frame(struct application* app_inst, struct frame_data* p_
                 shadow_map_cascade_data* cascade = &ext_data->cascades[c];
 
                 // shadow frustum culling and count
-                mat4 shadow_view = mat4_mul(shadow_camera_lookats[c], shadow_camera_projections[c]);
-                frustum shadow_frustum = frustum_from_view_projection(shadow_view);
+                // mat4 shadow_view = mat4_mul(shadow_camera_lookats[c], shadow_camera_projections[c]);
+                // frustum shadow_frustum = frustum_from_view_projection(shadow_view);
 
                 simple_scene* scene = &state->main_scene;
 
@@ -1138,7 +1142,7 @@ b8 application_prepare_frame(struct application* app_inst, struct frame_data* p_
                         culling_radius,
                         p_frame_data,
                         &cascade->geometry_count,
-                        cascade->geometries)) {
+                        &cascade->geometries)) {
                     KERROR("Failed to query shadow map pass meshes.");
                 }
 
@@ -1148,12 +1152,13 @@ b8 application_prepare_frame(struct application* app_inst, struct frame_data* p_
                 // Add terain(s)
                 cascade->terrain_geometries = darray_reserve_with_allocator(geometry_render_data, 16, &p_frame_data->allocator);
                 // Query the scene for terrain meshes using the shadow frustum.
-                if (!simple_scene_terrain_render_data_query(
+                if (!simple_scene_terrain_render_data_query_from_line(
                         scene,
-                        &shadow_frustum,
-                        shadow_camera_positions[c],
+                        light_dir,
+                        culling_center,
+                        culling_radius,
                         p_frame_data,
-                        &cascade->terrain_geometry_count, cascade->terrain_geometries)) {
+                        &cascade->terrain_geometry_count, &cascade->terrain_geometries)) {
                     KERROR("Failed to query shadow map pass terrain geometries.");
                 }
 
@@ -1214,12 +1219,15 @@ b8 application_prepare_frame(struct application* app_inst, struct frame_data* p_
                     &camera_frustum,
                     current_camera->position,
                     p_frame_data,
-                    &ext_data->geometry_count, ext_data->geometries)) {
+                    &ext_data->geometry_count, &ext_data->geometries)) {
                 KERROR("Failed to query scene pass meshs.");
             }
 
             // Track the number of meshes drawn in the scene pass.
             p_frame_data->drawn_mesh_count = ext_data->geometry_count;
+
+            //TODO:DXS Test
+            //simple_scene_update_lod_from_view_position(scene,p_frame_data, camera_position_get(current_camera), v->near_clip,v->far_clip);
 
             // Add terrain(s)
             ext_data->terrain_geometries = darray_reserve_with_allocator(geometry_render_data, 16, &p_frame_data->allocator);
@@ -1230,7 +1238,7 @@ b8 application_prepare_frame(struct application* app_inst, struct frame_data* p_
                     &camera_frustum,
                     current_camera->position,
                     p_frame_data,
-                    &ext_data->terrain_geometry_count, ext_data->terrain_geometries)) {
+                    &ext_data->terrain_geometry_count, &ext_data->terrain_geometries)) {
                 KERROR("Failed to query scene pass terrain geometries.");
             }
 
@@ -1588,7 +1596,7 @@ static void refresh_rendergraph_pfns(application* app) {
     state->shadowmap_pass.execute = shadow_map_pass_execute;
     state->shadowmap_pass.destroy = shadow_map_pass_destroy;
     state->shadowmap_pass.load_resources = shadow_map_pass_load_resources;
-    //state->shadowmap_pass.source_populate = shadow_map_pass_source_populate;
+    // state->shadowmap_pass.source_populate = shadow_map_pass_source_populate;
 
     state->scene_pass.initialize = scene_pass_initialize;
     state->scene_pass.execute = scene_pass_execute;

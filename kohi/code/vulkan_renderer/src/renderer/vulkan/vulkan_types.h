@@ -392,6 +392,9 @@ typedef struct vulkan_shader {
 
     /** @brief An array of pointers to pipelines associated with this shader. */
     vulkan_pipeline** pipelines;
+    /** @brief An Array of pointer to wireframe pipelines associated with this shader*/
+    vulkan_pipeline** wireframe_pipelines;
+    
     /** @brief The currently bound pipeline index. */
     u8 bound_pipeline_index;
     /** @brief The currently-selected topology. */

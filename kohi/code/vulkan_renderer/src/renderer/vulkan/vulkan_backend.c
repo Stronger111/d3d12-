@@ -1532,6 +1532,10 @@ void vulkan_renderer_shader_destroy(renderer_plugin* plugin, shader* s) {
             if (shader->pipelines[i]) {
                 vulkan_pipeline_destroy(context, shader->pipelines[i]);
             }
+
+            if (shader->wireframe_pipelines && shader->wireframe_pipelines[i]) {
+                vulkan_pipeline_destroy(context, shader->wireframe_pipelines[i]);
+            }
         }
 
         // Shader modules
@@ -1550,6 +1554,13 @@ b8 vulkan_renderer_shader_initialize(renderer_plugin* plugin, shader* s) {
     VkDevice logical_device = context->device.logical_device;
     VkAllocationCallbacks* vk_allocator = context->allocator;
     vulkan_shader* internal_shader = (vulkan_shader*)s->internal_data;
+
+    b8 needs_wireframe = (s->flags & SHADER_FLAG_WIREFRAME) != 0;
+    // Determin if the implementaion supports this and set to false if not.
+    if (!context->device.features.fillModeNonSolid) {
+        KINFO("Renderer backend does not support fillModeNonSolid. Wireframe mode is not possible,but was requested for the shader '%s'.", s->name);
+        needs_wireframe = false;
+    }
 
     // Create a module for each stage.
     kzero_memory(internal_shader->stages, sizeof(vulkan_shader_stage) * VULKAN_SHADER_MAX_STAGES);
@@ -1652,12 +1663,26 @@ b8 vulkan_renderer_shader_initialize(renderer_plugin* plugin, shader* s) {
     // Create an array of pointers to pipelines, one per topology class. Null means not supported for this shader.
     internal_shader->pipelines = kallocate(sizeof(vulkan_pipeline*) * pipeline_count, MEMORY_TAG_ARRAY);
 
+    // Do the same as above , but a wireframe version.
+    if (needs_wireframe) {
+        internal_shader->wireframe_pipelines = kallocate(sizeof(vulkan_pipeline*) * pipeline_count, MEMORY_TAG_ARRAY);
+    } else {
+        internal_shader->wireframe_pipelines = 0;
+    }
+
     // Create one pipeline per topology class.
     // Point class.
     if (s->topology_types & PRIMITIVE_TOPOLOGY_TYPE_POINT_LIST) {
         internal_shader->pipelines[VULKAN_TOPOLOGY_CLASS_POINT] = kallocate(sizeof(vulkan_pipeline), MEMORY_TAG_VULKAN);
         // Set the supported types for this class.
         internal_shader->pipelines[VULKAN_TOPOLOGY_CLASS_POINT]->supported_topology_types |= PRIMITIVE_TOPOLOGY_TYPE_POINT_LIST;
+
+        // Wireframe versions
+        if (needs_wireframe) {
+            internal_shader->wireframe_pipelines[VULKAN_TOPOLOGY_CLASS_POINT] = kallocate(sizeof(vulkan_pipeline), MEMORY_TAG_VULKAN);
+            // Set the supported types for this class.
+            internal_shader->wireframe_pipelines[VULKAN_TOPOLOGY_CLASS_POINT]->supported_topology_types |= PRIMITIVE_TOPOLOGY_TYPE_POINT_LIST;
+        }
     }
 
     // Line class.
@@ -1666,6 +1691,14 @@ b8 vulkan_renderer_shader_initialize(renderer_plugin* plugin, shader* s) {
         // Set the supported types for this class.
         internal_shader->pipelines[VULKAN_TOPOLOGY_CLASS_LINE]->supported_topology_types |= PRIMITIVE_TOPOLOGY_TYPE_LINE_LIST;
         internal_shader->pipelines[VULKAN_TOPOLOGY_CLASS_LINE]->supported_topology_types |= PRIMITIVE_TOPOLOGY_TYPE_LINE_STRIP;
+
+        // Wireframe versions
+        if (needs_wireframe) {
+            internal_shader->wireframe_pipelines[VULKAN_TOPOLOGY_CLASS_LINE] = kallocate(sizeof(vulkan_pipeline), MEMORY_TAG_VULKAN);
+            // Set the supported types for this class.
+            internal_shader->wireframe_pipelines[VULKAN_TOPOLOGY_CLASS_LINE]->supported_topology_types |= PRIMITIVE_TOPOLOGY_TYPE_LINE_LIST;
+            internal_shader->wireframe_pipelines[VULKAN_TOPOLOGY_CLASS_LINE]->supported_topology_types |= PRIMITIVE_TOPOLOGY_TYPE_LINE_STRIP;
+        }
     }
     // Triangle class.
     if (s->topology_types & PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE_LIST ||
@@ -1676,6 +1709,15 @@ b8 vulkan_renderer_shader_initialize(renderer_plugin* plugin, shader* s) {
         internal_shader->pipelines[VULKAN_TOPOLOGY_CLASS_TRIANGLE]->supported_topology_types |= PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE_LIST;
         internal_shader->pipelines[VULKAN_TOPOLOGY_CLASS_TRIANGLE]->supported_topology_types |= PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE_STRIP;
         internal_shader->pipelines[VULKAN_TOPOLOGY_CLASS_TRIANGLE]->supported_topology_types |= PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE_FAN;
+
+        // Wireframe versions
+        if (needs_wireframe) {
+            internal_shader->wireframe_pipelines[VULKAN_TOPOLOGY_CLASS_TRIANGLE] = kallocate(sizeof(vulkan_pipeline), MEMORY_TAG_VULKAN);
+            // Set the supported types for this class.
+            internal_shader->wireframe_pipelines[VULKAN_TOPOLOGY_CLASS_TRIANGLE]->supported_topology_types |= PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE_LIST;
+            internal_shader->wireframe_pipelines[VULKAN_TOPOLOGY_CLASS_TRIANGLE]->supported_topology_types |= PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE_STRIP;
+            internal_shader->wireframe_pipelines[VULKAN_TOPOLOGY_CLASS_TRIANGLE]->supported_topology_types |= PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE_FAN;
+        }
     }
 
     // Loop through and config/create one pipeline per class . NUll entries are skipped.
@@ -1696,7 +1738,11 @@ b8 vulkan_renderer_shader_initialize(renderer_plugin* plugin, shader* s) {
         pipeline_config.viewport = viewport;
         pipeline_config.scissor = scissor;
         pipeline_config.cull_mode = internal_shader->cull_mode;
-        pipeline_config.shader_flags = s->flags;
+
+        // Strip the wireframe flag if it's there.
+        shader_flag_bits flag = s->flags;
+        flag &= ~(SHADER_FLAG_WIREFRAME);
+        pipeline_config.shader_flags = flag;
         // NOTE: Always one block for the push constant.
         pipeline_config.push_constant_range_count = 1;
         range push_constant_range;
@@ -1707,6 +1753,13 @@ b8 vulkan_renderer_shader_initialize(renderer_plugin* plugin, shader* s) {
         pipeline_config.topology_types = s->topology_types;
 
         b8 pipeline_result = vulkan_graphics_pipeline_create(context, &pipeline_config, internal_shader->pipelines[i]);
+
+        // Create the wireframe version.
+        if (needs_wireframe && pipeline_result && internal_shader->wireframe_pipelines[i]) {
+            // Use the same config, but make sure the wireframe flag is set.
+            pipeline_config.shader_flags |= SHADER_FLAG_WIREFRAME;
+            pipeline_result = vulkan_graphics_pipeline_create(context, &pipeline_config, internal_shader->wireframe_pipelines[i]);
+        }
 
         kfree(pipeline_config.name, string_length(pipeline_config.name) + 1, MEMORY_TAG_STRING);
 
@@ -1822,22 +1875,36 @@ b8 vulkan_renderer_shader_initialize(renderer_plugin* plugin, shader* s) {
     return true;
 }
 
-b8 vulkan_renderer_shader_use(renderer_plugin* plugin, shader* shader) {
+b8 vulkan_renderer_shader_use(renderer_plugin* plugin, shader* s) {
     vulkan_context* context = (vulkan_context*)plugin->internal_context;
-    vulkan_shader* s = shader->internal_data;
+    vulkan_shader* internal = s->internal_data;
     vulkan_command_buffer* command_buffer = &context->graphics_command_buffers[context->image_index];
-    vulkan_pipeline_bind(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, s->pipelines[s->bound_pipeline_index]);
 
-    context->bound_shader = shader;
+    // Pick the correct pipeline
+    vulkan_pipeline** pipeline_array = s->is_wireframe ? internal->wireframe_pipelines : internal->pipelines;
+    vulkan_pipeline_bind(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_array[internal->bound_pipeline_index]);
+
+    context->bound_shader = s;
 
     // Make sure to use the current bound type as well
     if (context->device.support_flags & VULKAN_DEVICE_SUPPORT_FLAG_NATIVE_DYNAMIC_STATE_BIT) {
-        vkCmdSetPrimitiveTopology(command_buffer->handle, s->current_topology);
+        vkCmdSetPrimitiveTopology(command_buffer->handle, internal->current_topology);
     } else if (context->device.support_flags & VULKAN_DEVICE_SUPPORT_FLAG_DYNAMIC_STATE_BIT) {
-        context->vkCmdSetPrimitiveTopologyEXT(command_buffer->handle, s->current_topology);
+        context->vkCmdSetPrimitiveTopologyEXT(command_buffer->handle, internal->current_topology);
     }
 
     return true;
+}
+
+b8 vulkan_renderer_shader_supports_wireframe(const renderer_plugin* plugin, const struct shader* s) {
+    const vulkan_shader* internal = s->internal_data;
+
+    // If the array exists. this is supported.
+    if (internal->wireframe_pipelines) {
+        return true;
+    }
+
+    return false;
 }
 
 b8 vulkan_renderer_shader_bind_globals(renderer_plugin* plugin, shader* s) {
@@ -1997,9 +2064,13 @@ b8 vulkan_renderer_shader_apply_globals(renderer_plugin* plugin, shader* s, b8 n
             vkUpdateDescriptorSets(context->device.logical_device, descriptor_write_count, descriptor_writes, 0, 0);
         }
     }
+
+    // Pick the correct pipeline.
+    vulkan_pipeline** pipeline_array = s->is_wireframe ? internal->wireframe_pipelines : internal->pipelines;
+
     // Bind the global l descriptor set to be updated.
     vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            internal->pipelines[internal->bound_pipeline_index]->pipeline_layout, 0, 1,
+                            pipeline_array[internal->bound_pipeline_index]->pipeline_layout, 0, 1,
                             &global_descriptor_set, 0, 0);
     return true;
 }
@@ -2156,9 +2227,12 @@ b8 vulkan_renderer_shader_apply_instance(renderer_plugin* plugin, shader* s, b8 
         first_set = 0;
     }
 
+    // Pick the correct pipeline.
+    vulkan_pipeline** pipeline_array = s->is_wireframe ? internal->wireframe_pipelines : internal->pipelines;
+
     // Bind the descriptor set to be updated, or in case the shader changed.
     vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            internal->pipelines[internal->bound_pipeline_index]->pipeline_layout, first_set, 1,
+                            pipeline_array[internal->bound_pipeline_index]->pipeline_layout, first_set, 1,
                             &instance_descriptor_set, 0, 0);
     return true;
 }
@@ -2255,7 +2329,7 @@ b8 vulkan_renderer_texture_map_resources_acquire(renderer_plugin* plugin, textur
     string_format(formatted_name, "%s_texmap_sampler", map->texture->name);
     VK_SET_DEBUG_OBJECT_NAME(context, VK_OBJECT_TYPE_SAMPLER, context->samplers[selected_id], formatted_name);
     map->internal_id = selected_id;
-    
+
     return true;
 }
 
@@ -2486,9 +2560,13 @@ b8 vulkan_renderer_shader_apply_local(renderer_plugin* plugin, struct shader* s,
     vulkan_context* context = (vulkan_context*)plugin->internal_context;
     vulkan_shader* internal = s->internal_data;
     VkCommandBuffer command_buffer = context->graphics_command_buffers[context->image_index].handle;
+
+    // Pick the correct pipeline.
+    vulkan_pipeline** pipeline_array = s->is_wireframe ? internal->wireframe_pipelines : internal->pipelines;
+
     // push constants
     vkCmdPushConstants(command_buffer,
-                       internal->pipelines[internal->bound_pipeline_index]->pipeline_layout,
+                       pipeline_array[internal->bound_pipeline_index]->pipeline_layout,
                        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
                        0, 128, internal->local_push_constant_block);
     return true;

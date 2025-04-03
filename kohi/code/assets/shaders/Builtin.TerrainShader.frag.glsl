@@ -309,6 +309,9 @@ void main() {
        
     } else if(in_mode == 2) {
         out_colour = vec4(abs(normal), 1.0);
+    } else if(in_mode == 4){
+        //wireframe,just render a solid colour
+        out_colour=vec4(1.0,0.0,1.0,1.0); //magenta
     }
 }
 

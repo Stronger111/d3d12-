@@ -42,6 +42,7 @@ typedef enum renderer_debug_view_mode {
     RENDERER_VIEW_MODE_LIGHTING = 1,
     RENDERER_VIEW_MODE_NORMALS = 2,
     RENDERER_VIEW_MODE_CASCADES = 3,
+    RENDERER_VIEW_MODE_WIREFRAME=4
 } renderer_debug_view_mode;
 
 typedef enum render_target_attachment_type {
@@ -599,6 +600,15 @@ typedef struct renderer_plugin {
     b8 (*shader_use)(struct renderer_plugin* plugin, struct shader* shader);
 
     /**
+     * @brief Indicates if the supplied shader supports wireframe mode.
+     *
+     * @param plugin A constant pointer to the renderer plugin interface.
+     * @param s A constant pointer to the shader to be used.
+     * @return True if supported; otherwise false.
+     */
+    b8 (*shader_supports_wireframe)(const struct renderer_plugin* plugin, const struct shader* s);
+
+    /**
      * @brief Binds global resources for use and updating.
      *
      * @param plugin A pointer to the renderer plugin interface.
@@ -634,7 +644,7 @@ typedef struct renderer_plugin {
      * @param needs_update Indicates if the shader uniforms need to be updated or just bound.
      * @return True on success; otherwise false.
      */
-    b8 (*shader_apply_globals)(struct renderer_plugin* plugin, struct shader* s, b8 needs_update,struct frame_data* p_frame_data);
+    b8 (*shader_apply_globals)(struct renderer_plugin* plugin, struct shader* s, b8 needs_update, struct frame_data* p_frame_data);
 
     /**
      * @brief Applies data for the currently bound instance.
@@ -644,7 +654,7 @@ typedef struct renderer_plugin {
      * @param needs_update Indicates if the shader uniforms need to be updated or just bound.
      * @return True on success; otherwise false.
      */
-    b8 (*shader_apply_instance)(struct renderer_plugin* plugin, struct shader* s, b8 needs_update,struct frame_data* p_frame_data);
+    b8 (*shader_apply_instance)(struct renderer_plugin* plugin, struct shader* s, b8 needs_update, struct frame_data* p_frame_data);
 
     /**
      * @brief Acquires internal instance-level resources and provides an instance id.
@@ -655,7 +665,7 @@ typedef struct renderer_plugin {
      * @param out_instance_id A pointer to hold the new instance identifier.
      * @return True on success; otherwise false.
      */
-    b8 (*shader_instance_resources_acquire)(struct renderer_plugin* plugin, struct shader* s,const shader_instance_resource_config* config, u32* out_instance_id);
+    b8 (*shader_instance_resources_acquire)(struct renderer_plugin* plugin, struct shader* s, const shader_instance_resource_config* config, u32* out_instance_id);
 
     /**
      * @brief Releases internal instance-level resources for the given instance id.

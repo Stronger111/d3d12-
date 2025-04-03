@@ -476,6 +476,60 @@ b8 simple_scene_update(simple_scene* scene, const struct frame_data* p_frame_dat
     return true;
 }
 
+void simple_scene_update_lod_from_view_position(simple_scene* scene, const frame_data* p_frame_data, vec3 view_position, f32 near_clip, f32 far_clip) {
+    if (!scene) {
+        return;
+    }
+
+    if (scene->state >= SIMPLE_SCENE_STATE_LOADED) {
+        // Update terrain chunk LODs
+        u32 terrain_count = darray_length(scene->terrains);
+
+        for (u32 i = 0; i < terrain_count; ++i) {
+            terrain* t = &scene->terrains[i];
+
+            mat4 model = transform_world_get(&t->xform);
+
+            // Calculate LOD splits based on clip range.
+            f32 range = far_clip - near_clip;
+
+            // The first split distance is always 0
+            f32* splits = p_frame_data->allocator.allocate(sizeof(f32) * (t->lod_count + 1));
+            splits[0] = 0.0f;
+            for (u32 l = 0; l < t->lod_count; ++l) {
+                f32 pct = (l + 1) / (f32)t->lod_count;
+                // Just do linear splits for now.
+                splits[l + 1] = (near_clip + range) * pct;
+            }
+
+            // Calculate chunk LODs based on distance from camera position.
+            for (u32 c = 0; c < t->chunk_count; c++) {
+                terrain_chunk* chunk = &t->chunks[c];
+
+                // Translate/scale the center.
+                vec3 g_center = vec3_mul_mat4(chunk->center, model);
+
+                // Check the distance of the chunk.
+                f32 dist_to_chunk = vec3_distance(view_position, g_center);
+                u8 lod = INVALID_ID_U8;
+                for (u8 l = 0; l < t->lod_count; ++l) {
+                    // If between this and the next split, this is the LOD to use.
+                    if (dist_to_chunk >= splits[l] && dist_to_chunk <= splits[l + 1]) {
+                        lod = l;
+                        break;
+                    }
+                }
+                // Cover the case of chunks outside the view frustum.
+                if (lod == INVALID_ID_U8) {
+                    lod = t->lod_count - 1;
+                }
+
+                chunk->current_lod = lod;
+            }
+        }
+    }
+}
+
 b8 simple_scene_raycast(simple_scene* scene, const struct ray* r, struct raycast_result* out_result) {
     if (!scene || !r || !out_result || scene->state < SIMPLE_SCENE_STATE_LOADED) {
         return false;
@@ -1104,42 +1158,44 @@ b8 simple_scene_terrain_render_data_query_from_line(const simple_scene* scene, v
     for (u32 i = 0; i < terrain_count; ++i) {
         terrain* t = &scene->terrains[i];
         mat4 model = transform_world_get(&t->xform);
-        // b8 winding_inverted = t->xform.determinant < 0;
+        b8 winding_inverted = t->xform.determinant < 0;
 
         // Check each chunk to see if it is in view.
         for (u32 c = 0; c < t->chunk_count; c++) {
             terrain_chunk* chunk = &t->chunks[c];
 
-            geometry* g = &chunk->geo;
+            if (chunk->generation != INVALID_ID_U16) {
+                // TODO: cache this somewhere...
+                //
+                // Translate/scale the extents.
+                vec3 extents_min = vec3_mul_mat4(chunk->extents.min, model);
+                vec3 extents_max = vec3_mul_mat4(chunk->extents.max, model);
 
-            // Translate/scale the extents.
-            vec3 extents_min = vec3_mul_mat4(g->extents.min, model);
-            vec3 extents_max = vec3_mul_mat4(g->extents.max, model);
+                // Translate/scale the center.
+                vec3 transformed_center = vec3_mul_mat4(chunk->center, model);
+                // Find the one furthest from the center.
+                f32 mesh_radius = KMAX(vec3_distance(extents_min, transformed_center), vec3_distance(extents_max, transformed_center));
 
-            // Translate/scale the center.
-            vec3 transformed_center = vec3_mul_mat4(g->center, model);
-            // Find the one furthest from the center.
-            f32 mesh_radius = KMAX(vec3_distance(extents_min, transformed_center), vec3_distance(extents_max, transformed_center));
+                f32 dist_to_line = vec3_distance_to_line(transformed_center, center, direction);
 
-            f32 dist_to_line = vec3_distance_to_line(transformed_center, center, direction);
+                // Is whthin distance, so include it
+                if ((dist_to_line - mesh_radius) <= radius) {
+                    // Add it to the list to be rendered.
+                    geometry_render_data data = {0};
+                    data.model = model;
+                    data.material = chunk->material;
+                    data.vertex_count = chunk->total_vertex_count;
+                    data.vertex_buffer_offset = chunk->vertex_buffer_offset;
 
-            // Is whthin distance, so include it
-            if ((dist_to_line - mesh_radius) <= radius) {
-                //Add it to the list to be rendered.
-                geometry_render_data data = {0};
-                data.model = model;
-                data.material = g->material;
-                data.vertex_count = g->vertex_count;
-                data.vertex_buffer_offset = g->vertex_buffer_offset;
+                    // Use the indices for the current LOD.
+                    data.index_count = chunk->lods[chunk->current_lod].total_index_count;
+                    data.index_buffer_offset = chunk->lods[chunk->current_lod].index_buffer_offset;
+                    data.index_element_size = sizeof(u32);
+                    data.unique_id = t->id.uniqueid;
+                    data.winding_inverted = winding_inverted;
 
-                //Use the indices for the current LOD.
-                data.vertex_element_size = sizeof(terrain_vertex);
-                data.index_count = g->index_count;
-                data.index_buffer_offset = g->index_buffer_offset;
-                data.index_element_size = sizeof(u32);
-                data.unique_id = scene->terrains[i].id.uniqueid;
-
-                darray_push(*out_geometries, data);
+                    darray_push(*out_geometries, data);
+                }
             }
         }
     }
@@ -1276,42 +1332,45 @@ b8 simple_scene_terrain_render_data_query(const simple_scene* scene, const frust
     for (u32 i = 0; i < terrain_count; ++i) {
         terrain* t = &scene->terrains[i];
         mat4 model = transform_world_get(&t->xform);
-        // b8 winding_inverted = t->xform.determinant < 0;
+        b8 winding_inverted = t->xform.determinant < 0;
 
         // Check each chunk to see if it is in view.
         for (u32 c = 0; c < t->chunk_count; c++) {
             terrain_chunk* chunk = &t->chunks[c];
 
-            geometry* g = &chunk->geo;
+            if (chunk->generation != INVALID_ID_U16) {
+                // AABB calculation
+                vec3 g_center, half_extents;
+                if (f) {
+                    // Translate/scale the extents.
+                    // vec3 extents_min=vec3_mul_mat4(g->extents.min,model);
+                    vec3 extents_max = vec3_mul_mat4(chunk->extents.max, model);
 
-            // AABB calculation
-            vec3 g_center, half_extents;
-            if (f) {
-                // Translate/scale the extents.
-                // vec3 extents_min=vec3_mul_mat4(g->extents.min,model);
-                vec3 extents_max = vec3_mul_mat4(g->extents.max, model);
+                    // Translate/scale the center.
+                    g_center = vec3_mul_mat4(chunk->center, model);
+                    half_extents = (vec3){
+                        kabs(extents_max.x - g_center.x),
+                        kabs(extents_max.y - g_center.y),
+                        kabs(extents_max.z - g_center.z)};
+                }
 
-                // Translate/scale the center.
-                g_center = vec3_mul_mat4(g->center, model);
-                half_extents = (vec3){
-                    kabs(extents_max.x - g_center.x),
-                    kabs(extents_max.y - g_center.y),
-                    kabs(extents_max.z - g_center.z)};
-            }
+                if (!f || frustum_intersects_aabb(f, &g_center, &half_extents)) {
+                    geometry_render_data data = {0};
+                    data.model = model;
+                    data.material = chunk->material;
+                    data.vertex_count = chunk->total_vertex_count;
+                    data.vertex_buffer_offset = chunk->vertex_buffer_offset;
+                    data.vertex_element_size = sizeof(terrain_vertex);
 
-            if (!f || frustum_intersects_aabb(f, &g_center, &half_extents)) {
-                geometry_render_data data = {0};
-                data.model = model;
-                data.material = g->material;
-                data.vertex_count = g->vertex_count;
-                data.vertex_buffer_offset = g->vertex_buffer_offset;
-                data.vertex_element_size = sizeof(terrain_vertex);
-                data.index_count = g->index_count;
-                data.index_buffer_offset = g->index_buffer_offset;
-                data.index_element_size = sizeof(u32);
-                data.unique_id = scene->terrains[i].id.uniqueid;
+                    // Use the indices for the current LOD.
+                    data.index_count = chunk->lods[chunk->current_lod].total_index_count;
+                    data.index_buffer_offset = chunk->lods[chunk->current_lod].index_buffer_offset;
+                    data.index_element_size = sizeof(u32);
+                    data.unique_id = t->id.uniqueid;
+                    data.winding_inverted = winding_inverted;
 
-                darray_push(*out_terrain_geometries, data);
+                    darray_push(*out_terrain_geometries, data);
+                }
             }
         }
     }
