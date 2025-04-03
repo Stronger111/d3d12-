@@ -10,8 +10,9 @@ struct frame_data;
 
 b8 vulkan_renderer_backend_initialize(renderer_plugin* backend, const renderer_backend_config* config, u8* out_window_render_target_count);
 void vulkan_renderer_backend_shutdown(renderer_plugin* backend);
-
 void vulkan_renderer_backend_on_resized(renderer_plugin* backend, u16 width, u16 height);
+void vulkan_renderer_begin_debug_label(renderer_plugin* plugin,const char* label_text,vec3 colour);
+void vulkan_renderer_end_debug_label(renderer_plugin* plugin); 
 
 b8 vulkan_renderer_frame_prepare(renderer_plugin* plugin, struct frame_data* p_frame_data);
 b8 vulkan_renderer_begin(renderer_plugin* plugin, struct frame_data* p_frame_data);

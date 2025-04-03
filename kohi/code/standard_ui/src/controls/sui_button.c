@@ -12,6 +12,8 @@
 
 #include "standard_ui_system.h"
 
+static void sui_button_control_render_frame_prepare(struct sui_control* self,const struct frame_data* p_frame_data);
+
 b8 sui_button_control_create(const char* name, sui_control* out_control) {
     if (!sui_base_control_create(name, out_control)) {
         return false;

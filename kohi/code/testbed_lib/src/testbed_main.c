@@ -1421,26 +1421,22 @@ b8 application_render_frame(struct application* game_inst, struct frame_data* p_
     }
 
     kclock_start(&state->render_clock);
-    // Start the frame
-    if (!renderer_begin(p_frame_data)) {
-        //
-    }
 
     if (!rendergraph_execute_frame(&state->frame_graph, p_frame_data)) {
         KERROR("Failed to execute rendergraph frame.");
         return false;
     }
-    renderer_end(p_frame_data);
-    // NOTE: Stopping the timer before presentation since that can greatly impact this timing.
+    // renderer_end(p_frame_data);
+  
     kclock_update(&state->render_clock);
 
-    kclock_start(&state->present_clock);
+    // kclock_start(&state->present_clock);
 
-    if (!renderer_present(p_frame_data)) {
-        KERROR("The call to renderer_present failed. This is likely unrecoverable.Shutting down.");
-        return false;
-    }
-    kclock_update(&state->present_clock);
+    // if (!renderer_present(p_frame_data)) {
+    //     KERROR("The call to renderer_present failed. This is likely unrecoverable.Shutting down.");
+    //     return false;
+    // }
+    //kclock_update(&state->present_clock);
     return true;
 }
 

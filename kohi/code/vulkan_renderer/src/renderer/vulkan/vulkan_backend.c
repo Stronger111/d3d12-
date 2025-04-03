@@ -581,6 +581,23 @@ void vulkan_renderer_backend_on_resized(renderer_plugin* plugin, u16 width, u16 
     KINFO("vulkan renderer backends->resized:w/h/gen:%i/%i/%llu", width, height, context->framebuffer_size_generation);
 }
 
+void vulkan_renderer_begin_debug_label(renderer_plugin* plugin, const char* label_text, vec3 colour) {
+#ifdef _DEBUG
+    vulkan_context* context = (vulkan_context*)plugin->internal_context;
+    vulkan_command_buffer* command_buffer = &context->graphics_command_buffers[context->image_index];
+    vec4 rgba = (vec4){colour.r, colour.g, colour.b, 1.0f};
+#endif
+    VK_BEGIN_DEBUG_LABEL(context, command_buffer->handle, label_text, rgba);
+}
+
+void vulkan_renderer_end_debug_label(renderer_plugin* plugin) {
+#ifdef _DEBUG
+    vulkan_context* context = (vulkan_context*)plugin->internal_context;
+    vulkan_command_buffer* command_buffer = &context->graphics_command_buffers[context->image_index];
+#endif
+    VK_END_DEBUG_LABEL(context, command_buffer->handle);
+}
+
 b8 vulkan_renderer_frame_prepare(renderer_plugin* plugin, struct frame_data* p_frame_data) {
     // Cold-cast the context
     vulkan_context* context = (vulkan_context*)plugin->internal_context;

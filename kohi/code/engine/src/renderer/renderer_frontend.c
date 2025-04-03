@@ -3,6 +3,7 @@
 #include "containers/darray.h"
 #include "containers/freelist.h"
 #include "containers/hashtable.h"
+#include "core/event.h"
 #include "core/frame_data.h"
 #include "core/kmemory.h"
 #include "core/kstring.h"
@@ -62,6 +63,8 @@ b8 renderer_system_initialize(u64* memory_requirement, void* state, void* config
     renderer_config.application_name = typed_config->application_name;
     // TODO: expose this to the application to configure.
     renderer_config.flags = RENDERER_CONFIG_FLAG_VSYNC_ENABLED_BIT | RENDERER_CONFIG_FLAG_POWER_SAVING_BIT;
+    // NOTE: To enable validation, uncomment this line.
+    renderer_config.flags |= RENDERER_CONFIG_FLAG_ENABLE_VALIDATION;
 
     // Create the vsync kvar
     kvar_int_create("vsync", (renderer_config.flags & RENDERER_CONFIG_FLAG_VSYNC_ENABLED_BIT) ? 1 : 0);
@@ -123,6 +126,24 @@ void renderer_on_resized(u16 width, u16 height) {
         KWARN("renderer backend does not exist to accept resize:%i %i", width, height);
     }
 }
+
+void renderer_begin_debug_label(const char* label_text, vec3 colour) {
+#ifdef _DEBUG
+    renderer_system_state* state_ptr = (renderer_system_state*)systems_manager_get_state(K_SYSTEM_TYPE_RENDERER);
+    if(state_ptr){
+       state_ptr->plugin.begin_debug_label(&state_ptr->plugin, label_text, colour);
+    }
+#endif
+}
+
+void renderer_end_debug_label(void) {
+    #ifdef _DEBUG
+        renderer_system_state* state_ptr = (renderer_system_state*)systems_manager_get_state(K_SYSTEM_TYPE_RENDERER);
+        if(state_ptr){
+           state_ptr->plugin.end_debug_label(&state_ptr->plugin);
+        }
+    #endif
+    }
 
 b8 renderer_frame_prepare(struct frame_data* p_frame_data) {
     renderer_system_state* state_ptr = (renderer_system_state*)systems_manager_get_state(K_SYSTEM_TYPE_RENDERER);
