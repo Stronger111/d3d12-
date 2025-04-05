@@ -402,7 +402,7 @@ b8 terrain_chunk_load(terrain *t, terrain_chunk *chunk) {
     }
 
     // TODO:Passing false here produces a queue wait and should be offloaded to another queue.
-    if (!renderer_renderbuffer_load_range(vertex_buffer, chunk->vertex_buffer_offset, total_vertex_size, chunk->vertices)) {
+    if (!renderer_renderbuffer_load_range(vertex_buffer, chunk->vertex_buffer_offset, total_vertex_size, chunk->vertices,false)) {
         KERROR("Failed to upload vertex data for terrain chunk.");
         return false;
     }
@@ -418,7 +418,7 @@ b8 terrain_chunk_load(terrain *t, terrain_chunk *chunk) {
         }
 
         // TODO:Passing false here produces a queue wait and should be offloaded to another queue.
-        if (!renderer_renderbuffer_load_range(index_buffer, lod->index_buffer_offset, total_size, lod->indices)) {
+        if (!renderer_renderbuffer_load_range(index_buffer, lod->index_buffer_offset, total_size, lod->indices,false)) {
             KERROR("Failed to upload index data for terrain chunk lod.");
             return false;
         }

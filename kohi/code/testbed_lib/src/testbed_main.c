@@ -503,7 +503,7 @@ b8 application_initialize(struct application* game_inst) {
     systems_manager_state* sys_mgr_state = engine_systems_manager_state_get(game_inst);
     standard_ui_system_config standard_ui_cfg = {0};
     standard_ui_cfg.max_control_count = 1024;
-    if (!systems_manager_register(sys_mgr_state, K_SYSTEM_TYPE_STANDARD_UI_EXT, standard_ui_system_initialize, standard_ui_system_shutdown, standard_ui_system_update, &standard_ui_cfg)) {
+    if (!systems_manager_register(sys_mgr_state, K_SYSTEM_TYPE_STANDARD_UI_EXT, standard_ui_system_initialize, standard_ui_system_shutdown, standard_ui_system_update, standard_ui_system_render_prepare_frame, &standard_ui_cfg)) {
         KERROR("Failed to register standard ui system.");
         return false;
     }
@@ -525,7 +525,7 @@ b8 application_initialize(struct application* game_inst) {
     // Viewport setup
     // World Viewport
     rect_2d world_vp_rect = vec4_create(20.0f, 20.0f, 1280.0f - 40.0f, 720.0f - 40.0f);
-    if (!viewport_create(world_vp_rect, deg_to_rad(45.0f), 0.1f, 400.0f, RENDERER_PROJECTION_MATRIX_TYPE_PERSPECTIVE, &state->world_viewport)) {
+    if (!viewport_create(world_vp_rect, deg_to_rad(45.0f), 0.1f, 1000.0f, RENDERER_PROJECTION_MATRIX_TYPE_PERSPECTIVE, &state->world_viewport)) {
         KERROR("Failed to create world viewport. Cannot start application.");
         return false;
     }
@@ -687,7 +687,6 @@ b8 application_initialize(struct application* game_inst) {
     kzero_memory(&state->update_clock, sizeof(kclock));
     kzero_memory(&state->prepare_clock, sizeof(kclock));
     kzero_memory(&state->render_clock, sizeof(kclock));
-    kzero_memory(&state->present_clock, sizeof(kclock));
 
     // Load up a test audio file.
     state->test_audio_file = audio_system_chunk_load("Test.ogg");
@@ -789,10 +788,22 @@ b8 application_update(application* game_inst, struct frame_data* p_frame_data) {
     button_height = 50.0f + (ksin(p_frame_data->total_time) * 20.0f);
     sui_button_control_height_set(&state->test_button, (i32)button_height);
 
+    // Update the bitmap text with camera position. NOTE:Just using the default camera for now.
+    vec3 pos = camera_position_get(state->world_camera);
+    vec3 rot = camera_rotation_euler_get(state->world_camera);
+
+    viewport* view_viewport = &state->world_viewport;
+
+    f32 near_clip = view_viewport->near_clip;
+    f32 far_clip = view_viewport->far_clip;
+
     if (state->main_scene.state >= SIMPLE_SCENE_STATE_LOADED) {
         if (!simple_scene_update(&state->main_scene, p_frame_data)) {
             KWARN("Failed to update main scene.");
         }
+
+        // Update LODs for the scene based on distance from the camera.
+        simple_scene_update_lod_from_view_position(&state->main_scene, p_frame_data, pos, near_clip, far_clip);
 
         editor_gizmo_update(&state->gizmo);
 
@@ -823,10 +834,6 @@ b8 application_update(application* game_inst, struct frame_data* p_frame_data) {
     state->prev_alloc_count = state->alloc_count;
     state->alloc_count = get_memory_alloc_count();
 
-    // Update the bitmap text with camera position. NOTE: just using the default camera for now.
-    vec3 pos = camera_position_get(state->world_camera);
-    vec3 rot = camera_rotation_euler_get(state->world_camera);
-
     // Also tack on current mouse state.
     b8 left_down = input_is_button_down(BUTTON_LEFT);
     b8 right_down = input_is_button_down(BUTTON_RIGHT);
@@ -845,18 +852,15 @@ b8 application_update(application* game_inst, struct frame_data* p_frame_data) {
     static f32 total_update_seconds = 0;
     static f32 total_prepare_seconds = 0;
     static f32 total_render_seconds = 0;
-    static f32 total_present_seconds = 0;
 
     static f32 total_update_avg_us = 0;
     static f32 total_prepare_avg_us = 0;
     static f32 total_render_avg_us = 0;
-    static f32 total_present_avg_us = 0;
     static f32 total_avg = 0;  // total average across the frame
 
     total_update_seconds += state->update_clock.elapsed;
     total_prepare_seconds += state->prepare_clock.elapsed;
     total_render_seconds += state->render_clock.elapsed;
-    total_present_seconds += state->present_clock.elapsed;
     accumulated_ms += frame_time;
 
     // Once ~1 second has gone by, calculate the average and wipe the accumulators.
@@ -864,12 +868,10 @@ b8 application_update(application* game_inst, struct frame_data* p_frame_data) {
         total_update_avg_us = (total_update_seconds / accumulated_ms) * K_SEC_TO_US_MULTIPLIER;
         total_prepare_avg_us = (total_prepare_seconds / accumulated_ms) * K_SEC_TO_US_MULTIPLIER;
         total_render_avg_us = (total_render_seconds / accumulated_ms) * K_SEC_TO_US_MULTIPLIER;
-        total_present_avg_us = (total_present_seconds / accumulated_ms) * K_SEC_TO_US_MULTIPLIER;
-        total_avg = total_update_avg_us + total_prepare_avg_us + total_render_avg_us + total_present_avg_us;
+        total_avg = total_update_avg_us + total_prepare_avg_us + total_render_avg_us;
         total_render_seconds = 0;
         total_prepare_seconds = 0;
         total_update_seconds = 0;
-        total_present_seconds = 0;
         accumulated_ms = 0;
     }
 
@@ -879,7 +881,7 @@ b8 application_update(application* game_inst, struct frame_data* p_frame_data) {
         text_buffer,
         "\
 FPS: %5.1f(%4.1fms)        Pos=[%7.3f %7.3f %7.3f] Rot=[%7.3f, %7.3f, %7.3f]\n\
-Upd: %8.3fus, Prep: %8.3fus, Rend: %8.3fus, Pres: %8.3fus, Tot: %8.3fus \n\
+Upd: %8.3fus, Prep: %8.3fus, Rend: %8.3fus, Tot: %8.3fus \n\
 Mouse: X=%-5d Y=%-5d   L=%s R=%s   NDC: X=%.6f, Y=%.6f\n\
 VSync: %s Drawn: %-5u (%-5u shadow pass) Hovered: %s%u",
         fps,
@@ -889,7 +891,6 @@ VSync: %s Drawn: %-5u (%-5u shadow pass) Hovered: %s%u",
         total_update_avg_us,
         total_prepare_avg_us,
         total_render_avg_us,
-        total_present_avg_us,
         total_avg,
         mouse_x, mouse_y,
         left_down ? "Y" : "N",
@@ -936,6 +937,9 @@ b8 application_prepare_frame(struct application* app_inst, struct frame_data* p_
 
     // Tell our scene to generate relevant packet data. NOTE: Generates skybox and world packets.
     if (state->main_scene.state == SIMPLE_SCENE_STATE_LOADED) {
+        editor_gizmo_render_frame_prepare(&state->gizmo,p_frame_data);
+        simple_scene_render_frame_prepare(&state->main_scene,p_frame_data);
+
         {
             skybox_pass_ext_data->sb = state->main_scene.sb;
         }
@@ -1226,8 +1230,8 @@ b8 application_prepare_frame(struct application* app_inst, struct frame_data* p_
             // Track the number of meshes drawn in the scene pass.
             p_frame_data->drawn_mesh_count = ext_data->geometry_count;
 
-            //TODO:DXS Test
-            //simple_scene_update_lod_from_view_position(scene,p_frame_data, camera_position_get(current_camera), v->near_clip,v->far_clip);
+            // TODO:DXS Test
+            // simple_scene_update_lod_from_view_position(scene,p_frame_data, camera_position_get(current_camera), v->near_clip,v->far_clip);
 
             // Add terrain(s)
             ext_data->terrain_geometries = darray_reserve_with_allocator(geometry_render_data, 16, &p_frame_data->allocator);
@@ -1426,17 +1430,9 @@ b8 application_render_frame(struct application* game_inst, struct frame_data* p_
         KERROR("Failed to execute rendergraph frame.");
         return false;
     }
-    // renderer_end(p_frame_data);
-  
+
     kclock_update(&state->render_clock);
 
-    // kclock_start(&state->present_clock);
-
-    // if (!renderer_present(p_frame_data)) {
-    //     KERROR("The call to renderer_present failed. This is likely unrecoverable.Shutting down.");
-    //     return false;
-    // }
-    //kclock_update(&state->present_clock);
     return true;
 }
 

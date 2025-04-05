@@ -161,7 +161,7 @@ KAPI void standard_ui_system_shutdown(void* state);
 
 KAPI b8 standard_ui_system_update(void* state, struct frame_data* p_frame_data);
 
-KAPI void standard_ui_system_render_prepare_frame(void* state, struct frame_data* p_frame_data);
+KAPI void standard_ui_system_render_prepare_frame(void* state,const struct frame_data* p_frame_data);
 
 KAPI b8 standard_ui_system_render(void* state, sui_control* root, struct frame_data* p_frame_data, standard_ui_render_data* render_data);
 

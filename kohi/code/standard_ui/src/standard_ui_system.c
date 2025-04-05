@@ -128,7 +128,7 @@ static b8 standard_ui_system_move(u16 code, void* sender, void* listener_inst, e
                 KTRACE("Button hover:%s", control->name);
                 if (!control->is_hovered) {
                     control->is_hovered = true;
-                    if (control->internal_mouse_over) {   //正在悬停
+                    if (control->internal_mouse_over) {  // 正在悬停
                         control->internal_mouse_over(control, evt);
                     }
 
@@ -146,9 +146,9 @@ static b8 standard_ui_system_move(u16 code, void* sender, void* listener_inst, e
                 }
             } else {
                 if (control->is_hovered) {
-                    control->is_hovered = false; //没有在悬停
+                    control->is_hovered = false;  // 没有在悬停
                     if (control->internal_mouse_out) {
-                        control->internal_mouse_out(control, evt); 
+                        control->internal_mouse_out(control, evt);
                     }
                     if (control->on_mouse_out) {
                         control->on_mouse_out(control, evt);
@@ -266,6 +266,20 @@ b8 standard_ui_system_update(void* state, struct frame_data* p_frame_data) {
     return true;
 }
 
+void standard_ui_system_render_prepare_frame(void* state, const struct frame_data* p_frame_data) {
+    if (!state) {
+        return;
+    }
+
+    standard_ui_state* typed_state = (standard_ui_state*)state;
+    for (u32 i = 0; i < typed_state->active_control_count; ++i) {
+        sui_control* c = typed_state->active_controls[i];
+        if (c->render_prepare) {
+            c->render_prepare(c, p_frame_data);
+        }
+    }
+}
+
 b8 standard_ui_system_render(void* state, sui_control* root, struct frame_data* p_frame_data, standard_ui_render_data* render_data) {
     if (!state) {
         return false;
@@ -291,7 +305,7 @@ b8 standard_ui_system_render(void* state, sui_control* root, struct frame_data* 
         u32 length = darray_length(root->children);
         for (u32 i = 0; i < length; ++i) {
             sui_control* c = root->children[i];
-            //判断是否是显示状态
+            // 判断是否是显示状态
             if (!c->is_visible) {
                 continue;
             }

@@ -32,6 +32,7 @@ b8 sui_button_control_create(const char* name, sui_control* out_control) {
     out_control->load = sui_button_control_load;
     out_control->unload = sui_button_control_unload;
     out_control->update = sui_button_control_update;
+    out_control->render_prepare=sui_button_control_render_frame_prepare;
     out_control->render = sui_button_control_render;
 
     out_control->internal_mouse_down = sui_button_on_mouse_down;
@@ -116,6 +117,13 @@ KAPI b8 sui_button_control_update(sui_control* self, struct frame_data* p_frame_
     }
     //
     return true;
+}
+
+static void sui_button_control_render_frame_prepare(struct sui_control* self,const struct frame_data* p_frame_data){
+    if(self){
+       sui_button_internal_data* internal_data=self->internal_data;
+       nine_slice_render_frame_prepare(&internal_data->nslice,p_frame_data);
+    }
 }
 
 b8 sui_button_control_render(sui_control* self, struct frame_data* p_frame_data, standard_ui_render_data* render_data) {

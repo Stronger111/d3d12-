@@ -276,7 +276,7 @@ KAPI b8 renderer_geometry_upload(geometry* geometry);
  * @param vertex_count The number of vertices which will be updated.
  * @param vertices The vertex data.
  */
-KAPI void renderer_geometry_vertex_update(geometry* g, u32 offset, u32 vertex_count, void* vertices);
+KAPI void renderer_geometry_vertex_update(geometry* g, u32 offset, u32 vertex_count, void* vertices,b8 include_in_frame_workload);
 /**
  * @brief Destroys the given geometry, releasing GPU resources.
  *
@@ -654,7 +654,7 @@ KAPI b8 renderer_renderbuffer_clear(renderbuffer* buffer, b8 zero_memory);
  * @param data The data to be loaded.
  * @returns True on success; otherwise false.
  */
-KAPI b8 renderer_renderbuffer_load_range(renderbuffer* buffer, u64 offset, u64 size, const void* data);
+KAPI b8 renderer_renderbuffer_load_range(renderbuffer* buffer, u64 offset, u64 size, const void* data,b8 include_in_frame_workload);
 
 /**
  * @brief Copies data in the specified rage fron the source to the destination buffer.
@@ -666,7 +666,7 @@ KAPI b8 renderer_renderbuffer_load_range(renderbuffer* buffer, u64 offset, u64 s
  * @param size The size of the data in bytes to be copied.
  * @returns True on success; otherwise false.
  */
-KAPI b8 renderer_renderbuffer_copy_range(renderbuffer* source, u64 source_offset, renderbuffer* dest, u64 dest_offset, u64 size);
+KAPI b8 renderer_renderbuffer_copy_range(renderbuffer* source, u64 source_offset, renderbuffer* dest, u64 dest_offset, u64 size,b8 include_in_frame_workload);
 
 /**
  * @brief Attempts to draw the contents of the provided buffer at the given offset

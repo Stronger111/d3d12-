@@ -470,7 +470,7 @@ void nine_slice_render_frame_prepare(nine_slice* nslice, const struct frame_data
 
     if (nslice->is_dirty) {
         // Upload the new vertex data.
-        renderer_geometry_vertex_update(nslice->g, 0, nslice->g->vertex_count, nslice->g->vertices);
+        renderer_geometry_vertex_update(nslice->g, 0, nslice->g->vertex_count, nslice->g->vertices,true);
         nslice->is_dirty = false;
     }
 }

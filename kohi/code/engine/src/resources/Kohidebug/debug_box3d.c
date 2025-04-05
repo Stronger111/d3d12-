@@ -70,7 +70,7 @@ void debug_box3d_render_frame_prepare(debug_box3d *box, const struct frame_data 
         return;
     }
     // Upload the new vertex data.
-    renderer_geometry_vertex_update(&box->geo, 0, box->vertex_count, box->vertices);
+    renderer_geometry_vertex_update(&box->geo, 0, box->vertex_count, box->vertices,true);
 
     box->geo.generation++;
 

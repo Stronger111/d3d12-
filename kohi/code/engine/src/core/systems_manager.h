@@ -10,7 +10,7 @@ typedef void (*PFN_system_shutdown)(void* state);
 /** @brief Typedef for a update function pointer. */
 typedef b8 (*PFN_system_update)(void* state, struct frame_data* p_frame_data);
 /** @brief Typedef for a render prepare frame function pointer. */
-typedef b8 (*PFN_system_render_prepare_frame)(void* state, const struct frame_data* p_frame_data);
+typedef void (*PFN_system_render_prepare_frame)(void* state, const struct frame_data* p_frame_data);
 
 typedef struct k_system {
     u64 state_size;
