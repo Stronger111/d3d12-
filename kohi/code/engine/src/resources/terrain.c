@@ -184,11 +184,11 @@ static void terrain_chunk_calculate_geometry(terrain *t, terrain_chunk *chunk, u
             // NOTE: Because of the extra row and
             // column of vertices, the first row/column of this chunk must be the
             // same as the previous in that direction.
-            i32 globalx = x + (chunk_offset_x * vertex_stride);
+            i32 globalx = x + (chunk_offset_x * (vertex_stride));
             if (chunk_offset_x > 0) {
                 globalx -= chunk_offset_x;
             }
-            i32 globalz = z + (chunk_offset_z * vertex_stride);
+            i32 globalz = z + (chunk_offset_z * (vertex_stride));
             if (chunk_offset_z > 0) {
                 globalz -= chunk_offset_z;
             }
@@ -199,11 +199,11 @@ static void terrain_chunk_calculate_geometry(terrain *t, terrain_chunk *chunk, u
             }
 
             terrain_vertex_data *vert_data = &t->vertex_datas[global_terrain_index];
-            f32 point_light = vert_data->height;
+            f32 point_height = vert_data->height;
             // 地形高度
-            v->position.y = point_light * t->scale_y;
+            v->position.y = point_height * t->scale_y;
             y_min = KMIN(y_min, v->position.y);
-            y_max = KMIN(y_max, v->position.y);
+            y_max = KMAX(y_max, v->position.y);
 
             v->colour = vec4_one();       // 白色
             v->normal = (vec3){0, 1, 0};  // TODO: calculate based on geometry
@@ -213,10 +213,10 @@ static void terrain_chunk_calculate_geometry(terrain *t, terrain_chunk *chunk, u
             // NOTE: Assigning default weights based on overall height. Lower indices are
             //  lower in altitude.
             // NOTE: These must overlap the min/max to blend properly
-            v->material_weights[0] = kattenuation_min_max(-0.2f, 0.2f, point_light);  // mid 0
-            v->material_weights[1] = kattenuation_min_max(0.0f, 0.3f, point_light);   // mid .15
-            v->material_weights[2] = kattenuation_min_max(0.15f, 0.9f, point_light);  // mid 5
-            v->material_weights[3] = kattenuation_min_max(0.5f, 1.2f, point_light);   // mid 9
+            v->material_weights[0] = kattenuation_min_max(-0.2f, 0.2f, point_height);  // mid 0
+            v->material_weights[1] = kattenuation_min_max(0.0f, 0.3f, point_height);   // mid .15
+            v->material_weights[2] = kattenuation_min_max(0.15f, 0.9f, point_height);  // mid 5
+            v->material_weights[3] = kattenuation_min_max(0.5f, 1.2f, point_height);   // mid 9
         }
     }
 
@@ -402,7 +402,7 @@ b8 terrain_chunk_load(terrain *t, terrain_chunk *chunk) {
     }
 
     // TODO:Passing false here produces a queue wait and should be offloaded to another queue.
-    if (!renderer_renderbuffer_load_range(vertex_buffer, chunk->vertex_buffer_offset, total_vertex_size, chunk->vertices,false)) {
+    if (!renderer_renderbuffer_load_range(vertex_buffer, chunk->vertex_buffer_offset, total_vertex_size, chunk->vertices, false)) {
         KERROR("Failed to upload vertex data for terrain chunk.");
         return false;
     }
@@ -418,7 +418,7 @@ b8 terrain_chunk_load(terrain *t, terrain_chunk *chunk) {
         }
 
         // TODO:Passing false here produces a queue wait and should be offloaded to another queue.
-        if (!renderer_renderbuffer_load_range(index_buffer, lod->index_buffer_offset, total_size, lod->indices,false)) {
+        if (!renderer_renderbuffer_load_range(index_buffer, lod->index_buffer_offset, total_size, lod->indices, false)) {
             KERROR("Failed to upload index data for terrain chunk lod.");
             return false;
         }
@@ -529,6 +529,8 @@ static void terrain_chunk_destroy(terrain *t, terrain_chunk *chunk) {
     // Destroy vertex data
     if (chunk->vertices) {
         kfree(chunk->vertices, sizeof(terrain_vertex) * chunk->total_vertex_count, MEMORY_TAG_ARRAY);
+        chunk->vertex_buffer_offset = 0;
+        chunk->total_vertex_count = 0;
     }
 
     // Destroy each LOD.
