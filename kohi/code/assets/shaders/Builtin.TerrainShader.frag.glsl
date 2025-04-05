@@ -239,13 +239,13 @@ void main() {
 
     //Fade out the shadow map past a  certain distance.
     float fade_start=20.0;
-    float fade_distance=5+0.00001;  //Avoid divide by 0
+    float fade_distance=5+0.00001;  
 
     //The end of the fade-out range.
     float fade_end=fade_start+fade_distance;
 
-    float zclamp=clamp(length(in_dto.view_position-in_dto.frag_position),fade_start,fade_distance);
-    float fade_factor=(fade_end-zclamp)/(fade_end-fade_start);
+    float zclamp=clamp(length(in_dto.view_position-in_dto.frag_position),fade_start,fade_end);
+    float fade_factor=(fade_end-zclamp)/(fade_end-fade_start+0.00001);//Avoid divide by 0
 
     shadow=clamp(shadow+(1.0-fade_factor),0.0,1.0);
     
