@@ -948,6 +948,7 @@ b8 application_prepare_frame(struct application* app_inst, struct frame_data* p_
         viewport* view_viewport = &state->world_viewport;
 
         f32 near = view_viewport->near_clip;
+        //TODO: pull from light properties
         f32 far = view_viewport->far_clip;
         f32 clip_range = far - near;
 

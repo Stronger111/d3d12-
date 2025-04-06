@@ -334,6 +334,14 @@ KAPI void renderer_shader_destroy(struct shader* s);
 KAPI b8 renderer_shader_initialize(struct shader* s);
 
 /**
+ * @brief Reloads the internals of the given shader.
+ *
+ * @param s A pointer to the shader to be reloaded.
+ * @return True on success; otherwise false.
+ */
+KAPI b8 renderer_shader_reload(struct shader* s);
+
+/**
  * @brief Uses the given shader, activating it for updates to attributes, uniforms and such,
  * and for use in draw calls.
  *

@@ -594,6 +594,15 @@ typedef struct renderer_plugin {
      */
     b8 (*shader_initialize)(struct renderer_plugin* plugin, struct shader* shader);
 
+       /**
+     * @brief Reloads the internals of the given shader.
+     *
+     * @param plugin A pointer to the renderer plugin interface.
+     * @param s A pointer to the shader to be reloaded.
+     * @return True on success; otherwise false.
+     */
+    b8 (*shader_reload)(struct renderer_plugin* plugin, struct shader* s);
+
     /**
      * @brief Uses the given shader, activating it for updates to attributes, uniforms and such,
      * and for use in draw calls.
