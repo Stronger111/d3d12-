@@ -3639,3 +3639,10 @@ b8 vulkan_buffer_draw(renderer_plugin* plugin, renderbuffer* buffer, u64 offset,
         return false;
     }
 }
+
+void vulkan_renderer_wait_for_idle(renderer_plugin *plugin) {
+    if(plugin){
+       vulkan_context *context=plugin->internal_context;
+       VK_CHECK(vkDeviceWaitIdle(context->device.logical_device));
+    }
+}

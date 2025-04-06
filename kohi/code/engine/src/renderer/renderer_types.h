@@ -333,7 +333,7 @@ typedef struct renderer_plugin {
      */
     void (*shutdown)(struct renderer_plugin* plugin);
 
-    void (*begin_debug_label)(struct renderer_plugin* plugin,const char* label_text,vec3 colour);
+    void (*begin_debug_label)(struct renderer_plugin* plugin, const char* label_text, vec3 colour);
     void (*end_debug_label)(struct renderer_plugin* plugin);
     /**
      * @brief Handles window resizes.
@@ -542,7 +542,7 @@ typedef struct renderer_plugin {
      * @param size The number of bytes to be written.
      * @param pixels The raw image data to be written.
      */
-    void (*texture_write_data)(struct renderer_plugin* plugin, texture* t, u32 offset, u32 size, const u8* pixels,b8 include_in_frame_workload);
+    void (*texture_write_data)(struct renderer_plugin* plugin, texture* t, u32 offset, u32 size, const u8* pixels, b8 include_in_frame_workload);
 
     /**
      * @brief Reads the given data from the provided texture.
@@ -594,7 +594,7 @@ typedef struct renderer_plugin {
      */
     b8 (*shader_initialize)(struct renderer_plugin* plugin, struct shader* shader);
 
-       /**
+    /**
      * @brief Reloads the internals of the given shader.
      *
      * @param plugin A pointer to the renderer plugin interface.
@@ -950,6 +950,12 @@ typedef struct renderer_plugin {
      * @return True on success; otherwise false.
      */
     b8 (*renderbuffer_draw)(struct renderer_plugin* plugin, renderbuffer* buffer, u64 offset, u32 element_count, b8 bind_only);
+
+    /**
+     * Waits for the renderer backend to be completely idle of work before returning.
+     * NOTE: This incurs a lot of overhead/waits, and should be used sparingly.
+     */
+    void (*wait_for_idle)(struct renderer_plugin* plugin);
 
 } renderer_plugin;
 

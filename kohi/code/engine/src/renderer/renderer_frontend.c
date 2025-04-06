@@ -106,6 +106,8 @@ void renderer_system_shutdown(void* state) {
     if (state) {
         renderer_system_state* typed_state = (renderer_system_state*)state;
 
+        renderer_wait_for_idle();
+
         // Destroy buffers.
         renderer_renderbuffer_destroy(&typed_state->geometry_vertex_buffer);
         renderer_renderbuffer_destroy(&typed_state->geometry_index_buffer);
@@ -988,4 +990,9 @@ void renderer_active_viewport_set(viewport* v) {
 viewport* renderer_active_viewport_get() {
     renderer_system_state* state_ptr = (renderer_system_state*)systems_manager_get_state(K_SYSTEM_TYPE_RENDERER);
     return state_ptr->active_viewport;
+}
+
+void renderer_wait_for_idle(void) {
+    renderer_system_state* state_ptr = (renderer_system_state*)systems_manager_get_state(K_SYSTEM_TYPE_RENDERER);
+    state_ptr->plugin.wait_for_idle(&state_ptr->plugin);
 }
