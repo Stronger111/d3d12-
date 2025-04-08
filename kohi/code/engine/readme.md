@@ -37,17 +37,21 @@ Renderer:
   地形LOD skirt_side 平滑LOD过渡  四叉树进行LOD OTree 地块动态加载和卸载 
   线框shader pipeline
   Shader 热重载
+- 阴影
+    Shadow Map -> Cascade Shadow Map 
+       1:阴影消失的地方 柔和过渡 shadow_distance shadow_fade_distance 阴影淡出
+- PBR
+  Phone光照模型 PBR ->Albedo Normal Metalle Roughness AO IBL 间接漫反射 ->Roughness AO Metallic合并一张
+  R通道 金属度 G通道 粗糙度 B通道 Ao
 - Intel VTune Profiler 性能分析工具
 - 插件形式添加模块代码
-- Mac Os molten VK
+- Mac Os Molten VK
 - 描述符
   根据更新频率对描述符集进行分组  Shader和描述符池一起使用
   OpenGL 不必处理管理描述符以及手动同步内存之类的事情
-- PBR
-  Phone光照模型 PBR ->Albedo Normal Metalle Roughness AO IBL 间接漫反射 ->Roughness AO Metallic合并一张
-  R通道 金属度 G通道 粗糙度 B通道 ao
-  Shadow Map -> Cascade Shadow Map 
-   RenderGraph LoadResource 加载完Graph资源 在加载具体 Pass内部的资源
+- 控制台
+
+  RenderGraph LoadResource 加载完Graph资源 在加载具体 Pass内部的资源
 # 引擎待完成
 # Math
   Alt+41420 根号 Alt+178 平方号  1:44:25

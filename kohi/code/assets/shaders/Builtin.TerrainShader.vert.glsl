@@ -12,7 +12,11 @@ const int MAX_SHADOW_CASCADES =4;
 struct directional_light
 {
    vec4 colour;
-   vec4 direction;  
+   vec4 direction;
+   float shadow_distance;
+   float shadow_fade_distance;
+   float shadow_fade_mult;
+   float padding;
 };
 
 layout(set = 0, binding = 0) uniform global_uniform_object {

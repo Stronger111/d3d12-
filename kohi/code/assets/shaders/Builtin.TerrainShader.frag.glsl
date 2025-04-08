@@ -5,6 +5,10 @@ layout(location = 0) out vec4 out_colour;
 struct directional_light {
     vec4 colour;
     vec4 direction;
+    float shadow_distance;
+    float shadow_fade_distance;
+    float shadow_fade_mult;
+    float padding;
 };
 
 struct point_light
@@ -238,8 +242,8 @@ void main() {
     float shadow=calculate_shadow(in_dto.light_space_frag_pos[cascade_index],normal,global_ubo.dir_light,cascade_index);
 
     //Fade out the shadow map past a  certain distance.
-    float fade_start=200.0;
-    float fade_distance=25+0.00001;  
+    float fade_start=global_ubo.dir_light.shadow_distance;
+    float fade_distance=global_ubo.dir_light.shadow_fade_distance;  
 
     //The end of the fade-out range.
     float fade_end=fade_start+fade_distance;

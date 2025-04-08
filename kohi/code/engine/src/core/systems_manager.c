@@ -59,7 +59,7 @@ b8 systems_manager_update(systems_manager_state* state, struct frame_data* p_fra
             if (!s->update(s->state, p_frame_data)) {
                 KERROR("System update failed for type:%i", i);
             }
-        }
+        }   
     }
     return true;
 }

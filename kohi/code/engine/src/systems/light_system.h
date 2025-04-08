@@ -20,7 +20,13 @@ typedef struct directional_light_data {
     vec4 colour;
     /** @brief The direction of the light. The w component is ignored.*/
     vec4 direction;
+
+    f32 shadow_distance;
+    f32 shadow_fade_distance;
+    f32 shadow_split_mult;
+    f32 padding;
 } directional_light_data;
+
 /**
  * @brief A directional light, typically used to emulate sun/moon light.
  */

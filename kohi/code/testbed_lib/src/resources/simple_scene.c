@@ -129,6 +129,9 @@ b8 simple_scene_initialize(simple_scene* scene) {
             scene->dir_light->name = string_duplicate(scene->config->directional_light_config.name);
             scene->dir_light->data.colour = scene->config->directional_light_config.colour;
             scene->dir_light->data.direction = scene->config->directional_light_config.direction;
+            scene->dir_light->data.shadow_distance=scene->config->directional_light_config.shadow_distance;
+            scene->dir_light->data.shadow_fade_distance=scene->config->directional_light_config.shadow_fade_distance;
+            scene->dir_light->data.shadow_split_mult=scene->config->directional_light_config.shadow_split_mult;
 
             // Add debug data and initialize it
             scene->dir_light->debug_data = kallocate(sizeof(simple_scene_debug_data), MEMORY_TAG_RESOURCE);

@@ -462,6 +462,8 @@ b8 renderer_shader_create(shader* s, const shader_config* config, renderpass* pa
     s->instance_sampler_indices = darray_create(u32);
     s->local_uniform_count = 0;
 
+    s->shader_stage_count=config->stage_count;
+
     // Exambine the uniforms and determine scope as well as a count of samplers.
     u32 total_count = darray_length(config->uniforms);
     for (u32 i = 0; i < total_count; ++i) {

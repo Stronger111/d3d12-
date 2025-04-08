@@ -937,19 +937,16 @@ b8 application_prepare_frame(struct application* app_inst, struct frame_data* p_
 
     // Tell our scene to generate relevant packet data. NOTE: Generates skybox and world packets.
     if (state->main_scene.state == SIMPLE_SCENE_STATE_LOADED) {
-        editor_gizmo_render_frame_prepare(&state->gizmo,p_frame_data);
-        simple_scene_render_frame_prepare(&state->main_scene,p_frame_data);
+        editor_gizmo_render_frame_prepare(&state->gizmo, p_frame_data);
+        simple_scene_render_frame_prepare(&state->main_scene, p_frame_data);
 
-        {
-            skybox_pass_ext_data->sb = state->main_scene.sb;
-        }
+        directional_light* dir_light=state->main_scene.dir_light;
 
         camera* view_camera = state->world_camera;
         viewport* view_viewport = &state->world_viewport;
 
         f32 near = view_viewport->near_clip;
-        //TODO: pull from light properties
-        f32 far = view_viewport->far_clip;
+        f32 far = dir_light ? dir_light->data.shadow_distance + dir_light->data.shadow_fade_distance : 0;
         f32 clip_range = far - near;
 
         f32 min_z = near;
@@ -957,7 +954,7 @@ b8 application_prepare_frame(struct application* app_inst, struct frame_data* p_
         f32 range = max_z - min_z;
         f32 ratio = max_z / min_z;
 
-        f32 cascade_split_multiplier = 0.95f;
+        f32 cascade_split_multiplier = dir_light ? dir_light->data.shadow_split_mult : 0.95f;
 
         // Calculate splits based on view camera frustum.
         vec4 splits;
@@ -980,31 +977,43 @@ b8 application_prepare_frame(struct application* app_inst, struct frame_data* p_
             shadow_camera_positions[i] = vec3_zero();
         }
 
+        //Skybox pass
+        {
+            skybox_pass_ext_data->sb = state->main_scene.sb;
+        }
+
         // Shadowmap pass -only runs if there is a directional light.
-        if (state->main_scene.dir_light) {
+        if (dir_light) {
             f32 last_split_dist = 0.0f;
             rendergraph_pass* pass = &state->shadowmap_pass;
             // Mark this pass as executable.
             pass->pass_data.do_execute = true;
             // Obtain the light direction.
-            vec3 light_dir = vec3_normalized(vec3_from_vec4(state->main_scene.dir_light->data.direction));
+            vec3 light_dir = vec3_normalized(vec3_from_vec4(dir_light->data.direction));
 
             // Setup the extended data for the pass.
             shadow_map_pass_extended_data* ext_data = pass->pass_data.ext_data;
-            ext_data->light = state->main_scene.dir_light;
+            ext_data->light = dir_light;
 
             // fustum culling frustum
             vec3 culling_center;
             f32 culling_radius;
+
+            // Get the view-projection matrix.
+            mat4 shadow_dist_projection=mat4_perspective(
+                view_viewport->fov,
+                view_viewport->rect.width/view_viewport->rect.height,
+                near,
+                far
+            );
+            //Bug fix 阴影投射摄像机用 阴影的近裁切面。
+            mat4 cam_view_proj = mat4_transposed(mat4_mul(camera_view_get(view_camera), shadow_dist_projection));
 
             for (u32 c = 0; c < MAX_SHADOW_CASCADE_COUNT; c++) {
                 shadow_map_cascade_data* cascade = &ext_data->cascades[c];
                 cascade->cascade_index = c;
                 // NOTE: Each pass for cascades will need to do the following process.
                 // The only real difference will be that the near/far clip will be adjusted for each.
-
-                // Get the view-projection matrix.
-                mat4 cam_view_proj = mat4_transposed(mat4_mul(camera_view_get(view_camera), view_viewport->projection));
 
                 // Get the world-space corners of the view frustum
                 vec4 corners[8] = {0};
