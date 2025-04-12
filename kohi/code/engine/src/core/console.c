@@ -154,8 +154,30 @@ static b8 console_object_to_b8(const console_object* obj) {
     return *((b8*)obj->block);
 } */
 
+static console_object* console_object_get(console_object* parent, const char* name) {
+    if (parent) {
+        u32 property_count = darray_length(parent->properties);
+        for (u32 i = 0; i < property_count; ++i) {
+            console_object* obj = &parent->properties[i];
+            if (strings_equali(obj->name, name)) {
+                return obj;
+            }
+        }
+    } else {
+        u32 registered_object_len = darray_length(state_ptr->registered_objects);
+        for (u32 i = 0; i < registered_object_len; ++i) {
+            console_object* obj = &state_ptr->registered_objects[i];
+            if (strings_equali(obj->name, name)) {
+                return obj;
+            }
+        }
+    }
+
+    return 0;
+}
+
 static void console_object_print(u8 indent, console_object* obj) {
-    char indent_buffer[513] = 0;
+    char indent_buffer[513] = {0};
     u16 idx = 0;
     for (; idx < (indent * 2); idx += 2) {
         indent_buffer[idx + 0] = ' ';
@@ -178,7 +200,7 @@ static void console_object_print(u8 indent, console_object* obj) {
             KINFO("%s%s", indent_buffer, val ? "true" : "false");
         case CONSOLE_OBJECT_TYPE_STRUCT:
             if (obj->properties) {
-                KINFO("%s",obj->name);
+                KINFO("%s", obj->name);
                 indent++;
                 u32 len = darray_length(obj->properties);
                 for (u32 i = 0; i < len; ++i) {
@@ -210,19 +232,41 @@ static b8 console_expression_parse(const char* expression, console_object_type* 
             goto console_expression_parse_cleanup;
         }
 
-        u32 registered_object_len = darray_length(state_ptr->registered_objects);
-        for (u32 i = 0; i < registered_object_len; ++i) {
-            console_object* obj = &state_ptr->registered_objects[i];
-            if (strings_equali(obj->name, expression_copy)) {
-                console_object_print(0, obj);
+        // Check for a dot operator which indicates a property of a struct.
+        b8 identifier_found = false;
+        i32 dot_index = string_index_of(expression_copy, '.');
+        if (dot_index != -1) {
+            // Parse each portion and figure out the struct/property hierarchy
+            char** parts = darray_create(char*);
+            u32 split_count = string_split(expression_copy, '.', &parts, true, false);
+
+            console_object* parent = console_object_get(0, parts[0]);
+            for (u32 s = 1; s < split_count; ++s) {
+                console_object* obj = console_object_get(parent, parts[s]);
+                if (obj) {
+                    parent = obj;
+                }
+            }
+
+            if (parent) {
+                console_object_print(0, parent);
+                identifier_found = true;
                 result = true;
-                break;
+            }
+        } else {
+            console_object* obj = console_object_get(expression_copy);
+            if (obj) {
+                console_object_print(0, obj);
+                identifier_found = true;
+                result = true;
             }
         }
 
-        KERROR("Identifier is undefined: '%s'.", expression_copy);
-        result = false;
-        goto console_expression_parse_cleanup;
+        if (!identifier_found) {
+            KERROR("Identifier is undefined: '%s'.", expression_copy);
+            result = false;
+            goto console_expression_parse_cleanup;
+        }
     }
 
     // TODO:
@@ -244,13 +288,13 @@ KAPI b8 console_command_execute(const char* command) {
         return false;
     }
 
+    b8 has_error = true;
     char** parts = darray_create(char*);
     // TODO: 如果字符串被用作参数，这将不正确地分割。
     u32 part_count = string_split(command, ' ', &parts, true, false);
     if (part_count < 1) {
-        string_cleanup_split_array(parts);
-        darray_destroy(parts);
-        return false;
+        has_error = true;
+        goto console_command_execute_cleanup;
     }
     // LEFTOFF: Need to refactor this to have 2 types of processing, a "process_command",
     // which takes command_name(arg1, arg2+arg3), etc. and passes each argument through
@@ -268,7 +312,9 @@ KAPI b8 console_command_execute(const char* command) {
     console_object_type parsed_type;
     void* block = kallocate(sizeof(void*), MEMORY_TAG_ARRAY);
     if (console_expression_parse(command, &parsed_type, block)) {
-        //TODO: cast to appropriate type and use somehow...
+        // TODO: cast to appropriate type and use somehow...
+        has_error = false;
+        goto console_command_execute_cleanup;
     }
 
     // 对于参考退出控制台写那个行
@@ -277,7 +323,7 @@ KAPI b8 console_command_execute(const char* command) {
     console_write_line(LOG_LEVEL_INFO, temp);
 
     // 是的,字符串是很慢的,但是是一个控制台,并不需要非常的快。
-    b8 has_error = false;
+
     b8 command_found = false;
     u32 command_count = darray_length(state_ptr->registered_commands);
     // 查找匹配的命令
@@ -316,6 +362,7 @@ KAPI b8 console_command_execute(const char* command) {
         has_error = true;
     }
 
+console_command_execute_cleanup:
     string_cleanup_split_array(parts);
     darray_destroy(parts);
 
