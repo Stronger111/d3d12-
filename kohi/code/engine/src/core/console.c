@@ -187,13 +187,13 @@ static void console_object_print(u8 indent, console_object* obj) {
 
     switch (obj->type) {
         case CONSOLE_OBJECT_TYPE_INT32:
-            KINFO("%s%i", indent_buffer, ((u32*)obj->block));
+            KINFO("%s%i", indent_buffer, *((i32*)obj->block));
             break;
         case CONSOLE_OBJECT_TYPE_UINT32:
-            KINFO("%s%u", indent_buffer, ((u32*)obj->block));
+            KINFO("%s%u", indent_buffer, *((u32*)obj->block));
             break;
         case CONSOLE_OBJECT_TYPE_F32:
-            KINFO("%s%f", indent_buffer, ((f32*)obj->block));
+            KINFO("%s%f", indent_buffer, *((f32*)obj->block));
             break;
         case CONSOLE_OBJECT_TYPE_BOOL:
             b8 val = ((b8*)obj->block);
@@ -254,7 +254,7 @@ static b8 console_expression_parse(const char* expression, console_object_type* 
                 result = true;
             }
         } else {
-            console_object* obj = console_object_get(expression_copy);
+            console_object* obj = console_object_get(0,expression_copy);
             if (obj) {
                 console_object_print(0, obj);
                 identifier_found = true;
