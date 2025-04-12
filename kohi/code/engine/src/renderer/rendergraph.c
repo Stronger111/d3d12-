@@ -27,6 +27,8 @@ KAPI b8 rendergraph_create(const char* name, application* app, rendergraph* out_
 
 void rendergraph_destroy(rendergraph* graph) {
     if (graph) {
+        renderer_wait_for_idle();
+        
         graph->app = 0;
 
         if (graph->name) {

@@ -145,7 +145,7 @@ b8 debug_console_load(debug_console_state* state) {
     // Create another ui text control for rendering typed text.
 
     // new one
-    if (!sui_textbox_control_create("debug_console_entry_textbox", FONT_TYPE_SYSTEM, "Noto Sans CJK JP", font_size, "Some really long test text in the textbox.", &state->entry_textbox)) {
+    if (!sui_textbox_control_create("debug_console_entry_textbox", FONT_TYPE_SYSTEM, "Noto Sans CJK JP", font_size, "", &state->entry_textbox)) {
         KFATAL("Unable to create textbox control for debug console.");
         return false;
     } else {

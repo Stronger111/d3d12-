@@ -688,6 +688,22 @@ static b8 sui_textbox_on_key(u16 code, void* sender, void* listener_inst, event_
                     case KEY_EQUAL:
                         char_code = shift_held ? '+' : '=';
                         break;
+                    case KEY_PERIOD: //句号
+                        char_code = shift_held ? '>' : '.';
+                        break;
+                    case KEY_COMMA:  //逗号
+                        char_code = shift_held ? '<' : ',';
+                        break;
+                    case KEY_SLASH:
+                        char_code = shift_held ? '?' : '/';
+                        break;
+                    case KEY_QUOTE:  //引号
+                        char_code = shift_held ? '"' : '\'';
+                        break;
+                    case KEY_SEMICOLON: //分号
+                        char_code = shift_held ? ':' : ';';
+                        break;
+
                     default:
                         // Not valid for entry, use 0
                         char_code = 0;

@@ -234,26 +234,6 @@ b8 game_on_debug_event(u16 code, void* sender, void* listener_inst, event_contex
     return false;
 }
 
-// 按键状态触发的方法  改变局部坐标还是全局坐标模式
-b8 game_on_key(u16 code, void* sender, void* listener_inst, event_context context) {
-    application* game_inst = (application*)listener_inst;
-    testbed_game_state* state = (testbed_game_state*)game_inst->state;
-    if (code == EVENT_CODE_KEY_RELEASED) {
-        u16 key_code = context.data.u16[0];
-        // Change gizmo orientation
-        if (key_code == KEY_G) {
-            editor_gizmo_orientation orientation = editor_gizmo_orientation_get(&state->gizmo);
-
-            orientation++;
-            if (orientation > EDITOR_GIZMO_ORIENTATION_MAX) {
-                orientation = 0;
-            }
-            editor_gizmo_orientation_set(&state->gizmo, orientation);
-        }
-    }
-    return false;
-}
-
 static b8 game_on_drag(u16 code, void* sender, void* listener_inst, event_context context) {
     i16 x = context.data.i16[0];
     i16 y = context.data.i16[1];
@@ -1552,9 +1532,6 @@ void application_register_events(struct application* game_inst) {
         event_register(EVENT_CODE_MOUSE_DRAGGED, game_inst->state, game_on_drag);
         // TODO: end temp
 
-        event_register(EVENT_CODE_KEY_PRESSED, game_inst, game_on_key);
-        event_register(EVENT_CODE_KEY_RELEASED, game_inst, game_on_key);
-
         event_register(EVENT_CODE_KVAR_CHANGED, 0, game_on_kvar_changed);
     }
 }
@@ -1574,10 +1551,6 @@ void application_unregister_events(struct application* game_inst) {
     event_unregister(EVENT_CODE_MOUSE_DRAG_END, game_inst->state, game_on_drag);
     event_unregister(EVENT_CODE_MOUSE_DRAGGED, game_inst->state, game_on_drag);
     // TODO: end temp
-
-    event_unregister(EVENT_CODE_KEY_PRESSED, game_inst, game_on_key);
-    event_unregister(EVENT_CODE_KEY_RELEASED, game_inst, game_on_key);
-
     event_unregister(EVENT_CODE_KVAR_CHANGED, 0, game_on_kvar_changed);
 }
 
