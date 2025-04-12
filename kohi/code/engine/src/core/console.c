@@ -154,25 +154,35 @@ static b8 console_object_to_b8(const console_object* obj) {
     return *((b8*)obj->block);
 } */
 
-static void console_object_print(console_object* obj) {
+static void console_object_print(u8 indent, console_object* obj) {
+    char indent_buffer[513] = 0;
+    u16 idx = 0;
+    for (; idx < (indent * 2); idx += 2) {
+        indent_buffer[idx + 0] = ' ';
+        indent_buffer[idx + 1] = ' ';
+    }
+    indent_buffer[idx] = 0;
+
     switch (obj->type) {
         case CONSOLE_OBJECT_TYPE_INT32:
-            KINFO("%i", ((u32*)obj->block));
+            KINFO("%s%i", indent_buffer, ((u32*)obj->block));
             break;
         case CONSOLE_OBJECT_TYPE_UINT32:
-            KINFO("%u", ((u32*)obj->block));
+            KINFO("%s%u", indent_buffer, ((u32*)obj->block));
             break;
         case CONSOLE_OBJECT_TYPE_F32:
-            KINFO("%f", ((f32*)obj->block));
+            KINFO("%s%f", indent_buffer, ((f32*)obj->block));
             break;
         case CONSOLE_OBJECT_TYPE_BOOL:
             b8 val = ((b8*)obj->block);
-            KINFO("%s", val ? "true" : "false");
+            KINFO("%s%s", indent_buffer, val ? "true" : "false");
         case CONSOLE_OBJECT_TYPE_STRUCT:
             if (obj->properties) {
+                KINFO("%s",obj->name);
+                indent++;
                 u32 len = darray_length(obj->properties);
                 for (u32 i = 0; i < len; ++i) {
-                    console_object_print(&obj->properties[i]);
+                    console_object_print(indent, &obj->properties[i]);
                 }
             }
             break;
@@ -204,7 +214,7 @@ static b8 console_expression_parse(const char* expression, console_object_type* 
         for (u32 i = 0; i < registered_object_len; ++i) {
             console_object* obj = &state_ptr->registered_objects[i];
             if (strings_equali(obj->name, expression_copy)) {
-                // TODO: print to console.
+                console_object_print(0, obj);
                 result = true;
                 break;
             }
@@ -255,6 +265,11 @@ KAPI b8 console_command_execute(const char* command) {
     // Just entering a object name on its own would print the value of said object to the console.
     // Expressions can also just be parsed inline.
     // TODO: Add objects/properties to simple_scene during load.
+    console_object_type parsed_type;
+    void* block = kallocate(sizeof(void*), MEMORY_TAG_ARRAY);
+    if (console_expression_parse(command, &parsed_type, block)) {
+        //TODO: cast to appropriate type and use somehow...
+    }
 
     // 对于参考退出控制台写那个行
     char temp[512] = {0};
