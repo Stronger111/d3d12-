@@ -10,23 +10,24 @@ struct rendergraph_source;
 struct frame_data;
 struct texture;
 
-#define MAX_SHADOW_CASCADE_COUNT 4
+#define MAX_CASCADE_COUNT 4
 
 typedef struct shadow_map_cascade_data {
     mat4 projection;
     mat4 view;
     f32 split_depth;
     i32 cascade_index;
-    u32 terrain_geometry_count;
-    struct geometry_render_data* terrain_geometries;
-    u32 geometry_count;
-    struct geometry_render_data* geometries;
 } shadow_map_cascade_data;
 
 typedef struct shadow_map_pass_extended_data {
     struct directional_light* light;
     // Per -cascade data.
-    shadow_map_cascade_data cascades[MAX_SHADOW_CASCADE_COUNT];
+    shadow_map_cascade_data cascades[MAX_CASCADE_COUNT];
+
+    u32 terrain_geometry_count;
+    struct geometry_render_data* terrain_geometries;
+    u32 geometry_count;
+    struct geometry_render_data* geometries;
 } shadow_map_pass_extended_data;
 
 typedef struct shadow_map_pass_config {

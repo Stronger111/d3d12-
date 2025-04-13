@@ -203,7 +203,7 @@ b8 scene_pass_execute(struct rendergraph_pass* self, struct frame_data* p_frame_
         KERROR("Failed to set irradiance texture,check the properties of said texture.");
     }
 
-    for (u8 i = 0; i < MAX_SHADOW_CASCADE_COUNT; ++i) {
+    for (u8 i = 0; i < MAX_CASCADE_COUNT; ++i) {
         mat4 light_space = mat4_mul(ext_data->directional_light_views[i], ext_data->directional_light_projections[i]);
         material_system_directional_light_space_set(light_space, i);
         material_system_shadow_map_set(internal_data->shadowmap_source->textures[p_frame_data->render_target_index], i);

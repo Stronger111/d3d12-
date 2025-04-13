@@ -1,6 +1,6 @@
 #include "stack.h"
-#include "core/logger.h"
 #include "core/kmemory.h"
+#include "core/logger.h"
 
 // 扩容操作
 static void stack_ensure_allocated(stack* s, u32 count) {
@@ -48,7 +48,24 @@ KAPI b8 stack_push(stack* s, void* element_data) {
     return true;
 }
 
-KAPI b8 stack_pop(stack* s, void* out_element_data) {
+b8 stack_peek(const stack* s,void* out_element_data)
+{
+    if (!s || !out_element_data) {
+        KERROR("stack_peek requires a pointer to a valid stack and to hold element data output.");
+        return false;
+    }
+
+    if (s->element_count < 1) {
+        KWARN("Cannot pop from an empty stack.");
+        return false;
+    }
+
+    kcopy_memory(out_element_data, (void*)((u64)s->memory + ((s->element_count - 1) * s->element_size)), s->element_size);
+    //元素不减
+    return true;
+}
+
+b8 stack_pop(stack* s, void* out_element_data) {
     if (!s || !out_element_data) {
         KERROR("stack_pop requires a pointer to a valid stack and to hold element data output.");
         return false;

@@ -5,7 +5,6 @@
 #include "core/kstring.h"
 #include "core/logger.h"
 #include "defines.h"
-#include "math/kmath.h"
 #include "renderer/renderer_frontend.h"
 #include "renderer/renderer_types.h"
 #include "renderer/rendergraph.h"
@@ -45,7 +44,7 @@ typedef struct shadow_map_pass_internal_data {
     texture* depth_textures;
 
     // One per cascade.
-    cascade_resources cascades[MAX_SHADOW_CASCADE_COUNT];
+    cascade_resources cascades[MAX_CASCADE_COUNT];
 
     // Track instance updates per frame
     b8* instance_updated;
@@ -105,7 +104,7 @@ b8 shadow_map_pass_initialize(rendergraph_pass* self) {
         dt->flags |= TEXTURE_FLAG_DEPTH | TEXTURE_FLAG_IS_WRITEABLE;  // flags VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT 深度格式
         dt->width = internal_data->config.resolution;
         dt->height = internal_data->config.resolution;
-        dt->array_size = MAX_SHADOW_CASCADE_COUNT;
+        dt->array_size = MAX_CASCADE_COUNT;
         string_format(dt->name, "shadowmap_pass_res_%u_idx_%u_depth_texture", internal_data->config.resolution, i);
         dt->mip_levels = 1;
         dt->channel_count = 4;
@@ -283,7 +282,7 @@ b8 shadow_map_pass_load_resources(rendergraph_pass* self) {
     // Create the depth attachments,one per frame.
     u8 frame_count = renderer_window_attachment_count_get();
 
-    for (u32 i = 0; i < MAX_SHADOW_CASCADE_COUNT; ++i) {
+    for (u32 i = 0; i < MAX_CASCADE_COUNT; ++i) {
         cascade_resources* cascade = &internal_data->cascades[i];
         // Target per frame
         cascade->targets = kallocate(sizeof(render_target) * frame_count, MEMORY_TAG_ARRAY);
@@ -326,8 +325,8 @@ b8 shadow_map_pass_execute(rendergraph_pass* self, frame_data* p_frame_data) {
     // Bind the internal viewport - do not use one provided in pass data.
     renderer_active_viewport_set(&internal_data->camera_viewport);
 
-    for (u32 p = 0; p < MAX_SHADOW_CASCADE_COUNT; p++) {
-        shadow_map_cascade_data* cascade = &ext_data->cascades[p];
+    for (u32 p = 0; p < MAX_CASCADE_COUNT; p++) {
+        //shadow_map_cascade_data* cascade = &ext_data->cascades[p];
 
         if (!renderer_renderpass_begin(&self->pass, &internal_data->cascades[p].targets[p_frame_data->render_target_index])) {
             KERROR("Shadowmap pass failed to start.");
@@ -341,7 +340,7 @@ b8 shadow_map_pass_execute(rendergraph_pass* self, frame_data* p_frame_data) {
         b8 needs_update = p == 0;
         if (needs_update) {
             renderer_shader_bind_globals(internal_data->s);
-            for (u32 i = 0; i < MAX_SHADOW_CASCADE_COUNT; ++i) {
+            for (u32 i = 0; i < MAX_CASCADE_COUNT; ++i) {
                 if (!shader_system_uniform_set_by_location_arrayed(internal_data->locations.projections_location, i, &ext_data->cascades[i].projection)) {
                     KERROR("Failed to apply shadowmap projection uniform.");
                     return false;
@@ -356,8 +355,8 @@ b8 shadow_map_pass_execute(rendergraph_pass* self, frame_data* p_frame_data) {
 
         shader_system_apply_global(needs_update, p_frame_data);
 
-        u32 geometry_count = cascade->geometry_count;
-        u32 terrain_geometry_count = cascade->terrain_geometry_count;
+        u32 geometry_count = ext_data->geometry_count;
+        u32 terrain_geometry_count = ext_data->terrain_geometry_count;
 
         // Verify enough instance resources for this frame.
         // This is done by taking the highest material instance id
@@ -367,7 +366,7 @@ b8 shadow_map_pass_execute(rendergraph_pass* self, frame_data* p_frame_data) {
         // of instance updates per frame.
         u32 highest_id = 0;
         for (u32 i = 0; i < geometry_count; ++i) {
-            material* m = cascade->geometries[i].material;
+            material* m = ext_data->geometries[i].material;
             if (m->internal_id > highest_id) {
                 // NOTE: +1 to account for the first id being taken by the default instance.
                 highest_id = m->internal_id + 1;
@@ -413,7 +412,7 @@ b8 shadow_map_pass_execute(rendergraph_pass* self, frame_data* p_frame_data) {
 
         // Static geometies.
         for (u32 i = 0; i < geometry_count; ++i) {
-            geometry_render_data* g = &cascade->geometries[i];
+            geometry_render_data* g = &ext_data->geometries[i];
 
             u32 bind_id = INVALID_ID;
             texture_map* bind_map = 0;
@@ -469,7 +468,7 @@ b8 shadow_map_pass_execute(rendergraph_pass* self, frame_data* p_frame_data) {
             shader_system_uniform_set_by_location(internal_data->locations.cascade_index_location, &p);
             shader_system_apply_local(p_frame_data);
             // Invert if needed
-            if (cascade->geometries[i].winding_inverted) {
+            if (ext_data->geometries[i].winding_inverted) {
                 renderer_winding_set(RENDERER_WINDING_CLOCKWISE);
             }
 
@@ -477,7 +476,7 @@ b8 shadow_map_pass_execute(rendergraph_pass* self, frame_data* p_frame_data) {
             renderer_geometry_draw(g);
 
             // Change back if needed
-            if (cascade->geometries[i].winding_inverted) {
+            if (ext_data->geometries[i].winding_inverted) {
                 renderer_winding_set(RENDERER_WINDING_COUNTER_CLOCKWISE);
             }
         }
@@ -488,7 +487,7 @@ b8 shadow_map_pass_execute(rendergraph_pass* self, frame_data* p_frame_data) {
         // Apply globals
         renderer_shader_bind_globals(internal_data->ts);
         if (needs_update) {
-            for (u32 i = 0; i < MAX_SHADOW_CASCADE_COUNT; ++i) {
+            for (u32 i = 0; i < MAX_CASCADE_COUNT; ++i) {
                 // NOTE: using the internal projection matrix,not one passed on
                 if (!shader_system_uniform_set_by_location_arrayed(internal_data->terrain_locations.projections_location, i, &self->pass_data.projection_matrix)) {
                     KERROR("Failed to apply terrain shadowmap projection uniform.");
@@ -505,7 +504,7 @@ b8 shadow_map_pass_execute(rendergraph_pass* self, frame_data* p_frame_data) {
         shader_system_apply_global(needs_update,p_frame_data);
 
         for (u32 i = 0; i < terrain_geometry_count; ++i) {
-            geometry_render_data* terrain = &cascade->terrain_geometries[i];
+            geometry_render_data* terrain = &ext_data->terrain_geometries[i];
 
             // Just draw these using the default instance and texture map.
             texture_map* bind_map = &internal_data->default_terrain_colour_map;
@@ -552,7 +551,7 @@ void shadow_map_pass_destroy(rendergraph_pass* self) {
             u8 attachment_count = renderer_window_attachment_count_get();
 
             // Renderpass attachments.
-            for (u32 i = 0; i < MAX_SHADOW_CASCADE_COUNT; ++i) {
+            for (u32 i = 0; i < MAX_CASCADE_COUNT; ++i) {
                 cascade_resources* cascade = &internal_data->cascades[i];
                 // Targets per frame.
                 for (u32 f = 0; f < attachment_count; ++f) {
