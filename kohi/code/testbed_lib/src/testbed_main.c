@@ -35,9 +35,9 @@
 #include <standard_ui_system.h>
 
 // Rendergraph.
+#include "graphs/editor_rendergraph.h"
+#include "graphs/standard_ui_rendergraph.h"
 #include "renderer/graphs/forward_rendergraph.h"
-#include "passes/editor_pass.h"
-#include "passes/ui_pass.h"
 #include "renderer/rendergraph.h"
 
 // TODO: Editor temp
@@ -80,8 +80,12 @@ typedef struct geometry_distance {
 void application_register_events(struct application* game_inst);
 void application_unregister_events(struct application* game_inst);
 static b8 load_main_scene(struct application* game_inst);
+static b8 create_rendergraphs(application* app);
+static b8 initialize_rendergraphs(application* app);
+static b8 prepare_rendergraphs(application* app, frame_data* frame_data);
+static b8 execute_rendergraphs(application* app, frame_data* frame_data);
 static void destroy_rendergraphs(application* app);
-static b8 configure_rendergraph(application* app);
+static void refresh_rendergraph_pfns(application* app);
 
 static void clear_debug_objects(struct application* game_inst) {
     testbed_game_state* state = (testbed_game_state*)game_inst->state;
@@ -436,19 +440,8 @@ b8 application_boot(struct application* game_inst) {
     config->font_config.max_bitmap_font_count = 101;
     config->font_config.max_system_font_count = 101;
 
-    /* // Configure render views. TODO: read from file?
-   if (!configure_render_views(config)) {
-       KERROR("Failed to configure renderer views. Aborting application.");
-       return false;
-   } */
-    if (!configure_rendergraph(game_inst)) {
-        KERROR("Failed to setup render graph.Aboring application.");
-        return false;
-    }
-
-    testbed_game_state* state = (testbed_game_state*)game_inst->state;
-    if (!rendergraph_finalize(&state->frame_graph)) {
-        KERROR("Failed to finalize rendergraph. See log for details.");
+    if (!create_rendergraphs(game_inst)) {
+        KERROR("Failed to create render graphs.Aborting application.");
         return false;
     }
 
@@ -464,8 +457,8 @@ b8 application_initialize(struct application* game_inst) {
     KDEBUG("game_initialize() is CAll!");
 
     testbed_game_state* state = (testbed_game_state*)game_inst->state;
-    if (!rendergraph_load_resources(&state->frame_graph)) {
-        KERROR("Failed to load rendergraph resources.");
+    if (!initialize_rendergraphs(game_inst)) {
+        KERROR("Failed to initialize rendergraphs resources. See logs for details.");
         return false;
     }
 
@@ -514,8 +507,8 @@ b8 application_initialize(struct application* game_inst) {
         return false;
     }
 
-    state->forward_move_speed = 5.0f;
-    state->backward_move_speed = 2.5f;
+    state->forward_move_speed = 5.0f * 5.0f;
+    state->backward_move_speed = 2.5f * 5.0f;
 
     // Setup editor gizmo.
     if (!editor_gizmo_create(&state->gizmo)) {
@@ -530,6 +523,8 @@ b8 application_initialize(struct application* game_inst) {
         KERROR("Failed to load editor gizmo!");
         return false;
     }
+
+    editor_rendergraph_gizmo_set(&state->editor_graph, &state->gizmo);
 
     // World meshes
     // Invalidate all meshes.
@@ -895,125 +890,10 @@ b8 application_prepare_frame(struct application* app_inst, struct frame_data* p_
 
     kclock_start(&state->prepare_clock);
 
-  
-        // Editor pass
-        {
-            // Enable this pass for this frame.
-            state->editor_pass.pass_data.do_execute = true;
-            state->editor_pass.pass_data.vp = &state->world_viewport;
-            state->editor_pass.pass_data.view_matrix = camera_view_get(current_camera);
-            state->editor_pass.pass_data.view_position = camera_position_get(current_camera);
-            state->editor_pass.pass_data.projection_matrix = state->world_viewport.projection;
-
-            editor_pass_extended_data* ext_data = state->editor_pass.pass_data.ext_data;
-
-            geometry* g = &state->gizmo.mode_data[state->gizmo.mode].geo;
-
-            // vec3 camera_pos = camera_position_get(c);
-            // vec3 gizmo_pos = transform_position_get(&packet_data->gizmo->xform);
-            // TODO: Should get this from the camera/viewport.
-            // f32 fov = deg_to_rad(45.0f);
-            // f32 dist = vec3_distance(camera_pos, gizmo_pos);
-
-            mat4 model = transform_world_get(&state->gizmo.xform);
-            // f32 fixed_size = 0.1f;                            // TODO: Make this a configurable option for gizmo size.
-            f32 scale_scalar = 1.0f;                   // ((2.0f * ktan(fov * 0.5f)) * dist) * fixed_size;
-            state->gizmo.scale_scalar = scale_scalar;  // Keep a copy of this for hit detection.
-            mat4 scale = mat4_scale((vec3){scale_scalar, scale_scalar, scale_scalar});
-            model = mat4_mul(model, scale);
-
-            geometry_render_data render_data = {0};
-            render_data.model = model;
-            render_data.material = g->material;
-            render_data.vertex_count = g->vertex_count;
-            render_data.vertex_buffer_offset = g->vertex_buffer_offset;
-            render_data.index_count = g->index_count;
-            render_data.index_buffer_offset = g->index_buffer_offset;
-            render_data.unique_id = INVALID_ID;
-
-            ext_data->debug_geometries = darray_create_with_allocator(geometry_render_data, &p_frame_data->allocator);
-            darray_push(ext_data->debug_geometries, render_data);
-
-#ifdef _DEBUG
-            {
-                geometry_render_data plane_normal_render_data = {0};
-                plane_normal_render_data.model = transform_world_get(&state->gizmo.plane_normal_line.xform);
-
-                geometry* g = &state->gizmo.plane_normal_line.geo;
-                plane_normal_render_data.material = 0;
-
-                plane_normal_render_data.material = g->material;
-                plane_normal_render_data.vertex_count = g->vertex_count;
-                plane_normal_render_data.vertex_buffer_offset = g->vertex_buffer_offset;
-                plane_normal_render_data.index_count = g->index_count;
-                plane_normal_render_data.index_buffer_offset = g->index_buffer_offset;
-                plane_normal_render_data.unique_id = INVALID_ID;
-                darray_push(ext_data->debug_geometries, plane_normal_render_data);
-            }
-#endif
-            ext_data->debug_geometry_count = darray_length(ext_data->debug_geometries);
-        }
-
-        /* // Wireframe
-        {
-            render_view_packet* view_packet = &packet->views[TESTBED_PACKET_VIEW_WIREFRAME];
-            const render_view* view = view_packet->view;
-
-            render_view_wireframe_data wireframe_data = {0};
-            // TODO: Get a list of geometries not culled for the current camera.
-            //
-            wireframe_data.selected_id = state->selection.unique_id;
-            wireframe_data.world_geometries = packet->views[TESTBED_PACKET_VIEW_WORLD].geometries;
-            wireframe_data.terrain_geometries = packet->views[TESTBED_PACKET_VIEW_WORLD].terrain_geometries;
-            if (!render_view_system_packet_build(view, p_frame_data, &state->world_viewport2, state->world_camera_2, &wireframe_data, view_packet)) {
-                KERROR("Failed to build packet for view 'wireframe'");
-                return false;
-            }
-        } */
-    } else {
-        // Do not run these passes if the scene is not loaded.
-        state->scene_pass.pass_data.do_execute = false;
-        state->shadowmap_pass.pass_data.do_execute = false;
-        state->editor_pass.pass_data.do_execute = false;
+    if (!prepare_rendergraphs(app_inst, p_frame_data)) {
+        KERROR("Preparation of rendergraphs failed. See logs for details");
+        return false;
     }
-
-    // UI
-    {
-        ui_pass_extended_data* ext_data = state->ui_pass.pass_data.ext_data;
-        state->ui_pass.pass_data.vp = &state->ui_viewport;
-        state->ui_pass.pass_data.view_matrix = mat4_identity();
-        state->ui_pass.pass_data.projection_matrix = state->ui_viewport.projection;
-
-        state->ui_pass.pass_data.do_execute = true;
-
-        // Renerables
-        ext_data->sui_render_data.renderables = darray_create_with_allocator(standard_ui_renderable, &p_frame_data->allocator);
-        void* sui_state = systems_manager_get_state(K_SYSTEM_TYPE_STANDARD_UI_EXT);
-        if (!standard_ui_system_render(sui_state, 0, p_frame_data, &ext_data->sui_render_data)) {
-            KERROR("The standard ui system failed to render.");
-        }
-    }
-
-    // Pick
-    /*{
-        render_view_packet* view_packet = &packet->views[TESTBED_PACKET_VIEW_PICK];
-        const render_view* view = view_packet->view;
-
-        // Pick uses both world and ui packet data.
-        pick_packet_data pick_packet = {0};
-        pick_packet.ui_mesh_data = ui_packet.mesh_data;
-        pick_packet.world_mesh_data = packet->views[TESTBED_PACKET_VIEW_WORLD].geometries;
-        pick_packet.terrain_mesh_data = packet->views[TESTBED_PACKET_VIEW_WORLD].terrain_geometries;
-        pick_packet.texts = ui_packet.texts;
-        pick_packet.text_count = ui_packet.text_count;
-
-        if (!render_view_system_packet_build(view, p_frame_data->frame_allocator, &pick_packet, view_packet)) {
-            KERROR("Failed to build packet for view 'pick'.");
-            return false;
-        }
-    }*/
-    // TODO: end temp
-
     kclock_update(&state->prepare_clock);
     return true;
 }
@@ -1026,8 +906,8 @@ b8 application_render_frame(struct application* game_inst, struct frame_data* p_
 
     kclock_start(&state->render_clock);
 
-    if (!rendergraph_execute_frame(&state->frame_graph, p_frame_data)) {
-        KERROR("Failed to execute rendergraph frame.");
+    if (!execute_rendergraphs(game_inst, p_frame_data)) {
+        KERROR("Execution of rendergraphs failed. See logs for details.");
         return false;
     }
 
@@ -1071,6 +951,14 @@ void application_on_resize(struct application* game_inst, u32 width, u32 height)
     if (!forward_rendergraph_on_resize(&state->forward_graph, width, height)) {
         KERROR("Error resizing forward rendergraph. See logs for details.");
     }
+
+    if (!editor_rendergraph_on_resize(&state->editor_graph, width, height)) {
+        KERROR("Error resizing editor rendergraph. See logs for details.");
+    }
+
+    if (!standard_ui_rendergraph_on_resize(&state->standard_ui_graph, width, height)) {
+        KERROR("Error resizing Standard UI rendergraph. See logs for details.");
+    }
     //  TODO: end temp
 }
 
@@ -1089,7 +977,6 @@ void application_shutdown(struct application* game_inst) {
     // TODO: Temp
 
     // Destroy ui texts
-
     debug_console_unload(&state->debug_console);
 
     // Destroy rendergraph(s)
@@ -1109,6 +996,7 @@ void application_lib_on_load(struct application* game_inst) {
     if (game_inst->stage >= APPLICATION_STAGE_BOOT_COMPLETE) {
         game_setup_commands(game_inst);
         game_setup_keymaps(game_inst);
+        refresh_rendergraph_pfns(game_inst);
     }
 }
 
@@ -1169,50 +1057,101 @@ void application_unregister_events(struct application* game_inst) {
 static void refresh_rendergraph_pfns(application* app) {
     testbed_game_state* state = (testbed_game_state*)app->state;
 
-
-    state->editor_pass.initialize = editor_pass_initialize;
-    state->editor_pass.execute = editor_pass_execute;
-    state->editor_pass.destroy = editor_pass_destroy;
-
-    state->ui_pass.initialize = ui_pass_initialize;
-    state->ui_pass.execute = ui_pass_execute;
-    state->ui_pass.destroy = ui_pass_destroy;
+    editor_rendergraph_refresh_pfns(&state->editor_graph);
 }
 
-static b8 configure_rendergraph(application* app) {
+static b8 create_rendergraphs(application* app) {
     testbed_game_state* state = (testbed_game_state*)app->state;
-    
-    
-    // Editor pass
-    RG_CHECK(rendergraph_pass_create(&state->frame_graph, "editor", editor_pass_create, 0, &state->editor_pass));
-    RG_CHECK(rendergraph_pass_sink_add(&state->frame_graph, "editor", "colourbuffer"));
-    RG_CHECK(rendergraph_pass_sink_add(&state->frame_graph, "editor", "depthbuffer"));
-    RG_CHECK(rendergraph_pass_source_add(&state->frame_graph, "editor", "colourbuffer", RENDERGRAPH_SOURCE_TYPE_RENDER_TARGET_COLOUR, RENDERGRAPH_SOURCE_ORIGIN_OTHER));
-    RG_CHECK(rendergraph_pass_source_add(&state->frame_graph, "editor", "depthbuffer", RENDERGRAPH_SOURCE_TYPE_RENDER_TARGET_DEPTH_STENCIL, RENDERGRAPH_SOURCE_ORIGIN_OTHER));
-    RG_CHECK(rendergraph_pass_set_sink_linkage(&state->frame_graph, "editor", "colourbuffer", "scene", "colourbuffer"));
-    RG_CHECK(rendergraph_pass_set_sink_linkage(&state->frame_graph, "editor", "depthbuffer", "scene", "depthbuffer"));
 
-    // UI pass
-    RG_CHECK(rendergraph_pass_create(&state->frame_graph, "ui", ui_pass_create, 0, &state->ui_pass));
-    RG_CHECK(rendergraph_pass_sink_add(&state->frame_graph, "ui", "colourbuffer"));
-    RG_CHECK(rendergraph_pass_sink_add(&state->frame_graph, "ui", "depthbuffer"));
-    RG_CHECK(rendergraph_pass_source_add(&state->frame_graph, "ui", "colourbuffer", RENDERGRAPH_SOURCE_TYPE_RENDER_TARGET_COLOUR, RENDERGRAPH_SOURCE_ORIGIN_OTHER));
-    RG_CHECK(rendergraph_pass_source_add(&state->frame_graph, "ui", "depthbuffer", RENDERGRAPH_SOURCE_TYPE_RENDER_TARGET_DEPTH_STENCIL, RENDERGRAPH_SOURCE_ORIGIN_GLOBAL));
-    RG_CHECK(rendergraph_pass_set_sink_linkage(&state->frame_graph, "ui", "colourbuffer", "editor", "colourbuffer"));
-    RG_CHECK(rendergraph_pass_set_sink_linkage(&state->frame_graph, "ui", "depthbuffer", 0, "depthbuffer"));
+    forward_rendergraph_config forward_config = {0};
+    forward_config.shadowmap_resolution = 2048;
+    if (!forward_rendergraph_create(&forward_config, &state->forward_graph)) {
+        KERROR("Forward rendergraph failed to Create.");
+        return false;
+    }
 
-    refresh_rendergraph_pfns(app);
+    editor_rendergraph_config editor_config = {0};
+    editor_config.dummy = 0;
+    if (!editor_rendergraph_create(&editor_config, &state->editor_graph)) {
+        KERROR("Editor rendergraph failed to initialize.");
+        return false;
+    }
 
-    // if (!rendergraph_finalize(&state->frame_graph)) {
-    //     KERROR("Failed to finalize rendergraph.See log for details.");
-    //     return false;
-    // }
+    standard_ui_rendergraph_config sui_config = {0};
+    sui_config.dummy = 0;
+    if (!standard_ui_rendergraph_create(&sui_config, &state->standard_ui_graph)) {
+        KERROR("Standard UI rendergraph failed to initialize.");
+        return false;
+    }
+
+    return true;
+}
+
+static b8 initialize_rendergraphs(application* app) {
+    testbed_game_state* state = (testbed_game_state*)app->state;
+
+    if (!forward_rendergraph_initialize(&state->forward_graph)) {
+        KERROR("Failed to load Forward rendergraph initialize.");
+        return false;
+    }
+    if (!editor_rendergraph_initialize(&state->editor_graph)) {
+        KERROR("Failed to load Editor rendergraph initialize.");
+        return false;
+    }
+    if (!standard_ui_rendergraph_initialize(&state->standard_ui_graph)) {
+        KERROR("Failed to load Standard UI rendergraph initialize.");
+        return false;
+    }
+
+    return true;
+}
+
+static b8 prepare_rendergraphs(application* app, frame_data* p_frame_data) {
+    testbed_game_state* state = (testbed_game_state*)app->state;
+
+    // Prepare the configured rendergraphs.
+    if (!forward_rendergraph_frame_prepare(&state->forward_graph, p_frame_data, state->world_camera, &state->world_viewport, &state->main_scene, state->render_mode)) {
+        KERROR("Forward rendergraph failed to prepare frame data.");
+        return false;
+    }
+
+    if (!editor_rendergraph_frame_prepare(&state->editor_graph, p_frame_data, state->world_camera, &state->world_viewport, &state->main_scene, state->render_mode)) {
+        KERROR("Editor rendergraph failed to prepare frame data.");
+        return false;
+    }
+
+    if (!standard_ui_rendergraph_frame_prepare(&state->standard_ui_graph, p_frame_data, 0, &state->ui_viewport, &state->main_scene, state->render_mode)) {
+        KERROR("Standard UI rendergraph failed to prepare frame data.");
+        return false;
+    }
+    return true;
+}
+
+static b8 execute_rendergraphs(application* app, frame_data* p_frame_data) {
+    testbed_game_state* state = (testbed_game_state*)app->state;
+
+    if (!forward_rendergraph_execute(&state->forward_graph, p_frame_data)) {
+        KERROR("Forward rendergraph failed to execute frame. See logs for details.");
+        return false;
+    }
+
+    if (!editor_rendergraph_execute(&state->editor_graph, p_frame_data)) {
+        KERROR("Editor rendergraph failed to execute frame. See logs for details.");
+        return false;
+    }
+
+    if (!standard_ui_rendergraph_execute(&state->standard_ui_graph, p_frame_data)) {
+        KERROR("Standard UI rendergraph failed to execute frame. See logs for details.");
+        return false;
+    }
     return true;
 }
 
 static void destroy_rendergraphs(application* app) {
     testbed_game_state* state = (testbed_game_state*)app->state;
     forward_rendergraph_destroy(&state->forward_graph);
+    editor_rendergraph_destroy(&state->editor_graph);
+    standard_ui_rendergraph_destroy(&state->standard_ui_graph);
 }
 
 static b8 load_main_scene(struct application* game_inst) {

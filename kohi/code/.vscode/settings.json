@@ -194,7 +194,9 @@
         "renderer_utils.h": "c",
         "functional": "c",
         "optional": "c",
-        "game_state.h": "c"
+        "game_state.h": "c",
+        "forward_rendergraph.h": "c",
+        "ui_pass.h": "c"
     },
     // File copyright documentation tag.  Array of strings will be converted to one line per element.  Can template {year}.
     "doxdocgen.file.copyrightTag": [

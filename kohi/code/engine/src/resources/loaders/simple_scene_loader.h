@@ -17,4 +17,4 @@
  * 
  * @return The newly created resource loader.
  */
-resource_loader simple_scene_resource_loader_create(void);
+KAPI resource_loader simple_scene_resource_loader_create(void);
