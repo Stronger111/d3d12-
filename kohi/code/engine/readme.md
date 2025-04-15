@@ -79,6 +79,7 @@ Renderer:
 -Feature特性
 -JobSystem
  --Ring queue 循环队列 -> CPU调度工作
+ --多线程从另一个线程调用另一个 会产生共享资源竞争 Semaphore
 -空闲列表
  --内存管理 
  --内存地址对齐 Memory Alignment Allocator updates
