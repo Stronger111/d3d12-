@@ -4,6 +4,7 @@
 #include <core/logger.h>
 
 #include "renderer/vulkan/vulkan_backend.h"
+#include "vulkan_renderer_version.h"
 
 b8 plugin_create(renderer_plugin* out_plugin) {
     out_plugin->initialize = vulkan_renderer_backend_initialize;
@@ -84,6 +85,8 @@ b8 plugin_create(renderer_plugin* out_plugin) {
     out_plugin->renderbuffer_copy_range = vulkan_buffer_copy_range;
     out_plugin->renderbuffer_draw = vulkan_buffer_draw;
     out_plugin->wait_for_idle=vulkan_renderer_wait_for_idle;
+
+    KINFO("Vulkan Renderer Plugin Creation successful (%s).", KVERSION);
     return true;
 }
 

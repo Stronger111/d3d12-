@@ -198,7 +198,9 @@
         "forward_rendergraph.h": "c",
         "ui_pass.h": "c",
         "kthread.h": "c",
-        "job_system.h": "c"
+        "job_system.h": "c",
+        "time.h": "c",
+        "plugin_audio_openal_version.h": "c"
     },
     // File copyright documentation tag.  Array of strings will be converted to one line per element.  Can template {year}.
     "doxdocgen.file.copyrightTag": [
