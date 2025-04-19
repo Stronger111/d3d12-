@@ -129,9 +129,9 @@ b8 simple_scene_initialize(simple_scene* scene) {
             scene->dir_light->name = string_duplicate(scene->config->directional_light_config.name);
             scene->dir_light->data.colour = scene->config->directional_light_config.colour;
             scene->dir_light->data.direction = scene->config->directional_light_config.direction;
-            scene->dir_light->data.shadow_distance=scene->config->directional_light_config.shadow_distance;
-            scene->dir_light->data.shadow_fade_distance=scene->config->directional_light_config.shadow_fade_distance;
-            scene->dir_light->data.shadow_split_mult=scene->config->directional_light_config.shadow_split_mult;
+            scene->dir_light->data.shadow_distance = scene->config->directional_light_config.shadow_distance;
+            scene->dir_light->data.shadow_fade_distance = scene->config->directional_light_config.shadow_fade_distance;
+            scene->dir_light->data.shadow_split_mult = scene->config->directional_light_config.shadow_split_mult;
 
             // Add debug data and initialize it
             scene->dir_light->debug_data = kallocate(sizeof(simple_scene_debug_data), MEMORY_TAG_RESOURCE);
@@ -320,9 +320,9 @@ b8 simple_scene_load(simple_scene* scene) {
     // Update the state to show the scene is currently loading.
     scene->state = SIMPLE_SCENE_STATE_LOADING;
 
-    //Register with the console.
-    console_object_register("scene",scene,CONSOLE_OBJECT_TYPE_STRUCT);
-    console_object_add_property("scene","id",&scene->id,CONSOLE_OBJECT_TYPE_UINT32);
+    // Register with the console.
+    console_object_register("scene", scene, CONSOLE_OBJECT_TYPE_STRUCT);
+    console_object_add_property("scene", "id", &scene->id, CONSOLE_OBJECT_TYPE_UINT32);
 
     if (scene->sb) {
         if (scene->sb->instance_id == INVALID_ID) {
@@ -1538,4 +1538,56 @@ struct transform* simple_scene_transform_get_by_id(simple_scene* scene, u64 uniq
     }
 
     return 0;
+}
+
+b8 simple_scene_save(simple_scene* scene) {
+    if (!scene) {
+        KERROR("simple_scene_save requires a valid pointer to a scene.");
+        return false;
+    }
+
+    // Create a simple scene config based on the objects currently in the scene.
+    simple_scene_config config = {0};
+    config.name = string_duplicate(scene->name);
+    config.description = string_duplicate(scene->description);
+    if (scene->sb) {
+        config.skybox_config.name = string_duplicate(scene->config->skybox_config.name);
+        config.skybox_config.cubemap_name = string_duplicate(scene->config->skybox_config.cubemap_name);
+    }
+
+    if (scene->dir_light) {
+        config.directional_light_config.name = string_duplicate(scene->config->directional_light_config.name);
+        config.directional_light_config.colour = scene->dir_light->data.colour;
+        config.directional_light_config.direction = scene->dir_light->data.direction;
+        config.directional_light_config.shadow_split_mult = scene->dir_light->data.shadow_split_mult;
+        config.directional_light_config.shadow_fade_distance = scene->dir_light->data.shadow_fade_distance;
+        config.directional_light_config.shadow_distance = scene->dir_light->data.shadow_distance;
+    }
+
+    u32 mesh_count = darray_length(scene->meshes);
+    config.meshes = darray_create(mesh_simple_scene_config);
+    for (u32 i = 0; i < mesh_count; ++i) {
+        mesh_simple_scene_config mesh = {0};
+        mesh.name=string_duplicate(scene->meshes[i].name);
+        mesh.transform = scene->meshes[i].transform;
+        mesh.resource_name =scene->meshes[i].config.resource_name;
+        //TODO: Parent could have changed...
+        mesh.parent_name = scene->meshes[i].config.parent_name;
+        darray_push(config.meshes, mesh);
+    }
+
+    u32 terrain_count = darray_length(scene->terrains);
+    config.terrains = darray_create(terrain_simple_scene_config);
+    for (u32 i = 0; i < terrain_count; ++i) {
+        terrain_simple_scene_config terrain = {0};
+        terrain.name=string_duplicate(scene->terrains[i].name);
+        terrain.xform = scene->terrains[i].xform;
+        //terrain.resource_name =scene->terrains[i].config.resource_name;
+        //terrain.parent_name = scene->terrains[i].config.parent_name;
+        darray_push(config.terrains, terrain);
+    }
+    // Call teh resource system to write that config
+
+    // Destroy the config
+    return true;
 }

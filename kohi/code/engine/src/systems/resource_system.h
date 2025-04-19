@@ -21,15 +21,22 @@ typedef struct resource_loader {
      * @param out_resource A pointer to hold the loaded resource.
      * @returns True on success; otherwise false.
      */
-    b8 (*load)(struct resource_loader* self, const char* name,void* params, resource* out_resource);
+    b8 (*load)(struct resource_loader* self, const char* name, void* params, resource* out_resource);
+    /**
+     * @brief Unloads the given resource. Loader is determined by the resource's assigned loader id.
+     * @param self A pointer to the loader itself.
+     * @param name The name of the resource to be unloaded.
+     */
     void (*unload)(struct resource_loader* self, resource* resource);
+
+    b8 (*write)(struct resource_loader* self, resource* r);
 } resource_loader;
 
 /**
  * @brief Initializes this system.
  * Should be called twice; once to get the memory requirement (passing state=0), and a second
  * time passing an allocated block of memory to actually initialize the system.
- * 
+ *
  * @param memory_requirement A pointer to hold the memory requirement as it is calculated.
  * @param state A block of memory to hold the state or, if gathering the memory requirement, 0.
  * @param config The configuration (resource_system_config) for this system.
@@ -42,24 +49,35 @@ KAPI b8 resource_system_loader_register(resource_loader loader);
 
 /**
  * @brief Loads a resource of the given name.
- * 
+ *
  * @param name The name of the resource to load.
  * @param type The type of resource to load.
  * @param params Parameters to be passed to the loader, or 0.
  * @param out_resource A pointer to hold the newly-loaded resource.
  * @return True on success; otherwise false.
  */
-KAPI b8 resource_system_load(const char* name, resource_type type,void* params, resource* out_resource);
+KAPI b8 resource_system_load(const char* name, resource_type type, void* params, resource* out_resource);
 /**
  * @brief Loads a resource of the given name and of a custom type.
- * 
+ *
  * @param name The name of the resource to load.
  * @param custom_type The custom resource type.
  * @param params Parameters to be passed to the loader, or 0.
  * @param out_resource A pointer to hold the newly-loaded resource.
  * @return True on success; otherwise false.
  */
-KAPI b8 resource_system_load_custom(const char* name, const char* custom_type,void* params, resource* out_resource);
+KAPI b8 resource_system_load_custom(const char* name, const char* custom_type, void* params, resource* out_resource);
+
+/**
+ * @brief Writes a resource of the given name.
+ *
+ * @param type The type of resource to write.
+ * @param params Parameters to be passed to the write, or 0.
+ * @param r A pointer to the resource to be written.
+ * @return True on success; otherwise false.
+ */
+KAPI b8 resource_system_write(resource_type type, resource* r);
+
 /**
  * @brief Attempts to obtain the base asset path for the given type. Includes trailing slash '/'. Returns 0 if not found.
  * @param type The resource type to search for.

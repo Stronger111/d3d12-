@@ -48,9 +48,9 @@ static b8 simple_scene_loader_load(struct resource_loader* self, const char* nam
     kzero_memory(resource_data, sizeof(simple_scene_config));
 
     // Set some defaults, create arrays.
-    resource_data->directional_light_config.shadow_distance=SHADOW_DISTANCE_DEFAULT;
-    resource_data->directional_light_config.shadow_fade_distance=SHADOW_FADE_DISTANCE_DEFAULT;
-    resource_data->directional_light_config.shadow_split_mult=SHADOW_SPLIT_MULT_DEFAULT;
+    resource_data->directional_light_config.shadow_distance = SHADOW_DISTANCE_DEFAULT;
+    resource_data->directional_light_config.shadow_fade_distance = SHADOW_FADE_DISTANCE_DEFAULT;
+    resource_data->directional_light_config.shadow_split_mult = SHADOW_SPLIT_MULT_DEFAULT;
     resource_data->description = 0;
     resource_data->name = string_duplicate(name);
     resource_data->point_lights = darray_create(point_light_simple_scene_config);
@@ -316,7 +316,7 @@ static b8 simple_scene_loader_load(struct resource_loader* self, const char* nam
                 } else {
                     KWARN("Format warning: Cannot process shadow_fade_distance in the current mode.");
                 }
-            }else if (strings_equali(trimmed_var_name, "shadow_split_mult")) {
+            } else if (strings_equali(trimmed_var_name, "shadow_split_mult")) {
                 if (mode == SIMPLE_SCENE_PARSE_MODE_DIRECTIONAL_LIGHT) {
                     if (!string_to_f32(trimmed_value, &resource_data->directional_light_config.shadow_split_mult)) {
                         KWARN("Error parsing directional light shadow_split_mult as f32. Using default value");
@@ -434,12 +434,249 @@ static void simple_scene_loader_unload(struct resource_loader* self, resource* r
     }
 }
 
+static b8 simple_scene_loader_write(struct resource_loader* self, resource* r) {
+    if (!self || !r) {
+        return false;
+    }
+
+    char* format_str = "%s/%s/%s%s";
+    char full_file_path[512];
+    string_format(full_file_path, format_str, resource_system_base_path(), self->type_path, r->name, ".kss");
+
+    file_handle f;
+    if (!filesystem_open(full_file_path, FILE_MODE_WRITE, false, &f)) {
+        KERROR("simple_scene_loader_write - unable to open simple scene file for writing: '%s'.", full_file_path);
+        return false;
+    }
+
+    simple_scene_config* resource_data = r->data;
+    b8 result = true;
+
+    char line_buffer[1024] = {0};
+    // Version.
+    string_format(line_buffer, "!version=%u", 1);
+    if (!filesystem_write_line(&f, line_buffer)) {
+        result = false;
+        goto simple_scene_loader_write_return;
+    }
+
+    // Scene header
+    if (!filesystem_write_line(&f, "[Scene]")) {
+        result = false;
+        goto simple_scene_loader_write_return;
+    }
+    string_format(line_buffer, "name=%s", resource_data->name);
+    if (!filesystem_write_line(&f, line_buffer)) {
+        result = false;
+        goto simple_scene_loader_write_return;
+    }
+    string_format(line_buffer, "description=%s", resource_data->description);
+    if (!filesystem_write_line(&f, line_buffer)) {
+        result = false;
+        goto simple_scene_loader_write_return;
+    }
+    if (!filesystem_write_line(&f, "[/Scene]")) {
+        result = false;
+        goto simple_scene_loader_write_return;
+    }
+
+    // Skybox, if there is one.
+    if (resource_data->skybox_config.name && resource_data->skybox_config.cubemap_name) {
+        if (!filesystem_write_line(&f, "[Skybox]")) {
+            result = false;
+            goto simple_scene_loader_write_return;
+        }
+        string_format(line_buffer, "name=%s", resource_data->skybox_config.name);
+        if (!filesystem_write_line(&f, line_buffer)) {
+            result = false;
+            goto simple_scene_loader_write_return;
+        }
+        string_format(line_buffer, "cubemap_name=%s", resource_data->skybox_config.cubemap_name);
+        if (!filesystem_write_line(&f, line_buffer)) {
+            result = false;
+            goto simple_scene_loader_write_return;
+        }
+        if (!filesystem_write_line(&f, "[/Skybox]")) {
+            result = false;
+            goto simple_scene_loader_write_return;
+        }
+    }
+
+    // TODO:Determine if there is a directional light at all....
+    {
+        if (!filesystem_write_line(&f, "[DirectionalLight]")) {
+            result = false;
+            goto simple_scene_loader_write_return;
+        }
+        string_format(line_buffer, "name=%s", resource_data->directional_light_config.name);
+        if (!filesystem_write_line(&f, line_buffer)) {
+            result = false;
+            goto simple_scene_loader_write_return;
+        }
+        vec4 c = resource_data->directional_light_config.colour;
+        string_format(line_buffer, "colour=%f %f %f %f", c.r, c.g, c.b, c.a);
+        if (!filesystem_write_line(&f, line_buffer)) {
+            result = false;
+            goto simple_scene_loader_write_return;
+        }
+        vec4 d = resource_data->directional_light_config.direction;
+        string_format(line_buffer, "direction=%f %f %f %f", d.r, d.g, d.b, d.a);
+        if (!filesystem_write_line(&f, line_buffer)) {
+            result = false;
+            goto simple_scene_loader_write_return;
+        }
+        string_format(line_buffer, "shadow_distance=%u", resource_data->directional_light_config.shadow_distance);
+        if (!filesystem_write_line(&f, line_buffer)) {
+            result = false;
+            goto simple_scene_loader_write_return;
+        }
+        string_format(line_buffer, "shadow_fade_distance=%u", resource_data->directional_light_config.shadow_fade_distance);
+        if (!filesystem_write_line(&f, line_buffer)) {
+            result = false;
+            goto simple_scene_loader_write_return;
+        }
+        string_format(line_buffer, "shadow_split_mult=%u", resource_data->directional_light_config.shadow_split_mult);
+        if (!filesystem_write_line(&f, line_buffer)) {
+            result = false;
+            goto simple_scene_loader_write_return;
+        }
+        if (!filesystem_write_line(&f, "[/DirectionalLight]")) {
+            result = false;
+            goto simple_scene_loader_write_return;
+        }
+    }
+    
+    //Meshs
+    u32 mesh_count = darray_length(resource_data->meshes);
+    for (u32 i = 0; i < mesh_count; ++i) {
+        mesh_simple_scene_config* mesh = &resource_data->meshes[i];
+
+        if (!filesystem_write_line(&f, "[Mesh]")) {
+            result = false;
+            goto simple_scene_loader_write_return;
+        }
+        string_format(line_buffer, "name=%s", mesh->name);
+        if (!filesystem_write_line(&f, line_buffer)) {
+            result = false;
+            goto simple_scene_loader_write_return;
+        }
+        string_format(line_buffer, "resource_name=%s", mesh->resource_name);
+        if (!filesystem_write_line(&f, line_buffer)) {
+            result = false;
+            goto simple_scene_loader_write_return;
+        }
+        transform t = mesh->transform;
+        string_format(line_buffer,
+                      "transform=%f %f %f %f %f %f %f %f %f %f",
+                      t.position.x, t.position.y, t.position.z,
+                      t.rotation.x, t.rotation.y, t.rotation.z, t.rotation.w,
+                      t.scale.x, t.scale.y, t.scale.z);
+        if (!filesystem_write_line(&f, line_buffer)) {
+            result = false;
+            goto simple_scene_loader_write_return;
+        }
+        if (!filesystem_write_line(&f, "[/Mesh]")) {
+            result = false;
+            goto simple_scene_loader_write_return;
+        }
+    }
+    
+    //Point lights
+    u32 point_light_count = darray_length(resource_data->point_lights);
+    for (u32 i = 0; i < point_light_count; ++i) {
+        point_light_simple_scene_config* light = &resource_data->point_lights[i];
+
+        if (!filesystem_write_line(&f, "[PointLight]")) {
+            result = false;
+            goto simple_scene_loader_write_return;
+        }
+        string_format(line_buffer, "name=%s",light->name);
+        if (!filesystem_write_line(&f, line_buffer)) {
+            result = false;
+            goto simple_scene_loader_write_return;
+        }
+        vec4 c = light->colour;
+        string_format(line_buffer, "colour=%f %f %f %f", c.r, c.g, c.b, c.a);
+        if (!filesystem_write_line(&f, line_buffer)) {
+            result = false;
+            goto simple_scene_loader_write_return;
+        }
+        vec4 d = light->position;
+        string_format(line_buffer, "position=%f %f %f %f", d.r, d.g, d.b, d.a);
+        if (!filesystem_write_line(&f, line_buffer)) {
+            result = false;
+            goto simple_scene_loader_write_return;
+        }
+        string_format(line_buffer, "constant_f=%f", light->constant_f);
+        if (!filesystem_write_line(&f, line_buffer)) {
+            result = false;
+            goto simple_scene_loader_write_return;
+        }
+        string_format(line_buffer, "linear=%f", light->linear);
+        if (!filesystem_write_line(&f, line_buffer)) {
+            result = false;
+            goto simple_scene_loader_write_return;
+        }
+        string_format(line_buffer, "quadratic=%f", light->quadratic);
+        if (!filesystem_write_line(&f, line_buffer)) {
+            result = false;
+            goto simple_scene_loader_write_return;
+        }
+        if (!filesystem_write_line(&f, "[/PointLight]")) {
+            result = false;
+            goto simple_scene_loader_write_return;
+        }
+    }
+
+    //Terrains
+    u32 terrain_count = darray_length(resource_data->terrains);
+    for (u32 i = 0; i < terrain_count; ++i) {
+        terrain_simple_scene_config* terain = &resource_data->terrains[i];
+
+        if (!filesystem_write_line(&f, "[Terrain]")) {
+            result = false;
+            goto simple_scene_loader_write_return;
+        }
+        string_format(line_buffer, "name=%s", terain->name);
+        if (!filesystem_write_line(&f, line_buffer)) {
+            result = false;
+            goto simple_scene_loader_write_return;
+        }
+        string_format(line_buffer, "resource_name=%s", terain->resource_name);
+        if (!filesystem_write_line(&f, line_buffer)) {
+            result = false;
+            goto simple_scene_loader_write_return;
+        }
+        transform t = terain->xform;
+        string_format(line_buffer,
+                      "transform=%f %f %f %f %f %f %f %f %f %f",
+                      t.position.x, t.position.y, t.position.z,
+                      t.rotation.x, t.rotation.y, t.rotation.z, t.rotation.w,
+                      t.scale.x, t.scale.y, t.scale.z);
+        if (!filesystem_write_line(&f, line_buffer)) {
+            result = false;
+            goto simple_scene_loader_write_return;
+        }
+        if (!filesystem_write_line(&f, "[/Terrain]")) {
+            result = false;
+            goto simple_scene_loader_write_return;
+        }
+    }
+simple_scene_loader_write_return:
+    if (!result) {
+        KERROR("Failed to write scene file.");
+    }
+
+    return result;
+}
+
 resource_loader simple_scene_resource_loader_create(void) {
     resource_loader loader;
     loader.type = RESOURCE_TYPE_SIMPLE_SCENE;
     loader.custom_type = 0;
     loader.load = simple_scene_loader_load;
     loader.unload = simple_scene_loader_unload;
+    loader.write = simple_scene_loader_write;
     loader.type_path = "scenes";
 
     return loader;
