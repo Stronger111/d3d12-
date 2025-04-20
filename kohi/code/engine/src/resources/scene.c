@@ -1,4 +1,4 @@
-#include "simple_scene.h"
+#include "scene.h"
 
 #include "containers/darray.h"
 #include "core/frame_data.h"

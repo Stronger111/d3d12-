@@ -1,4 +1,4 @@
-#include "simple_scene_loader.h"
+#include "scene_loader.h"
 
 #include "containers/darray.h"
 #include "core/kmemory.h"

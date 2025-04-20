@@ -24,7 +24,7 @@
 #include "game_state.h"
 #include "math/math_types.h"
 #include "renderer/viewport.h"
-#include "resources/loaders/simple_scene_loader.h"
+#include "resources/loaders/scene_loader.h"
 #include "systems/camera_system.h"
 
 // Standard UI.
@@ -51,7 +51,7 @@
 #include <math/transform.h>
 #include <resources/loaders/audio_loader.h>
 #include <resources/mesh.h>
-#include <resources/simple_scene.h>
+#include <resources/scene.h>
 #include <resources/skybox.h>
 #include <systems/audio_system.h>
 #include <systems/geometry_system.h>

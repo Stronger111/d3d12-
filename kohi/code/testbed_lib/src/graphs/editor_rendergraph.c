@@ -8,7 +8,7 @@
 #include "passes/editor_pass.h"
 #include "renderer/camera.h"
 #include "renderer/viewport.h"
-#include "resources/simple_scene.h"
+#include "resources/scene.h"
 
 b8 editor_rendergraph_create(const editor_rendergraph_config* config, editor_rendergraph* out_graph) {
     if (!rendergraph_create("editor_rendergraph", &out_graph->internal_graph)) {

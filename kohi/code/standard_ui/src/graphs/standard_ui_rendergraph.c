@@ -8,7 +8,7 @@
 #include "passes/ui_pass.h"
 #include "renderer/camera.h"
 #include "renderer/viewport.h"
-#include "resources/simple_scene.h"
+#include "resources/scene.h"
 
 b8 standard_ui_rendergraph_create(const standard_ui_rendergraph_config* config, standard_ui_rendergraph* out_graph) {
     if (!rendergraph_create("standard_ui_rendergraph", &out_graph->internal_graph)) {

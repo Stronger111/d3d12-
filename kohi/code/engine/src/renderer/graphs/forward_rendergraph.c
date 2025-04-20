@@ -7,7 +7,7 @@
 #include "renderer/renderer_types.h"
 #include "renderer/rendergraph.h"
 #include "renderer/viewport.h"
-#include "resources/simple_scene.h"
+#include "resources/scene.h"
 #include "resources/skybox.h"
 #include "systems/light_system.h"
 
