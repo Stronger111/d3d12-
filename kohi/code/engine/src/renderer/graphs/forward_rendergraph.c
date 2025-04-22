@@ -97,7 +97,7 @@ b8 forward_rendergraph_update(forward_rendergraph* graph, struct frame_data* p_f
     return true;
 }
 
-b8 forward_rendergraph_frame_prepare(forward_rendergraph* graph, struct frame_data* p_frame_data, struct camera* current_camera, struct viewport* current_viewport, struct simple_scene* scene, u32 render_mode) {
+b8 forward_rendergraph_frame_prepare(forward_rendergraph* graph, struct frame_data* p_frame_data, struct camera* current_camera, struct viewport* current_viewport, struct scene* scene, u32 render_mode) {
     // Skybox pass. This pass must always run, as it is what clears the screen.
     skybox_pass_extended_data* skybox_pass_ext_data = graph->skybox_pass.pass_data.ext_data;
     graph->skybox_pass.pass_data.vp = current_viewport;
@@ -108,8 +108,8 @@ b8 forward_rendergraph_frame_prepare(forward_rendergraph* graph, struct frame_da
     skybox_pass_ext_data->sb = 0;
 
     // Tell our scene to generate relevant packet data. NOTE: Generates skybox and world packets.
-    if (scene->state == SIMPLE_SCENE_STATE_LOADED) {
-        simple_scene_render_frame_prepare(scene, p_frame_data);
+    if (scene->state == SCENE_STATE_LOADED) {
+        scene_render_frame_prepare(scene, p_frame_data);
 
         directional_light* dir_light = scene->dir_light;
 
@@ -264,7 +264,7 @@ b8 forward_rendergraph_frame_prepare(forward_rendergraph* graph, struct frame_da
             ext_data->geometries = darray_reserve_with_allocator(geometry_render_data, 512, &p_frame_data->allocator);
             // b8 shadow_clipping_enabled = false;
             // Query the scene for static meshes using the shadow frustum.  最远距离剔除
-            if (!simple_scene_mesh_render_data_query_from_line(
+            if (!scene_mesh_render_data_query_from_line(
                     scene,
                     light_dir,
                     culling_center,
@@ -281,7 +281,7 @@ b8 forward_rendergraph_frame_prepare(forward_rendergraph* graph, struct frame_da
             // Gather terrain geometries.
             ext_data->terrain_geometries = darray_reserve_with_allocator(geometry_render_data, 16, &p_frame_data->allocator);
             // Query the scene for terrain meshes using the shadow frustum.
-            if (!simple_scene_terrain_render_data_query_from_line(
+            if (!scene_terrain_render_data_query_from_line(
                     scene,
                     light_dir,
                     culling_center,
@@ -335,7 +335,7 @@ b8 forward_rendergraph_frame_prepare(forward_rendergraph* graph, struct frame_da
             ext_data->geometries = darray_reserve_with_allocator(geometry_render_data, 512, &p_frame_data->allocator);
 
             // Query the scene for static meshes using the camera frustum.
-            if (!simple_scene_mesh_render_data_query(
+            if (!scene_mesh_render_data_query(
                     scene,
                     &camera_frustum,
                     current_camera->position,
@@ -351,7 +351,7 @@ b8 forward_rendergraph_frame_prepare(forward_rendergraph* graph, struct frame_da
             ext_data->terrain_geometries = darray_reserve_with_allocator(geometry_render_data, 16, &p_frame_data->allocator);
 
             // Query the scene for terrain meshes using the camera frustum.
-            if (!simple_scene_terrain_render_data_query(
+            if (!scene_terrain_render_data_query(
                     scene,
                     &camera_frustum,
                     current_camera->position,
@@ -364,13 +364,13 @@ b8 forward_rendergraph_frame_prepare(forward_rendergraph* graph, struct frame_da
             p_frame_data->drawn_mesh_count += ext_data->terrain_geometry_count;
 
             // Debug geometry
-            if (!simple_scene_debug_render_data_query(scene, &ext_data->debug_geometry_count, 0)) {
+            if (!scene_debug_render_data_query(scene, &ext_data->debug_geometry_count, 0)) {
                 KERROR("Failed to obtain count of debug render objects.");
                 return false;
             }
             ext_data->debug_geometries = darray_reserve_with_allocator(geometry_render_data, ext_data->debug_geometry_count, &p_frame_data->allocator);
 
-            if (!simple_scene_debug_render_data_query(scene, &ext_data->debug_geometry_count, &ext_data->debug_geometries)) {
+            if (!scene_debug_render_data_query(scene, &ext_data->debug_geometry_count, &ext_data->debug_geometries)) {
                 KERROR("Failed to obtain debug render objects.");
                 return false;
             }

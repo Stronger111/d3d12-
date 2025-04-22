@@ -50,7 +50,7 @@ typedef struct testbed_game_state {
     f64 last_update_elapsed;
 
     // TODO: temp
-    simple_scene main_scene;
+    scene main_scene;
     b8 main_scene_unload_triggered;
 
     mesh meshes[10];

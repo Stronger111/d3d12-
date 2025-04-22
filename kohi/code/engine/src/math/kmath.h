@@ -1424,6 +1424,20 @@ KINLINE vec3 mat4_right(mat4 matrix) {
 }
 
 /**
+ * @brief Returns the position relative to the provided matrix.
+ *
+ * @param matrix The matrix from which to base the vector.
+ * @return A 3-component positional vector.
+ */
+KINLINE vec3 mat4_position(mat4 matrix) {
+    vec3 pos;
+    pos.x = matrix.data[12];
+    pos.y = matrix.data[13];
+    pos.z = matrix.data[14];
+    return pos;
+}
+
+/**
  * @brief Performs m * v
  *
  * @param m The matrix to be multiplied.

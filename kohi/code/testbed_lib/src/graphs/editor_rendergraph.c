@@ -59,8 +59,8 @@ b8 editor_rendergraph_initialize(editor_rendergraph* graph) {
 b8 editor_rendergraph_update(editor_rendergraph* graph, struct frame_data* p_frame_data) {
     return true;
 }
-b8 editor_rendergraph_frame_prepare(editor_rendergraph* graph, struct frame_data* p_frame_data, struct camera* current_camera, struct viewport* current_viewport, struct simple_scene* scene, u32 render_mode) {
-    if (scene->state == SIMPLE_SCENE_STATE_LOADED) {
+b8 editor_rendergraph_frame_prepare(editor_rendergraph* graph, struct frame_data* p_frame_data, struct camera* current_camera, struct viewport* current_viewport, struct scene* scene, u32 render_mode) {
+    if (scene->state == SCENE_STATE_LOADED) {
         if (graph->gizmo) {
             editor_gizmo_render_frame_prepare(graph->gizmo, p_frame_data);
         }

@@ -20,7 +20,7 @@ typedef enum resource_type {
     /** @brief System font resource type. */
     RESOURCE_TYPE_SYSTEM_FONT,
     /** @brief Simple scene resource type. */
-    RESOURCE_TYPE_SIMPLE_SCENE,
+    RESOURCE_TYPE_SCENE,
     /** @brief Terrain resource type. */
     RESOURCE_TYPE_TERRAIN,
     /** @brief Audio resource type. */
@@ -578,6 +578,32 @@ typedef struct material {
     u8 render_draw_index;
 } material;
 
+typedef enum scene_node_attachment_type {
+    SCENE_NODE_ATTACHMENT_TYPE_UNKNOWN,
+    SCENE_NODE_ATTACHMENT_TYPE_STATIC_MESH,
+    SCENE_NODE_ATTACHMENT_TYPE_TERRAIN,
+    SCENE_NODE_ATTACHMENT_TYPE_SKYBOX,
+    SCENE_NODE_ATTACHMENT_TYPE_DIRECTIONAL_LIGHT,
+    SCENE_NODE_ATTACHMENT_TYPE_POINT_LIGHT
+} scene_node_attachment_type;
+
+// Static mesh attachment
+typedef struct scene_node_attachment_static_mesh {
+    char* resource_name;
+} scene_node_attachment_static_mesh;
+
+//Terrain attachment
+typedef struct scene_node_attachment_terrain {
+    char* name;
+    char* resource_name;
+} scene_node_attachment_terrain;
+
+//Skybox attachment
+typedef struct scene_node_attachment_skybox {
+    char* cubemap_name;
+} scene_node_attachment_skybox;
+
+//TODO:
 typedef struct skybox_simple_scene_config {
     char* name;
     char* cubemap_name;

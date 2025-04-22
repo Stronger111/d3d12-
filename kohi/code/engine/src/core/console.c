@@ -308,7 +308,7 @@ KAPI b8 console_command_execute(const char* command) {
     // the_thing
     // Just entering a object name on its own would print the value of said object to the console.
     // Expressions can also just be parsed inline.
-    // TODO: Add objects/properties to simple_scene during load.
+    // TODO: Add objects/properties to scene during load.
     console_object_type parsed_type;
     void* block = kallocate(sizeof(void*), MEMORY_TAG_ARRAY);
     if (console_expression_parse(command, &parsed_type, block)) {

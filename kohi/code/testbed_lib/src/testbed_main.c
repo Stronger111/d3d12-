@@ -183,7 +183,7 @@ b8 game_on_debug_event(u16 code, void* sender, void* listener_inst, event_contex
         }
         return true;
     } else if (code == EVENT_CODE_DEBUG1) {
-        if (state->main_scene.state < SIMPLE_SCENE_STATE_LOADING) {
+        if (state->main_scene.state < SCENE_STATE_LOADING) {
             KDEBUG("Loading main scene...");
             if (!load_main_scene(game_inst)) {
                 KERROR("Error loading main scene");
@@ -191,10 +191,10 @@ b8 game_on_debug_event(u16 code, void* sender, void* listener_inst, event_contex
         }
         return true;
     } else if (code == EVENT_CODE_DEBUG2) {
-        if (state->main_scene.state == SIMPLE_SCENE_STATE_LOADED) {
+        if (state->main_scene.state == SCENE_STATE_LOADED) {
             KDEBUG("Unloading scene...");
 
-            simple_scene_unload(&state->main_scene, false);
+            scene_unload(&state->main_scene, false);
 
             clear_debug_objects(game_inst);
             KDEBUG("Done.");
@@ -274,7 +274,7 @@ b8 game_on_button(u16 code, void* sender, void* listener_list, event_context con
                 testbed_game_state* state = (testbed_game_state*)listener_list;
 
                 // If the scene isn't loaded, don't do anything else.
-                if (state->main_scene.state < SIMPLE_SCENE_STATE_LOADED) {
+                if (state->main_scene.state < SCENE_STATE_LOADED) {
                     return false;
                 }
 
@@ -296,7 +296,7 @@ b8 game_on_button(u16 code, void* sender, void* listener_list, event_context con
                         view,
                         v->projection);
                     raycast_result r_result;
-                    if (simple_scene_raycast(&state->main_scene, &r, &r_result)) {
+                    if (scene_raycast(&state->main_scene, &r, &r_result)) {
                         u32 hit_count = darray_length(r_result.hits);
                         for (u32 i = 0; i < hit_count; ++i) {
                             raycast_hit* hit = &r_result.hits[i];
@@ -762,13 +762,13 @@ b8 application_update(application* game_inst, struct frame_data* p_frame_data) {
     f32 near_clip = view_viewport->near_clip;
     f32 far_clip = view_viewport->far_clip;
 
-    if (state->main_scene.state >= SIMPLE_SCENE_STATE_LOADED) {
-        if (!simple_scene_update(&state->main_scene, p_frame_data)) {
+    if (state->main_scene.state >= SCENE_STATE_LOADED) {
+        if (!scene_update(&state->main_scene, p_frame_data)) {
             KWARN("Failed to update main scene.");
         }
 
         // Update LODs for the scene based on distance from the camera.
-        simple_scene_update_lod_from_view_position(&state->main_scene, p_frame_data, pos, near_clip, far_clip);
+        scene_update_lod_from_view_position(&state->main_scene, p_frame_data, pos, near_clip, far_clip);
 
         editor_gizmo_update(&state->gizmo);
 
@@ -966,10 +966,10 @@ void application_shutdown(struct application* game_inst) {
     testbed_game_state* state = (testbed_game_state*)game_inst->state;
     state->running = false;
 
-    if (state->main_scene.state == SIMPLE_SCENE_STATE_LOADED) {
+    if (state->main_scene.state == SCENE_STATE_LOADED) {
         KDEBUG("Unloading scene...");
 
-        simple_scene_unload(&state->main_scene, true);
+        scene_unload(&state->main_scene, true);
         clear_debug_objects(game_inst);
 
         KDEBUG("Done.");
@@ -1160,25 +1160,25 @@ static b8 load_main_scene(struct application* game_inst) {
     // Load up config file
     // TODO: clean up resource.
     resource simple_scene_resource;
-    if (!resource_system_load("test_scene", RESOURCE_TYPE_SIMPLE_SCENE, 0, &simple_scene_resource)) {
+    if (!resource_system_load("test_scene", RESOURCE_TYPE_SCENE, 0, &simple_scene_resource)) {
         KERROR("Failed to load scene file, check above logs.");
         return false;
     }
     simple_scene_config* scene_config = (simple_scene_config*)simple_scene_resource.data;
 
     // TODO: temp load/prepare stuff
-    if (!simple_scene_create(scene_config, &state->main_scene)) {
+    if (!scene_create(scene_config, &state->main_scene)) {
         KERROR("Failed to create main scene");
         return false;
     }
 
     // Initialize
-    if (!simple_scene_initialize(&state->main_scene)) {
+    if (!scene_initialize(&state->main_scene)) {
         KERROR("Failed initialize main scene, aborting game.");
         return false;
     }
 
     state->p_light_1 = simple_scene_point_light_get(&state->main_scene, "point_light_1");
     // Actually load the scene.
-    return simple_scene_load(&state->main_scene);
+    return scene_load(&state->main_scene);
 }

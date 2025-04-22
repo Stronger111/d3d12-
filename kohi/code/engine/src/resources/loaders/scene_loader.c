@@ -672,7 +672,7 @@ simple_scene_loader_write_return:
 
 resource_loader simple_scene_resource_loader_create(void) {
     resource_loader loader;
-    loader.type = RESOURCE_TYPE_SIMPLE_SCENE;
+    loader.type = RESOURCE_TYPE_SCENE;
     loader.custom_type = 0;
     loader.load = simple_scene_loader_load;
     loader.unload = simple_scene_loader_unload;

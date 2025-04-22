@@ -61,7 +61,7 @@ b8 standard_ui_rendergraph_initialize(standard_ui_rendergraph* graph) {
 b8 standard_ui_rendergraph_update(standard_ui_rendergraph* graph, struct frame_data* p_frame_data) {
     return true;
 }
-b8 standard_ui_rendergraph_frame_prepare(standard_ui_rendergraph* graph, struct frame_data* p_frame_data, struct camera* current_camera, struct viewport* current_viewport, struct simple_scene* scene, u32 render_mode) {
+b8 standard_ui_rendergraph_frame_prepare(standard_ui_rendergraph* graph, struct frame_data* p_frame_data, struct camera* current_camera, struct viewport* current_viewport, struct scene* scene, u32 render_mode) {
     // UI
     {
         ui_pass_extended_data* ext_data = graph->ui_pass.pass_data.ext_data;

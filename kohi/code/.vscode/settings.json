@@ -1,4 +1,5 @@
 {
+    "debug.focusWindowOnBreak": false,
     "workbench.colorTheme": "Gruvbox Dark (Hard)",
     "xmlTools.enforcePrettySelfClosingTagOnFormat": true,
     "editor.minimap.enabled": false,
@@ -201,7 +202,8 @@
         "job_system.h": "c",
         "time.h": "c",
         "plugin_audio_openal_version.h": "c",
-        "scene.h": "c"
+        "scene.h": "c",
+        "khandle.h": "c"
     },
     // File copyright documentation tag.  Array of strings will be converted to one line per element.  Can template {year}.
     "doxdocgen.file.copyrightTag": [
