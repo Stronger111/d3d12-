@@ -15,11 +15,10 @@ struct mesh;
 struct skybox;
 struct geometry_config;
 struct camera;
-struct simple_scene_config;
+struct scene_config;
 struct terrain;
 struct ray;
 struct raycast_result;
-struct transform;
 struct viewport;
 struct geometry_render_data;
 
@@ -46,6 +45,24 @@ typedef struct scene_attachment {
     k_handle resource_handle;
 } scene_attachment;
 
+typedef enum scene_flag {
+    SCENE_FLAG_NONE = 0,
+    /* @brief Indicates if the scene can be saved once modified
+     * (i.e. read-only would be used for runtime, writing would
+     * be used in editor, etc.)
+     */
+    SCENE_FLAG_READONLY = 1
+} scene_flag;
+
+// Bitwise flags to be used on scene load, etc.
+typedef u32 scene_flags;
+
+// typedef struct scene_node_meta
+
+typedef struct scene_skybox_metadata {
+    const char* cubemap_name;
+} scene_skybox_metadata;
+
 typedef struct scene {
     u32 id;
     scene_state state;
@@ -53,30 +70,60 @@ typedef struct scene {
 
     char* name;
     char* description;
-
-    transform scene_transform;
+    char* resource_name;
+    char* resource_full_path;
 
     // Singlular pointer to a directional light.
-    struct directional_light* dir_light;
+    struct directional_light* dir_lights;
+    // TODO: Delete this
+    // Indices into the attachment array for xform lookups.
+    u32* directional_light_attachment_indices;
+    // Array of scene attachments for directional lights.
+    scene_attachment* directional_light_attachments;
 
     // darray of point lights.
     struct point_light* point_lights;
+    // TODO: Delete this
+    // Indices into the attachment array for xform lookups.
+    u32* point_light_attachment_indices;
+    // Array of scene attachments for point lights.
+    scene_attachment* point_light_attachments;
 
     // darray of meshes to be loaded.`
     struct mesh* meshes;
+    // TODO: Delete this
+    // Indices into the attachment array for xform and resource lookups.
+    u32* mesh_attachment_indices;
+    // Array of scene attachments for meshes.
+    scene_attachment* mesh_attachments;
+    // Array of mesh metadata.
 
     // darray of terrains.
     struct terrain* terrains;
+    // TODO: Delete this
+    // Indices into the attachment array for xform lookups.
+    u32* terrain_attachment_indices;
+    // Array of scene attachments for terrains.
+    scene_attachment* terrain_attachments;
+    // Array of terrain metadata.
 
     // Singlular pointer to a skybox.
-    struct skybox* sb;
+    struct skybox* skyboxes;
+    // TODO: Delete this
+    // Indices into the attachment array for xform lookups.
+    u32* skybox_attachment_indices;
+    // Array of scene attachments for skyboxes
+    scene_attachment* skybox_attachments;
+    // Array of skybox metadata.
+    scene_skybox_metadata* skybox_metadata;
 
     // A grid for the scene
     debug_grid grid;
 
     // A pointer to the scene configuration, if provided.
-    struct simple_scene_config* config;
+    struct scene_config* config;
 
+    hierarchy_graph hierarchy;
 } scene;
 
 /**
@@ -87,7 +134,7 @@ typedef struct scene {
  * @param out_scene A pointer to hold the newly created scene. Required.
  * @return True on success; otherwise false.
  */
-KAPI b8 scene_create(void* config, scene* out_scene);
+KAPI b8 scene_create(scene_config* config, scene* out_scene);
 
 /**
  * @brief Performs initialization routines on the scene, including processing
@@ -139,24 +186,6 @@ KAPI void scene_render_frame_prepare(scene* scene, const struct frame_data* p_fr
 KAPI void scene_update_lod_from_view_position(scene* scene, const struct frame_data* p_frame_data, vec3 view_position, f32 near_clip, f32 far_clip);
 
 KAPI b8 scene_raycast(scene* scene, const struct ray* r, struct raycast_result* out_result);
-
-KAPI b8 simple_scene_directional_light_remove(scene* scene, const char* name);
-
-KAPI b8 simple_scene_mesh_remove(scene* scene, const char* name);
-
-KAPI b8 simple_scene_skybox_remove(scene* scene, const char* name);
-
-KAPI b8 simple_scene_terrain_remove(scene* scene, const char* name);
-
-KAPI struct point_light* simple_scene_point_light_get(scene* scene, const char* name);
-
-KAPI struct mesh* simple_scene_mesh_get(scene* scene, const char* name);
-
-KAPI struct skybox* simple_scene_skybox_get(scene* scene, const char* name);
-
-KAPI struct terrain* simple_scene_terrain_get(scene* scene, const char* name);
-
-KAPI struct transform* simple_scene_transform_get_by_id(scene* scene, u64 unique_id);
 
 KAPI b8 scene_debug_render_data_query(scene* scene, u32* data_count, struct geometry_render_data** debug_geometries);
 

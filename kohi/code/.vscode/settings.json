@@ -203,7 +203,9 @@
         "time.h": "c",
         "plugin_audio_openal_version.h": "c",
         "scene.h": "c",
-        "khandle.h": "c"
+        "khandle.h": "c",
+        "hierarchy_graph.h": "c",
+        "unordered_map": "c"
     },
     // File copyright documentation tag.  Array of strings will be converted to one line per element.  Can template {year}.
     "doxdocgen.file.copyrightTag": [

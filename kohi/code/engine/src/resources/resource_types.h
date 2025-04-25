@@ -305,22 +305,28 @@ typedef struct geometry {
 struct geometry_config;
 
 typedef struct mesh_config {
-    char* name;
-    char* parent_name;
     char* resource_name;
     u16 geometry_count;
     struct geometry_config* g_configs;
 } mesh_config;
 
+typedef enum mesh_state {
+    MESH_STATE_UNDEFINED,
+    MESH_STATE_CREATE,
+    MESH_STATE_INITIALIZED,
+    MESH_STATE_LOADING,
+    MESH_STATE_LOADED
+} mesh_state;
+
 typedef struct mesh {
     char* name;
-    mesh_config config;
+    char* resource_name;
+    mesh_state state;
     identifier id;
     u8 generation;
     u16 geometry_count;
+    struct geometry_config* g_configs;
     geometry** geometries;
-    // TODO: rename to xform
-    transform transform;
     extents_3d extents;
     void* debug_data;
 } mesh;
@@ -592,22 +598,35 @@ typedef struct scene_node_attachment_static_mesh {
     char* resource_name;
 } scene_node_attachment_static_mesh;
 
-//Terrain attachment
+// Terrain attachment
 typedef struct scene_node_attachment_terrain {
     char* name;
     char* resource_name;
 } scene_node_attachment_terrain;
 
-//Skybox attachment
+// Skybox attachment
 typedef struct scene_node_attachment_skybox {
     char* cubemap_name;
 } scene_node_attachment_skybox;
 
-//TODO:
-typedef struct skybox_simple_scene_config {
-    char* name;
-    char* cubemap_name;
-} skybox_simple_scene_config;
+// Directional light attachment
+typedef struct scene_node_attachment_directional_light {
+    vec4 colour;
+    vec4 direction;
+    f32 shadow_distance;
+    f32 shadow_fade_distance;
+    f32 shadow_split_mult;
+} scene_node_attachment_directional_light;
+
+typedef struct scene_node_attachment_point_light{
+    vec4 colour;
+    vec4 position;
+    f32 constant_f;
+    f32 linear;
+    f32 quadratic;
+} scene_node_attachment_point_light;
+
+// TODO:
 
 typedef struct directional_light_simple_scene_config {
     char* name;
@@ -640,10 +659,10 @@ typedef struct terrain_simple_scene_config {
     transform xform;
 } terrain_simple_scene_config;
 
+// TODO:Delete
 typedef struct simple_scene_config {
     char* name;
     char* description;
-    skybox_simple_scene_config skybox_config;
     directional_light_simple_scene_config directional_light_config;
 
     // darray
@@ -655,3 +674,35 @@ typedef struct simple_scene_config {
     // darray
     terrain_simple_scene_config* terrains;
 } simple_scene_config;
+
+typedef struct scene_node_attachment_config {
+    scene_node_attachment_type type;
+    void* attachment_data;
+} scene_node_attachment_config;
+
+typedef struct scene_xform_config {
+    vec3 position;
+    quat rotation;
+    vec3 scale;
+} scene_xform_config;
+
+typedef struct scene_node_config {
+    char* name;
+    // pointer to a config if one exists, otherwise 0
+    scene_xform_config* xform;
+    // darray
+    scene_node_attachment_config* attachements;
+    // darray
+    struct scene_node_config* children;
+} scene_node_config;
+
+typedef struct scene_config {
+    u32 version;
+    char* name;
+    char* description;
+    char* resource_name;
+    char* resource_full_path;
+
+    // darray
+    scene_node_config* nodes;
+} scene_config;

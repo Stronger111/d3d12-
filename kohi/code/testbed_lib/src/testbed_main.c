@@ -329,7 +329,7 @@ b8 game_on_button(u16 code, void* sender, void* listener_list, event_context con
                             // Object selection
                             if (i == 0) {
                                 state->selection.unique_id = hit->unique_id;
-                                state->selection.xform = simple_scene_transform_get_by_id(&state->main_scene, hit->unique_id);
+                                state->selection.xform = scene_transform_get_by_id(&state->main_scene, hit->unique_id);
                                 if (state->selection.xform) {
                                     KINFO("Selected object id %u", hit->unique_id);
                                     // state->gizmo.selected_xfrom=state->selection.xform;
@@ -474,7 +474,7 @@ b8 application_initialize(struct application* game_inst) {
     application_register_events(game_inst);
 
     // Register resource loader
-    resource_system_loader_register(simple_scene_resource_loader_create());
+    resource_system_loader_register(scene_resource_loader_create());
     resource_system_loader_register(audio_resource_loader_create());
 
     state->selection.unique_id = INVALID_ID;

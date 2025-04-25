@@ -15,6 +15,7 @@
 #include "renderer/passes/scene_pass.h"
 #include "renderer/passes/shadow_map_pass.h"
 #include "renderer/passes/skybox_pass.h"
+#include "systems/texture_system.h"
 
 b8 forward_rendergraph_create(const forward_rendergraph_config* config, forward_rendergraph* out_graph) {
     if (!rendergraph_create("forward_rendergraph", &out_graph->internal_graph)) {
@@ -111,7 +112,9 @@ b8 forward_rendergraph_frame_prepare(forward_rendergraph* graph, struct frame_da
     if (scene->state == SCENE_STATE_LOADED) {
         scene_render_frame_prepare(scene, p_frame_data);
 
-        directional_light* dir_light = scene->dir_light;
+        // HACK:Using the first light in the collection for now.
+        // TODO: Support for multiple directional lights with priority sorting.
+        directional_light* dir_light = scene->dir_lights ? &scene->dir_lights[0] : 0;
 
         // Global setup
         f32 near = current_viewport->near_clip;
@@ -148,7 +151,12 @@ b8 forward_rendergraph_frame_prepare(forward_rendergraph* graph, struct frame_da
 
         // Skybox pass
         {
-            skybox_pass_ext_data->sb = scene->sb;
+            // HACK: Just use the first one for now.
+            // TODO: Support for multiple skyboxes, possibly transition between them.
+            if (scene->skyboxes) {
+                u32 skybox_count = darray_length(scene->skyboxes);
+                skybox_pass_ext_data->sb = skybox_count ? &scene->skyboxes[0] : 0;
+            }
         }
 
         // Shadowmap pass -only runs if there is a directional light.
@@ -320,7 +328,10 @@ b8 forward_rendergraph_frame_prepare(forward_rendergraph* graph, struct frame_da
 
             ext_data->render_mode = render_mode;
             // Hack: use the skybox cubemap as teh irradiance texture for now.
-            ext_data->irradiance_cube_texture =scene->sb->cubemap.texture;
+            // HACK: #2 Support for multiple skyboxes, but using the first one for now.
+            // DOUBLE HACK!!!
+            // TODO: Support multiple skyboxes/irradiance maps.
+            ext_data->irradiance_cube_texture =scene->skyboxes? scene->skyboxes[0].cubemap.texture:texture_system_get_default_cube_texture();
 
             // Camera frustum culling and count.
             viewport* v = current_viewport;

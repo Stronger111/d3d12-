@@ -9,6 +9,7 @@
 #include "platform/filesystem.h"
 #include "resources/loaders/loader_utils.h"
 #include "resources/resource_types.h"
+#include "resources/scene.h"
 #include "systems/resource_system.h"
 
 typedef enum simple_scene_parse_mode {
@@ -670,7 +671,7 @@ simple_scene_loader_write_return:
     return result;
 }
 
-resource_loader simple_scene_resource_loader_create(void) {
+resource_loader scene_resource_loader_create(void) {
     resource_loader loader;
     loader.type = RESOURCE_TYPE_SCENE;
     loader.custom_type = 0;

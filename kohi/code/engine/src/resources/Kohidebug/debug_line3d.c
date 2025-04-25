@@ -1,24 +1,23 @@
 #include "debug_line3d.h"
 
 #include "core/identifier.h"
+#include "core/khandle.h"
 #include "core/kmemory.h"
 #include "math/kmath.h"
-#include "math/transform.h"
 #include "renderer/renderer_frontend.h"
+#include "systems/xform_system.h"
 
 static void recalculate_points(debug_line3d *line);
 static void update_vert_colour(debug_line3d *line);
 
-b8 debug_line3d_create(vec3 point_0, vec3 point_1, transform *parent, debug_line3d *out_line) {
+b8 debug_line3d_create(vec3 point_0, vec3 point_1, k_handle parent_xform, debug_line3d *out_line) {
     if (!out_line) {
         return false;
     }
     out_line->vertex_count = 0;
     out_line->vertices = 0;
-    out_line->xform = transform_create();
-    if (parent) {
-        transform_parent_set(&out_line->xform, parent);
-    }
+    out_line->xform = xform_create();
+    out_line->xform_parent = parent_xform;
     // out_line->name // TODO: name?
     out_line->point_0 = point_0;
     out_line->point_1 = point_1;
@@ -37,9 +36,9 @@ void debug_line3d_destroy(debug_line3d *line) {
     line->id.uniqueid = INVALID_ID_U64;
 }
 
-void debug_line3d_parent_set(debug_line3d *line, transform *parent) {
+void debug_line3d_parent_set(debug_line3d *line, k_handle parent_xform) {
     if (line) {
-        transform_parent_set(&line->xform, parent);
+        line->xform_parent = parent_xform;
     }
 }
 
@@ -75,7 +74,7 @@ void debug_line3d_render_frame_prepare(debug_line3d *line, const struct frame_da
     }
 
     // Upload the new vertex data.
-    renderer_geometry_vertex_update(&line->geo, 0, line->vertex_count, line->vertices,true);
+    renderer_geometry_vertex_update(&line->geo, 0, line->vertex_count, line->vertices, true);
 
     line->geo.generation++;
 
@@ -86,7 +85,6 @@ void debug_line3d_render_frame_prepare(debug_line3d *line, const struct frame_da
 
     line->is_dirty = false;
 }
-
 
 b8 debug_line3d_initialize(debug_line3d *line) {
     if (!line) {
