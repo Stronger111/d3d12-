@@ -49,7 +49,7 @@ KAPI u32 string_utf8_length(const char* str) {
     return length;
 }
 
-KAPI b8 bytes_to_codepoint(const char* bytes, u32 offset, i32* out_codepoint, u8* out_advance) {
+b8 bytes_to_codepoint(const char* bytes, u32 offset, i32* out_codepoint, u8* out_advance) {
     i32 codepoint = (i32)bytes[offset];
     if (codepoint >= 0 && codepoint < 0x7F) {
         // Normal single-byte ascii character.
