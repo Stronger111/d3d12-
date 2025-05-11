@@ -4,6 +4,8 @@
 #include <math/math_types.h>
 #include <resources/resource_types.h>
 
+#include "core/khandle.h"
+
 #ifdef _DEBUG
 #include <resources/Kohidebug/debug_line3d.h>
 #endif
@@ -55,15 +57,17 @@ typedef enum editor_gizmo_orientation {
     /** @brief The gizmo's transform operations are relative to local transform. */
     EDITOR_GIZMO_ORIENTATION_LOCAL = 1,
     /** @brief The gizmo's transform operations are relative to the current view. */
-    //EDITOR_GIZMO_ORIENTATION_VIEW = 2,
+    // EDITOR_GIZMO_ORIENTATION_VIEW = 2,
     EDITOR_GIZMO_ORIENTATION_MAX = EDITOR_GIZMO_ORIENTATION_LOCAL
 } editor_gizmo_orientation;
 
 typedef struct editor_gizmo {
     /** @brief The transform of the gizmo. */
-    transform xform;
-    /** @brief A pointer to the currently selected object's transform. Null if nothing is selected. */
-    transform* selected_xform;
+    k_handle xform_handle;
+    /** @brief A handle to the currently selected object's transform. Invalid handle if nothing is selected. */
+    k_handle selected_xform_handle;
+    /** @brief A handle to the parent of the currently selected object's transform, if one exists. Otherwise invalid handle. */
+    k_handle selected_xform_parent_handle;
     /** @brief The current mode of the gizmo. */
     editor_gizmo_mode mode;
     /** @brief Used to keep the gizmo a consistent size on the screen despite camera distance. */
@@ -93,7 +97,7 @@ KAPI b8 editor_gizmo_unload(editor_gizmo* gizmo);
 KAPI void editor_gizmo_refresh(editor_gizmo* gizmo);
 KAPI editor_gizmo_orientation editor_gizmo_orientation_get(editor_gizmo* gizmo);
 KAPI void editor_gizmo_orientation_set(editor_gizmo* gizmo, editor_gizmo_orientation orientation);
-KAPI void editor_gizmo_selected_transform_set(editor_gizmo* gizmo, transform* xform);
+KAPI void editor_gizmo_selected_transform_set(editor_gizmo* gizmo, k_handle xform_handle,k_handle parent_xform_handle);
 
 KAPI void editor_gizmo_update(editor_gizmo* gizmo);
 KAPI void editor_gizmo_render_frame_prepare(editor_gizmo* gizmo, const struct frame_data* p_frame_data);
@@ -103,3 +107,5 @@ KAPI void editor_gizmo_mode_set(editor_gizmo* gizmo, editor_gizmo_mode mode);
 KAPI void editor_gizmo_interaction_begin(editor_gizmo* gizmo, struct camera* c, struct ray* r, editor_gizmo_interaction_type interaction_type);
 KAPI void editor_gizmo_interaction_end(editor_gizmo* gizmo);
 KAPI void editor_gizmo_handle_interaction(editor_gizmo* gizmo, struct camera* c, struct ray* r, editor_gizmo_interaction_type interaction_type);
+
+KAPI mat4 editor_gizmo_model_get(editor_gizmo* gizmo);

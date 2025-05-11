@@ -49,7 +49,7 @@ typedef struct memory_system_configuration {
  * @brief Initializes the memory system.
  * @param config The configuration for this system.
  */
-b8 memory_system_initialize(memory_system_configuration config);
+KAPI b8 memory_system_initialize(memory_system_configuration config);
 /**
  * @brief Shuts down the memory system.
  */

@@ -814,7 +814,18 @@ b8 scene_raycast(scene* scene, const struct ray* r, struct raycast_result* out_r
             hit.distance = dist;
             hit.type = RAYCAST_HIT_TYPE_OBB;
             hit.position = vec3_add(r->origin, vec3_mul_scalar(r->direction, hit.distance));
-            hit.unique_id = m->id.uniqueid;
+
+            hit.xform_handle = xform_handle;
+            hit.node_handle = attachment->hierarchy_node_handle;
+
+            // Get parent handle if one exists.
+            u32 parent_index = scene->hierarchy.parent_indices[attachment->hierarchy_node_handle.handle_index];
+            if (parent_index != INVALID_ID) {
+                hit.xform_parent_handle=scene->hierarchy.xform_handles[parent_index];
+            }else{
+                hit.xform_parent_handle=k_handle_invalid();
+            }
+            //TODO: Indicate selection node attachment type somehow?
 
             darray_push(out_result->hits, hit);
         }
@@ -1391,7 +1402,7 @@ b8 scene_save(scene* scene) {
         KERROR("simple_scene_save requires a valid pointer to a scene.");
         return false;
     }
-    
+
     KERROR("Not Implemented.");
     return true;
 }

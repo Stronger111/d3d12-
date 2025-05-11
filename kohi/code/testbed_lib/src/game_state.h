@@ -8,6 +8,7 @@
 #include <systems/camera_system.h>
 
 #include "audio/audio_types.h"
+#include "core/khandle.h"
 #include "editor/editor_gizmo.h"
 #include "graphs/editor_rendergraph.h"
 #include "graphs/standard_ui_rendergraph.h"
@@ -25,11 +26,11 @@
 #include "debug_console.h"
 struct debug_line3d;
 struct debug_box3d;
-struct transform;
 
 typedef struct selected_object {
-    u32 unique_id;
-    struct transform* xform;
+    k_handle xform_handle;
+    k_handle node_handle;
+    k_handle xform_parent_handle;
 } selected_object;
 
 typedef struct testbed_game_state {

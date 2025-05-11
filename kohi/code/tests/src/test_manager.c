@@ -1,33 +1,36 @@
 #include "test_manager.h"
 
 #include <containers/darray.h>
-#include<core/logger.h>
-#include<core/kstring.h>
-#include<core/kclock.h>
+#include <core/logger.h>
+#include <core/kstring.h>
+#include <core/kclock.h>
+#include <core/kmemory.h>
 
-typedef struct test_entry
-{
+typedef struct test_entry {
     PFN_test func;
     char* desc;
-}test_entry;
+} test_entry;
 
 static test_entry* tests;
 
-void test_manager_init(void) 
-{
+void test_manager_init(void) {
+    // FIXED:DS 防止未初始化报错 在调用内存对齐之前进行初始化内存管理
+    memory_system_configuration memory_system_config = {};
+    memory_system_config.total_alloc_size = GIBIBYTES(2);  // 2G 大小
+    if (!memory_system_initialize(memory_system_config)) {
+        KERROR("Failed to initialize memory system; shutting down.");
+    }
     tests = darray_create(test_entry);
 }
 
-void test_manager_register_test(u8 (*PFN_test)(void) , char* desc) 
-{
+void test_manager_register_test(u8 (*PFN_test)(void), char* desc) {
     test_entry e;
-    e.func=PFN_test;
-    e.desc=desc;
-    darray_push(tests,e);
+    e.func = PFN_test;
+    e.desc = desc;
+    darray_push(tests, e);
 }
 
-void test_manager_run_tests(void) 
-{
+void test_manager_run_tests(void) {
     u32 passed = 0;
     u32 failed = 0;
     u32 skipped = 0;

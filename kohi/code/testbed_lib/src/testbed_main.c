@@ -300,11 +300,12 @@ b8 game_on_button(u16 code, void* sender, void* listener_list, event_context con
                         u32 hit_count = darray_length(r_result.hits);
                         for (u32 i = 0; i < hit_count; ++i) {
                             raycast_hit* hit = &r_result.hits[i];
-                            KINFO("Hit!id:%u,dist:%f", hit->unique_id, hit->distance);
+                            // TODO: Use Handle index to identify?
+                            KINFO("Hit!id:%u,dist:%f", hit->node_handle.handle_index, hit->distance);
 
                             // create a debug line where the ray cast starts and ends (at the intersection)
                             debug_line3d test_line;
-                            debug_line3d_create(r.origin, hit->position, 0, &test_line);
+                            debug_line3d_create(r.origin, hit->position, k_handle_invalid(), &test_line);
                             debug_line3d_initialize(&test_line);
                             debug_line3d_load(&test_line);
                             // Yellow for hits
@@ -315,7 +316,7 @@ b8 game_on_button(u16 code, void* sender, void* listener_list, event_context con
                             // Create a debug box to show the intersection point
                             debug_box3d test_box;
 
-                            debug_box3d_create((vec3){0.1f, 0.1f, 0.1f}, 0, &test_box);
+                            debug_box3d_create((vec3){0.1f, 0.1f, 0.1f}, k_handle_invalid(), &test_box);
                             debug_box3d_initialize(&test_box);
                             debug_box3d_load(&test_box);
 
@@ -328,12 +329,14 @@ b8 game_on_button(u16 code, void* sender, void* listener_list, event_context con
 
                             // Object selection
                             if (i == 0) {
-                                state->selection.unique_id = hit->unique_id;
-                                state->selection.xform = scene_transform_get_by_id(&state->main_scene, hit->unique_id);
-                                if (state->selection.xform) {
-                                    KINFO("Selected object id %u", hit->unique_id);
+                                state->selection.node_handle = hit->node_handle;
+                                state->selection.xform_handle = hit->xform_handle;
+                                state->selection.xform_parent_handle = hit->xform_parent_handle;
+                                if (!k_handle_is_invalid(state->selection.xform_handle)) {
+                                    // NOTE: is handle index what we should identify by?
+                                    KINFO("Selected object id %u", hit->node_handle.handle_index);
                                     // state->gizmo.selected_xfrom=state->selection.xform;
-                                    editor_gizmo_selected_transform_set(&state->gizmo, state->selection.xform);
+                                    editor_gizmo_selected_transform_set(&state->gizmo,state->selection.xform_handle,state->selection.xform_parent_handle);
                                     // transform_parent_set(&state->gizmo.xform,state->selection.xform);
                                 }
                             }
@@ -343,7 +346,7 @@ b8 game_on_button(u16 code, void* sender, void* listener_list, event_context con
 
                         // Create a debug line where the way cast starts and continue to .
                         debug_line3d test_line;
-                        debug_line3d_create(r.origin, vec3_add(r.origin, vec3_mul_scalar(r.direction, 100.0f)), 0, &test_line);
+                        debug_line3d_create(r.origin, vec3_add(r.origin, vec3_mul_scalar(r.direction, 100.0f)), k_handle_invalid(), &test_line);
                         debug_line3d_initialize(&test_line);
                         debug_line3d_load(&test_line);
                         // Magenta for non-hits
@@ -351,12 +354,13 @@ b8 game_on_button(u16 code, void* sender, void* listener_list, event_context con
 
                         darray_push(state->test_lines, test_line);
 
-                        if (state->selection.xform) {
+                        if (k_handle_is_invalid(state->selection.xform_handle)) {
                             KINFO("Object deselected.");
-                            state->selection.xform = 0;
-                            state->selection.unique_id = INVALID_ID;
+                            state->selection.xform_handle = k_handle_invalid();
+                            state->selection.node_handle = k_handle_invalid();
+                            state->selection.xform_parent_handle = k_handle_invalid();
 
-                            editor_gizmo_selected_transform_set(&state->gizmo, 0);
+                            editor_gizmo_selected_transform_set(&state->gizmo, state->selection.xform_handle, state->selection.xform_parent_handle);
                         }
 
                         // TODO:hide gizmo,disable input,etc.
@@ -474,11 +478,10 @@ b8 application_initialize(struct application* game_inst) {
     application_register_events(game_inst);
 
     // Register resource loader
-    resource_system_loader_register(scene_resource_loader_create());
     resource_system_loader_register(audio_resource_loader_create());
-
-    state->selection.unique_id = INVALID_ID;
-    state->selection.xform = 0;
+    
+    // Invalid handle = no selection.
+    state->selection.xform_handle = k_handle_invalid();
 
     debug_console_load(&state->debug_console);
 
@@ -1164,10 +1167,10 @@ static b8 load_main_scene(struct application* game_inst) {
         KERROR("Failed to load scene file, check above logs.");
         return false;
     }
-    simple_scene_config* scene_config = (simple_scene_config*)simple_scene_resource.data;
+    scene_config* scene_cfg = (scene_config*)simple_scene_resource.data;
 
     // TODO: temp load/prepare stuff
-    if (!scene_create(scene_config, &state->main_scene)) {
+    if (!scene_create(scene_cfg, &state->main_scene)) {
         KERROR("Failed to create main scene");
         return false;
     }
@@ -1178,7 +1181,7 @@ static b8 load_main_scene(struct application* game_inst) {
         return false;
     }
 
-    state->p_light_1 = simple_scene_point_light_get(&state->main_scene, "point_light_1");
+    state->p_light_1 = 0;  // scene_point_light_get(&state->main_scene, "point_light_1");
     // Actually load the scene.
     return scene_load(&state->main_scene);
 }

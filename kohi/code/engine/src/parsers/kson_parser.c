@@ -73,7 +73,7 @@ static void PUSH_TOKEN(kson_token* t, kson_parser* parser) {
         darray_push(parser->tokens, *t);
     }
 }
-
+//对脚本语言进行标记化 思考:对解析ShadeLab这种进行标记 然后对Pipeline进行初始化
 b8 kson_parser_tokenize(kson_parser* parser, const char* source) {
     if (!parser) {
         KERROR("kson_parser_tokenize requires valid pointer to out_parser, ya dingus.");
@@ -210,6 +210,7 @@ b8 kson_parser_tokenize(kson_parser* parser, const char* source) {
 
                 // Change to string parsing mode.
                 mode = KSON_TOKENIZE_MODE_STRING_LITERAL;
+                current_token.type=KSON_TOKEN_TYPE_STRING_LITERAL;
                 current_token.start = c + advance;
                 current_token.end = c + advance;
             } break;
@@ -264,6 +265,7 @@ b8 kson_parser_tokenize(kson_parser* parser, const char* source) {
             case '/': {
                 PUSH_TOKEN(&current_token, parser);
                 RESET_CURRENT_TOKEN_AND_MODE(&current_token, &mode);
+                //判断是否是注释的情况 注释不进行标记化
                 if (source[c + 1] == '/') {
                     i32 cm = c + 2;
                     char ch = source[cm];
@@ -338,7 +340,7 @@ b8 kson_parser_tokenize(kson_parser* parser, const char* source) {
                     if (mode == KSON_TOKENIZE_MODE_DEFINING_IDENTIFIER) {
                         // Start a new identifier token.
                         if (current_token.type == KSON_TOKEN_TYPE_UNKNOWN) {
-                            current_token.type == KSON_TOKEN_TYPE_IDENTIFIER;
+                            current_token.type = KSON_TOKEN_TYPE_IDENTIFIER;
                             current_token.start = c;
                             current_token.end = c;
                         }
@@ -381,7 +383,7 @@ b8 kson_parser_tokenize(kson_parser* parser, const char* source) {
                     // If any other character is come across here that isn't part of a string, it's unknown
                     // what should happen here. So, throw an error regarding this and boot if this is the
                     // case.
-                    KERROR("Unexpected character '%c' at position %u. Tokenization failed.", c + advance);
+                    KERROR("Unexpected character '%c' at position %u. Tokenization failed.",codepoint, c+advance);
                     // Clear the tokens array, as there is nothing that can be done with them in this case.
                     darray_clear(parser->tokens);
                     return false;
@@ -443,6 +445,1091 @@ static char* string_from_kson_token(const char* file_content, const kson_token* 
     return mid;
 }
 
-b8 kson_parser_parse(kson_parser* parser,kson_tree* out_tree){
-    
+b8 kson_parser_parse(kson_parser* parser, kson_tree* out_tree) {
+    if (!parser) {
+        KERROR("kson_parser_parse requires a valid pointer to a parser.");
+        return false;
+    }
+    if (!out_tree) {
+        KERROR("kson_parser_parse requires a valid pointer to a tree.");
+        return false;
+    }
+
+    if (!parser->tokens) {
+        KERROR("Cannot parse an empty set of tokens,ya dingus!");
+        return false;
+    }
+
+    kson_token* current_token = 0;
+
+    stack scope;
+    stack_create(&scope, sizeof(kson_object*));
+
+    // The first thing expected is an identifier.
+    b8 expect_identifier = true;
+    b8 expect_value = false;
+    b8 expect_operator = false;
+    b8 expect_numeric = false;
+
+    char numeric_literal_str[NUMERIC_LITERAL_STR_MAX_LENGTH] = {0};
+    u32 numeric_literal_str_pos = 0;
+    i32 numeric_decimal_pos = -1;
+
+    u32 index = 0;
+    current_token = &parser->tokens[index];
+
+    // Setup the tree
+    out_tree->root = (kson_object){0};
+    out_tree->root.type = KSON_OBJECT_TYPE_OBJECT;
+    out_tree->root.properties = darray_create(kson_property);
+
+    // Set it as the current object.
+    kson_object* current_object = &out_tree->root;
+    if (!stack_push(&scope, &current_object)) {
+        KERROR("Failed to push base object onto stack.");
+        return false;
+    }
+    kson_property* current_property = 0;
+
+    while (current_token && current_token->type != KSON_TOKEN_TYPE_EOF) {
+        switch (current_token->type) {
+            case KSON_TOKEN_TYPE_CURLY_BRACE_OPEN: {  // {}
+                // TODO: may be needed to verify object starts at correct place.
+                /* ENSURE_IDENTIFIER("{") */
+                // starting a block.
+                kson_object new_obj = {0};
+                new_obj.type = KSON_OBJECT_TYPE_OBJECT;
+                new_obj.properties = darray_create(kson_property);
+
+                if (current_object->type == KSON_OBJECT_TYPE_ARRAY) {
+                    // Apply the value directly to a newly created, non-named property that that gets added to current_object
+                    kson_property unnamed_array_prop = {0};
+                    unnamed_array_prop.type = KSON_PROPERTY_TYPE_OBJECT;
+                    unnamed_array_prop.value.o = new_obj;
+                    unnamed_array_prop.name = 0;
+                    // Add the array property to the current object.
+                    darray_push(current_object->properties, unnamed_array_prop);
+                    // The current object is now new_obj.
+                    u32 prop_length = darray_length(current_object->properties);
+                    current_object = &current_object->properties[prop_length - 1].value.o;
+                } else {
+                    // The object becomes the value of the current property.
+                    current_property->value.o = new_obj;
+                    // The current object is now new_obj.
+                    current_object = &current_property->value.o;
+                    // This also means that the current property is being assigned an object
+                    // as its value, so mark the property as type object.
+                    current_property->type = KSON_PROPERTY_TYPE_OBJECT;
+                }
+
+                // Add the newly-updated current_object to the stack.
+                stack_push(&scope, &current_object);
+
+                expect_identifier = true;
+            } break;
+            case KSON_TOKEN_TYPE_CURLY_BRACE_CLOSE: {
+                // TODO: may be needed to verify object ends at correct place.
+                /* ENSURE_IDENTIFIER("}") */
+                // Ending a block.
+                kson_object* popped_obj = 0;
+                if (!stack_pop(&scope, &popped_obj)) {
+                    KERROR("Failed to pop from scope stack.");
+                    return false;
+                }
+
+                // Peek the next object on the stack and make it the current object.
+                if (!stack_peek(&scope, &current_object)) {
+                    KERROR("Failed to pop from scope stack.");
+                    return false;
+                }
+                expect_value = current_object->type == KSON_OBJECT_TYPE_ARRAY;
+            } break;
+            case KSON_TOKEN_TYPE_BRACKET_OPEN: {  //[]
+                                                  // TODO: may be needed to verify array starts at correct place.
+                                                  /* ENSURE_IDENTIFIER("[") */
+                // starting an array.
+                kson_object new_arr = {0};
+                new_arr.type = KSON_OBJECT_TYPE_ARRAY;
+                new_arr.properties = darray_create(kson_property);
+
+                if (current_object->type == KSON_OBJECT_TYPE_ARRAY) {
+                    // Apply the value directly to a newly-created, non-named property that gets added to current_object.
+                    kson_property unnamed_array_prop = {0};
+                    unnamed_array_prop.type = KSON_PROPERTY_TYPE_ARRAY;
+                    unnamed_array_prop.value.o = new_arr;
+                    unnamed_array_prop.name = 0;
+                    // Add the property to the current object.
+                    darray_push(current_object->properties, unnamed_array_prop);
+                    // The current object is now new_arr. This will always be the first entry in that array.
+                    u32 prop_length = darray_length(current_object->properties);
+                    current_object = &current_object->properties[prop_length - 1].value.o;
+                } else {
+                    // The object becomes the value of the current property
+                    current_property->value.o = new_arr;
+                    // The current object is now new_obj.
+                    current_object = &current_property->value.o;
+
+                    // This also means that the current property is being assigned an array
+                    // as its value, so mark the property as type array.
+                    current_property->type = KSON_PROPERTY_TYPE_ARRAY;
+                }
+
+                // Add the object to the stack.
+                stack_push(&scope, &current_object);
+
+                expect_value = true;
+            } break;
+            case KSON_TOKEN_TYPE_BRACKET_CLOSE: {
+                // TODO: may be needed to verify array ends at correct place.
+                /* ENSURE_IDENTIFIER("]") */
+
+                // Ending an array.
+                kson_object* popped_obj = 0;
+                if (!stack_pop(&scope, &popped_obj)) {
+                    KERROR("Failed to pop from scope stack.");
+                    return false;
+                }
+
+                // Peek the next object on the stack and make it the current object.
+                if (!stack_peek(&scope, &current_object)) {
+                    KERROR("Failed to peek scope stack.");
+                    return false;
+                }
+
+                expect_value = current_object->type == KSON_OBJECT_TYPE_ARRAY;
+            } break;
+            case KSON_TOKEN_TYPE_IDENTIFIER: {
+                char buf[512] = {0};
+                string_mid(buf, parser->file_content, current_token->start, current_token->end - current_token->start);
+                if (!expect_identifier) {
+                    KERROR("Unexpected identifier '%s' at position %u.", buf, current_token->start);
+                    return false;
+                }
+                // Start a new property
+                kson_property prop = {0};
+                prop.type = KSON_PROPERTY_TYPE_UNKNOWN;
+                prop.name = string_duplicate(buf);
+
+                // Push the new property and set the current property to it
+                if (!current_object->properties) {
+                    current_object->properties = darray_create(kson_property);
+                }
+                darray_push(current_object->properties, prop);
+                u32 prop_count = darray_length(current_object->properties);
+                current_property = &current_object->properties[prop_count - 1];
+
+                // No longer expecting an identifier
+                expect_identifier = false;
+                expect_operator = true;
+            } break;
+            case KSON_TOKEN_TYPE_WHITESPACE:
+            case KSON_TOKEN_TYPE_COMMENT: {
+                NEXT_TOKEN();
+                continue;
+            } break;
+            case KSON_TOKEN_TYPE_UNKNOWN:
+            default: {
+                KERROR("Unexpected and unknown token found. Parse failed.");
+                return false;
+            }
+            case KSON_TOKEN_TYPE_OPERATOR_EQUAL: {
+                ENSURE_IDENTIFIER("=");
+                // Previous token must be an identifier.
+                kson_token* t = get_last_non_whitespace_token(parser, index);
+                if (!t) {
+                    KERROR("Unexpected token before assignment operator. Position:%u", current_token->start);
+                    return false;
+                } else if (t->type != KSON_TOKEN_TYPE_IDENTIFIER) {
+                    KERROR("Expected identifier before assignment operator. Position: %u", current_token->start);
+                    return false;
+                }
+                expect_operator = false;
+
+                // The next non-whitspace token should be a value of some kind.
+                expect_value = true;
+            } break;
+            case KSON_TOKEN_TYPE_OPERATOR_MINUS: {
+                if (expect_numeric) {
+                    KERROR("Already parsing a numeric, negatives are invalid within a numeric. Position: %u", current_token->start);
+                    return false;
+                }
+
+                // If the next token is a numeric literal, process this as a numeric.
+                // Note that a negative is only valid for the first character of a numeric literal.
+                if (parser->tokens[index + 1].type == KSON_TOKEN_TYPE_NUMERIC_LITERAL ||
+                    (parser->tokens[index + 1].type == KSON_TOKEN_TYPE_OPERATOR_DOT && parser->tokens[index + 2].type == KSON_TOKEN_TYPE_NUMERIC_LITERAL)) {
+                    // Start of a numeric process.
+                    expect_numeric = true;
+                    kzero_memory(numeric_literal_str, sizeof(char) * NUMERIC_LITERAL_STR_MAX_LENGTH);
+
+                    numeric_literal_str[0] = '-';
+                    numeric_literal_str_pos++;
+                } else {
+                    // TODO: This should be treated as a subtraction operator. Ensure previous token
+                    // is valid, etc.
+                    KERROR("subtraction is not supported at this time.");
+                    return false;
+                }
+            } break;
+            case KSON_TOKEN_TYPE_OPERATOR_PLUS:
+                KERROR("Addition is not supported at this time.");
+                return false;
+                break;
+            case KSON_TOKEN_TYPE_OPERATOR_DOT:
+                // This could be the first in a string of tokens of a numeric literal.
+                if (!expect_numeric) {
+                    // Check the next token to see if it is a numeric. It must be in order for this to be part of it.
+                    // Whitespace in between is not supported.
+                    if (parser->tokens[index + 1].type == KSON_TOKEN_TYPE_NUMERIC_LITERAL) {
+                        // Start a numeric literal.
+                        numeric_literal_str[0] = '.';
+                        expect_numeric = true;
+                        kzero_memory(numeric_literal_str, sizeof(char) * NUMERIC_LITERAL_STR_MAX_LENGTH);
+                        numeric_decimal_pos = 0;
+                        numeric_literal_str_pos++;
+                    } else {
+                        // TODO: Support named object properties such as "sponza.name".
+                        KERROR("Dot property operator not supported. Position: %u", current_token->start);
+                        return false;
+                    }
+                } else {
+                    // Just verify that a decimal doesn't already exist.
+                    if (numeric_decimal_pos != -1) {
+                        KERROR("Cannot include more than once decimal in a numeric literal. First occurrance: %i, Position: %u", numeric_decimal_pos, current_token->start);
+                        return false;
+                    }
+
+                    // Append it to the string.
+                    numeric_literal_str[numeric_literal_str_pos] = '.';
+                    numeric_decimal_pos = numeric_literal_str_pos;
+                    numeric_literal_str_pos++;
+                }
+                break;
+            case KSON_TOKEN_TYPE_OPERATOR_ASTERISK:
+            case KSON_TOKEN_TYPE_OPERATOR_SLASH:
+                KERROR("Unexpected token at position %u. Parse failed.", current_token->start);
+                return false;
+            case KSON_TOKEN_TYPE_NUMERIC_LITERAL: {
+                if (!expect_numeric) {
+                    expect_numeric = true;
+                    kzero_memory(numeric_literal_str, sizeof(char) * NUMERIC_LITERAL_STR_MAX_LENGTH);
+                }
+                u32 length = current_token->end - current_token->start;
+                string_ncopy(numeric_literal_str + numeric_literal_str_pos, parser->file_content + current_token->start, length);
+                numeric_literal_str_pos += length;
+            } break;
+            case KSON_TOKEN_TYPE_STRING_LITERAL:
+                if (!expect_value) {
+                    KERROR("Unexpected string token at position: %u", current_token->start);
+                    return false;
+                }
+
+                if (current_object->type == KSON_OBJECT_TYPE_ARRAY) {
+                    // Apply the value directly to a newly-created, non-named property that gets added to current_object.
+                    kson_property p = {0};
+                    p.type = KSON_PROPERTY_TYPE_STRING;
+                    p.value.s = string_from_kson_token(parser->file_content, current_token);
+                    p.name = 0;
+                    darray_push(current_object->properties, p);
+                } else {
+                    current_property->type = KSON_PROPERTY_TYPE_STRING;
+                    current_property->value.s = string_from_kson_token(parser->file_content, current_token);
+                }
+                expect_value = current_object->type == KSON_OBJECT_TYPE_ARRAY;
+                break;
+            case KSON_TOKEN_TYPE_BOOLEAN: {
+                if (!expect_value) {
+                    KERROR("Unexpected boolean token at position: %u", current_token->start);
+                    return false;
+                }
+
+                char* token_string = string_from_kson_token(parser->file_content, current_token);
+                b8 bool_value = false;
+                if (!string_to_bool(token_string, &bool_value)) {
+                    KERROR("Failed to parse boolean from token. Position: %u", current_token->start);
+                }
+                // LEFTOFF: Something is causing a segfault here. Memory getting trampled?
+                string_free(token_string);
+
+                if (current_object->type == KSON_OBJECT_TYPE_ARRAY) {
+                    // Apply the value directly to a newly-created, non-named property that gets added to current_object.
+                    kson_property p = {0};
+                    p.type = KSON_PROPERTY_TYPE_BOOLEAN;
+                    p.value.b = bool_value;
+                    p.name = 0;
+                    darray_push(current_object->properties, p);
+                } else {
+                    current_property->type = KSON_PROPERTY_TYPE_BOOLEAN;
+                    current_property->value.b = bool_value;
+                }
+
+                expect_value = current_object->type == KSON_OBJECT_TYPE_ARRAY;
+            } break;
+            case KSON_TOKEN_TYPE_NEWLINE:
+                if (expect_numeric) {
+                    // Terminate the numeric and set the current property's value to it.
+                    kson_property p = {0};
+                    p.name = 0;
+                    // Determine whether it is a float or a int.
+                    if (string_index_of(numeric_literal_str, '.') != -1) {
+                        f32 f_value = 0;
+                        if (!string_to_f32(numeric_literal_str, &f_value)) {
+                            KERROR("Failed to parse string to float: '%s', Position: %u", numeric_literal_str, current_token->start);
+                            return false;
+                        }
+                        p.value.f = f_value;
+                        p.type = KSON_PROPERTY_TYPE_FLOAT;
+                    } else {
+                        i64 i_value = 0;
+                        if (!string_to_i64(numeric_literal_str, &i_value)) {
+                            KERROR("Failed to parse string to signed int: '%s', Position: %u", numeric_literal_str, current_token->start);
+                            return false;
+                        }
+                        p.value.i = i_value;
+                        p.type = KSON_PROPERTY_TYPE_INT;
+                    }
+
+                    if (current_object->type == KSON_OBJECT_TYPE_ARRAY) {
+                        // Apply the value directly to a newly-created, non-named property that gets added to current_object.
+                        darray_push(current_object->properties, p);
+                    } else {
+                        current_property->type = p.type;
+                        current_property->value = p.value;
+                    }
+
+                    // Reset the numeric parse string state.
+                    u32 num_lit_len = string_length(numeric_literal_str);
+                    kzero_memory(numeric_literal_str, sizeof(char) * num_lit_len);
+                    expect_numeric = false;
+                    numeric_decimal_pos = -1;
+                    numeric_literal_str_pos = 0;
+
+                    // Current value is set, so now expect another identifier or array element.
+                }
+                // Don't expect a value after a newline.
+                expect_value = current_object->type == KSON_OBJECT_TYPE_ARRAY;
+                expect_identifier = !expect_value;
+                break;
+            case KSON_TOKEN_TYPE_EOF: {
+                b8 valid = true;
+                // Verify that we are not in the middle of assignment.
+                if (expect_value || expect_operator || expect_numeric) {
+                    valid = false;
+                }
+                // Verify that the current depth is now 1 (to account for the base object).
+                if (scope.element_count > 1) {
+                    valid = false;
+                }
+                if (!valid) {
+                    KERROR("Unexpected end of file at position: %u", current_token->start);
+                    return false;
+                }
+            } break;
+        }
+        index++;
+        current_token = &parser->tokens[index];
+    }
+    return true;
+}
+
+b8 kson_tree_from_string(const char* source, kson_tree* out_tree) {
+    if (!source) {
+        KERROR("kson_tree_from_string requires valid source.");
+        return false;
+    }
+    if (!out_tree) {
+        KERROR("kson_tree_from_string requires a valid pointer to out_tree.");
+        return false;
+    }
+
+    // String is empty,return empty tree.
+    if (string_length(source) < 1) {
+        out_tree->root.type = KSON_OBJECT_TYPE_OBJECT;
+        out_tree->root.properties = 0;
+        return true;
+    }
+
+    // Create a parser to use.
+    kson_parser parser;
+    if (!kson_parser_create(&parser)) {
+        KERROR("Failed to create KSON parser.");
+        return false;
+    }
+
+    b8 result = true;
+
+    // Start tokenizing
+    if (!kson_parser_tokenize(&parser, source)) {
+        KERROR("Tokenization failed. See logs for details.");
+        result = false;
+        goto kson_tree_from_string_parser_cleanup;
+    }
+
+    // Parse the tokens
+    if (!kson_parser_parse(&parser, out_tree)) {
+        KERROR("Parsing failed. See logs for details.");
+        result = false;
+        goto kson_tree_from_string_parser_cleanup;
+    }
+
+kson_tree_from_string_parser_cleanup:
+    kson_parser_destroy(&parser);
+    if (!result && out_tree->root.properties) {
+        kson_tree_cleanup(out_tree);
+    }
+    return result;
+}
+
+static void write_spaces(char* out_source, u32* position, u16 count) {
+    if (out_source) {
+        for (u32 s = 0; s < count; ++s) {
+            out_source[(*position)] = ' ';
+            (*position)++;
+        }
+    } else {
+        (*position) += count;
+    }
+}
+
+static void write_string(char* out_source, u32* position, const char* str) {
+    u32 len = string_length(str);
+    if (out_source) {
+        for (u32 s = 0; s < len; ++s) {
+            out_source[(*position)] = str[s];
+            (*position)++;
+        }
+    } else {
+        (*position) += len;
+    }
+}
+
+static void kson_tree_object_to_string(const kson_object* obj, char* out_source, u32* position, i16 indent_level, u8 indent_spaces) {
+    indent_level++;
+
+    if (obj && obj->properties) {
+        u32 prop_count = darray_length(obj->properties);
+        for (u32 i = 0; i < prop_count; ++i) {
+            kson_property* p = &obj->properties[i];
+            // Write indent
+            write_spaces(out_source, position, indent_level * indent_spaces);
+
+            // If named, it is a property being defined. Otherwise it is an array element.
+            if (p->name) {
+                // Write the name, then a space, the = , then another space.
+                write_string(out_source, position, p->name);
+                write_spaces(out_source, position, 1);
+                write_string(out_source, position, "=");
+                write_spaces(out_source, position, 1);
+            }
+
+            // Write the value.
+            switch (p->type) {
+                case KSON_PROPERTY_TYPE_OBJECT:
+                case KSON_PROPERTY_TYPE_ARRAY: {
+                    // Opener/closer and newline based on type.
+                    const char* opener = p->type == KSON_PROPERTY_TYPE_OBJECT ? "{\n" : "[\n";
+                    const char* closer = p->type == KSON_PROPERTY_TYPE_OBJECT ? "}\n" : "]\n";
+                    write_string(out_source, position, opener);
+
+                    kson_tree_object_to_string(&p->value.o, out_source, position, indent_level, indent_spaces);
+
+                    // Indent the closer.
+                    write_spaces(out_source, position, indent_level * indent_spaces);
+                    write_string(out_source, position, closer);
+                } break;
+                case KSON_PROPERTY_TYPE_STRING: {
+                    if (p->value.s) {
+                        // Surround the string with quotes and put a newline after.
+                        write_string(out_source, position, "\"");
+                        write_string(out_source, position, p->value.s);
+                        write_string(out_source, position, "\"\n");
+                    } else {
+                        // Write an empty string.
+                        write_string(out_source, position, "\"\"\n");
+                    }
+                } break;
+                case KSON_PROPERTY_TYPE_BOOLEAN: {
+                    write_string(out_source, position, p->value.b ? "true" : "false");
+                    write_string(out_source, position, "\n");
+                } break;
+                case KSON_PROPERTY_TYPE_INT: {
+                    char buffer[30] = {0};
+                    string_append_int(buffer, "", p->value.i);
+                    write_string(out_source, position, buffer);
+                    write_string(out_source, position, "\n");
+                } break;
+                case KSON_PROPERTY_TYPE_FLOAT: {
+                    char buffer[30] = {0};
+                    string_append_float(buffer, "", p->value.f);
+                    write_string(out_source, position, buffer);
+                    write_string(out_source, position, "\n");
+                } break;
+                default:
+                case KSON_PROPERTY_TYPE_UNKNOWN: {
+                    KWARN("kson_tree_object_cleanup encountered an unknown property type.");
+                } break;
+            }
+        }
+    }
+}
+
+const char* kson_tree_to_string(kson_tree* tree) {
+    if (!tree || !tree->root.properties) {
+        return 0;
+    }
+
+    u32 length = 0;
+    kson_tree_object_to_string(&tree->root, 0, &length, -1, 4);
+    char* out_string = kallocate(sizeof(char) * (length + 1), MEMORY_TAG_STRING);
+
+    length = 0;
+    kson_tree_object_to_string(&tree->root, out_string, &length, -1, 4);
+    return out_string;
+}
+
+static void kson_tree_object_cleanup(kson_object* obj) {
+    if (obj && obj->properties) {
+        u32 prop_count = darray_length(obj->properties);
+        for (u32 i = 0; i < prop_count; ++i) {
+            kson_property* p = &obj->properties[i];
+            switch (p->type) {
+                case KSON_PROPERTY_TYPE_OBJECT: {
+                    kson_tree_object_cleanup(&p->value.o);
+                } break;
+                case KSON_PROPERTY_TYPE_ARRAY: {
+                    kson_tree_object_cleanup(&p->value.o);
+                } break;
+                case KSON_PROPERTY_TYPE_STRING: {
+                    if (p->value.s) {
+                        string_free((char*)p->value.s);
+                        p->value.s = 0;
+                    }
+                } break;
+                case KSON_PROPERTY_TYPE_BOOLEAN:
+                case KSON_PROPERTY_TYPE_FLOAT:
+                case KSON_PROPERTY_TYPE_INT: {
+                    // no-op
+                } break;
+                default:
+                case KSON_PROPERTY_TYPE_UNKNOWN: {
+                    KWARN("kson_tree_object_cleanup encountered unknown property type.");
+                } break;
+            }
+        }
+        darray_destroy(obj->properties);
+        obj->properties = 0;
+    }
+}
+
+void kson_tree_cleanup(kson_tree* tree) {
+    if (tree && tree->root.properties) {
+        kson_tree_object_cleanup(&tree->root);
+    }
+}
+
+static b8 kson_object_property_add(kson_object* obj, kson_property_type type, const char* name, kson_property_value value) {
+    if (!obj) {
+        KERROR("kson_object_property_add requires a valid pointer to a kson_object of object type.");
+        return false;
+    }
+
+    if (!name) {
+        KERROR("kson_object_property_add requires a valid pointer to a name.");
+        return false;
+    }
+
+    if (obj->type != KSON_OBJECT_TYPE_OBJECT) {
+        KERROR("Cannot use kson_object_property_add on a non-object.");
+        if (obj->type == KSON_OBJECT_TYPE_ARRAY) {
+            KERROR("Passed object is an array. Use kson_array_value_add_[type] instead.");
+        }
+        return false;
+    }
+
+    if (!obj->properties) {
+        obj->properties = darray_create(kson_property);
+    }
+
+    kson_property new_prop = {0};
+    new_prop.type = type;
+    new_prop.name = string_duplicate(name);
+    new_prop.value = value;
+    darray_push(obj->properties, new_prop);
+
+    return true;
+}
+
+// Internal for now since this API might not make sense externally.
+static b8 kson_array_value_add_unnamed_property(kson_array* array, kson_property_type type, kson_property_value value) {
+    if (!array) {
+        KERROR("kson_array_value_add_unnamed_property requires a valid pointer to a kson_object of array type.");
+        return false;
+    }
+
+    if (array->type != KSON_OBJECT_TYPE_ARRAY) {
+        KERROR("Cannot use kson_array_property_add on a non-array.");
+        if (array->type == KSON_OBJECT_TYPE_OBJECT) {
+            KERROR("Passed object is an object. Use kson_object_property_add instead.");
+        }
+        return false;
+    }
+
+    if (!array->properties) {
+        array->properties = darray_create(kson_property);
+    }
+
+    kson_property new_prop = {0};
+    new_prop.type = type;
+    new_prop.name = 0;
+    new_prop.value = value;
+
+    darray_push(array->properties, new_prop);
+
+    return true;
+}
+
+b8 kson_array_value_add_int(kson_array* array, i64 value) {
+    kson_property_value pv = {0};
+    pv.i = value;
+
+    return kson_array_value_add_unnamed_property(array, KSON_PROPERTY_TYPE_INT, pv);
+}
+
+b8 kson_array_value_add_float(kson_array* array, f32 value) {
+    kson_property_value pv = {0};
+    pv.f = value;
+
+    return kson_array_value_add_unnamed_property(array, KSON_PROPERTY_TYPE_FLOAT, pv);
+}
+
+b8 kson_array_value_add_boolean(kson_array* array, b8 value) {
+    kson_property_value pv = {0};
+    pv.b = value;
+
+    return kson_array_value_add_unnamed_property(array, KSON_PROPERTY_TYPE_BOOLEAN, pv);
+}
+
+b8 kson_array_value_add_string(kson_array* array, const char* value) {
+    if (!value) {
+        KERROR("kson_array_value_add_string requires a valid pointer to a string value.");
+        return false;
+    }
+
+    kson_property_value pv = {0};
+    pv.s = string_duplicate(value);
+
+    return kson_array_value_add_unnamed_property(array, KSON_PROPERTY_TYPE_STRING, pv);
+}
+
+b8 kson_array_value_add_object(kson_array* array, kson_object value) {
+    kson_property_value pv = {0};
+    pv.o = value;
+
+    return kson_array_value_add_unnamed_property(array, KSON_PROPERTY_TYPE_OBJECT, pv);
+}
+
+b8 kson_array_value_add_object_empty(kson_array* array) {
+    kson_object new_obj = {0};
+    new_obj.type = KSON_OBJECT_TYPE_OBJECT;
+    new_obj.properties = 0;
+
+    kson_property_value pv = {0};
+    pv.o = new_obj;
+
+    return kson_array_value_add_unnamed_property(array, KSON_PROPERTY_TYPE_OBJECT, pv);
+}
+
+b8 kson_array_value_add_array(kson_array* array, kson_object value) {
+    kson_property_value pv = {0};
+    pv.o = value;
+
+    return kson_array_value_add_unnamed_property(array, KSON_PROPERTY_TYPE_ARRAY, pv);
+}
+
+b8 kson_array_value_add_array_empty(kson_array* array) {
+    kson_object new_arr = {0};
+    new_arr.type = KSON_OBJECT_TYPE_ARRAY;
+    new_arr.properties = 0;
+
+    kson_property_value pv = {0};
+    pv.o = new_arr;
+
+    return kson_array_value_add_unnamed_property(array, KSON_PROPERTY_TYPE_ARRAY, pv);
+}
+
+// Object functions.
+
+b8 kson_object_value_add_int(kson_object* object, const char* name, i64 value) {
+    kson_property_value pv = {0};
+    pv.i = value;
+
+    return kson_object_property_add(object, KSON_PROPERTY_TYPE_INT, name, pv);
+}
+
+b8 kson_object_value_add_float(kson_object* object, const char* name, f32 value) {
+    kson_property_value pv = {0};
+    pv.f = value;
+
+    return kson_object_property_add(object, KSON_PROPERTY_TYPE_FLOAT, name, pv);
+}
+
+b8 kson_object_value_add_boolean(kson_object* object, const char* name, b8 value) {
+    kson_property_value pv = {0};
+    pv.b = value;
+
+    return kson_object_property_add(object, KSON_PROPERTY_TYPE_BOOLEAN, name, pv);
+}
+
+b8 kson_object_value_add_string(kson_object* object, const char* name, const char* value) {
+    if (!value) {
+        KERROR("kson_object_value_add_string requires a valid pointer to value.");
+        return false;
+    }
+
+    kson_property_value pv = {0};
+    pv.s = string_duplicate(value);
+
+    return kson_object_property_add(object, KSON_PROPERTY_TYPE_STRING, name, pv);
+}
+
+b8 kson_object_value_add_object(kson_object* object, const char* name, kson_object value) {
+    kson_property_value pv = {0};
+    pv.o = value;
+
+    return kson_object_property_add(object, KSON_PROPERTY_TYPE_OBJECT, name, pv);
+}
+
+b8 kson_object_value_add_object_empty(kson_object* object, const char* name) {
+    kson_object new_obj = {0};
+    new_obj.type = KSON_OBJECT_TYPE_OBJECT;
+    new_obj.properties = 0;
+
+    kson_property_value pv = {0};
+    pv.o = new_obj;
+
+    return kson_object_property_add(object, KSON_PROPERTY_TYPE_OBJECT, name, pv);
+}
+
+b8 kson_object_value_add_array(kson_object* object, const char* name, kson_object value) {
+    kson_property_value pv = {0};
+    pv.o = value;
+
+    return kson_object_property_add(object, KSON_PROPERTY_TYPE_ARRAY, name, pv);
+}
+
+b8 kson_object_value_add_array_empty(kson_object* object, const char* name) {
+    kson_object new_arr = {0};
+    new_arr.type = KSON_OBJECT_TYPE_ARRAY;
+    new_arr.properties = 0;
+
+    kson_property_value pv = {0};
+    pv.o = new_arr;
+
+    return kson_object_property_add(object, KSON_PROPERTY_TYPE_ARRAY, name, pv);
+}
+
+b8 kson_array_element_count_get(kson_array* array, u32* out_count) {
+    if (!array || array->type != KSON_OBJECT_TYPE_ARRAY || !out_count) {
+        KERROR("kson_array_element_count_get requires a valid pointer to an array object and out_count.");
+        return false;
+    }
+
+    if (!array->properties) {
+        *out_count = 0;
+        return true;
+    }
+
+    *out_count = darray_length(array->properties);
+    return true;
+}
+
+b8 kson_array_element_type_at(kson_array* array, u32 index, kson_property_type* out_type) {
+    if (!array || array->type != KSON_OBJECT_TYPE_ARRAY || !out_type) {
+        KERROR("kson_array_element_count_get requires a valid pointer to an array object and out_type.");
+        return false;
+    }
+
+    if (!array->properties) {
+        KWARN("kson_array_element_type_at called on an empty array. Any index would be out of bounds.");
+        *out_type = KSON_PROPERTY_TYPE_UNKNOWN;
+        return false;
+    }
+
+    u32 count = darray_length(array->properties);
+    if (index >= count) {
+        KWARN("kson_array_element_type_at index %u is out of range [0-%u].", index, count);
+        *out_type = KSON_PROPERTY_TYPE_UNKNOWN;
+        return false;
+    }
+
+    *out_type = array->properties[index].type;
+    return true;
+}
+
+static b8 kson_array_index_in_range(const kson_array* array, u32 index) {
+    if (!array || array->type != KSON_OBJECT_TYPE_ARRAY) {
+        KERROR("kson_array_index_in_range requires a valid pointer to an array object.");
+        return false;
+    }
+
+    if (!array->properties) {
+        KWARN("kson_array_index_in_range called on an empty array. Any index would be out of bounds.");
+        return false;
+    }
+
+    u32 count = darray_length(array->properties);
+    return index < count;
+}
+
+b8 kson_array_element_value_get_int(const kson_array* array, u32 index, i64* out_value) {
+    if (!kson_array_index_in_range(array, index)) {
+        return false;
+    }
+
+    KASSERT_MSG(array->properties[index].type != KSON_PROPERTY_TYPE_INT, "Array element is not an int.");
+
+    *out_value = array->properties[index].value.i;
+    return true;
+}
+
+b8 kson_array_element_value_get_float(const kson_array* array, u32 index, f32* out_value) {
+    if (!kson_array_index_in_range(array, index)) {
+        return false;
+    }
+
+    KASSERT_MSG(array->properties[index].type != KSON_PROPERTY_TYPE_FLOAT, "Array element is not a float.");
+
+    *out_value = array->properties[index].value.f;
+    return true;
+}
+
+b8 kson_array_element_value_get_bool(const kson_array* array, u32 index, b8* out_value) {
+    if (!kson_array_index_in_range(array, index)) {
+        return false;
+    }
+
+    KASSERT_MSG(array->properties[index].type != KSON_PROPERTY_TYPE_BOOLEAN, "Array element is not a boolean.");
+
+    *out_value = array->properties[index].value.b;
+    return true;
+}
+
+b8 kson_array_element_value_get_string(const kson_array* array, u32 index, const char** out_value) {
+    if (!kson_array_index_in_range(array, index)) {
+        return false;
+    }
+
+    KASSERT_MSG(array->properties[index].type != KSON_PROPERTY_TYPE_STRING, "Array element is not a string.");
+
+    *out_value = array->properties[index].value.s;
+    return true;
+}
+
+b8 kson_array_element_value_get_object(const kson_array* array, u32 index, kson_object* out_value) {
+    if (!kson_array_index_in_range(array, index)) {
+        return false;
+    }
+
+    KASSERT_MSG(
+        array->properties[index].type == KSON_PROPERTY_TYPE_OBJECT || array->properties[index].type == KSON_PROPERTY_TYPE_ARRAY,
+        "Array element is not an object or array.");
+
+    *out_value = array->properties[index].value.o;
+    return true;
+}
+
+b8 kson_object_property_type_get(const kson_object* object, const char* name, kson_property_type* out_type) {
+    if (!object) {
+        KERROR("kson_object_property_type_get requires a valid pointer to an object.");
+        *out_type = KSON_PROPERTY_TYPE_UNKNOWN;
+        return false;
+    }
+
+    if (!object->properties) {
+        KERROR("kson_object_property_type_get cannot get a property type for an object with no properties.");
+        *out_type = KSON_PROPERTY_TYPE_UNKNOWN;
+        return false;
+    }
+
+    u32 count = darray_length(object->properties);
+    for (u32 i = 0; i < count; ++i) {
+        if (strings_equal(object->properties[i].name, name)) {
+            *out_type = object->properties[i].type;
+            return true;
+        }
+    }
+
+    KERROR("Failed to find object property named '%s'.", name);
+    *out_type = KSON_PROPERTY_TYPE_UNKNOWN;
+    return false;
+}
+
+b8 kson_object_property_count_get(const kson_object* object, u32* out_count) {
+    if (!object) {
+        KERROR("kson_object_property_type_get requires a valid pointer to object.");
+        *out_count = 0;
+        return false;
+    }
+
+    if (!object->properties) {
+        *out_count = 0;
+        return true;
+    }
+
+    *out_count = darray_length(object->properties);
+    return true;
+}
+
+static i32 kson_object_property_index_get(const kson_object* object, const char* name) {
+    if (!object || !name) {
+        return -1;
+    }
+
+    if (!object->properties) {
+        return -1;
+    }
+
+    u32 count = darray_length(object->properties);
+    for (u32 i = 0; i < count; ++i) {
+        if (strings_equal(object->properties[i].name, name)) {
+            return i;
+        }
+    }
+
+    return -1;
+}
+
+b8 kson_object_property_value_get_int(const kson_object* object, const char* name, i64* out_value) {
+    i32 index = kson_object_property_index_get(object, name);
+    if (index == -1) {
+        *out_value = 0;
+        return false;
+    }
+
+    kson_property* p = &object->properties[index];
+
+    // NOTE: Try some type conversions.
+    if (p->type == KSON_PROPERTY_TYPE_INT) {
+        *out_value = p->value.i;
+    } else if (p->type == KSON_PROPERTY_TYPE_BOOLEAN) {
+        *out_value = p->value.b ? 1 : 0;
+    } else {
+        *out_value = (i64)p->value.f;
+    }
+
+    return true;
+}
+
+b8 kson_object_property_value_get_float(const kson_object* object, const char* name, f32* out_value) {
+    i32 index = kson_object_property_index_get(object, name);
+    if (index == -1) {
+        *out_value = 0;
+        return false;
+    }
+    kson_property* p = &object->properties[index];
+
+    // If the property is an int, cast to a float.
+    if (p->type == KSON_PROPERTY_TYPE_INT) {
+        *out_value = (f32)p->value.i;
+    } else if (p->type == KSON_PROPERTY_TYPE_BOOLEAN) {
+        *out_value = (f32)p->value.b;
+    } else {
+        *out_value = p->value.f;
+    }
+
+    return true;
+}
+
+b8 kson_object_property_value_get_bool(const kson_object* object, const char* name, b8* out_value) {
+    i32 index = kson_object_property_index_get(object, name);
+    if (index == -1) {
+        *out_value = 0;
+        return false;
+    }
+
+    kson_property* p = &object->properties[index];
+
+    // NOTE: Try some type conversions.
+    if (p->type == KSON_PROPERTY_TYPE_INT) {
+        *out_value = p->value.i == 0 ? false : true;
+    } else if (p->type == KSON_PROPERTY_TYPE_FLOAT) {
+        *out_value = p->value.f == 0 ? false : true;
+    } else {
+        *out_value = p->value.b;
+    }
+
+    return true;
+}
+
+b8 kson_object_property_value_get_string(const kson_object* object, const char* name, const char** out_value) {
+    i32 index = kson_object_property_index_get(object, name);
+    if (index == -1) {
+        *out_value = 0;
+        return false;
+    }
+
+    kson_property* p = &object->properties[index];
+
+    // NOTE: Try some type conversions.
+    if (p->type == KSON_PROPERTY_TYPE_INT) {
+        char buf[50] = {0};
+        string_format(buf, "%i", p->value.i);
+        *out_value = string_duplicate(buf);
+    } else if (p->type == KSON_PROPERTY_TYPE_FLOAT) {
+        char buf[50] = {0};
+        string_format(buf, "%f", p->value.f);
+        *out_value = string_duplicate(buf);
+    } else if (p->type == KSON_PROPERTY_TYPE_BOOLEAN) {
+        char buf[6] = {0};
+        string_format(buf, "%s", p->value.b ? "true" : "false");
+        *out_value = string_duplicate(buf);
+    } else if (p->type == KSON_PROPERTY_TYPE_OBJECT) {
+        *out_value = string_duplicate("[Object]");
+    } else if (p->type == KSON_PROPERTY_TYPE_ARRAY) {
+        *out_value = string_duplicate("[Array]");
+    } else if (p->type == KSON_PROPERTY_TYPE_STRING) {
+        *out_value = string_duplicate(p->value.s);
+    } else {
+        *out_value = string_duplicate("undefined_type");
+        KERROR("Unrecognized value type.")
+        return false;
+    }
+
+    return true;
+}
+
+b8 kson_object_property_value_get_object(const kson_object* object, const char* name, kson_object* out_value) {
+    i32 index = kson_object_property_index_get(object, name);
+    if (index == -1) {
+        return false;
+    }
+
+    *out_value = object->properties[index].value.o;
+    return true;
+}
+
+kson_property kson_object_property_create(const char* name) {
+    kson_property obj = {0};
+    obj.type = KSON_PROPERTY_TYPE_OBJECT;
+    obj.name = 0;
+    if (name) {
+        obj.name = string_duplicate(name);
+    }
+    obj.value.o.type = KSON_OBJECT_TYPE_OBJECT;
+    obj.value.o.properties = darray_create(kson_property);
+
+    return obj;
+}
+
+kson_property kson_array_property_create(const char* name) {
+    kson_property arr = {0};
+    arr.type = KSON_PROPERTY_TYPE_ARRAY;
+    arr.name = 0;
+    if (name) {
+        arr.name = string_duplicate(name);
+    }
+    arr.value.o.type = KSON_OBJECT_TYPE_ARRAY;
+    arr.value.o.properties = darray_create(kson_property);
+
+    return arr;
 }

@@ -56,7 +56,7 @@ typedef int b32;
 /** @brief 8-bit boolean type */
 typedef _Bool b8;
 
-#define UINT64_MAX_T  0xffffffffffffffffull
+#define UINT64_MAX_T 0xffffffffffffffffull
 
 /** @brief A range, typically of memory */
 typedef struct range {
@@ -187,6 +187,12 @@ STATIC_ASSERT(sizeof(f64) == 8, "Expected f64 to be 8 bytes.");
 #endif
 #endif
 
+#ifdef _DEBUG
+#define KOHI_DEBUG
+#else
+#define KOHI_RELEASE
+#endif
+
 #define KCLAMP(value, min, max) ((value <= min) ? min : (value >= max) ? max \
                                                                        : value)
 
@@ -221,7 +227,7 @@ KINLINE u64 get_aligned(u64 operand, u64 granularity) {
     return ((operand + (granularity - 1)) & ~(granularity - 1));
 }
 
-KINLINE range get_aligned_range(u64 offset, u64 size,u64 granularity) {
+KINLINE range get_aligned_range(u64 offset, u64 size, u64 granularity) {
     return (range){get_aligned(offset, granularity), get_aligned(size, granularity)};
 }
 

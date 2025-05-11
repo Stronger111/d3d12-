@@ -206,7 +206,10 @@
         "khandle.h": "c",
         "hierarchy_graph.h": "c",
         "unordered_map": "c",
-        "list": "c"
+        "list": "c",
+        "editor_rendergraph.h": "c",
+        "standard_ui_rendergraph.h": "c",
+        "editor_pass.h": "c"
     },
     // File copyright documentation tag.  Array of strings will be converted to one line per element.  Can template {year}.
     "doxdocgen.file.copyrightTag": [
