@@ -98,13 +98,10 @@ char* string_duplicate(const char* str) {
 }
 KAPI void string_free(char* str) {
     if (str) {
-        u64 size = 0;
-        u16 alignment = 0;
-        if (kmemory_get_size_alignment(str, &size, &alignment)) {
-            kfree_aligned(str, size, alignment, MEMORY_TAG_STRING);
-        } else {
-            // TODO: report failure?
-        }
+        // NOTE: Using kfree instead of aligned version because this might be
+        // called without the memory system being initialized (i.e.unit tests)
+        u64 length = string_length(str);
+        kfree(str, length + 1, MEMORY_TAG_STRING);
     } else {
         // TODO: report null ptr?
     }
@@ -188,8 +185,16 @@ KAPI char* string_trim(char* str) {
 }
 
 void string_mid(char* dest, const char* source, i32 start, i32 length) {
-    if (length == 0)
+    if (!source || !dest) {
         return;
+    }
+    if (length == 0)
+    {
+        KTRACE("Tried to perform mid on zero-length string.");
+        dest[0]=0;
+        return;
+    }
+        
     i32 src_length = (i32)string_length(source);
     if (start >= src_length) {
         dest[0] = 0;
@@ -197,17 +202,19 @@ void string_mid(char* dest, const char* source, i32 start, i32 length) {
     }
 
     if (length > 0) {
-        for (i32 i = start, j = 0; j < length && source[i]; ++i, ++j) {
+        i32 j = 0;
+        for (i32 i = start; j < length && source[i]; ++i, ++j) {
             dest[j] = source[i];
         }
-        dest[start + length] = 0;
+        //start+length dest Buffer大小为512 start长度为519 大于512时重置的内存超过 自身范围导致内存 出错  操作了不属于自己的内存块
+        dest[j] = 0;
     } else {
         // If a negative value is passed, proceed to the end of the string.
         u64 j = 0;
         for (u64 i = start; source[i]; ++i, ++j) {
             dest[j] = source[i];
         }
-        dest[start + j] = 0;
+        dest[j] = 0;
     }
 }
 
@@ -537,7 +544,7 @@ KAPI b8 string_to_bool(const char* str, b8* b) {
         return false;
 
     *b = strings_equal(str, "1") || strings_equali(str, "true");
-    return *b;
+    return true;
 }
 
 KAPI u32 string_split(const char* str, char delimiter, char*** str_darray, b8 trim_entries, b8 include_empty) {

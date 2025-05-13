@@ -545,8 +545,8 @@ b8 kson_parser_parse(kson_parser* parser, kson_tree* out_tree) {
                 expect_value = current_object->type == KSON_OBJECT_TYPE_ARRAY;
             } break;
             case KSON_TOKEN_TYPE_BRACKET_OPEN: {  //[]
-                                                  // TODO: may be needed to verify array starts at correct place.
-                                                  /* ENSURE_IDENTIFIER("[") */
+                // TODO: may be needed to verify array starts at correct place.
+                /* ENSURE_IDENTIFIER("[") */
                 // starting an array.
                 kson_object new_arr = {0};
                 new_arr.type = KSON_OBJECT_TYPE_ARRAY;
