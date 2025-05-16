@@ -102,8 +102,8 @@ b8 scene_create(scene_config* config, scene* out_scene) {
         out_scene->config = kallocate(sizeof(scene_config), MEMORY_TAG_SCENE);
         kcopy_memory(out_scene->config, config, sizeof(scene_config));
 
-        out_scene->resource_name = string_duplicate(config->resource_name);
-        out_scene->resource_full_path = string_duplicate(config->resource_full_path);
+        // out_scene->resource_name = string_duplicate(config->resource_name);
+        // out_scene->resource_full_path = string_duplicate(config->resource_full_path);
     }
 
     debug_grid_config grid_config = {0};
@@ -575,6 +575,11 @@ b8 scene_update(scene* scene, const struct frame_data* p_frame_data) {
         return false;
     }
 
+    if (scene->state == SCENE_STATE_UNLOADED) {
+        scene_actual_unload(scene);
+        return true;
+    }
+
     if (scene->state >= SCENE_STATE_LOADED) {
         hierarchy_graph_update(&scene->hierarchy, p_frame_data);
 
@@ -821,11 +826,11 @@ b8 scene_raycast(scene* scene, const struct ray* r, struct raycast_result* out_r
             // Get parent handle if one exists.
             u32 parent_index = scene->hierarchy.parent_indices[attachment->hierarchy_node_handle.handle_index];
             if (parent_index != INVALID_ID) {
-                hit.xform_parent_handle=scene->hierarchy.xform_handles[parent_index];
-            }else{
-                hit.xform_parent_handle=k_handle_invalid();
+                hit.xform_parent_handle = scene->hierarchy.xform_handles[parent_index];
+            } else {
+                hit.xform_parent_handle = k_handle_invalid();
             }
-            //TODO: Indicate selection node attachment type somehow?
+            // TODO: Indicate selection node attachment type somehow?
 
             darray_push(out_result->hits, hit);
         }
@@ -1369,6 +1374,9 @@ static void scene_actual_unload(scene* s) {
             s->point_lights[i].debug_data = 0;
         }
     }
+
+    // Destroy the hierarchy graph.
+    hierarchy_graph_destroy(&s->hierarchy);
 
     // Update the state to show the s is initialized.
     s->state = SCENE_STATE_UNLOADED;

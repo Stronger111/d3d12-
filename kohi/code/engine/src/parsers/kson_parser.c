@@ -832,6 +832,10 @@ b8 kson_parser_parse(kson_parser* parser, kson_tree* out_tree) {
     return true;
 }
 
+/// @brief 字符串到kson_tree
+/// @param source 
+/// @param out_tree 
+/// @return 
 b8 kson_tree_from_string(const char* source, kson_tree* out_tree) {
     if (!source) {
         KERROR("kson_tree_from_string requires valid source.");
@@ -860,7 +864,7 @@ b8 kson_tree_from_string(const char* source, kson_tree* out_tree) {
 
     // Start tokenizing
     if (!kson_parser_tokenize(&parser, source)) {
-        KERROR("Tokenization failed. See logs for details.");
+        KERROR("Parser tokenization failed. See logs for details.");
         result = false;
         goto kson_tree_from_string_parser_cleanup;
     }

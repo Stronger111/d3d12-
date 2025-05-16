@@ -11,6 +11,7 @@
 #include "resources/loaders/image_loader.h"
 #include "resources/loaders/material_loader.h"
 #include "resources/loaders/mesh_loader.h"
+#include "resources/loaders/scene_loader.h"
 #include "resources/loaders/shader_loader.h"
 #include "resources/loaders/system_font_loader.h"
 #include "resources/loaders/terrain_loader.h"
@@ -60,6 +61,7 @@ b8 resource_system_initialize(u64* memory_requirement, void* state, void* config
     resource_system_loader_register(bitmap_font_resource_loader_create());
     resource_system_loader_register(system_font_resource_loader_create());
     resource_system_loader_register(terrain_resource_loader_create());
+    resource_system_loader_register(scene_resource_loader_create());
 
     // NOTE: Auto-register loader types here
     KINFO("Resource system initialized with base path '%s'.", typed_config->asset_base_path);

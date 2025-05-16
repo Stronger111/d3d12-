@@ -626,55 +626,6 @@ typedef struct scene_node_attachment_point_light{
     f32 quadratic;
 } scene_node_attachment_point_light;
 
-// TODO:
-
-typedef struct directional_light_simple_scene_config {
-    char* name;
-    vec4 colour;
-    vec4 direction;
-    f32 shadow_distance;
-    f32 shadow_fade_distance;
-    f32 shadow_split_mult;
-} directional_light_simple_scene_config;
-
-typedef struct point_light_simple_scene_config {
-    char* name;
-    vec4 colour;
-    vec4 position;
-    f32 constant_f;
-    f32 linear;
-    f32 quadratic;
-} point_light_simple_scene_config;
-
-typedef struct mesh_simple_scene_config {
-    char* name;
-    char* resource_name;
-    transform transform;
-    char* parent_name;  // optional
-} mesh_simple_scene_config;
-
-typedef struct terrain_simple_scene_config {
-    char* name;
-    char* resource_name;
-    transform xform;
-} terrain_simple_scene_config;
-
-// TODO:Delete
-typedef struct simple_scene_config {
-    char* name;
-    char* description;
-    directional_light_simple_scene_config directional_light_config;
-
-    // darray
-    point_light_simple_scene_config* point_lights;
-
-    // darray
-    mesh_simple_scene_config* meshes;
-
-    // darray
-    terrain_simple_scene_config* terrains;
-} simple_scene_config;
-
 typedef struct scene_node_attachment_config {
     scene_node_attachment_type type;
     void* attachment_data;

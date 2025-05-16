@@ -1162,12 +1162,12 @@ static b8 load_main_scene(struct application* game_inst) {
 
     // Load up config file
     // TODO: clean up resource.
-    resource simple_scene_resource;
-    if (!resource_system_load("test_scene", RESOURCE_TYPE_SCENE, 0, &simple_scene_resource)) {
+    resource scene_resource;
+    if (!resource_system_load("test_scene", RESOURCE_TYPE_SCENE, 0, &scene_resource)) {
         KERROR("Failed to load scene file, check above logs.");
         return false;
     }
-    scene_config* scene_cfg = (scene_config*)simple_scene_resource.data;
+    scene_config* scene_cfg = (scene_config*)scene_resource.data;
 
     // TODO: temp load/prepare stuff
     if (!scene_create(scene_cfg, &state->main_scene)) {

@@ -71,7 +71,7 @@ typedef struct hierarchy_graph {
 KAPI b8 hierarchy_graph_create(hierarchy_graph* out_graph);
 KAPI void hierarchy_graph_destroy(hierarchy_graph* graph);
 
-KAPI void hierarchy_graph_update_tree_node(hierarchy_graph* graph,u32 node_index);
+KAPI void hierarchy_graph_update_tree_view_node(hierarchy_graph* graph,u32 node_index);
 
 KAPI void hierarchy_graph_update(hierarchy_graph* graph,const struct frame_data* p_frame_data);
 

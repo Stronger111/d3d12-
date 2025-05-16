@@ -70,6 +70,9 @@ u8 kson_parser_should_tokenize_file_content(void) {
 
     kson_parser_destroy(&parser);
 
+    const char* str=kson_tree_to_string(&tree);
+    KINFO(str);
+
     return true;
 }
 

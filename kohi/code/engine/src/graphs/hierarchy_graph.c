@@ -57,7 +57,7 @@ void hierarchy_graph_destroy(hierarchy_graph* graph) {
     }
 }
 
-void hierarchy_graph_update_tree_node(hierarchy_graph* graph, u32 node_index) {
+void hierarchy_graph_update_tree_view_node(hierarchy_graph* graph, u32 node_index) {
     if (node_index == INVALID_ID) {
         return;
     }
@@ -100,11 +100,14 @@ void hierarchy_graph_update_tree_node(hierarchy_graph* graph, u32 node_index) {
         world = node_local;
     }
 
+    //变换完设置世界矩阵
+    xform_world_set(node->xform_handle, world);
+
     if (node->children) {
         u32 child_count = darray_length(node->children);
         for (u32 i = 0; i < child_count; ++i) {
             // Proces children based off world matrix of this node.
-            hierarchy_graph_update_tree_node(graph, node->children[i]);
+            hierarchy_graph_update_tree_view_node(graph, node->children[i]);
         }
     }
 }
@@ -120,7 +123,7 @@ void hierarchy_graph_update(hierarchy_graph* graph, const struct frame_data* p_f
     u32 root_count = darray_length(graph->view.root_indices);
     for (u32 i = 0; i < root_count; ++i) {
         // Roots have no parent, so no world matrix is passed.
-        hierarchy_graph_update_tree_node(graph, graph->view.root_indices[i]);
+        hierarchy_graph_update_tree_view_node(graph, graph->view.root_indices[i]);
     }
 }
 
