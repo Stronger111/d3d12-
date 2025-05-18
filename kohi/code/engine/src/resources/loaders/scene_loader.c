@@ -24,7 +24,7 @@ static b8 scene_loader_load(struct resource_loader* self, const char* name, void
 
     char* format_str = "%s/%s/%s%s";
     char full_file_path[512];
-    string_format(full_file_path, format_str, resource_system_base_path(), self->type_path, name, ".kss");
+    string_format(full_file_path, format_str, resource_system_base_path(), self->type_path, name, ".ksn");
 
     file_handle f;
     if (!filesystem_open(full_file_path, FILE_MODE_READ, false, &f)) {
@@ -33,6 +33,26 @@ static b8 scene_loader_load(struct resource_loader* self, const char* name, void
     }
 
     out_resource->full_path = string_duplicate(full_file_path);
+
+    u64 bytes_read = 0;
+    u64 file_size = 0;
+    char* file_content = 0;
+    if (!filesystem_size(&f, &file_size)) {
+        KERROR("Failed to check size of scene file.");
+        return false;
+    }
+
+    if (!filesystem_read_all_text(&f, &file_content, &bytes_read)) {
+        KERROR("Failed to read all text of scene file.");
+        return false;
+    }
+
+    filesystem_close(&f);
+
+    // Verify that we read the whole file.
+    if (bytes_read != file_size) {
+        KWARN("File size/bytes read mismatch: %llu / %llu", file_size, bytes_read);
+    }
 
     scene_config* resource_data = kallocate(sizeof(scene_config), MEMORY_TAG_RESOURCE);
     kzero_memory(resource_data, sizeof(scene_config));
@@ -101,7 +121,7 @@ static b8 scene_loader_load(struct resource_loader* self, const char* name, void
     darray_push(falcon.attachements, falcon_mesh_attachment);
 
     scene_node_attachment_config falcon_red_light_attachment = {0};
-    falcon_red_light_attachment.type=SCENE_NODE_ATTACHMENT_TYPE_POINT_LIGHT;
+    falcon_red_light_attachment.type = SCENE_NODE_ATTACHMENT_TYPE_POINT_LIGHT;
     falcon_red_light_attachment.attachment_data = kallocate(sizeof(scene_node_attachment_point_light), MEMORY_TAG_SCENE);
     scene_node_attachment_point_light* falcon_red_light_typed_attachment = falcon_red_light_attachment.attachment_data;
     falcon_red_light_typed_attachment->colour = vec4_create(100.0f, 0.0f, 0.0f, 1.0f);
@@ -129,13 +149,13 @@ static b8 scene_loader_load(struct resource_loader* self, const char* name, void
     terrain_attachment.attachment_data = kallocate(sizeof(scene_node_attachment_terrain), MEMORY_TAG_SCENE);
     scene_node_attachment_terrain* terrain_typed_mesh_attachmet = terrain_attachment.attachment_data;
     terrain_typed_mesh_attachmet->resource_name = "test_terrain";
-    terrain_typed_mesh_attachmet->name="test_terrain";
+    terrain_typed_mesh_attachmet->name = "test_terrain";
     darray_push(terrain.attachements, terrain_attachment);
 
     // Add to global nodes array.
     darray_push(resource_data->nodes, terrain);
 
-    //Environment 
+    // Environment
     scene_node_config environment = {0};
     environment.name = "environment";
 
@@ -151,16 +171,16 @@ static b8 scene_loader_load(struct resource_loader* self, const char* name, void
     dir_light_attachment.type = SCENE_NODE_ATTACHMENT_TYPE_DIRECTIONAL_LIGHT;
     dir_light_attachment.attachment_data = kallocate(sizeof(scene_node_attachment_directional_light), MEMORY_TAG_SCENE);
     scene_node_attachment_directional_light* dir_light_typed_mesh_attachmet = dir_light_attachment.attachment_data;
-    dir_light_typed_mesh_attachmet->colour = vec4_create(80.0f,80.0f,70.0f,1.0f);
-    dir_light_typed_mesh_attachmet->direction = vec4_create(0.1f,-1.0f,0.1f,1.0f);
-    dir_light_typed_mesh_attachmet->shadow_distance=100.0f;
-    dir_light_typed_mesh_attachmet->shadow_fade_distance=5.0f;
-    dir_light_typed_mesh_attachmet->shadow_split_mult=0.75f;
+    dir_light_typed_mesh_attachmet->colour = vec4_create(80.0f, 80.0f, 70.0f, 1.0f);
+    dir_light_typed_mesh_attachmet->direction = vec4_create(0.1f, -1.0f, 0.1f, 1.0f);
+    dir_light_typed_mesh_attachmet->shadow_distance = 100.0f;
+    dir_light_typed_mesh_attachmet->shadow_fade_distance = 5.0f;
+    dir_light_typed_mesh_attachmet->shadow_split_mult = 0.75f;
     darray_push(environment.attachements, dir_light_attachment);
 
     // Add to global nodes array.
     darray_push(resource_data->nodes, environment);
- 
+
     /*
     // Set some defaults, create arrays.
     resource_data->directional_light_config.shadow_distance = SHADOW_DISTANCE_DEFAULT;
@@ -187,7 +207,6 @@ static b8 scene_loader_load(struct resource_loader* self, const char* name, void
     u64 line_length = 0;
     u32 line_number = 1;
 */
-    filesystem_close(&f);
 
     out_resource->data = resource_data;
     out_resource->data_size = sizeof(scene_config);
