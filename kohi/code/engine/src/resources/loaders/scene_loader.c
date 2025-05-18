@@ -12,6 +12,7 @@
 #include "resources/scene.h"
 #include "systems/resource_system.h"
 #include "systems/xform_system.h"
+#include "parsers/kson_parser.h"
 
 #define SHADOW_DISTANCE_DEFAULT 200.0f
 #define SHADOW_FADE_DISTANCE_DEFAULT 25.0f
@@ -34,15 +35,15 @@ static b8 scene_loader_load(struct resource_loader* self, const char* name, void
 
     out_resource->full_path = string_duplicate(full_file_path);
 
-    u64 bytes_read = 0;
     u64 file_size = 0;
-    char* file_content = 0;
     if (!filesystem_size(&f, &file_size)) {
         KERROR("Failed to check size of scene file.");
         return false;
     }
 
-    if (!filesystem_read_all_text(&f, &file_content, &bytes_read)) {
+    u64 bytes_read = 0;
+    char* file_content = kallocate(file_size + 1, MEMORY_TAG_RESOURCE);
+    if (!filesystem_read_all_text(&f, file_content, &bytes_read)) {
         KERROR("Failed to read all text of scene file.");
         return false;
     }
@@ -54,8 +55,26 @@ static b8 scene_loader_load(struct resource_loader* self, const char* name, void
         KWARN("File size/bytes read mismatch: %llu / %llu", file_size, bytes_read);
     }
 
+    // Parse the file.
+    // kson_parser parser;
+    // if (!kson_parser_create(&parser)) {
+    //     KERROR("Failed to create scene parser. See logs for details.");
+    //     return false;
+    // }
+
+    kson_tree source_tree={0};
+    if (!kson_tree_from_string(file_content, &source_tree)) {
+        KERROR("Failed to parser scene file. See logs for details.");
+        return false;
+    }
+
     scene_config* resource_data = kallocate(sizeof(scene_config), MEMORY_TAG_RESOURCE);
     kzero_memory(resource_data, sizeof(scene_config));
+
+    // TODO: loop through objects/properties,etc.
+
+    // Destroy the tree and parser.
+    kson_tree_cleanup(&source_tree);
 
     // HACK: temporarily construct a scene hierarchy, will read from file later.
     resource_data->name = "test_scene2";
