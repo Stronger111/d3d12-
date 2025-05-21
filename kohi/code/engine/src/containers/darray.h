@@ -22,6 +22,13 @@
 
 struct frame_allocator_int;
 
+typedef struct darray_header {
+    u64 capacity;
+    u64 length;
+    u64 stride;
+    struct frame_allocator_int* allocator;
+} darray_header;
+
 // 不显示说明枚举常量的值下标从0开始
 // u64 stride每个元素的大小
 /**
@@ -48,7 +55,7 @@ KAPI void* _darray_insert_at(void* array, u64 index, void* value_ptr);
 
 // stride 传进来类型的大小
 #define darray_create(type) \
-    _darray_create(DARRAY_DEFAULT_CAPACITY, sizeof(type), 0)
+    (type*)_darray_create(DARRAY_DEFAULT_CAPACITY, sizeof(type), 0)
 
 /**
  * @brief Creates a new darray of the given type with the default capacity.

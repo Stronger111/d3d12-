@@ -142,10 +142,10 @@ void scene_node_initialize(scene* s, k_handle parent_handle, scene_node_config* 
         // TODO: Also do this for attachments where needed.
 
         // Process attachment configs.
-        if (node_config->attachements) {
-            u32 attachment_count = darray_length(node_config->attachements);
+        if (node_config->attachments) {
+            u32 attachment_count = darray_length(node_config->attachments);
             for (u32 i = 0; i < attachment_count; ++i) {
-                scene_node_attachment_config* attachment_config = &node_config->attachements[i];
+                scene_node_attachment_config* attachment_config = &node_config->attachments[i];
                 scene_node_attachment_type attachment_type = (*(scene_node_attachment_type*)attachment_config);
                 switch (attachment_type) {
                     default:

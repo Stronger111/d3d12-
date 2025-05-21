@@ -10,7 +10,7 @@
 #include "core/logger.h"
 
 #include "math/kmath.h"
-#include "math/transform.h"
+#include "resources/resource_types.h"
 
 #ifndef _MSC_VER
 #include <strings.h>
@@ -206,6 +206,7 @@ void string_mid(char* dest, const char* source, i32 start, i32 length) {
         for (i32 i = start; j < length && source[i]; ++i, ++j) {
             dest[j] = source[i];
         }
+        //堆栈上溢或者下溢 会损坏其他地方内存
         //start+length dest Buffer大小为512 start长度为519 大于512时重置的内存超过 自身范围导致内存 出错  操作了不属于自己的内存块
         dest[j] = 0;
     } else {
@@ -337,48 +338,48 @@ void string_remove_at(char* dest, const char* src, u32 pos, u32 length) {
     dest[original_length - length] = 0;
 }
 
-b8 string_to_transform(const char* str, transform* out_transform) {
-    if (!str || !out_transform) {
+b8 string_to_xform_config(const char* str, scene_xform_config* out_xform) {
+    if (!str || !out_xform) {
         return false;
     }
 
-    kzero_memory(out_transform, sizeof(transform));
+    kzero_memory(out_xform, sizeof(scene_xform_config));
     f32 values[7] = {0};
 
     i32 count = sscanf(
         str,
         "%f %f %f %f %f %f %f %f %f %f",
-        &out_transform->position.x, &out_transform->position.y, &out_transform->position.z,
+        &out_xform->position.x, &out_xform->position.y, &out_xform->position.z,
         &values[0], &values[1], &values[2], &values[3], &values[4], &values[5], &values[6]);
 
     if (count == 10) {
         // Treat as quat, load directly.
-        out_transform->rotation.x = values[0];
-        out_transform->rotation.y = values[1];
-        out_transform->rotation.z = values[2];
-        out_transform->rotation.w = values[3];
+        out_xform->rotation.x = values[0];
+        out_xform->rotation.y = values[1];
+        out_xform->rotation.z = values[2];
+        out_xform->rotation.w = values[3];
 
         // Set scale
-        out_transform->scale.x = values[4];
-        out_transform->scale.y = values[5];
-        out_transform->scale.z = values[6];
+        out_xform->scale.x = values[4];
+        out_xform->scale.y = values[5];
+        out_xform->scale.z = values[6];
     } else if (count == 9) {
         quat x_rot = quat_from_axis_angle((vec3){1.0f, 0, 0}, deg_to_rad(values[0]), true);
         quat y_rot = quat_from_axis_angle((vec3){0, 1.0f, 0}, deg_to_rad(values[1]), true);
         quat z_rot = quat_from_axis_angle((vec3){0, 0, 1.0f}, deg_to_rad(values[2]), true);
-        out_transform->rotation = quat_mul(x_rot, quat_mul(y_rot, z_rot));
+        out_xform->rotation = quat_mul(x_rot, quat_mul(y_rot, z_rot));
 
         // Set scale
-        out_transform->scale.x = values[3];
-        out_transform->scale.y = values[4];
-        out_transform->scale.z = values[5];
+        out_xform->scale.x = values[3];
+        out_xform->scale.y = values[4];
+        out_xform->scale.z = values[5];
     } else {
-        KWARN("Format error: invalid transform provided. Identity transform will be used.");
-        *out_transform = transform_create();
+        KWARN("Format error: invalid xform provided. Identity transform will be used.");
+        out_xform->position = vec3_zero();
+        out_xform->rotation = quat_identity();
+        out_xform->scale = vec3_one();
         return false;
     }
-
-    out_transform->is_dirty = true;
 
     return true;
 }

@@ -642,7 +642,7 @@ typedef struct scene_node_config {
     // pointer to a config if one exists, otherwise 0
     scene_xform_config* xform;
     // darray
-    scene_node_attachment_config* attachements;
+    scene_node_attachment_config* attachments;
     // darray
     struct scene_node_config* children;
 } scene_node_config;
