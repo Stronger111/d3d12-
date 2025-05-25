@@ -20,11 +20,11 @@
 #include <resources/terrain.h>
 
 #include "core/engine.h"
+#include "core/khandle.h"
 #include "defines.h"
 #include "game_state.h"
 #include "math/math_types.h"
 #include "renderer/viewport.h"
-#include "resources/loaders/scene_loader.h"
 #include "systems/camera_system.h"
 
 // Standard UI.
@@ -48,7 +48,6 @@
 
 // TODO: temp
 #include <core/identifier.h>
-#include <math/transform.h>
 #include <resources/loaders/audio_loader.h>
 #include <resources/mesh.h>
 #include <resources/scene.h>
@@ -80,6 +79,7 @@ typedef struct geometry_distance {
 void application_register_events(struct application* game_inst);
 void application_unregister_events(struct application* game_inst);
 static b8 load_main_scene(struct application* game_inst);
+static b8 save_main_scene(struct application* game_inst);
 static b8 create_rendergraphs(application* app);
 static b8 initialize_rendergraphs(application* app);
 static b8 prepare_rendergraphs(application* app, frame_data* frame_data);
@@ -123,6 +123,7 @@ b8 game_on_event(u16 code, void* sender, void* listener_inst, event_context cont
         case EVENT_CODE_SET_RENDER_MODE: {
             i32 mode = context.data.i32[0];
             switch (mode) {
+                default:
                 case RENDERER_VIEW_MODE_DEFAULT:
                     KDEBUG("Renderer mode set to default.");
                     state->render_mode = RENDERER_VIEW_MODE_DEFAULT;
@@ -190,6 +191,13 @@ b8 game_on_debug_event(u16 code, void* sender, void* listener_inst, event_contex
             }
         }
         return true;
+    } else if (code == EVENT_CODE_DEBUG5) {
+        if (state->main_scene.state >= SCENE_STATE_LOADING) {
+            KDEBUG("Saving main scene...");
+            if (!save_main_scene(game_inst)) {
+                KERROR("Error saving main scene");
+            }
+        }
     } else if (code == EVENT_CODE_DEBUG2) {
         if (state->main_scene.state == SCENE_STATE_LOADED) {
             KDEBUG("Unloading scene...");
@@ -336,7 +344,7 @@ b8 game_on_button(u16 code, void* sender, void* listener_list, event_context con
                                     // NOTE: is handle index what we should identify by?
                                     KINFO("Selected object id %u", hit->node_handle.handle_index);
                                     // state->gizmo.selected_xfrom=state->selection.xform;
-                                    editor_gizmo_selected_transform_set(&state->gizmo,state->selection.xform_handle,state->selection.xform_parent_handle);
+                                    editor_gizmo_selected_transform_set(&state->gizmo, state->selection.xform_handle, state->selection.xform_parent_handle);
                                     // transform_parent_set(&state->gizmo.xform,state->selection.xform);
                                 }
                             }
@@ -479,7 +487,7 @@ b8 application_initialize(struct application* game_inst) {
 
     // Register resource loader
     resource_system_loader_register(audio_resource_loader_create());
-    
+
     // Invalid handle = no selection.
     state->selection.xform_handle = k_handle_invalid();
 
@@ -569,7 +577,7 @@ b8 application_initialize(struct application* game_inst) {
         if (!sui_panel_control_load(&state->test_panel)) {
             KERROR("Failed to load test panel.");
         } else {
-            transform_translate(&state->test_panel.xform, (vec3){950, 350});
+            xform_translate(state->test_panel.xform, (vec3){950, 350});
             void* sui_state = systems_manager_get_state(K_SYSTEM_TYPE_STANDARD_UI_EXT);
             if (!standard_ui_system_register_control(sui_state, &state->test_panel)) {
                 KERROR("Unable to register control.");
@@ -801,76 +809,76 @@ b8 application_update(application* game_inst, struct frame_data* p_frame_data) {
     // Track allocation differences.
     state->prev_alloc_count = state->alloc_count;
     state->alloc_count = get_memory_alloc_count();
+    if (state->running) {
+        // Also tack on current mouse state.
+        b8 left_down = input_is_button_down(BUTTON_LEFT);
+        b8 right_down = input_is_button_down(BUTTON_RIGHT);
+        i32 mouse_x, mouse_y;
+        input_get_mouse_position(&mouse_x, &mouse_y);
 
-    // Also tack on current mouse state.
-    b8 left_down = input_is_button_down(BUTTON_LEFT);
-    b8 right_down = input_is_button_down(BUTTON_RIGHT);
-    i32 mouse_x, mouse_y;
-    input_get_mouse_position(&mouse_x, &mouse_y);
+        // Convert to NDC
+        f32 mouse_x_ndc = range_convert_f32((f32)mouse_x, 0.0f, (f32)state->width, -1.0f, 1.0f);
+        f32 mouse_y_ndc = range_convert_f32((f32)mouse_y, 0.0f, (f32)state->height, -1.0f, 1.0f);
 
-    // Convert to NDC
-    f32 mouse_x_ndc = range_convert_f32((f32)mouse_x, 0.0f, (f32)state->width, -1.0f, 1.0f);
-    f32 mouse_y_ndc = range_convert_f32((f32)mouse_y, 0.0f, (f32)state->height, -1.0f, 1.0f);
+        f64 fps, frame_time;
+        metrics_frame(&fps, &frame_time);
 
-    f64 fps, frame_time;
-    metrics_frame(&fps, &frame_time);
+        // Keep a running average of update and render timers over the last ~1 second.秒
+        static f64 accumulated_ms = 0;
+        static f32 total_update_seconds = 0;
+        static f32 total_prepare_seconds = 0;
+        static f32 total_render_seconds = 0;
 
-    // Keep a running average of update and render timers over the last ~1 second.秒
-    static f64 accumulated_ms = 0;
-    static f32 total_update_seconds = 0;
-    static f32 total_prepare_seconds = 0;
-    static f32 total_render_seconds = 0;
+        static f32 total_update_avg_us = 0;
+        static f32 total_prepare_avg_us = 0;
+        static f32 total_render_avg_us = 0;
+        static f32 total_avg = 0;  // total average across the frame
 
-    static f32 total_update_avg_us = 0;
-    static f32 total_prepare_avg_us = 0;
-    static f32 total_render_avg_us = 0;
-    static f32 total_avg = 0;  // total average across the frame
+        total_update_seconds += state->update_clock.elapsed;
+        total_prepare_seconds += state->prepare_clock.elapsed;
+        total_render_seconds += state->render_clock.elapsed;
+        accumulated_ms += frame_time;
 
-    total_update_seconds += state->update_clock.elapsed;
-    total_prepare_seconds += state->prepare_clock.elapsed;
-    total_render_seconds += state->render_clock.elapsed;
-    accumulated_ms += frame_time;
+        // Once ~1 second has gone by, calculate the average and wipe the accumulators.
+        if (accumulated_ms >= 1000.0f) {
+            total_update_avg_us = (total_update_seconds / accumulated_ms) * K_SEC_TO_US_MULTIPLIER;
+            total_prepare_avg_us = (total_prepare_seconds / accumulated_ms) * K_SEC_TO_US_MULTIPLIER;
+            total_render_avg_us = (total_render_seconds / accumulated_ms) * K_SEC_TO_US_MULTIPLIER;
+            total_avg = total_update_avg_us + total_prepare_avg_us + total_render_avg_us;
+            total_render_seconds = 0;
+            total_prepare_seconds = 0;
+            total_update_seconds = 0;
+            accumulated_ms = 0;
+        }
 
-    // Once ~1 second has gone by, calculate the average and wipe the accumulators.
-    if (accumulated_ms >= 1000.0f) {
-        total_update_avg_us = (total_update_seconds / accumulated_ms) * K_SEC_TO_US_MULTIPLIER;
-        total_prepare_avg_us = (total_prepare_seconds / accumulated_ms) * K_SEC_TO_US_MULTIPLIER;
-        total_render_avg_us = (total_render_seconds / accumulated_ms) * K_SEC_TO_US_MULTIPLIER;
-        total_avg = total_update_avg_us + total_prepare_avg_us + total_render_avg_us;
-        total_render_seconds = 0;
-        total_prepare_seconds = 0;
-        total_update_seconds = 0;
-        accumulated_ms = 0;
-    }
-
-    char* vsync_text = renderer_flag_enabled_get(RENDERER_CONFIG_FLAG_VSYNC_ENABLED_BIT) ? "YES" : "NO";
-    char text_buffer[2048];
-    string_format(
-        text_buffer,
-        "\
+        char* vsync_text = renderer_flag_enabled_get(RENDERER_CONFIG_FLAG_VSYNC_ENABLED_BIT) ? "YES" : "NO";
+        char text_buffer[2048];
+        string_format(
+            text_buffer,
+            "\
 FPS: %5.1f(%4.1fms)        Pos=[%7.3f %7.3f %7.3f] Rot=[%7.3f, %7.3f, %7.3f]\n\
 Upd: %8.3fus, Prep: %8.3fus, Rend: %8.3fus, Tot: %8.3fus \n\
 Mouse: X=%-5d Y=%-5d   L=%s R=%s   NDC: X=%.6f, Y=%.6f\n\
 VSync: %s Drawn: %-5u (%-5u shadow pass) Hovered: %s%u",
-        fps,
-        frame_time,
-        pos.x, pos.y, pos.z,
-        rad_to_deg(rot.x), rad_to_deg(rot.y), rad_to_deg(rot.z),
-        total_update_avg_us,
-        total_prepare_avg_us,
-        total_render_avg_us,
-        total_avg,
-        mouse_x, mouse_y,
-        left_down ? "Y" : "N",
-        right_down ? "Y" : "N",
-        mouse_x_ndc,
-        mouse_y_ndc,
-        vsync_text,
-        p_frame_data->drawn_mesh_count,
-        p_frame_data->drawn_shadow_mesh_count,
-        state->hovered_object_id == INVALID_ID ? "none" : "",
-        state->hovered_object_id == INVALID_ID ? 0 : state->hovered_object_id);
-    if (state->running) {
+            fps,
+            frame_time,
+            pos.x, pos.y, pos.z,
+            rad_to_deg(rot.x), rad_to_deg(rot.y), rad_to_deg(rot.z),
+            total_update_avg_us,
+            total_prepare_avg_us,
+            total_render_avg_us,
+            total_avg,
+            mouse_x, mouse_y,
+            left_down ? "Y" : "N",
+            right_down ? "Y" : "N",
+            mouse_x_ndc,
+            mouse_y_ndc,
+            vsync_text,
+            p_frame_data->drawn_mesh_count,
+            p_frame_data->drawn_shadow_mesh_count,
+            state->hovered_object_id == INVALID_ID ? "none" : "",
+            state->hovered_object_id == INVALID_ID ? 0 : state->hovered_object_id);
+        //Update the text control
         sui_label_text_set(&state->test_text, text_buffer);
     }
 
@@ -1024,6 +1032,7 @@ void application_register_events(struct application* game_inst) {
         event_register(EVENT_CODE_DEBUG2, game_inst, game_on_debug_event);
         event_register(EVENT_CODE_DEBUG3, game_inst, game_on_debug_event);
         event_register(EVENT_CODE_DEBUG4, game_inst, game_on_debug_event);
+        event_register(EVENT_CODE_DEBUG5, game_inst, game_on_debug_event);
         event_register(EVENT_CODE_OBJECT_HOVER_ID_CHANGED, game_inst, game_on_event);
 
         event_register(EVENT_CODE_SET_RENDER_MODE, game_inst, game_on_event);
@@ -1045,6 +1054,7 @@ void application_unregister_events(struct application* game_inst) {
     event_unregister(EVENT_CODE_DEBUG2, game_inst, game_on_debug_event);
     event_unregister(EVENT_CODE_DEBUG3, game_inst, game_on_debug_event);
     event_unregister(EVENT_CODE_DEBUG4, game_inst, game_on_debug_event);
+    event_unregister(EVENT_CODE_DEBUG5, game_inst, game_on_debug_event);
     event_unregister(EVENT_CODE_OBJECT_HOVER_ID_CHANGED, game_inst, game_on_event);
 
     event_unregister(EVENT_CODE_SET_RENDER_MODE, game_inst, game_on_event);
@@ -1168,9 +1178,13 @@ static b8 load_main_scene(struct application* game_inst) {
         return false;
     }
     scene_config* scene_cfg = (scene_config*)scene_resource.data;
+    scene_cfg->resource_name = string_duplicate(scene_resource.name);
+    scene_cfg->resource_full_path = string_duplicate(scene_resource.full_path);
 
-    // TODO: temp load/prepare stuff
-    if (!scene_create(scene_cfg, &state->main_scene)) {
+    // Create the scene.
+    scene_flags scene_load_flags = 0;
+    /* scene_load_flags |= SCENE_FLAG_READONLY;  // NOTE: to enable "editor mode", turn this flag off. */
+    if (!scene_create(scene_cfg, scene_load_flags, &state->main_scene)) {
         KERROR("Failed to create main scene");
         return false;
     }
@@ -1181,7 +1195,17 @@ static b8 load_main_scene(struct application* game_inst) {
         return false;
     }
 
+    // TODO: fix once scene loading works again.
     state->p_light_1 = 0;  // scene_point_light_get(&state->main_scene, "point_light_1");
     // Actually load the scene.
     return scene_load(&state->main_scene);
+}
+
+static b8 save_main_scene(struct application* game_inst) {
+    if(!game_inst){
+       return false;
+    }
+    testbed_game_state* state = (testbed_game_state*)game_inst->state;
+
+    return scene_save(&state->main_scene);
 }

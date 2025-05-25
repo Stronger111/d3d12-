@@ -211,7 +211,8 @@
         "standard_ui_rendergraph.h": "c",
         "editor_pass.h": "c",
         "scene_loader.h": "c",
-        "kson_parser.h": "c"
+        "kson_parser.h": "c",
+        "xform_system.h": "c"
     },
     // File copyright documentation tag.  Array of strings will be converted to one line per element.  Can template {year}.
     "doxdocgen.file.copyrightTag": [

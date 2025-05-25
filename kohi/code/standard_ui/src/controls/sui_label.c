@@ -6,12 +6,12 @@
 #include <core/kstring.h>
 #include <core/logger.h>
 #include <math/kmath.h>
-#include <math/transform.h>
 #include <renderer/renderer_frontend.h>
 #include <systems/font_system.h>
 #include <systems/shader_system.h>
 
 #include "defines.h"
+#include "resources/resource_types.h"
 
 static void regenerate_label_geometry(sui_control* self);
 static void sui_label_control_render_frame_prepare(struct sui_control* self, const struct frame_data* p_frame_data);
@@ -179,7 +179,7 @@ b8 sui_label_control_render(sui_control* self, struct frame_data* p_frame_data, 
         // NOTE: Override the default UI atlas use that and use that of the loaded font instead.
         renderable.atlas_override = &typed_data->data->atlas;
 
-        renderable.render_data.model = transform_world_get(&self->xform);
+        renderable.render_data.model = xform_world_get(self->xform);
         renderable.render_data.diffuse_colour = typed_data->colour;
 
         renderable.instance_id = &typed_data->instance_id;

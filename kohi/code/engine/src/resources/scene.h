@@ -57,7 +57,22 @@ typedef enum scene_flag {
 // Bitwise flags to be used on scene load, etc.
 typedef u32 scene_flags;
 
-// typedef struct scene_node_meta
+typedef struct scene_node_metadata {
+    // Metdata considered stale/non-existant if INVALID_ID
+    u32 id;
+
+    // The name of the node
+    const char* name;
+} scene_node_metadata;
+
+typedef struct scene_static_mesh_metadata {
+    const char* resource_name;
+} scene_static_mesh_metadata;
+
+typedef struct scene_terrain_metadata {
+    const char* name;
+    const char* resource_name;
+} scene_terrain_metadata;
 
 typedef struct scene_skybox_metadata {
     const char* cubemap_name;
@@ -65,6 +80,8 @@ typedef struct scene_skybox_metadata {
 
 typedef struct scene {
     u32 id;
+    scene_flag flags;
+
     scene_state state;
     b8 enabled;
 
@@ -97,6 +114,7 @@ typedef struct scene {
     // Array of scene attachments for meshes.
     scene_attachment* mesh_attachments;
     // Array of mesh metadata.
+    scene_static_mesh_metadata* mesh_metadata;
 
     // darray of terrains.
     struct terrain* terrains;
@@ -106,6 +124,7 @@ typedef struct scene {
     // Array of scene attachments for terrains.
     scene_attachment* terrain_attachments;
     // Array of terrain metadata.
+    scene_terrain_metadata* terrain_metadata;
 
     // Singlular pointer to a skybox.
     struct skybox* skyboxes;
@@ -124,6 +143,14 @@ typedef struct scene {
     struct scene_config* config;
 
     hierarchy_graph hierarchy;
+
+    // An array of node metadata, indexed by hierarchy graph handle.
+    // Marked as unused by id == INVALID_ID
+    // Size of this array is always highest id+1. Does not shrink on node destruction.
+    scene_node_metadata* node_metadata;
+
+    // The number of node_metadatas currently allocated.
+    u32 node_metadata_count;
 } scene;
 
 /**
@@ -131,10 +158,11 @@ typedef struct scene {
  * No resources are allocated. Config is not yet processed.
  *
  * @param config A pointer to the configuration. Optional.
+ * @param flags Flags to be used during creation (i.e. read-only, etc.).
  * @param out_scene A pointer to hold the newly created scene. Required.
  * @return True on success; otherwise false.
  */
-KAPI b8 scene_create(scene_config* config, scene* out_scene);
+KAPI b8 scene_create(scene_config* config, scene_flags flags, scene* out_scene);
 
 /**
  * @brief Performs initialization routines on the scene, including processing
@@ -196,3 +224,5 @@ KAPI b8 scene_mesh_render_data_query_from_line(const scene* scene, vec3 directio
 KAPI b8 scene_terrain_render_data_query(const scene* scene, const frustum* f, vec3 center, struct frame_data* p_frame_data, u32* out_count, struct geometry_render_data** out_terrain_geometries);
 
 KAPI b8 scene_terrain_render_data_query_from_line(const scene* scene, vec3 direction, vec3 center, f32 radius, struct frame_data* p_frame_data, u32* out_count, struct geometry_render_data** out_geometries);
+
+KAPI b8 scene_save(scene* s);

@@ -5,7 +5,6 @@
 #include <core/systems_manager.h>
 #include <math/geometry_utils.h>
 #include <math/kmath.h>
-#include <math/transform.h>
 #include <renderer/renderer_frontend.h>
 #include <resources/resource_types.h>
 #include <systems/geometry_system.h>
@@ -111,7 +110,7 @@ b8 sui_panel_control_render(struct sui_control* self, struct frame_data* p_frame
         renderable.render_data.index_count = typed_data->g->index_count;
         renderable.render_data.index_element_size = typed_data->g->index_element_size;
         renderable.render_data.index_buffer_offset = typed_data->g->index_buffer_offset;
-        renderable.render_data.model = transform_world_get(&self->xform);
+        renderable.render_data.model = xform_world_get(self->xform);
         renderable.render_data.diffuse_colour = typed_data->colour;
 
         renderable.instance_id = &typed_data->instance_id;

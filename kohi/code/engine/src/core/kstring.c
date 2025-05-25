@@ -8,7 +8,6 @@
 #include "containers/darray.h"
 #include "core/kmemory.h"
 #include "core/logger.h"
-
 #include "math/kmath.h"
 #include "resources/resource_types.h"
 
@@ -188,13 +187,12 @@ void string_mid(char* dest, const char* source, i32 start, i32 length) {
     if (!source || !dest) {
         return;
     }
-    if (length == 0)
-    {
+    if (length == 0) {
         KTRACE("Tried to perform mid on zero-length string.");
-        dest[0]=0;
+        dest[0] = 0;
         return;
     }
-        
+
     i32 src_length = (i32)string_length(source);
     if (start >= src_length) {
         dest[0] = 0;
@@ -206,8 +204,8 @@ void string_mid(char* dest, const char* source, i32 start, i32 length) {
         for (i32 i = start; j < length && source[i]; ++i, ++j) {
             dest[j] = source[i];
         }
-        //堆栈上溢或者下溢 会损坏其他地方内存
-        //start+length dest Buffer大小为512 start长度为519 大于512时重置的内存超过 自身范围导致内存 出错  操作了不属于自己的内存块
+        // 堆栈上溢或者下溢 会损坏其他地方内存
+        // start+length dest Buffer大小为512 start长度为519 大于512时重置的内存超过 自身范围导致内存 出错  操作了不属于自己的内存块
         dest[j] = 0;
     } else {
         // If a negative value is passed, proceed to the end of the string.
@@ -418,6 +416,13 @@ KAPI b8 string_to_vec4(const char* str, vec4* out_vector) {
     kzero_memory(out_vector, sizeof(vec4));
     i32 result = sscanf(str, "%f %f %f %f", &out_vector->x, &out_vector->y, &out_vector->z, &out_vector->w);
     return result != -1;
+}
+
+const char* vec4_to_string(vec4 v) {
+    char buffer[100];
+    kzero_memory(buffer, sizeof(char) * 100);
+    string_format(buffer, "%f %f %f %f", v.x, v.y, v.z, v.w);
+    return string_duplicate(buffer);
 }
 
 b8 string_to_vec3(const char* str, vec3* out_vector) {

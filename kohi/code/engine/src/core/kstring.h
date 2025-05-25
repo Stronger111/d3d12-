@@ -167,6 +167,15 @@ KAPI b8 string_to_mat4(const char* str, mat4* out_mat);
 KAPI b8 string_to_vec4(const char* str, vec4* out_vector);
 
 /**
+ * @brief Creates a string representation of the provided vector.
+ * NOTE: string is dynamically allocated, so the caller should free it.
+ *
+ * @param v The vector to convert to string.
+ * @return The string representation of the vector.
+ */
+KAPI const char* vec4_to_string(vec4 v);
+
+/**
  * @brief Attempts to parse a vector from the provided string.
  *
  * @param str The string to parse from. Should be space-delimited. (i.e. "1.0 2.0 3.0")
