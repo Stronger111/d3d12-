@@ -27,6 +27,13 @@ KAPI u32 string_utf8_length(const char* str);
  * @return True on success; otherwise false for invalid/unsupported UTF-8.
  */
 KAPI b8 bytes_to_codepoint(const char* bytes, u32 offset, i32* out_codepoint, u8* out_advance);
+/**
+ * @brief Indicates if the provided codepoint is considered whitespace.
+ *
+ * @param codepoint The codepoint to examine.
+ * @return True if whitespace; otherwise false.
+ */
+KAPI b8 codepoint_is_whitespace(i32 codepoint);
 
 KAPI char* string_duplicate(const char* str);
 

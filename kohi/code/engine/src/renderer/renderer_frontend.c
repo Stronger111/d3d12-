@@ -462,7 +462,7 @@ b8 renderer_shader_create(shader* s, const shader_config* config, renderpass* pa
     s->instance_sampler_indices = darray_create(u32);
     s->local_uniform_count = 0;
 
-    s->shader_stage_count=config->stage_count;
+    s->shader_stage_count = config->stage_count;
 
     // Exambine the uniforms and determine scope as well as a count of samplers.
     u32 total_count = darray_length(config->uniforms);
@@ -496,7 +496,9 @@ b8 renderer_shader_create(shader* s, const shader_config* config, renderpass* pa
     // TODO: Implement #include directives here at this level so it's handled the same
     // regardless of what backend is being used.
     s->stage_configs = kallocate(sizeof(shader_stage_config) * config->stage_count, MEMORY_TAG_ARRAY);
+#ifdef _DEBUG
     s->module_watch_ids = kallocate(sizeof(u32) * config->stage_count, MEMORY_TAG_ARRAY);
+#endif
     // Each stage.
     for (u8 i = 0; i < config->stage_count; ++i) {
         s->stage_configs[i].stage = config->stage_configs[i].stage;
@@ -598,7 +600,7 @@ b8 renderer_shader_reload(struct shader* s) {
         return false;
     }
 
-    return state_ptr->plugin.shader_reload(&state_ptr->plugin,s);
+    return state_ptr->plugin.shader_reload(&state_ptr->plugin, s);
 }
 
 b8 renderer_shader_use(shader* s) {
