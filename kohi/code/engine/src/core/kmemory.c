@@ -132,7 +132,7 @@ void* kallocate_aligned(u64 size, u16 alignment, memory_tag tag) {
             return 0;
         }
 
-        // 总共的内存开辟
+        // 总共的内存开辟  FIXME:Track aligned alloc offset as part of size.
         state_ptr->stats.total_allocated += size;
         // 单个类型内存开辟
         state_ptr->stats.tagged_allocations[tag] += size;
@@ -169,6 +169,24 @@ void kallocate_report(u64 size, memory_tag tag) {
     state_ptr->stats.new_tagged_allocations[tag] += size;
     state_ptr->alloc_count++;
     kmutex_unlock(&state_ptr->allocation_mutex);
+}
+
+void* kreallocate(void* block, u64 old_size, u64 new_size, memory_tag tag) {
+    return kreallocate_aligned(block, old_size, new_size, 1, tag);
+}
+
+void* kreallocate_aligned(void* block, u64 old_size, u64 new_size, u16 alignment, memory_tag tag) {
+    void* new_block = kallocate_aligned(new_size, alignment, tag);
+    if (block && new_block) {
+        kcopy_memory(new_block, block, old_size);
+        kfree_aligned(block, old_size, alignment, tag);
+    }
+    return new_block;
+}
+
+void kreallocate_report(u64 old_size, u64 new_size, memory_tag tag) {
+    kfree_report(old_size, tag);
+    kallocate_report(new_size, tag);
 }
 
 KAPI void kfree(void* block, u64 size, memory_tag tag) {

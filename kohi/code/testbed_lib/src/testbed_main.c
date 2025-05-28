@@ -67,6 +67,8 @@
 #include "game_commands.h"
 #include "game_keybinds.h"
 // TODO: end temp
+#include "systems/timeline_system.h"
+#include "testbed_lib_version.h"
 
 /** @brief A private structure used to sort geometry by distance from the camera. */
 typedef struct geometry_distance {
@@ -86,6 +88,11 @@ static b8 prepare_rendergraphs(application* app, frame_data* frame_data);
 static b8 execute_rendergraphs(application* app, frame_data* frame_data);
 static void destroy_rendergraphs(application* app);
 static void refresh_rendergraph_pfns(application* app);
+
+static f32 get_engine_delta_time(void) {
+    k_handle engine = timeline_system_get_engine();
+    return timeline_system_delta_get(engine);
+}
 
 static void clear_debug_objects(struct application* game_inst) {
     testbed_game_state* state = (testbed_game_state*)game_inst->state;
@@ -646,7 +653,6 @@ b8 application_initialize(struct application* game_inst) {
     sui_control_position_set(&state->test_sys_text, vec3_create(950, 450, 0));
 
     // TODO: end temp load/prepare stuff
-
     state->world_camera = camera_system_acquire("world");
     camera_position_set(state->world_camera, (vec3){5.83f, 4.35f, 18.68f});
     camera_rotation_euler_set(state->world_camera, (vec3){-29.43f, -42.41f, 0.0f});
@@ -761,7 +767,7 @@ b8 application_update(application* game_inst, struct frame_data* p_frame_data) {
 
     // TODO: testing resize
     static f32 button_height = 50.0f;
-    button_height = 50.0f + (ksin(p_frame_data->total_time) * 20.0f);
+    button_height = 50.0f + (ksin(get_engine_delta_time()) * 20.0f);
     sui_button_control_height_set(&state->test_button, (i32)button_height);
 
     // Update the bitmap text with camera position. NOTE:Just using the default camera for now.
@@ -795,11 +801,11 @@ b8 application_update(application* game_inst, struct frame_data* p_frame_data) {
 
         if (state->p_light_1) {
             state->p_light_1->data.colour = (vec4){
-                KCLAMP(ksin(p_frame_data->total_time) * 0.75f + 0.5f, 0.0f, 1.0f),
-                KCLAMP(ksin(p_frame_data->total_time - (K_2PI / 3)) * 0.75f + 0.5f, 0.0f, 1.0f),
-                KCLAMP(ksin(p_frame_data->total_time - (K_4PI / 3)) * 0.75f + 0.5f, 0.0f, 1.0f),
+                KCLAMP(ksin(get_engine_delta_time()) * 0.75f + 0.5f, 0.0f, 1.0f),
+                KCLAMP(ksin(get_engine_delta_time() - (K_2PI / 3)) * 0.75f + 0.5f, 0.0f, 1.0f),
+                KCLAMP(ksin(get_engine_delta_time() - (K_4PI / 3)) * 0.75f + 0.5f, 0.0f, 1.0f),
                 1.0f};
-            state->p_light_1->data.position.z = 20.0f + ksin(p_frame_data->total_time);
+            state->p_light_1->data.position.z = 20.0f + ksin(get_engine_delta_time());
 
             // Make the audio emitter follow it
             state->test_emitter.position = vec3_from_vec4(state->p_light_1->data.position);
@@ -878,7 +884,7 @@ VSync: %s Drawn: %-5u (%-5u shadow pass) Hovered: %s%u",
             p_frame_data->drawn_shadow_mesh_count,
             state->hovered_object_id == INVALID_ID ? "none" : "",
             state->hovered_object_id == INVALID_ID ? 0 : state->hovered_object_id);
-        //Update the text control
+        // Update the text control
         sui_label_text_set(&state->test_text, text_buffer);
     }
 
@@ -1202,8 +1208,8 @@ static b8 load_main_scene(struct application* game_inst) {
 }
 
 static b8 save_main_scene(struct application* game_inst) {
-    if(!game_inst){
-       return false;
+    if (!game_inst) {
+        return false;
     }
     testbed_game_state* state = (testbed_game_state*)game_inst->state;
 

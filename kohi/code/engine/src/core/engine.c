@@ -2,10 +2,11 @@
 
 #include "application_types.h"
 #include "containers/darray.h"
-#include "core/kclock.h"
 #include "core/event.h"
 #include "core/frame_data.h"
 #include "core/input.h"
+#include "core/kclock.h"
+#include "core/khandle.h"
 #include "core/kmemory.h"
 #include "core/kstring.h"
 #include "core/logger.h"
@@ -17,6 +18,7 @@
 
 // systems
 #include "core/systems_manager.h"
+#include "systems/timeline_system.h"
 
 typedef struct engine_state_t {
     application* game_inst;
@@ -157,6 +159,8 @@ b8 engine_run(application* game_inst) {
     f64 frame_elapsed_time = 0;  // 帧过去的时间
 
     KINFO(get_memory_usage_str());
+
+    void* timeline_state = systems_manager_get_state(K_SYSTEM_TYPE_TIMELINE);
     while (engine_state->is_running) {
         if (!platform_pump_messages()) {
             engine_state->is_running = false;
@@ -169,14 +173,14 @@ b8 engine_run(application* game_inst) {
             f64 delta = (current_time - engine_state->last_time);
             f64 frame_start_time = platform_get_absolute_time();
 
-            engine_state->p_frame_data.total_time = current_time;
-            engine_state->p_frame_data.delta_time = (f32)delta;
-
             // Reset the frame allocator
             engine_state->p_frame_data.allocator.free_all();
 
             // Update  system.
             systems_manager_update(&engine_state->sys_manager_state, &engine_state->p_frame_data);
+            // Update timelines. Note that this is not done by the systems manager.
+            // because we don't want or have timeline data in the frame data struct any longer.
+            timeline_system_update(timeline_state, delta);
 
             // update metrics
             metrics_update(frame_elapsed_time);
@@ -229,15 +233,15 @@ b8 engine_run(application* game_inst) {
                 break;
             }
 
-            //Begin "prepare_frame" render event grouping.
-            renderer_begin_debug_label("prepare_frame",(vec3){1.0f,1.0f,0.0f});
+            // Begin "prepare_frame" render event grouping.
+            renderer_begin_debug_label("prepare_frame", (vec3){1.0f, 1.0f, 0.0f});
 
-            systems_manager_renderer_frame_prepare(&engine_state->sys_manager_state,&engine_state->p_frame_data);
+            systems_manager_renderer_frame_prepare(&engine_state->sys_manager_state, &engine_state->p_frame_data);
 
             // Have the application generate the render packet.
             b8 prepare_result = engine_state->game_inst->prepare_frame(engine_state->game_inst, &engine_state->p_frame_data);
 
-            //End "prepare_frame" render event grouping.
+            // End "prepare_frame" render event grouping.
             renderer_end_debug_label();
 
             if (!prepare_result) {
@@ -251,14 +255,14 @@ b8 engine_run(application* game_inst) {
                 break;
             }
 
-            //End the frame.
+            // End the frame.
             renderer_end(&engine_state->p_frame_data);
 
-            //Present the frame.
-            if(!renderer_present(&engine_state->p_frame_data)){
-               KERROR("The call to renderer_present failed. This is likely unrecoverable. Shutting down.");
-               engine_state->is_running = false;
-               break;
+            // Present the frame.
+            if (!renderer_present(&engine_state->p_frame_data)) {
+                KERROR("The call to renderer_present failed. This is likely unrecoverable. Shutting down.");
+                engine_state->is_running = false;
+                break;
             }
 
             // Figure out how long the frame took and ,if below
