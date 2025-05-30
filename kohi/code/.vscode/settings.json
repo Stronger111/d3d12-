@@ -14,7 +14,7 @@
     },
     "workbench.statusBar.visible": true,
     "editor.lineNumbers": "on",
-    "C_Cpp.clang_format_style": "{ BasedOnStyle: Google, IndentWidth: 4, ColumnLimit: 0, NamespaceIndentation: All}",
+    "C_Cpp.clang_format_style": "{ BasedOnStyle: Google, IndentWidth: 4, ColumnLimit: 0, NamespaceIndentation: All,PointerAlignment: Left}",
     "C_Cpp.vcFormat.newLine.beforeOpenBrace.block": "sameLine",
     "C_Cpp.vcFormat.newLine.beforeOpenBrace.type": "sameLine",
     "C_Cpp.vcFormat.newLine.beforeOpenBrace.function": "sameLine",
@@ -22,6 +22,7 @@
     "C_Cpp.clang_format_sortIncludes": false,
     "C_Cpp.vcFormat.indent.namespaceContents": true,
     "editor.cursorStyle": "block",
+    "editor.formatOnSave": true,
     "window.zoomLevel": 1,
     "editor.tabCompletion": "on",
     "todohighlight.isEnable": true,
@@ -213,7 +214,13 @@
         "scene_loader.h": "c",
         "kson_parser.h": "c",
         "xform_system.h": "c",
-        "timeline_system.h":"c"
+        "timeline_system.h": "c",
+        "kohi.plugin.audio.openal_version.h": "c",
+        "kohi.plugin.ui.standard_version.h": "c",
+        "stat.h": "c",
+        "stdarg.h": "c",
+        "unordered_set": "c",
+        "ksemaphore.h": "c"
     },
     // File copyright documentation tag.  Array of strings will be converted to one line per element.  Can template {year}.
     "doxdocgen.file.copyrightTag": [
@@ -235,4 +242,5 @@
         "empty",
         "custom"
     ],
+    "C_Cpp.errorSquiggles": "enabled",
 }
