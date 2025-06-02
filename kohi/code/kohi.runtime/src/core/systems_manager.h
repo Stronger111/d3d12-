@@ -90,7 +90,7 @@ b8 systems_manager_update(systems_manager_state* state, struct frame_data* p_fra
 void systems_manager_renderer_frame_prepare(systems_manager_state* state, const struct frame_data* p_frame_data);
 
 /**
- * @brief Registers a system to be managed.
+ * @brief Registers a system to be managed.Also calls its initialize() function.
  *
  * @param state A pointer to the system manager state.
  * @param type The system type. For known types, a k_system_type. Otherwise a user type.

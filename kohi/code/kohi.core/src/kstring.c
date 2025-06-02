@@ -133,7 +133,8 @@ char* string_duplicate(const char* str) {
     copy[length] = 0;
     return copy;
 }
-KAPI void string_free(char* str) {
+
+void string_free(char* str) {
     if (str) {
         // NOTE: Using kfree instead of aligned version because this might be
         // called without the memory system being initialized (i.e.unit tests)
@@ -447,6 +448,13 @@ b8 string_to_f32(const char* str, f32* f) {
     return result != -1;
 }
 
+const char* f32_to_string(f32 f) {
+    char buffer[20];
+    kzero_memory(buffer, sizeof(char) * 20);
+    string_format(buffer, "%f", f);
+    return string_duplicate(buffer);
+}
+
 b8 string_to_f64(const char* str, f64* f) {
     if (!str || !f) {
         return false;
@@ -455,6 +463,13 @@ b8 string_to_f64(const char* str, f64* f) {
     *f = 0;
     i32 result = sscanf(str, "%lf", f);
     return result != -1;
+}
+
+const char* f64_to_string(f64 f) {
+    char buffer[25];
+    kzero_memory(buffer, sizeof(char) * 25);
+    string_format(buffer, "%f", f);
+    return string_duplicate(buffer);
 }
 
 b8 string_to_i8(const char* str, i8* i) {
@@ -467,6 +482,13 @@ b8 string_to_i8(const char* str, i8* i) {
     return result != -1;
 }
 
+const char* i8_to_string(i8 i) {
+    char buffer[25];
+    kzero_memory(buffer, sizeof(char) * 25);
+    string_format(buffer, "%hhi", i);
+    return string_duplicate(buffer);
+}
+
 b8 string_to_i16(const char* str, i16* i) {
     if (!str || !i) {
         return false;
@@ -475,6 +497,13 @@ b8 string_to_i16(const char* str, i16* i) {
     *i = 0;
     i32 result = sscanf(str, "%hi", i);
     return result != -1;
+}
+
+const char* i16_to_string(i16 i) {
+    char buffer[25];
+    kzero_memory(buffer, sizeof(char) * 25);
+    string_format(buffer, "%hi", i);
+    return string_duplicate(buffer);
 }
 
 b8 string_to_i32(const char* str, i32* i) {
@@ -487,6 +516,13 @@ b8 string_to_i32(const char* str, i32* i) {
     return result != -1;
 }
 
+const char* i32_to_string(i32 i) {
+    char buffer[25];
+    kzero_memory(buffer, sizeof(char) * 25);
+    string_format(buffer, "%i", i);
+    return string_duplicate(buffer);
+}
+
 b8 string_to_i64(const char* str, i64* i) {
     if (!str || !i) {
         return false;
@@ -495,6 +531,13 @@ b8 string_to_i64(const char* str, i64* i) {
     *i = 0;
     i32 result = sscanf(str, "%lli", i);
     return result != -1;
+}
+
+const char* i64_to_string(i64 i) {
+    char buffer[25];
+    kzero_memory(buffer, sizeof(char) * 25);
+    string_format(buffer, "%lli", i);
+    return string_duplicate(buffer);
 }
 
 b8 string_to_u8(const char* str, u8* u) {

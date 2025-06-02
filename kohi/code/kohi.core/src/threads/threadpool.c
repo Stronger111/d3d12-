@@ -1,6 +1,6 @@
 #include "threadpool.h"
 
-#include "core/logger.h"
+#include "logger.h"
 #include "kmemory.h"
 #include "worker_thread.h"
 

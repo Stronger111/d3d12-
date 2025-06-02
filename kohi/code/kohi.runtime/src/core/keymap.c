@@ -1,5 +1,5 @@
 #include "keymap.h"
-#include "core/kmemory.h"
+#include "kmemory.h"
 
 KAPI keymap keymap_create(void) {
     keymap map;
@@ -14,7 +14,7 @@ KAPI keymap keymap_create(void) {
 }
 
 KAPI void keymap_binding_add(keymap* map, keys key, keymap_entry_bind_type type, keymap_modifier modifiers, void* user_data, PFN_keybind_callback callback) {
-   if (map) {
+    if (map) {
         keymap_entry* entry = &map->entries[key];
         keymap_binding* node = entry->bindings;
         keymap_binding* previous = entry->bindings;

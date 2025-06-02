@@ -2,10 +2,10 @@
 
 #include "containers/stack.h"
 #include "core/event.h"
-#include "core/frame_data.h"
+#include "frame_data.h"
 #include "core/keymap.h"
-#include "core/kmemory.h"
-#include "core/logger.h"
+#include "kmemory.h"
+#include "logger.h"
 
 typedef struct keyboard_state {
     b8 keys[256];
@@ -14,8 +14,8 @@ typedef struct keyboard_state {
 typedef struct mouse_state {
     i16 x;
     i16 y;
-    b8 buttons[BUTTON_MAX_BUTTONS];
-    b8 dragging[BUTTON_MAX_BUTTONS];
+    b8 buttons[MOUSE_BUTTON_MAX];
+    b8 dragging[MOUSE_BUTTON_MAX];
 } mouse_state;
 
 typedef struct input_state {
@@ -221,35 +221,35 @@ void input_process_key(keys key, b8 pressed) {
 }
 
 // mouse input
-b8 input_is_button_down(buttons button) {
+b8 input_is_button_down(mouse_buttons button) {
     if (!state_ptr) {
         return false;
     }
     return state_ptr->mouse_current.buttons[button] == true;
 }
 
-b8 input_is_button_up(buttons button) {
+b8 input_is_button_up(mouse_buttons button) {
     if (!state_ptr) {
         return true;
     }
     return state_ptr->mouse_current.buttons[button] == false;
 }
 
-b8 input_was_button_down(buttons button) {
+b8 input_was_button_down(mouse_buttons button) {
     if (!state_ptr) {
         return false;
     }
     return state_ptr->mouse_previous.buttons[button] == true;
 }
 
-b8 input_was_button_up(buttons button) {
+b8 input_was_button_up(mouse_buttons button) {
     if (!state_ptr) {
         return true;
     }
     return state_ptr->mouse_previous.buttons[button] == false;
 }
 
-b8 input_is_button_dragging(buttons button) {
+b8 input_is_button_dragging(mouse_buttons button) {
     if (!state_ptr) {
         return false;
     }
@@ -276,7 +276,7 @@ void input_get_previous_mouse_position(i32* x, i32* y) {
     *y = state_ptr->mouse_previous.y;
 }
 
-void input_process_button(buttons button, b8 pressed) {
+void input_process_button(mouse_buttons button, b8 pressed) {
     // If the state changed. fire an event
     if (state_ptr->mouse_current.buttons[button] != pressed) {
         state_ptr->mouse_current.buttons[button] = pressed;
@@ -329,7 +329,7 @@ void input_process_mouse_move(i16 x, i16 y) {
         context.data.i16[1] = y;
         event_fire(EVENT_CODE_MOUSE_MOVED, 0, context);
 
-        for (u16 i = 0; i < BUTTON_MAX_BUTTONS; ++i) {
+        for (u16 i = 0; i < MOUSE_BUTTON_MAX; ++i) {
             // check if the button is down first
             if (state_ptr->mouse_current.buttons[i]) {
                 if (!state_ptr->mouse_previous.dragging[i] && !state_ptr->mouse_current.dragging[i]) {

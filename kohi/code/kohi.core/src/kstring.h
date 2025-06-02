@@ -196,6 +196,14 @@ KAPI b8 string_to_vec2(const char* str, vec2* out_vector);
 KAPI b8 string_to_f32(const char* str, f32* f);
 
 /**
+ * @brief Creates a string representation of the provided float.
+ * NOTE: string is dynamically allocated, so the caller should free it.
+ *
+ * @param f The float to convert to string.
+ * @return The string representation of the provided float.
+ */
+KAPI const char* f32_to_string(f32 f);
+/**
  * @brief Attempts to parse a 64-bit floating-point number from the provided string.
  *
  * @param str The string to parse from.
@@ -205,6 +213,14 @@ KAPI b8 string_to_f32(const char* str, f32* f);
 KAPI b8 string_to_f64(const char* str, f64* f);
 
 /**
+ * @brief Creates a string representation of the provided 64-bit float.
+ * NOTE: string is dynamically allocated, so the caller should free it.
+ *
+ * @param f The 64-bit float to convert to string.
+ * @return The string representation of the provided 64-bit float.
+ */
+KAPI const char* f64_to_string(f64 f);
+/**
  * @brief Attempts to parse an 8-bit signed integer from the provided string.
  *
  * @param str The string to parse from.
@@ -212,6 +228,15 @@ KAPI b8 string_to_f64(const char* str, f64* f);
  * @return True if parsed successfully; otherwise false.
  */
 KAPI b8 string_to_i8(const char* str, i8* i);
+
+/**
+ * @brief Creates a string representation of the provided integer.
+ * NOTE: string is dynamically allocated, so the caller should free it.
+ *
+ * @param i The integer to create a string from.
+ * @return The string representation of the provided integer.
+ */
+KAPI const char* i8_to_string(i8 i);
 
 /**
  * @brief Attempts to parse a 16-bit signed integer from the provided string.
@@ -223,6 +248,14 @@ KAPI b8 string_to_i8(const char* str, i8* i);
 KAPI b8 string_to_i16(const char* str, i16* i);
 
 /**
+ * @brief Creates a string representation of the provided integer.
+ * NOTE: string is dynamically allocated, so the caller should free it.
+ *
+ * @param i The integer to create a string from.
+ * @return The string representation of the provided integer.
+ */
+KAPI const char* i16_to_string(i16 i);
+/**
  * @brief Attempts to parse a 32-bit signed integer from the provided string.
  *
  * @param str The string to parse from.
@@ -232,6 +265,15 @@ KAPI b8 string_to_i16(const char* str, i16* i);
 KAPI b8 string_to_i32(const char* str, i32* i);
 
 /**
+ * @brief Creates a string representation of the provided integer.
+ * NOTE: string is dynamically allocated, so the caller should free it.
+ *
+ * @param i The integer to create a string from.
+ * @return The string representation of the provided integer.
+ */
+KAPI const char* i32_to_string(i32 i);
+
+/**
  * @brief Attempts to parse a 64-bit signed integer from the provided string.
  *
  * @param str The string to parse from.
@@ -239,6 +281,15 @@ KAPI b8 string_to_i32(const char* str, i32* i);
  * @return True if parsed successfully; otherwise false.
  */
 KAPI b8 string_to_i64(const char* str, i64* i);
+
+/**
+ * @brief Creates a string representation of the provided integer.
+ * NOTE: string is dynamically allocated, so the caller should free it.
+ *
+ * @param i The integer to create a string from.
+ * @return The string representation of the provided integer.
+ */
+KAPI const char* i64_to_string(i64 i);
 
 /**
  * @brief Attempts to parse an 8-bit unsigned integer from the provided string.

@@ -15,12 +15,12 @@
 #include "defines.h"
 #include "logger.h"
 
- /**
-  * @brief Typedef for a console consumer write function, which
-  * is invoked every time a logging event occurs. Consumers must
-  * implement this and handle the input thusly.
-  */
-typedef b8(*PFN_console_consumer_write)(void* inst, log_level level, const char* message);
+/**
+ * @brief Typedef for a console consumer write function, which
+ * is invoked every time a logging event occurs. Consumers must
+ * implement this and handle the input thusly.
+ */
+typedef b8 (*PFN_console_consumer_write)(void* inst, log_level level, const char* message);
 /**
  * @brief Represents a single console command argument's value.
  * Always represented as a string, it is up to the console command
@@ -132,7 +132,7 @@ typedef enum console_object_type {
     CONSOLE_OBJECT_TYPE_F32,
     CONSOLE_OBJECT_TYPE_BOOL,
     CONSOLE_OBJECT_TYPE_STRUCT,
-}console_object_type;
+} console_object_type;
 
 KAPI b8 console_object_register(const char* object_name, void* object, console_object_type type);
 

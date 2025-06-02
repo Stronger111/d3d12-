@@ -1,10 +1,10 @@
 #include "worker_thread.h"
 
 #include "containers/queue.h"
-#include "core/kmemory.h"
-#include "core/kmutex.h"
-#include "core/kthread.h"
-#include "core/logger.h"
+#include "kmemory.h"
+#include "kmutex.h"
+#include "kthread.h"
+#include "logger.h"
 
 typedef struct work {
     pfn_thread_start work_fn;
@@ -96,6 +96,6 @@ b8 worker_thread_start(worker_thread* thread) {
     return true;
 }
 
-b8 worker_thread_wait(worker_thread* thread){
+b8 worker_thread_wait(worker_thread* thread) {
     return kthread_wait(&thread->thread);
 }

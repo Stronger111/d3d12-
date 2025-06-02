@@ -1,5 +1,5 @@
 #include "metrics.h"
-#include "core/kmemory.h"
+#include "kmemory.h"
 
 #define AVG_COUNT 30
 

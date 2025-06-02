@@ -2,11 +2,11 @@
 
 #include "containers/darray.h"
 #include "containers/stack.h"
-#include "core/asserts.h"
-#include "core/identifier.h"
-#include "core/khandle.h"
-#include "core/kmemory.h"
-#include "core/logger.h"
+#include "kassert.h"
+#include "identifier.h"
+#include "khandle.h"
+#include "kmemory.h"
+#include "logger.h"
 #include "defines.h"
 #include "math/kmath.h"
 #include "systems/xform_system.h"
@@ -100,7 +100,7 @@ void hierarchy_graph_update_tree_view_node(hierarchy_graph* graph, u32 node_inde
         world = node_local;
     }
 
-    //变换完设置世界矩阵
+    // 变换完设置世界矩阵
     xform_world_set(node->xform_handle, world);
 
     if (node->children) {
@@ -188,21 +188,21 @@ quat hierarchy_graph_world_rotation_get(hierarchy_graph* graph, k_handle node_ha
     return world_rot;
 }
 
-vec3 hierarchy_graph_world_position_get(hierarchy_graph* graph,k_handle node_handle){
+vec3 hierarchy_graph_world_position_get(hierarchy_graph* graph, k_handle node_handle) {
     KASSERT(graph);
 
     if (k_handle_is_invalid(node_handle)) {
         KERROR("Invalid handle passed to get world position. Returning zero position.");
         return vec3_zero();
     }
-    
-    mat4 world=xform_world_get(graph->xform_handles[node_handle.handle_index]);
-    vec3 world_pos=mat4_position(world);
+
+    mat4 world = xform_world_get(graph->xform_handles[node_handle.handle_index]);
+    vec3 world_pos = mat4_position(world);
 
     return world_pos;
 }
 
-vec3 hierarchy_graph_world_scale_get(hierarchy_graph* graph,k_handle node_handle){
+vec3 hierarchy_graph_world_scale_get(hierarchy_graph* graph, k_handle node_handle) {
     KASSERT(graph);
 
     if (k_handle_is_invalid(node_handle)) {

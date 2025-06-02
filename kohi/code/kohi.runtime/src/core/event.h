@@ -18,8 +18,20 @@ typedef struct event_context {
 
         i8 i8[16];
         u8 u8[16];
-
+        /** @brief An array of 16 8-bit unsigned integers. */
         char c[16];
+        /**
+         * @brief Allows a pointer to arbitrary data to be passed. Also includes size info.
+         * NOTE: If used, should be freed by the sender or listener.
+         */
+        union {
+            // The size of the data pointed to.
+            u64 size;
+            // A pointer to a memory block of data to be included with the event.
+            void* data;
+        } custom_data;
+        /** @brief A free-form string. If used, should be freed by sender or listener. */
+        const char* s;
     } data;
 } event_context;
 
@@ -137,6 +149,8 @@ typedef enum system_event_code {
 
     /**
      * @brief An event fired by the kvar system when a kvar has been updated.
+     * Context usage:
+     * kvar_change* change = context.data.custom_data.data;
      */
     EVENT_CODE_KVAR_CHANGED = 0x22,
 

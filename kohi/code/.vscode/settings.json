@@ -220,7 +220,8 @@
         "stat.h": "c",
         "stdarg.h": "c",
         "unordered_set": "c",
-        "ksemaphore.h": "c"
+        "ksemaphore.h": "c",
+        "kvar.h": "c"
     },
     // File copyright documentation tag.  Array of strings will be converted to one line per element.  Can template {year}.
     "doxdocgen.file.copyrightTag": [

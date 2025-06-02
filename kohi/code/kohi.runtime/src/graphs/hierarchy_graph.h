@@ -17,7 +17,7 @@
 #ifndef _XFORM_GRAPH_H_
 #define _XFORM_GRAPH_H_
 
-#include "core/khandle.h"
+#include "khandle.h"
 #include "math/math_types.h"
 
 struct frame_data;
@@ -64,26 +64,26 @@ typedef struct hierarchy_graph {
     // which do not have transforms (i.e. a skybox doesn't need one).
     k_handle* xform_handles;
 
-     // A view of the tree.
-     hierarchy_graph_view view;
+    // A view of the tree.
+    hierarchy_graph_view view;
 } hierarchy_graph;
 
 KAPI b8 hierarchy_graph_create(hierarchy_graph* out_graph);
 KAPI void hierarchy_graph_destroy(hierarchy_graph* graph);
 
-KAPI void hierarchy_graph_update_tree_view_node(hierarchy_graph* graph,u32 node_index);
+KAPI void hierarchy_graph_update_tree_view_node(hierarchy_graph* graph, u32 node_index);
 
-KAPI void hierarchy_graph_update(hierarchy_graph* graph,const struct frame_data* p_frame_data);
+KAPI void hierarchy_graph_update(hierarchy_graph* graph, const struct frame_data* p_frame_data);
 
 KAPI k_handle hierarchy_graph_root_add(hierarchy_graph* graph);
-KAPI k_handle hierarchy_graph_root_add_with_xform(hierarchy_graph* graph,k_handle xform_handle);
-KAPI k_handle hierarchy_graph_child_add(hierarchy_graph* graph,k_handle parent_handle);
-KAPI k_handle hierarchy_graph_child_add_with_xform(hierarchy_graph* graph,k_handle parent_node_handle,k_handle xform_handle);
-KAPI void hierarchy_graph_node_remove(hierarchy_graph* graph,k_handle* node_handle,b8 release_transform);
+KAPI k_handle hierarchy_graph_root_add_with_xform(hierarchy_graph* graph, k_handle xform_handle);
+KAPI k_handle hierarchy_graph_child_add(hierarchy_graph* graph, k_handle parent_handle);
+KAPI k_handle hierarchy_graph_child_add_with_xform(hierarchy_graph* graph, k_handle parent_node_handle, k_handle xform_handle);
+KAPI void hierarchy_graph_node_remove(hierarchy_graph* graph, k_handle* node_handle, b8 release_transform);
 
-KAPI quat hierarchy_graph_world_rotation_get(hierarchy_graph* graph,k_handle node_handle);
+KAPI quat hierarchy_graph_world_rotation_get(hierarchy_graph* graph, k_handle node_handle);
 
-KAPI vec3 hierarchy_graph_world_position_get(hierarchy_graph* graph,k_handle node_handle);
+KAPI vec3 hierarchy_graph_world_position_get(hierarchy_graph* graph, k_handle node_handle);
 
-KAPI vec3 hierarchy_graph_world_scale_get(hierarchy_graph* graph,k_handle node_handle);
+KAPI vec3 hierarchy_graph_world_scale_get(hierarchy_graph* graph, k_handle node_handle);
 #endif

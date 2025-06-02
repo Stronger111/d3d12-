@@ -1,7 +1,7 @@
 #include "core/event.h"
 
-#include "core/kmemory.h"
-#include "core/logger.h"
+#include "kmemory.h"
+#include "logger.h"
 #include "containers/darray.h"
 #include "core/engine.h"
 
@@ -26,17 +26,17 @@ typedef struct event_system_state {
 // Event system internal state ptr->
 static event_system_state* state_ptr;
 
-b8 event_system_initialize(u64* memory_requirement, void* state,void* config) {
+b8 event_system_initialize(u64* memory_requirement, void* state, void* config) {
     *memory_requirement = sizeof(event_system_state);
     if (state == 0) {
         return true;
     }
     kzero_memory(state, sizeof(state));
     state_ptr = state;
-    
-    //通知引擎事件系统 is ready for use
+
+    // 通知引擎事件系统 is ready for use
     engine_on_event_system_initialized();
-    
+
     return true;
 }
 
@@ -63,8 +63,8 @@ b8 event_register(u16 code, void* listener, PFN_on_event on_event) {
     if (state_ptr->registered[code].events == 0) {
         state_ptr->registered[code].events = darray_create(registered_event);
     }
-    
-    //hu 代表无符号short 格式输出整数
+
+    // hu 代表无符号short 格式输出整数
     u64 registered_count = darray_length(state_ptr->registered[code].events);
     for (u64 i = 0; i < registered_count; ++i) {
         if (state_ptr->registered[code].events[i].listener == listener && state_ptr->registered[code].events[i].callback == on_event) {
