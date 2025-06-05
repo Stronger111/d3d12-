@@ -25,6 +25,6 @@ identifier identifier_from_u64(u64 uniqueid) {
     return id;
 }
 
-b8 identifiers_equal(identifier a, identifier b){
+b8 identifiers_equal(identifier a, identifier b) {
     return a.uniqueid == b.uniqueid;
 }

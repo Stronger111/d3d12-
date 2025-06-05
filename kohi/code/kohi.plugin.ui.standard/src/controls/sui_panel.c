@@ -1,14 +1,14 @@
 #include "sui_panel.h"
 
 #include <containers/darray.h>
-#include <core/kstring.h>
-#include <core/systems_manager.h>
-#include <math/geometry_utils.h>
+#include <math/geometry.h>
 #include <math/kmath.h>
 #include <renderer/renderer_frontend.h>
 #include <resources/resource_types.h>
+#include <strings/kstring.h>
 #include <systems/geometry_system.h>
 #include <systems/shader_system.h>
+
 
 static void sui_panel_control_render_frame_prepare(struct sui_control* self, const struct frame_data* p_frame_data);
 
@@ -61,8 +61,9 @@ b8 sui_panel_control_load(struct sui_control* self) {
     generate_quad_2d(self->name, typed_data->rect.width, typed_data->rect.height, xmin, xmax, ymin, ymax, &ui_config);
     // Get UI geometry from config. NOTE:this upload to GPU.
     typed_data->g = geometry_system_acquire_from_config(ui_config, true);
-
-    standard_ui_state* typed_state = systems_manager_get_state(128);  // HACK:need standard way to get extension types.
+    
+    //TODO:DXS
+    standard_ui_state* typed_state = 0;  // HACK:need standard way to get extension types.
 
     // Acquire instance resources for this control.
     texture_map* maps[1] = {&typed_state->ui_atlas};

@@ -1,9 +1,9 @@
 #include "mesh.h"
 
-#include "core/identifier.h"
-#include "core/kmemory.h"
-#include "core/kstring.h"
-#include "core/logger.h"
+#include "identifiers/identifier.h"
+#include "memory/kmemory.h"
+#include "strings/kstring.h"
+#include "logger.h"
 #include "math/math_types.h"
 #include "renderer/renderer_types.h"
 #include "resources/resource_types.h"

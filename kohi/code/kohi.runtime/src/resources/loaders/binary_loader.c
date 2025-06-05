@@ -1,14 +1,16 @@
 #include "binary_loader.h"
 
-#include "core/logger.h"
-#include "core/kmemory.h"
-#include "core/kstring.h"
+
+#include "memory/kmemory.h"
+#include "strings/kstring.h"
+#include "logger.h"
+#include "loader_utils.h"
 #include "resources/resource_types.h"
 #include "systems/resource_system.h"
 #include "math/kmath.h"
 
 #include "platform/filesystem.h"
-#include "loader_utils.h"
+
 
 static b8 binary_loader_load(struct resource_loader* self, const char* name, void* params, resource* out_resource) {
     if (!self || !name || !out_resource) {

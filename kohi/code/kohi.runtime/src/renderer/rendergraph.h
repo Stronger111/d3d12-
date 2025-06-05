@@ -1,7 +1,6 @@
 #ifndef _RENDERGRAPH_H_
 #define _RENDERGRAPH_H_
 
-#include "core/frame_data.h"
 #include "defines.h"
 #include "renderer/renderer_types.h"
 #include "resources/resource_types.h"
@@ -99,6 +98,6 @@ KAPI b8 rendergraph_finalize(rendergraph* graph);
 
 KAPI b8 rendergraph_load_resources(rendergraph* graph);
 
-KAPI b8 rendergraph_execute_frame(rendergraph* graph,frame_data* p_frame_data);
+KAPI b8 rendergraph_execute_frame(rendergraph* graph,struct frame_data* p_frame_data);
 KAPI b8 rendergraph_on_resize(rendergraph* graph,u16 width,u16 height);
 #endif

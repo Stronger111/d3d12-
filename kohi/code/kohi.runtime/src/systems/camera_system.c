@@ -1,8 +1,8 @@
 #include "camera_system.h"
 
 #include "containers/hashtable.h"
-#include "core/kstring.h"
-#include "core/logger.h"
+#include "strings/kstring.h"
+#include "logger.h"
 #include "renderer/camera.h"
 
 typedef struct camera_lookup {

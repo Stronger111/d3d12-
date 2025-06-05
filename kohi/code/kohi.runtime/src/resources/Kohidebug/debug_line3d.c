@@ -1,11 +1,12 @@
 #include "debug_line3d.h"
 
-#include "core/identifier.h"
-#include "core/khandle.h"
-#include "core/kmemory.h"
+#include "identifiers/identifier.h"
+#include "identifiers/khandle.h"
+#include "memory/kmemory.h"
 #include "math/kmath.h"
 #include "renderer/renderer_frontend.h"
 #include "systems/xform_system.h"
+
 
 static void recalculate_points(debug_line3d *line);
 static void update_vert_colour(debug_line3d *line);

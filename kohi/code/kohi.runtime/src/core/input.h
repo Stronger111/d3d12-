@@ -12,7 +12,7 @@
 #pragma once
 
 #include "defines.h"
-#include "input_type.h"
+#include "input_types.h"
 
 struct keymap;
 struct frame_data;

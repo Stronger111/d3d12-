@@ -1,16 +1,16 @@
 #include "texture_system.h"
 
 #include "containers/hashtable.h"
-#include "core/kmemory.h"
-#include "core/kstring.h"
-#include "core/logger.h"
-#include "core/threadpool.h"
-#include "core/worker_thread.h"
+#include "memory/kmemory.h"
+#include "strings/kstring.h"
+#include "logger.h"
 #include "renderer/renderer_frontend.h"
 #include "resources/loaders/image_loader.h"
 #include "resources/resource_types.h"
 #include "systems/job_system.h"
 #include "systems/resource_system.h"
+#include "threads/threadpool.h"
+#include "threads/worker_thread.h"
 
 typedef struct texture_system_state {
     texture_system_config config;

@@ -1,10 +1,10 @@
 #include "render_view_wireframe.h"
 
 #include <containers/darray.h>
-#include <core/event.h>
-#include <core/frame_data.h>
-#include <core/kmemory.h>
-#include <core/logger.h>
+#include <event.h>
+#include <frame_data.h>
+#include <kmemory.h>
+#include <logger.h>
 #include <defines.h>
 #include <math/kmath.h>
 #include <renderer/camera.h>
@@ -50,10 +50,10 @@ static b8 render_view_on_event(u16 code, void* sender, void* listener_inst, even
     }
 
     switch (code) {
-        case EVENT_CODE_DEFAULT_RENDERTARGET_REFRESH_REQUIRED:
-            /* render_view_system_render_targets_regenerate(self); */
-            // This needs to be consumed by other views,so consider this as _not_ handled.
-            return false;
+    case EVENT_CODE_DEFAULT_RENDERTARGET_REFRESH_REQUIRED:
+        /* render_view_system_render_targets_regenerate(self); */
+        // This needs to be consumed by other views,so consider this as _not_ handled.
+        return false;
     }
 
     // Event purposely not handled to allow other listeners to get this.
@@ -70,9 +70,9 @@ b8 render_view_wireframe_on_registered(struct render_view* self) {
     render_view_wireframe_internal_data* data = self->internal_data;
     data->selected_id = INVALID_ID;
 
-    const char* shader_names[2] = {"Shader.Builtin.Wireframe", "Shader.Builtin.WireframeTerrain"};
-    wireframe_shader_info* shader_infos[2] = {&data->mesh_shader, &data->terrain_shader};
-    vec4 normal_colours[2] = {vec4_create(0.5f, 0.8f, 0.8f, 1.0f), vec4_create(0.8f, 0.8f, 0.5f, 1.0f)};
+    const char* shader_names[2] = { "Shader.Builtin.Wireframe", "Shader.Builtin.WireframeTerrain" };
+    wireframe_shader_info* shader_infos[2] = { &data->mesh_shader, &data->terrain_shader };
+    vec4 normal_colours[2] = { vec4_create(0.5f, 0.8f, 0.8f, 1.0f), vec4_create(0.8f, 0.8f, 0.5f, 1.0f) };
 
     for (u32 s = 0; s < 2; ++s) {
         wireframe_shader_info* info = shader_infos[s];
@@ -96,21 +96,21 @@ b8 render_view_wireframe_on_registered(struct render_view* self) {
         info->locations.colour = shader_system_uniform_location(info->s, "colour");
 
         // Acquire shader instance resources.
-        info->normal_instance = (wireframe_colour_instance){0};
+        info->normal_instance = (wireframe_colour_instance){ 0 };
         info->normal_instance.colour = normal_colours[s];
 
-        shader_instance_resource_config instance_resource_config = {0};
+        shader_instance_resource_config instance_resource_config = { 0 };
         instance_resource_config.uniform_config_count = 0;  // NOTE: no textures, so this doesn't matter.
         instance_resource_config.uniform_configs = 0;
 
-        if (!renderer_shader_instance_resources_acquire(info->s,&instance_resource_config, &info->normal_instance.id)) {
+        if (!renderer_shader_instance_resources_acquire(info->s, &instance_resource_config, &info->normal_instance.id)) {
             KERROR("Unable to acquire geometry shader instance resources from wireframe shader.");
             return false;
         }
 
-        info->selected_instance = (wireframe_colour_instance){0};
+        info->selected_instance = (wireframe_colour_instance){ 0 };
         info->selected_instance.colour = vec4_create(0.0f, 1.0f, 0.0f, 1.0f);
-        if (!renderer_shader_instance_resources_acquire(info->s,&instance_resource_config, &info->selected_instance.id)) {
+        if (!renderer_shader_instance_resources_acquire(info->s, &instance_resource_config, &info->selected_instance.id)) {
             KERROR("Unable to acquire selected shader instance resources from wireframe shader.");
             return false;
         }
@@ -176,10 +176,10 @@ b8 render_view_wireframe_on_packet_build(const struct render_view* self, struct 
     // Take note of the currently selected object.
     internal_data->selected_id = world_data->selected_id;
 
-    wireframe_shader_info* infos[2] = {&internal_data->mesh_shader, &internal_data->terrain_shader};
-    geometry_render_data* source_arrays[2] = {world_data->world_geometries, world_data->terrain_geometries};
-    u32* counts[2] = {&out_packet->geometry_count, &out_packet->terrain_geometry_count};
-    geometry_render_data** target_arrays[2] = {&out_packet->geometries, &out_packet->terrain_geometries};
+    wireframe_shader_info* infos[2] = { &internal_data->mesh_shader, &internal_data->terrain_shader };
+    geometry_render_data* source_arrays[2] = { world_data->world_geometries, world_data->terrain_geometries };
+    u32* counts[2] = { &out_packet->geometry_count, &out_packet->terrain_geometry_count };
+    geometry_render_data** target_arrays[2] = { &out_packet->geometries, &out_packet->terrain_geometries };
 
     for (u32 s = 0; s < 2; ++s) {
         // Reset draw indices.
@@ -233,9 +233,9 @@ b8 render_view_wireframe_on_render(const struct render_view* self, const struct 
             return false;
         }
 
-        wireframe_shader_info* infos[2] = {&internal_data->mesh_shader, &internal_data->terrain_shader};
-        u32 counts[2] = {packet->geometry_count, packet->terrain_geometry_count};
-        geometry_render_data* arrays[2] = {packet->geometries, packet->terrain_geometries};
+        wireframe_shader_info* infos[2] = { &internal_data->mesh_shader, &internal_data->terrain_shader };
+        u32 counts[2] = { packet->geometry_count, packet->terrain_geometry_count };
+        geometry_render_data* arrays[2] = { packet->geometries, packet->terrain_geometries };
 
         for (u32 s = 0; s < 2; ++s) {
             wireframe_shader_info* info = infos[s];
@@ -255,7 +255,7 @@ b8 render_view_wireframe_on_render(const struct render_view* self, const struct 
                 return false;
             }
 
-            shader_system_apply_global(true,p_frame_data);
+            shader_system_apply_global(true, p_frame_data);
 
             if (array) {
                 for (u32 i = 0; i < counts[s]; ++i) {
@@ -265,7 +265,8 @@ b8 render_view_wireframe_on_render(const struct render_view* self, const struct 
                     wireframe_colour_instance* inst = 0;
                     if (array[i].unique_id == internal_data->selected_id) {
                         inst = &info->selected_instance;
-                    } else {
+                    }
+                    else {
                         inst = &info->normal_instance;
                     }
 
@@ -279,7 +280,7 @@ b8 render_view_wireframe_on_render(const struct render_view* self, const struct 
                         }
                     }
 
-                    shader_system_apply_instance(needs_update,p_frame_data);
+                    shader_system_apply_instance(needs_update, p_frame_data);
 
                     // Sync frame number and draw index
                     inst->frame_number = p_frame_data->renderer_frame_number;
@@ -292,7 +293,7 @@ b8 render_view_wireframe_on_render(const struct render_view* self, const struct 
                     }
 
                     // Draw it.
-                     renderer_geometry_draw(&array[i]);
+                    renderer_geometry_draw(&array[i]);
                 }
             }
         }

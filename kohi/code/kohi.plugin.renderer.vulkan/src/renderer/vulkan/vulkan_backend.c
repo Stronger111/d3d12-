@@ -1,23 +1,24 @@
 #include "vulkan_backend.h"
+
 #include <renderer/renderer_types.h>
 #include <vulkan/vulkan_core.h>
 
 #include "containers/darray.h"
-#include "core/asserts.h"
 #include "core/event.h"
 #include "core/frame_data.h"
-#include "core/kmemory.h"
-#include "core/kstring.h"
-#include "core/logger.h"
+#include "kdebug/kassert.h"
 #include "defines.h"
+#include "logger.h"
 #include "math/kmath.h"
 #include "math/math_types.h"
+#include "memory/kmemory.h"
 #include "platform/platform.h"
 #include "platform/vulkan_platform.h"
 #include "renderer/renderer_frontend.h"
 #include "renderer/renderer_utils.h"
 #include "renderer/viewport.h"
 #include "resources/resource_types.h"
+#include "strings/kstring.h"
 #include "systems/material_system.h"
 #include "systems/resource_system.h"
 #include "systems/shader_system.h"
@@ -29,7 +30,6 @@
 #include "vulkan_swapchain.h"
 #include "vulkan_types.h"
 #include "vulkan_utils.h"
-#include "renderer/renderer_utils.h"
 
 // For runtime shader compilation.
 #include <shaderc/shaderc.h>

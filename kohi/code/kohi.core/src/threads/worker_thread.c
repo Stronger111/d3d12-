@@ -1,7 +1,7 @@
 #include "worker_thread.h"
 
 #include "containers/queue.h"
-#include "kmemory.h"
+#include "memory/kmemory.h"
 #include "kmutex.h"
 #include "kthread.h"
 #include "logger.h"

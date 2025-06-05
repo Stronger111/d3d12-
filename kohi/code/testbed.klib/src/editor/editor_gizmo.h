@@ -4,7 +4,7 @@
 #include <math/math_types.h>
 #include <resources/resource_types.h>
 
-#include "core/khandle.h"
+#include "khandle.h"
 
 #ifdef _DEBUG
 #include <resources/Kohidebug/debug_line3d.h>
@@ -97,7 +97,7 @@ KAPI b8 editor_gizmo_unload(editor_gizmo* gizmo);
 KAPI void editor_gizmo_refresh(editor_gizmo* gizmo);
 KAPI editor_gizmo_orientation editor_gizmo_orientation_get(editor_gizmo* gizmo);
 KAPI void editor_gizmo_orientation_set(editor_gizmo* gizmo, editor_gizmo_orientation orientation);
-KAPI void editor_gizmo_selected_transform_set(editor_gizmo* gizmo, k_handle xform_handle,k_handle parent_xform_handle);
+KAPI void editor_gizmo_selected_transform_set(editor_gizmo* gizmo, k_handle xform_handle, k_handle parent_xform_handle);
 
 KAPI void editor_gizmo_update(editor_gizmo* gizmo);
 KAPI void editor_gizmo_render_frame_prepare(editor_gizmo* gizmo, const struct frame_data* p_frame_data);

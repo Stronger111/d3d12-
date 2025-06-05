@@ -1,5 +1,5 @@
+/*
 #include "systems_manager.h"
-
 #include "containers/darray.h"
 #include "logger.h"
 
@@ -268,3 +268,4 @@ static b8 register_known_systems_post_boot(systems_manager_state* state, applica
     }
     return true;
 }
+*/

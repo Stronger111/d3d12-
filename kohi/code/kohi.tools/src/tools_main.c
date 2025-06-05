@@ -1,6 +1,6 @@
 #include <containers/darray.h>
-#include <core/kstring.h>
-#include <core/logger.h>
+#include <kstring.h>
+#include <logger.h>
 #include <defines.h>
 
 // For executing shell commands
@@ -30,7 +30,8 @@ i32 main(i32 argc, char** argv) {
     // The second argument tells us what mode to go into.
     if (strings_equali(argv[1], "combine") || strings_equali(argv[1], "cmaps")) {
         return combine_texture_maps(argc, argv);
-    } else {
+    }
+    else {
         KERROR("Unrecognized argument '%s'.", argv[1]);
         print_help();
         return -2;
@@ -69,8 +70,8 @@ i32 combine_texture_maps(i32 argc, char** argv) {
     // Always filp y when loading in.
     stbi_set_flip_vertically_on_load_thread(true);
 
-    channel_map maps[MAP_TYPE_MAX] = {0};
-    char out_file_path[1024] = {0};
+    channel_map maps[MAP_TYPE_MAX] = { 0 };
+    char out_file_path[1024] = { 0 };
 
     // Starting at third argument. One argument = 1 shader.
     for (u32 i = 2; i < argc; ++i) {
@@ -80,13 +81,17 @@ i32 combine_texture_maps(i32 argc, char** argv) {
 
         if (strings_equali(parts[0], "metallic")) {
             maps[MAP_TYPE_METALLIC].file_path = string_duplicate(parts[1]);
-        } else if (strings_equali(parts[0], "roughness")) {
+        }
+        else if (strings_equali(parts[0], "roughness")) {
             maps[MAP_TYPE_ROUGHNESS].file_path = string_duplicate(parts[1]);
-        } else if (strings_equali(parts[0], "ao")) {
+        }
+        else if (strings_equali(parts[0], "ao")) {
             maps[MAP_TYPE_AO].file_path = string_duplicate(parts[1]);
-        } else if (strings_equali(parts[0], "outfile")) {
+        }
+        else if (strings_equali(parts[0], "outfile")) {
             string_ncopy(out_file_path, parts[1], 1024);
-        } else {
+        }
+        else {
             KERROR("Unrecognized map type '%s'", parts[0]);
             return -5;
         }
@@ -120,7 +125,8 @@ i32 combine_texture_maps(i32 argc, char** argv) {
                 // Dimensions not set, use first dimension.
                 width = maps[i].width;
                 height = maps[i].height;
-            } else {
+            }
+            else {
                 // Validate that the dimensions match.
                 if (maps[i].width != width || maps[i].height != height) {
                     KERROR("All texture maps must be the same width and height.");
@@ -145,7 +151,8 @@ i32 combine_texture_maps(i32 argc, char** argv) {
                 for (u32 j = 0; j < count; ++j) {
                     maps[i].data[j] = 255;
                 }
-            } else if (i == MAP_TYPE_ROUGHNESS) {
+            }
+            else if (i == MAP_TYPE_ROUGHNESS) {
                 // medium grey
                 for (u64 row = 0; row < width; ++row) {
                     for (u64 col = 0; col < height; ++col) {
@@ -158,7 +165,8 @@ i32 combine_texture_maps(i32 argc, char** argv) {
                         maps[i].data[index_bpp + 3] = 255;
                     }
                 }
-            } else if (i == MAP_TYPE_METALLIC) {
+            }
+            else if (i == MAP_TYPE_METALLIC) {
                 // white
                 u32 count = 4 * width * height;
                 for (u32 j = 0; j < count; ++j) {

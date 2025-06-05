@@ -1,7 +1,8 @@
 #include "forward_rendergraph.h"
 
 #include "containers/darray.h"
-#include "core/logger.h"
+#include "core/frame_data.h"
+#include "logger.h"
 #include "math/kmath.h"
 #include "renderer/camera.h"
 #include "renderer/renderer_types.h"

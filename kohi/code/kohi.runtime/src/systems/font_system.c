@@ -2,9 +2,9 @@
 
 #include "containers/darray.h"
 #include "containers/hashtable.h"
-#include "core/kmemory.h"
-#include "core/kstring.h"
-#include "core/logger.h"
+#include "memory/kmemory.h"
+#include "strings/kstring.h"
+#include "logger.h"
 #include "renderer/renderer_frontend.h"
 #include "resources/resource_types.h"
 #include "systems/resource_system.h"

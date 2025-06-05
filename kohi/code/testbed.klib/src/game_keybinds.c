@@ -3,21 +3,21 @@
 #include <application_types.h>
 #include <core/console.h>
 #include <core/engine.h>
-#include <core/event.h>
-#include <core/frame_data.h>
+#include <event.h>
+#include <frame_data.h>
 #include <core/input.h>
 #include <core/keymap.h>
-#include <core/kmemory.h>
-#include <core/kstring.h>
+#include <kmemory.h>
+#include <kstring.h>
 #include <core/kvar.h>
-#include <core/logger.h>
+#include <logger.h>
 #include <core/systems_manager.h>
 #include <defines.h>
 #include <renderer/renderer_frontend.h>
 #include <systems/camera_system.h>
 #include <systems/timeline_system.h>
 
-#include "core/khandle.h"
+#include "khandle.h"
 #include "debug_console.h"
 #include "game_state.h"
 #include "renderer/renderer_types.h"
@@ -29,7 +29,7 @@ static f32 get_engine_delta_time(void) {
 
 void game_on_escape_callback(keys key, keymap_entry_bind_type type, keymap_modifier modifiers, void* user_data) {
     KDEBUG("game_on_escape_callback");
-    event_fire(EVENT_CODE_APPLICATION_QUIT, 0, (event_context){});
+    event_fire(EVENT_CODE_APPLICATION_QUIT, 0, (event_context) {});
 }
 
 void game_on_yaw(keys key, keymap_entry_bind_type type, keymap_modifier modifiers, void* user_data) {
@@ -39,7 +39,8 @@ void game_on_yaw(keys key, keymap_entry_bind_type type, keymap_modifier modifier
     f32 f = 0.0f;
     if (key == KEY_LEFT || key == KEY_A) {
         f = 1.0f;
-    } else if (key == KEY_RIGHT || key == KEY_D) {
+    }
+    else if (key == KEY_RIGHT || key == KEY_D) {
         f = -1.0f;
     }
 
@@ -53,7 +54,8 @@ void game_on_pitch(keys key, keymap_entry_bind_type type, keymap_modifier modifi
     f32 f = 0.0f;
     if (key == KEY_UP) {
         f = 1.0f;
-    } else if (key == KEY_DOWN) {
+    }
+    else if (key == KEY_DOWN) {
         f = -1.0f;
     }
     camera_pitch(state->world_camera, f * get_engine_delta_time());
@@ -77,7 +79,7 @@ void game_on_move_left(keys key, keymap_entry_bind_type type, keymap_modifier mo
     application* game_inst = (application*)user_data;
     testbed_game_state* state = (testbed_game_state*)game_inst->state;
 
-    camera_move_left(state->world_camera, state->forward_move_speed *get_engine_delta_time());
+    camera_move_left(state->world_camera, state->forward_move_speed * get_engine_delta_time());
 }
 
 void game_on_move_right(keys key, keymap_entry_bind_type type, keymap_modifier modifiers, void* user_data) {
@@ -91,7 +93,7 @@ void game_on_move_up(keys key, keymap_entry_bind_type type, keymap_modifier modi
     application* game_inst = (application*)user_data;
     testbed_game_state* state = (testbed_game_state*)game_inst->state;
 
-    camera_move_up(state->world_camera, state->forward_move_speed *get_engine_delta_time());
+    camera_move_up(state->world_camera, state->forward_move_speed * get_engine_delta_time());
 }
 
 void game_on_move_down(keys key, keymap_entry_bind_type type, keymap_modifier modifiers, void* user_data) {
@@ -110,7 +112,8 @@ void game_on_console_change_visibility(keys key, keymap_entry_bind_type type, ke
     debug_console_visible_set(&state->debug_console, console_visible);
     if (console_visible) {
         input_keymap_push(&state->console_keymap);
-    } else {
+    }
+    else {
         input_keymap_pop();
     }
 }
@@ -150,20 +153,20 @@ void game_on_set_gizmo_mode(keys key, keymap_entry_bind_type type, keymap_modifi
     testbed_game_state* state = (testbed_game_state*)game_inst->state;
 
     switch (key) {
-        case KEY_1:
-            state->gizmo.mode = EDITOR_GIZMO_MODE_NONE;
-            break;
-        case KEY_2:
-            state->gizmo.mode = EDITOR_GIZMO_MODE_MOVE;
-            break;
-        case KEY_3:
-            state->gizmo.mode = EDITOR_GIZMO_MODE_ROTATE;
-            break;
-        case KEY_4:
-            state->gizmo.mode = EDITOR_GIZMO_MODE_SCALE;
-            break;
-        default:
-            break;
+    case KEY_1:
+        state->gizmo.mode = EDITOR_GIZMO_MODE_NONE;
+        break;
+    case KEY_2:
+        state->gizmo.mode = EDITOR_GIZMO_MODE_MOVE;
+        break;
+    case KEY_3:
+        state->gizmo.mode = EDITOR_GIZMO_MODE_ROTATE;
+        break;
+    case KEY_4:
+        state->gizmo.mode = EDITOR_GIZMO_MODE_SCALE;
+        break;
+    default:
+        break;
     }
 }
 
@@ -180,19 +183,19 @@ void game_on_gizmo_orientation_set(keys key, keymap_entry_bind_type type, keymap
 }
 
 void game_on_load_scene(keys key, keymap_entry_bind_type type, keymap_modifier modifiers, void* user_data) {
-    event_fire(EVENT_CODE_DEBUG1, (application*)user_data, (event_context){});
+    event_fire(EVENT_CODE_DEBUG1, (application*)user_data, (event_context) {});
 }
 
 void game_on_unload_scene(keys key, keymap_entry_bind_type type, keymap_modifier modifiers, void* user_data) {
-    event_fire(EVENT_CODE_DEBUG2, (application*)user_data, (event_context){});
+    event_fire(EVENT_CODE_DEBUG2, (application*)user_data, (event_context) {});
 }
 
 void game_on_play_sound(keys key, keymap_entry_bind_type type, keymap_modifier modifiers, void* user_data) {
-    event_fire(EVENT_CODE_DEBUG3, (application*)user_data, (event_context){});
+    event_fire(EVENT_CODE_DEBUG3, (application*)user_data, (event_context) {});
 }
 
 void game_on_toggle_sound(keys key, keymap_entry_bind_type type, keymap_modifier modifiers, void* user_data) {
-    event_fire(EVENT_CODE_DEBUG4, (application*)user_data, (event_context){});
+    event_fire(EVENT_CODE_DEBUG4, (application*)user_data, (event_context) {});
 }
 
 void game_on_console_scroll(keys key, keymap_entry_bind_type type, keymap_modifier modifiers, void* user_data) {
@@ -201,7 +204,8 @@ void game_on_console_scroll(keys key, keymap_entry_bind_type type, keymap_modifi
     debug_console_state* console_state = &state->debug_console;
     if (key == KEY_PAGEUP) {
         debug_console_move_up(console_state);
-    } else if (key == KEY_PAGEDOWN) {
+    }
+    else if (key == KEY_PAGEDOWN) {
         debug_console_move_down(console_state);
     }
 }
@@ -229,7 +233,8 @@ void game_on_console_scroll_hold(keys key, keymap_entry_bind_type type, keymap_m
     if (accumulated_time >= 0.1f) {
         if (key == KEY_PAGEUP) {
             debug_console_move_up(console_state);
-        } else if (key == KEY_PAGEDOWN) {
+        }
+        else if (key == KEY_PAGEDOWN) {
             debug_console_move_down(console_state);
         }
         accumulated_time = 0.0f;

@@ -1,5 +1,5 @@
 #include "stack.h"
-#include "kmemory.h"
+#include "memory/kmemory.h"
 #include "logger.h"
 
 // 扩容操作

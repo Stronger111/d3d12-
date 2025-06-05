@@ -2,34 +2,34 @@
 
 #include "defines.h"
 #ifdef KPLATFORM_WINDOWS
-#include <malloc.h>
+#    include <malloc.h>
 #else
-#include <alloca.h>
+#    include <alloca.h>
 #endif
-#include <core/kmutex.h>
-#include <core/kthread.h>
 #include <math/kmath.h>
 #include <platform/platform.h>
+#include <threads/kmutex.h>
+#include <threads/kthread.h>
 
 #include "audio/audio_types.h"
 #include "containers/darray.h"
-#include "core/kmemory.h"
-#include "core/kstring.h"
-#include "core/logger.h"
 #include "defines.h"
+#include "logger.h"
+#include "memory/kmemory.h"
 #include "resources/loaders/audio_loader.h"
 #include "resources/loaders/loader_utils.h"
 #include "resources/resource_types.h"
+#include "strings/kstring.h"
 #include "systems/job_system.h"
 #include "systems/resource_system.h"
 
 // OpenAL
 #ifdef KPLATFORM_WINDOWS
-#include <al.h>
-#include <alc.h>
+#    include <al.h>
+#    include <alc.h>
 #else
-#include <AL/al.h>
-#include <AL/alc.h>
+#    include <AL/al.h>
+#    include <AL/alc.h>
 #endif
 
 // The number of buffers used for streaming music file data.

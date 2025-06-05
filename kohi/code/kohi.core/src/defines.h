@@ -205,6 +205,17 @@ STATIC_ASSERT(sizeof(f64) == 8, "Expected f64 to be 8 bytes.");
 #define KNOINLINE
 #endif
 
+//Deprecation
+#if defined(__clang__) || defined(__gcc__)
+/** @brief Mark something (i.e. a function) as deprecated. */
+#define KDEPRECATED(message) __attribute__((deprecated(message)))
+#elif defined(_MSC_VER)
+/** @brief Mark something (i.e. a function) as deprecated. */
+#define KDEPRECATED(message) __declspec(deprecated(message))
+#else
+#error "Unsupported compiler - don't know how to define deprecations!"
+#endif
+
 /** @brief Gets the number of bytes from amount of gibibytes (GiB) (1024*1024*1024) */
 #define GIBIBYTES(amount) (amount * 1024ULL * 1024ULL * 1024ULL)
 /** @brief Gets the number of bytes from amount of mebibytes (MiB) (1024*1024) */

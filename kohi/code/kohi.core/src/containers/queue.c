@@ -1,6 +1,6 @@
 #include "queue.h"
 
-#include "kmemory.h"
+#include "memory/kmemory.h"
 #include "logger.h"
 
 // 扩容
@@ -85,6 +85,6 @@ b8 queue_pop(queue* s, void* out_element_data) {
     kcopy_memory(s->memory, (void*)(((u64)s->memory) + s->element_size), s->element_size * (s->element_count - 1));
 
     s->element_count--;
-    
+
     return true;
 }

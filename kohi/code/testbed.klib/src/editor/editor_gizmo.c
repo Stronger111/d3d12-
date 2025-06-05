@@ -8,7 +8,7 @@
 
 #include "editor_gizmo.h"
 
-#include <core/logger.h>
+#include <logger.h>
 #include <defines.h>
 #include <math/geometry_3d.h>
 #include <math/kmath.h>
@@ -16,8 +16,8 @@
 #include <renderer/renderer_frontend.h>
 #include <systems/xform_system.h>
 
-#include "core/khandle.h"
-#include "core/kmemory.h"
+#include "khandle.h"
+#include "kmemory.h"
 #include "math/math_types.h"
 
 static void create_gizmo_mode_none(editor_gizmo* gizmo);
@@ -79,7 +79,7 @@ b8 editor_gizmo_load(editor_gizmo* gizmo) {
 
     for (u32 i = 0; i < EDITOR_GIZMO_MODE_MAX + 1; ++i) {
         if (!renderer_geometry_create(&gizmo->mode_data[i].geo, sizeof(colour_vertex_3d), gizmo->mode_data[i].vertex_count,
-                                      gizmo->mode_data[i].vertices, 0, 0, 0)) {
+            gizmo->mode_data[i].vertices, 0, 0, 0)) {
             KERROR("Failed to create gizmo geometry type: '%u'", i);
             return false;
         }
@@ -90,7 +90,8 @@ b8 editor_gizmo_load(editor_gizmo* gizmo) {
         }
         if (gizmo->mode_data[i].geo.generation == INVALID_ID_U16) {
             gizmo->mode_data[i].geo.generation = 0;
-        } else {
+        }
+        else {
             gizmo->mode_data[i].geo.generation++;
         }
     }
@@ -100,7 +101,7 @@ b8 editor_gizmo_load(editor_gizmo* gizmo) {
     debug_line3d_initialize(&gizmo->plane_normal_line);
     debug_line3d_load(&gizmo->plane_normal_line);
     // magenta
-    debug_line3d_colour_set(&gizmo->plane_normal_line, (vec4){1.0f, 0, 1.0f, 1.0f});
+    debug_line3d_colour_set(&gizmo->plane_normal_line, (vec4) { 1.0f, 0, 1.0f, 1.0f });
 #endif
     return true;
 }
@@ -126,12 +127,14 @@ void editor_gizmo_refresh(editor_gizmo* gizmo) {
             // If local,set rotation.
             if (gizmo->orientation == EDITOR_GIZMO_ORIENTATION_LOCAL) {
                 xform_rotation_set(gizmo->xform_handle, xform_rotation_get(gizmo->selected_xform_handle));
-            } else {
+            }
+            else {
                 xform_rotation_set(gizmo->xform_handle, quat_identity());
             }
             // Ensure the scale is set.
             xform_scale_set(gizmo->xform_handle, vec3_one());
-        } else {
+        }
+        else {
             KINFO("refreshing gizmo with defaults.");
             // For now,reset.
             xform_position_set(gizmo->xform_handle, vec3_zero());
@@ -155,19 +158,19 @@ void editor_gizmo_orientation_set(editor_gizmo* gizmo, editor_gizmo_orientation 
         gizmo->orientation = orientation;
 #if _DEBUG
         switch (gizmo->orientation) {
-            case EDITOR_GIZMO_ORIENTATION_GLOBAL:
-                KTRACE("Setting editor gizmo to GLOBAL.");
-                break;
-            case EDITOR_GIZMO_ORIENTATION_LOCAL:
-                KTRACE("Setting editor gizmo to LOCAL.");
-                break;
+        case EDITOR_GIZMO_ORIENTATION_GLOBAL:
+            KTRACE("Setting editor gizmo to GLOBAL.");
+            break;
+        case EDITOR_GIZMO_ORIENTATION_LOCAL:
+            KTRACE("Setting editor gizmo to LOCAL.");
+            break;
         }
 #endif
         editor_gizmo_refresh(gizmo);
     }
 }
 
-void editor_gizmo_selected_transform_set(editor_gizmo* gizmo,k_handle xform_handle, k_handle parent_xform_handle) {
+void editor_gizmo_selected_transform_set(editor_gizmo* gizmo, k_handle xform_handle, k_handle parent_xform_handle) {
     if (gizmo) {
         gizmo->selected_xform_handle = xform_handle;
         gizmo->selected_xform_parent_handle = parent_xform_handle;
@@ -200,7 +203,7 @@ static void create_gizmo_mode_none(editor_gizmo* gizmo) {
 
     data->vertex_count = 6;  // 2 per line, 3 lines
     data->vertices = kallocate(sizeof(colour_vertex_3d) * data->vertex_count, MEMORY_TAG_ARRAY);
-    vec4 grey = (vec4){0.5f, 0.5f, 0.5f, 1.0f};
+    vec4 grey = (vec4){ 0.5f, 0.5f, 0.5f, 1.0f };
 
     // x
     data->vertices[0].colour = grey;  // First vert is at origin, no pos needed.
@@ -224,9 +227,9 @@ static void create_gizmo_mode_move(editor_gizmo* gizmo) {
     data->vertex_count = 18;  // 2 per line, 3 lines + 6 lines
     data->vertices = kallocate(sizeof(colour_vertex_3d) * data->vertex_count, MEMORY_TAG_ARRAY);
 
-    vec4 r = (vec4){1.0f, 0.0f, 0.0f, 1.0f};
-    vec4 g = (vec4){0.0f, 1.0f, 0.0f, 1.0f};
-    vec4 b = (vec4){0.0f, 0.0f, 1.0f, 1.0f};
+    vec4 r = (vec4){ 1.0f, 0.0f, 0.0f, 1.0f };
+    vec4 g = (vec4){ 0.0f, 1.0f, 0.0f, 1.0f };
+    vec4 b = (vec4){ 0.0f, 0.0f, 1.0f, 1.0f };
     // x
     data->vertices[0].colour = r;
     data->vertices[0].position.x = 0.2f;
@@ -332,9 +335,9 @@ static void create_gizmo_mode_scale(editor_gizmo* gizmo) {
     data->vertex_count = 12;  // 2 per line, 3 lines + 3 lines
     data->vertices = kallocate(sizeof(colour_vertex_3d) * data->vertex_count, MEMORY_TAG_ARRAY);
 
-    vec4 r = (vec4){1.0f, 0.0f, 0.0f, 1.0f};
-    vec4 g = (vec4){0.0f, 1.0f, 0.0f, 1.0f};
-    vec4 b = (vec4){0.0f, 0.0f, 1.0f, 1.0f};
+    vec4 r = (vec4){ 1.0f, 0.0f, 0.0f, 1.0f };
+    vec4 g = (vec4){ 0.0f, 1.0f, 0.0f, 1.0f };
+    vec4 b = (vec4){ 0.0f, 0.0f, 1.0f, 1.0f };
 
     // x
     data->vertices[0].colour = r;  // First vert is at origin, no pos needed.
@@ -415,9 +418,9 @@ static void create_gizmo_mode_rotate(editor_gizmo* gizmo) {
     data->vertex_count = 12 + (segments * 2 * 3);  // 2 per line, 3 lines + 3 lines
     data->vertices = kallocate(sizeof(colour_vertex_3d) * data->vertex_count, MEMORY_TAG_ARRAY);
 
-    vec4 r = (vec4){1.0f, 0.0f, 0.0f, 1.0f};
-    vec4 g = (vec4){0.0f, 1.0f, 0.0f, 1.0f};
-    vec4 b = (vec4){0.0f, 0.0f, 1.0f, 1.0f};
+    vec4 r = (vec4){ 1.0f, 0.0f, 0.0f, 1.0f };
+    vec4 g = (vec4){ 0.0f, 1.0f, 0.0f, 1.0f };
+    vec4 b = (vec4){ 0.0f, 0.0f, 1.0f, 1.0f };
 
     // Start with the center, draw small axes.
     // x
@@ -499,25 +502,26 @@ void editor_gizmo_interaction_begin(editor_gizmo* gizmo, struct camera* c, struc
             // create the interaction plane
             if (gizmo->orientation == EDITOR_GIZMO_ORIENTATION_LOCAL || gizmo->orientation == EDITOR_GIZMO_ORIENTATION_GLOBAL) {
                 switch (data->current_axis_index) {
-                    case 0:  // x axis
-                    case 3:  // xy axis
-                        plane_dir = vec3_transform(vec3_back(), 0.0f, gizmo_world);
-                        break;
-                    case 1:  // y axis
-                    case 6:  // xyz
-                        plane_dir = camera_backward(c);
-                        break;
-                    case 4:  // xz axis
-                        plane_dir = vec3_transform(vec3_up(), 0.0f, gizmo_world);
-                        break;
-                    case 2:  // z axis
-                    case 5:  // yz axis
-                        plane_dir = vec3_transform(vec3_right(), 0.0f, gizmo_world);
-                        break;
-                    default:
-                        return;
+                case 0:  // x axis
+                case 3:  // xy axis
+                    plane_dir = vec3_transform(vec3_back(), 0.0f, gizmo_world);
+                    break;
+                case 1:  // y axis
+                case 6:  // xyz
+                    plane_dir = camera_backward(c);
+                    break;
+                case 4:  // xz axis
+                    plane_dir = vec3_transform(vec3_up(), 0.0f, gizmo_world);
+                    break;
+                case 2:  // z axis
+                case 5:  // yz axis
+                    plane_dir = vec3_transform(vec3_right(), 0.0f, gizmo_world);
+                    break;
+                default:
+                    return;
                 }
-            } else {
+            }
+            else {
                 // TODO: Other orientations
                 return;
             }
@@ -528,7 +532,7 @@ void editor_gizmo_interaction_begin(editor_gizmo* gizmo, struct camera* c, struc
             debug_line3d_points_set(&gizmo->plane_normal_line, origin, vec3_add(origin, plane_dir));
 #endif
             // Get the initial intersection point of the ray on the plane.
-            vec3 intersection = {0};
+            vec3 intersection = { 0 };
             f32 distance;
             if (!raycast_plane_3d(r, &data->interaction_plane, &intersection, &distance)) {
                 // Try from the other direction
@@ -538,7 +542,8 @@ void editor_gizmo_interaction_begin(editor_gizmo* gizmo, struct camera* c, struc
             }
             data->interaction_start_pos = intersection;
             data->last_interaction_pos = intersection;
-        } else if (gizmo->mode == EDITOR_GIZMO_MODE_ROTATE) {
+        }
+        else if (gizmo->mode == EDITOR_GIZMO_MODE_ROTATE) {
             // NOTE:No interaction needed because no current axis.
             if (data->current_axis_index == INVALID_ID_U8) {
                 return;
@@ -546,15 +551,15 @@ void editor_gizmo_interaction_begin(editor_gizmo* gizmo, struct camera* c, struc
             KINFO("starting rotate interaction");
             // Create the interaction plane.
             switch (data->current_axis_index) {
-                case 0:  // x
-                    plane_dir = vec3_transform(vec3_left(), 0.0f, gizmo_world);
-                    break;
-                case 1:  // y
-                    plane_dir = vec3_transform(vec3_down(), 0.0f, gizmo_world);
-                    break;
-                case 2:  // z
-                    plane_dir = vec3_transform(vec3_forward(), 0.0, gizmo_world);
-                    break;
+            case 0:  // x
+                plane_dir = vec3_transform(vec3_left(), 0.0f, gizmo_world);
+                break;
+            case 1:  // y
+                plane_dir = vec3_transform(vec3_down(), 0.0f, gizmo_world);
+                break;
+            case 2:  // z
+                plane_dir = vec3_transform(vec3_forward(), 0.0, gizmo_world);
+                break;
             }
 
             data->interaction_plane = plane_3d_create(origin, plane_dir);
@@ -565,7 +570,7 @@ void editor_gizmo_interaction_begin(editor_gizmo* gizmo, struct camera* c, struc
 #endif
 
             // Get the initial intersection point of the ray on the plane.
-            vec3 intersection = {0};
+            vec3 intersection = { 0 };
             f32 distance;
             if (!raycast_plane_3d(r, &data->interaction_plane, &intersection, &distance)) {
                 // Try from the other direction
@@ -603,7 +608,7 @@ void editor_gizmo_handle_interaction(editor_gizmo* gizmo, struct camera* c, stru
     editor_gizmo_mode_data* data = &gizmo->mode_data[gizmo->mode];
     mat4 gizmo_world = xform_local_get(gizmo->xform_handle);
     vec3 origin = xform_position_get(gizmo->xform_handle);
-    vec3 intersection = {0};
+    vec3 intersection = { 0 };
     f32 distance;
 
     if (gizmo->mode == EDITOR_GIZMO_MODE_MOVE) {
@@ -626,31 +631,32 @@ void editor_gizmo_handle_interaction(editor_gizmo* gizmo, struct camera* c, stru
             if (gizmo->orientation == EDITOR_GIZMO_ORIENTATION_LOCAL || gizmo->orientation == EDITOR_GIZMO_ORIENTATION_GLOBAL) {
                 // move along the current axis' line
                 switch (data->current_axis_index) {
-                    case 0:  // x
-                        direction = vec3_transform(vec3_right(), 0.0f, gizmo_world);
-                        // Project diff onto direction
-                        translation = vec3_mul_scalar(direction, vec3_dot(diff, direction));
-                        break;
-                    case 1:  // y
-                        direction = vec3_transform(vec3_up(), 0.0f, gizmo_world);
-                        // Project diff onto direction.
-                        translation = vec3_mul_scalar(direction, vec3_dot(diff, direction));
-                        break;
-                    case 2:  // z
-                        direction = vec3_transform(vec3_forward(), 0.0f, gizmo_world);
-                        // Project diff onto direction.
-                        translation = vec3_mul_scalar(direction, vec3_dot(diff, direction));
-                        break;
-                    case 3:  // xy
-                    case 4:  // xz
-                    case 5:  // yz
-                    case 6:  // xyz
-                        translation = diff;
-                        break;
-                    default:
-                        return;
+                case 0:  // x
+                    direction = vec3_transform(vec3_right(), 0.0f, gizmo_world);
+                    // Project diff onto direction
+                    translation = vec3_mul_scalar(direction, vec3_dot(diff, direction));
+                    break;
+                case 1:  // y
+                    direction = vec3_transform(vec3_up(), 0.0f, gizmo_world);
+                    // Project diff onto direction.
+                    translation = vec3_mul_scalar(direction, vec3_dot(diff, direction));
+                    break;
+                case 2:  // z
+                    direction = vec3_transform(vec3_forward(), 0.0f, gizmo_world);
+                    // Project diff onto direction.
+                    translation = vec3_mul_scalar(direction, vec3_dot(diff, direction));
+                    break;
+                case 3:  // xy
+                case 4:  // xz
+                case 5:  // yz
+                case 6:  // xyz
+                    translation = diff;
+                    break;
+                default:
+                    return;
                 }
-            } else {
+            }
+            else {
                 // TODO:Other orientations.
                 return;
             }
@@ -665,13 +671,15 @@ void editor_gizmo_handle_interaction(editor_gizmo* gizmo, struct camera* c, stru
                 if (!k_handle_is_invalid(gizmo->selected_xform_parent_handle)) {
                     mat4 selected_world = xform_world_get(gizmo->selected_xform_parent_handle);
                     selected_world_scale = vec3_create(1.0f / selected_world.data[0], 1.0f / selected_world.data[5], 1.0f / selected_world.data[10]);
-                } else {
+                }
+                else {
                     selected_world_scale = vec3_one();
                 }
                 vec3 scaled_translation = vec3_mul(translation, selected_world_scale);
                 xform_translate(gizmo->selected_xform_handle, scaled_translation);
             }
-        } else if (interaction_type == EDITOR_GIZMO_INTERACTION_TYPE_MOUSE_HOVER) {
+        }
+        else if (interaction_type == EDITOR_GIZMO_INTERACTION_TYPE_MOUSE_HOVER) {
             f32 dist;
             xform_calculate_local(gizmo->xform_handle);
             u8 hit_axis = INVALID_ID_U8;
@@ -699,7 +707,8 @@ void editor_gizmo_handle_interaction(editor_gizmo* gizmo, struct camera* c, stru
                     if (i == hit_axis) {
                         data->vertices[(i * 2) + 0].colour = y;
                         data->vertices[(i * 2) + 1].colour = y;
-                    } else {
+                    }
+                    else {
                         // Set non-hit axes back to their original colour.
                         data->vertices[(i * 2) + 0].colour = vec4_create(0.0f, 0.0f, 0.0f, 1.0f);
                         data->vertices[(i * 2) + 0].colour.elements[i] = 1.0f;
@@ -714,7 +723,8 @@ void editor_gizmo_handle_interaction(editor_gizmo* gizmo, struct camera* c, stru
                     for (u32 i = 0; i < 18; ++i) {
                         data->vertices[i].colour = y;
                     }
-                } else {
+                }
+                else {
                     if (hit_axis == 3) {
                         // x/y
                         // 6/7,12/13
@@ -722,7 +732,8 @@ void editor_gizmo_handle_interaction(editor_gizmo* gizmo, struct camera* c, stru
                         data->vertices[7].colour = y;
                         data->vertices[12].colour = y;
                         data->vertices[13].colour = y;
-                    } else {
+                    }
+                    else {
                         // 还原颜色
                         data->vertices[6].colour = r;
                         data->vertices[7].colour = r;
@@ -737,7 +748,8 @@ void editor_gizmo_handle_interaction(editor_gizmo* gizmo, struct camera* c, stru
                         data->vertices[9].colour = y;
                         data->vertices[16].colour = y;
                         data->vertices[17].colour = y;
-                    } else {
+                    }
+                    else {
                         data->vertices[8].colour = r;
                         data->vertices[9].colour = r;
                         data->vertices[16].colour = b;
@@ -751,7 +763,8 @@ void editor_gizmo_handle_interaction(editor_gizmo* gizmo, struct camera* c, stru
                         data->vertices[11].colour = y;
                         data->vertices[14].colour = y;
                         data->vertices[15].colour = y;
-                    } else {
+                    }
+                    else {
                         data->vertices[10].colour = g;
                         data->vertices[11].colour = g;
                         data->vertices[14].colour = b;
@@ -761,7 +774,8 @@ void editor_gizmo_handle_interaction(editor_gizmo* gizmo, struct camera* c, stru
                 gizmo->is_dirty = true;
             }
         }
-    } else if (gizmo->mode == EDITOR_GIZMO_MODE_SCALE) {
+    }
+    else if (gizmo->mode == EDITOR_GIZMO_MODE_SCALE) {
         if (interaction_type == EDITOR_GIZMO_INTERACTION_TYPE_MOUSE_DRAG) {
             // NOTE: Don't handle interaction if  there's no current axis
             if (data->current_axis_index == INVALID_ID_U8) {
@@ -780,32 +794,32 @@ void editor_gizmo_handle_interaction(editor_gizmo* gizmo, struct camera* c, stru
             // Scale along the current axis' line in local space.
             // This will be transformed to global later if need be.
             switch (data->current_axis_index) {
-                case 0:  // x
-                    direction = vec3_right();
-                    break;
-                case 1:  // y
-                    direction = vec3_up();
-                    break;
-                case 2:  // z
-                    direction = vec3_forward();
-                    break;
-                case 3:  // xy
-                    // Combine the  2 axes,scale along both.  缩小一半
-                    direction = vec3_normalized(vec3_mul_scalar(vec3_add(vec3_right(), vec3_up()), 0.5f));
-                    break;
-                case 4:  // xz
-                    // Combine the  2 axes,scale along both. vec3_back
-                    direction = vec3_normalized(vec3_mul_scalar(vec3_add(vec3_right(), vec3_back()), 0.5f));
-                    break;
-                case 5:  // yz
-                    // Combine the  2 axes,scale along both.
-                    direction = vec3_normalized(vec3_mul_scalar(vec3_add(vec3_back(), vec3_up()), 0.5f));
-                    break;
-                case 6:  // xyz
-                    direction = vec3_normalized(vec3_one());
-                    break;
-                default:
-                    break;
+            case 0:  // x
+                direction = vec3_right();
+                break;
+            case 1:  // y
+                direction = vec3_up();
+                break;
+            case 2:  // z
+                direction = vec3_forward();
+                break;
+            case 3:  // xy
+                // Combine the  2 axes,scale along both.  缩小一半
+                direction = vec3_normalized(vec3_mul_scalar(vec3_add(vec3_right(), vec3_up()), 0.5f));
+                break;
+            case 4:  // xz
+                // Combine the  2 axes,scale along both. vec3_back
+                direction = vec3_normalized(vec3_mul_scalar(vec3_add(vec3_right(), vec3_back()), 0.5f));
+                break;
+            case 5:  // yz
+                // Combine the  2 axes,scale along both.
+                direction = vec3_normalized(vec3_mul_scalar(vec3_add(vec3_back(), vec3_up()), 0.5f));
+                break;
+            case 6:  // xyz
+                direction = vec3_normalized(vec3_one());
+                break;
+            default:
+                break;
             }
             // This distance from the origin ultimately determines scale magnitude.
             f32 dist = vec3_distance(origin, intersection);
@@ -818,14 +832,17 @@ void editor_gizmo_handle_interaction(editor_gizmo* gizmo, struct camera* c, stru
             if (gizmo->orientation == EDITOR_GIZMO_ORIENTATION_LOCAL) {
                 if (data->current_axis_index < 6) {
                     direction_t = vec3_transform(direction, 0.0f, gizmo_world);
-                } else {
+                }
+                else {
                     // NOTE:In the case of uniform scale.base on the local up vector.
                     direction_t = vec3_transform(vec3_up(), 0.0f, gizmo_world);
                 }
-            } else if (gizmo->orientation == EDITOR_GIZMO_ORIENTATION_GLOBAL) {
+            }
+            else if (gizmo->orientation == EDITOR_GIZMO_ORIENTATION_GLOBAL) {
                 // Use the direction as-is
                 direction_t = direction;
-            } else {
+            }
+            else {
                 // TODO: Other orientations.
 
                 // Use the direction as-is.
@@ -866,7 +883,8 @@ void editor_gizmo_handle_interaction(editor_gizmo* gizmo, struct camera* c, stru
                 xform_scale_set(gizmo->selected_xform_handle, current_scale);
             }
             data->last_interaction_pos = intersection;
-        } else if (interaction_type == EDITOR_GIZMO_INTERACTION_TYPE_MOUSE_HOVER) {
+        }
+        else if (interaction_type == EDITOR_GIZMO_INTERACTION_TYPE_MOUSE_HOVER) {
             f32 dist;
             xform_calculate_local(gizmo->xform_handle);
             u8 hit_axis = INVALID_ID_U8;
@@ -894,7 +912,8 @@ void editor_gizmo_handle_interaction(editor_gizmo* gizmo, struct camera* c, stru
                     if (i == hit_axis) {
                         data->vertices[(i * 2) + 0].colour = y;
                         data->vertices[(i * 2) + 1].colour = y;
-                    } else {
+                    }
+                    else {
                         // Set non-hit axes back to their original colours.
                         data->vertices[(i * 2) + 0].colour = vec4_create(0.0f, 0.0f, 0.0f, 1.0f);
                         data->vertices[(i * 2) + 0].colour.elements[i] = 1.0f;
@@ -909,12 +928,14 @@ void editor_gizmo_handle_interaction(editor_gizmo* gizmo, struct camera* c, stru
                     for (u32 i = 0; i < 12; ++i) {
                         data->vertices[i].colour = y;
                     }
-                } else {
+                }
+                else {
                     // x/y is 6/7
                     if (hit_axis == 3) {
                         data->vertices[6].colour = y;
                         data->vertices[7].colour = y;
-                    } else {
+                    }
+                    else {
                         data->vertices[6].colour = r;
                         data->vertices[7].colour = g;
                     }
@@ -923,7 +944,8 @@ void editor_gizmo_handle_interaction(editor_gizmo* gizmo, struct camera* c, stru
                     if (hit_axis == 4) {
                         data->vertices[10].colour = y;
                         data->vertices[11].colour = y;
-                    } else {
+                    }
+                    else {
                         data->vertices[10].colour = r;
                         data->vertices[11].colour = b;
                     }
@@ -932,7 +954,8 @@ void editor_gizmo_handle_interaction(editor_gizmo* gizmo, struct camera* c, stru
                     if (hit_axis == 5) {
                         data->vertices[8].colour = y;
                         data->vertices[9].colour = y;
-                    } else {
+                    }
+                    else {
                         data->vertices[8].colour = b;
                         data->vertices[9].colour = g;
                     }
@@ -940,7 +963,8 @@ void editor_gizmo_handle_interaction(editor_gizmo* gizmo, struct camera* c, stru
                 gizmo->is_dirty = true;
             }
         }
-    } else if (gizmo->mode == EDITOR_GIZMO_MODE_ROTATE) {
+    }
+    else if (gizmo->mode == EDITOR_GIZMO_MODE_ROTATE) {
         if (interaction_type == EDITOR_GIZMO_INTERACTION_TYPE_MOUSE_DRAG) {
             // NOTE:No interaction needed if no current axis
             if (data->current_axis_index == INVALID_ID_U8) {
@@ -973,17 +997,17 @@ void editor_gizmo_handle_interaction(editor_gizmo* gizmo, struct camera* c, stru
             }
 
             switch (data->current_axis_index) {
-                case 0:  // x
-                    direction = vec3_transform(vec3_right(), 0.0f, gizmo_world);
-                    break;
-                case 1:  // y
-                    direction = vec3_transform(vec3_up(), 0.0f, gizmo_world);
-                    break;
-                case 2:  // z
-                    direction = vec3_transform(vec3_back(), 0.0f, gizmo_world);
-                    break;
-                default:
-                    return;
+            case 0:  // x
+                direction = vec3_transform(vec3_right(), 0.0f, gizmo_world);
+                break;
+            case 1:  // y
+                direction = vec3_transform(vec3_up(), 0.0f, gizmo_world);
+                break;
+            case 2:  // z
+                direction = vec3_transform(vec3_back(), 0.0f, gizmo_world);
+                break;
+            default:
+                return;
             }
 
             quat rotation = quat_from_axis_angle(direction, angle, true);
@@ -995,7 +1019,8 @@ void editor_gizmo_handle_interaction(editor_gizmo* gizmo, struct camera* c, stru
             if (!k_handle_is_invalid(gizmo->selected_xform_handle)) {
                 xform_rotate(gizmo->selected_xform_handle, rotation);
             }
-        } else if (interaction_type == EDITOR_GIZMO_INTERACTION_TYPE_MOUSE_HOVER) {
+        }
+        else if (interaction_type == EDITOR_GIZMO_INTERACTION_TYPE_MOUSE_HOVER) {
             f32 dist;
             vec3 point;
             u8 hit_axis = INVALID_ID_U8;
@@ -1010,7 +1035,8 @@ void editor_gizmo_handle_interaction(editor_gizmo* gizmo, struct camera* c, stru
                 if (raycast_disc_3d(r, center, aa_normal, radius + 0.05f, radius - 0.05f, &point, &dist)) {
                     hit_axis = i;
                     break;
-                } else {
+                }
+                else {
                     // If not,try from the other way.
                     aa_normal = vec3_mul_scalar(aa_normal, -1.0f);
                     if (raycast_disc_3d(r, center, aa_normal, radius + 0.05f, radius - 0.05f, &point, &dist)) {
@@ -1031,7 +1057,8 @@ void editor_gizmo_handle_interaction(editor_gizmo* gizmo, struct camera* c, stru
                     if (i == hit_axis) {
                         set_colour.r = 1.0f;
                         set_colour.g = 1.0f;
-                    } else {
+                    }
+                    else {
                         set_colour.elements[i] = 1.0f;
                     }
 

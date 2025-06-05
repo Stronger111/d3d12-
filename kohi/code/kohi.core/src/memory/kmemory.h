@@ -2,7 +2,7 @@
 
 #include "defines.h"
 
-//Interface for a frame allocator
+// Interface for a frame allocator
 typedef struct frame_allocator_int {
     void* (*allocate)(u64 size);
     void (*free)(void* block, u64 size);
@@ -42,7 +42,8 @@ typedef enum memory_tag {
     MEMORY_TAG_HASHTABLE,
     MEMORY_TAG_AUDIO,
     MEMORY_TAG_UI,
-    
+    MEMORY_TAG_REGISTRY,
+
     MEMORY_TAG_MAX_TAGS
 } memory_tag;
 
@@ -60,7 +61,7 @@ KAPI b8 memory_system_initialize(memory_system_configuration config);
 /**
  * @brief Shuts down the memory system.
  */
-void memory_system_shutdown(void);
+KAPI void memory_system_shutdown(void);
 
 KAPI void* kallocate(u64 size, memory_tag tag);
 
@@ -94,7 +95,7 @@ KAPI void kallocate_report(u64 size, memory_tag tag);
  * @param tag Indicates the use of the allocated block.
  * @returns If successful, a pointer to a block of allocated memory; otherwise 0.
  */
-KAPI void* kreallocate(void* block,u64 old_size,u64 new_size,memory_tag tag);
+KAPI void* kreallocate(void* block, u64 old_size, u64 new_size, memory_tag tag);
 
 /**
  * @brief Performs a memory reallocation from the host of the given size and alignment, and also frees the
@@ -108,7 +109,7 @@ KAPI void* kreallocate(void* block,u64 old_size,u64 new_size,memory_tag tag);
  * @param tag Indicates the use of the allocated block.
  * @returns If successful, a pointer to a block of allocated memory; otherwise 0.
  */
-KAPI void* kreallocate_aligned(void* block,u64 old_size,u64 new_size,u16 alignment,memory_tag tag);
+KAPI void* kreallocate_aligned(void* block, u64 old_size, u64 new_size, u16 alignment, memory_tag tag);
 
 /**
  * @brief Reports an allocation associated with the application, but made externally.
@@ -119,7 +120,7 @@ KAPI void* kreallocate_aligned(void* block,u64 old_size,u64 new_size,u16 alignme
  * @param new_size The size of the new allocation.
  * @param tag Indicates the use of the allocated block.
  */
-KAPI void kreallocate_report(u64 old_size,u64 new_size,memory_tag tag);
+KAPI void kreallocate_report(u64 old_size, u64 new_size, memory_tag tag);
 
 /**
  * @brief Frees the given block, and untracks its size from the given tag.

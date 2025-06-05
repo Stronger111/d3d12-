@@ -1,14 +1,14 @@
 #include "job_system.h"
 
 #include "containers/ring_queue.h"
-#include "core/asserts.h"
 #include "core/frame_data.h"
-#include "core/kthread.h"
-#include "core/kmutex.h"
-#include "core/ksemaphore.h"
-#include "core/kmemory.h"
-#include "core/logger.h"
 #include "defines.h"
+#include "kdebug/kassert.h"
+#include "memory/kmemory.h"
+#include "threads/kmutex.h"
+#include "threads/ksemaphore.h"
+#include "threads/kthread.h"
+#include "logger.h"
 
 typedef struct job_thread {
     u8 index;
@@ -70,7 +70,8 @@ static void store_result(pfn_job_on_complete callback, u32 param_size, void* par
         // Take a copy, as the job is destroyed after this.
         entry.params = kallocate(entry.param_size, MEMORY_TAG_JOB);
         kcopy_memory(entry.params, params, param_size);
-    } else {
+    }
+    else {
         entry.params = 0;
     }
 
@@ -135,7 +136,8 @@ static u32 job_thread_run(void* params) {
             // so it does not have to be held onto by this thread any longer.
             if (result && info.on_success) {
                 store_result(info.on_success, info.result_data_size, info.result_data);
-            } else if (!result && info.on_fail) {
+            }
+            else if (!result && info.on_fail) {
                 store_result(info.on_fail, info.result_data_size, info.result_data);
             }
 
@@ -485,14 +487,16 @@ job_info job_create_with_dependencies(
     if (param_data_size) {
         job.param_data = kallocate(param_data_size, MEMORY_TAG_JOB);
         kcopy_memory(job.param_data, param_data, param_data_size);
-    } else {
+    }
+    else {
         job.param_data = 0;
     }
 
     job.result_data_size = result_data_size;
     if (result_data_size) {
         job.result_data = kallocate(result_data_size, MEMORY_TAG_JOB);
-    } else {
+    }
+    else {
         job.result_data = 0;
     }
 
@@ -500,7 +504,8 @@ job_info job_create_with_dependencies(
     if (dependency_count) {
         job.dependency_ids = kallocate(dependency_count * sizeof(u16), MEMORY_TAG_ARRAY);
         kcopy_memory(job.dependency_ids, dependencies, dependency_count * sizeof(u16));
-    } else {
+    }
+    else {
         job.dependency_ids = 0;
     }
 

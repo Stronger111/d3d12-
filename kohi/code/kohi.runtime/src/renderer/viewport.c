@@ -1,6 +1,6 @@
 #include "viewport.h"
-#include "core/kmemory.h"
-#include "core/logger.h"
+#include "memory/kmemory.h"
+#include "logger.h"
 #include "math/kmath.h"
 #include "renderer/renderer_types.h"
 

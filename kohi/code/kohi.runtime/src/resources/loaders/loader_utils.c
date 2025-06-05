@@ -1,8 +1,9 @@
 #include "loader_utils.h"
 
-#include "core/kmemory.h"
-#include "core/logger.h"
-#include "core/kstring.h"
+
+#include "memory/kmemory.h"
+#include "strings/kstring.h"
+#include "logger.h"
 
 b8 resource_unload(struct resource_loader* self, resource* resource, memory_tag tag) {
     if (!self || !resource) {

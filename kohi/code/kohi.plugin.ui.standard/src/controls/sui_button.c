@@ -1,13 +1,14 @@
 #include "sui_button.h"
 
 #include <containers/darray.h>
-#include <core/kmemory.h>
-#include <core/kstring.h>
-#include <core/logger.h>
 #include <core/systems_manager.h>
+#include <logger.h>
 #include <math/kmath.h>
+#include <memory/kmemory.h>
 #include <renderer/renderer_frontend.h>
+#include <strings/kstring.h>
 #include <systems/shader_system.h>
+
 
 #include "standard_ui_system.h"
 

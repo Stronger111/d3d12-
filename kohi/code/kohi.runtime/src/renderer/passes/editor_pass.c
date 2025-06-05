@@ -1,7 +1,7 @@
 #include "editor_pass.h"
 
-#include "core/kmemory.h"
-#include "core/logger.h"
+#include "memory/kmemory.h"
+#include "logger.h"
 #include "renderer/renderer_frontend.h"
 #include "renderer/rendergraph.h"
 #include "systems/material_system.h"
@@ -19,7 +19,7 @@ typedef struct editor_pass_internal_data {
     debug_shader_locations debug_locations;
 } editor_pass_internal_data;
 
-b8 editor_pass_create(struct rendergraph_pass* self,void* config) {
+b8 editor_pass_create(struct rendergraph_pass* self, void* config) {
     if (!self) {
         return false;
     }
@@ -38,9 +38,9 @@ b8 editor_pass_initialize(struct rendergraph_pass* self) {
     editor_pass_internal_data* internal_data = self->internal_data;
 
     // Renderpass config.
-    renderpass_config editor_pass_config = {0};
+    renderpass_config editor_pass_config = { 0 };
     editor_pass_config.name = "Renderpass.Testbed.EditorWorld";
-    editor_pass_config.clear_colour = (vec4){0.0f, 0.0f, 0.0f, 1.0f};
+    editor_pass_config.clear_colour = (vec4){ 0.0f, 0.0f, 0.0f, 1.0f };
     editor_pass_config.clear_flags = RENDERPASS_CLEAR_DEPTH_BUFFER_FLAG | RENDERPASS_CLEAR_STENCIL_BUFFER_FLAG;
     editor_pass_config.depth = 1.0f;
     editor_pass_config.stencil = 0;
@@ -108,7 +108,7 @@ b8 editor_pass_execute(struct rendergraph_pass* self, struct frame_data* p_frame
         shader_system_uniform_set_by_location(internal_data->debug_locations.projection, &self->pass_data.projection_matrix);
         shader_system_uniform_set_by_location(internal_data->debug_locations.view, &self->pass_data.view_matrix);
     }
-    shader_system_apply_global(needs_update,p_frame_data);
+    shader_system_apply_global(needs_update, p_frame_data);
 
     // Sync frame number and draw index.
     internal_data->colour_shader->render_frame_number = p_frame_data->renderer_frame_number;

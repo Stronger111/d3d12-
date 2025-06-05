@@ -1,6 +1,6 @@
 #include "hashtable.h"  //散列hash
 
-#include "kmemory.h"
+#include "memory/kmemory.h"
 #include "logger.h"
 
 static u64 hash_name(const char* name, u32 element_count) {
@@ -119,4 +119,3 @@ b8 hashtable_fill(hashtable* table, void* value) {
 
     return true;
 }
-

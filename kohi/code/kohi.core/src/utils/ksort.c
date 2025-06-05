@@ -1,6 +1,6 @@
 #include "ksort.h"
 
-#include "core/kmemory.h"
+#include "memory/kmemory.h"
 
 KAPI void ptr_swap(void* scratch_mem, u64 size, void* a, void* b) {
     kcopy_memory(scratch_mem, a, size);

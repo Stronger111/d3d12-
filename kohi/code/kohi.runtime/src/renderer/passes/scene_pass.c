@@ -1,9 +1,9 @@
 #include "scene_pass.h"
 
 #include "containers/darray.h"
-#include "core/kmemory.h"
-#include "core/kstring.h"
-#include "core/logger.h"
+#include "memory/kmemory.h"
+#include "strings/kstring.h"
+#include "logger.h"
 #include "defines.h"
 #include "math/kmath.h"
 #include "renderer/passes/shadow_map_pass.h"
@@ -213,10 +213,10 @@ b8 scene_pass_execute(struct rendergraph_pass* self, struct frame_data* p_frame_
     u32 terrain_count = ext_data->terrain_geometry_count;
     if (terrain_count > 0) {
         shader_system_use_by_id(internal_data->terrain_shader->id);
-        if(ext_data->render_mode==RENDERER_VIEW_MODE_WIREFRAME){
-           shader_system_set_wireframe(internal_data->terrain_shader,true);
-        }else{
-            shader_system_set_wireframe(internal_data->terrain_shader,false);
+        if (ext_data->render_mode == RENDERER_VIEW_MODE_WIREFRAME) {
+            shader_system_set_wireframe(internal_data->terrain_shader, true);
+        } else {
+            shader_system_set_wireframe(internal_data->terrain_shader, false);
         }
 
         // Apply globals
@@ -268,9 +268,9 @@ b8 scene_pass_execute(struct rendergraph_pass* self, struct frame_data* p_frame_
             return false;
         }
 
-        if(ext_data->render_mode == RENDERER_VIEW_MODE_WIREFRAME){
+        if (ext_data->render_mode == RENDERER_VIEW_MODE_WIREFRAME) {
             shader_system_set_wireframe(internal_data->pbr_shader, true);
-        }else{
+        } else {
             shader_system_set_wireframe(internal_data->pbr_shader, false);
         }
 
@@ -351,7 +351,7 @@ b8 scene_pass_execute(struct rendergraph_pass* self, struct frame_data* p_frame_
             shader_system_bind_local();
             shader_system_uniform_set_by_location(internal_data->debug_locations.model, &ext_data->debug_geometries[i].model);
             shader_system_apply_local(p_frame_data);
-            
+
             // Draw it.
             renderer_geometry_draw(&ext_data->debug_geometries[i]);
         }

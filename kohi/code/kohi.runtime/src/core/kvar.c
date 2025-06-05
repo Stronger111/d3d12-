@@ -1,9 +1,10 @@
 #include "kvar.h"
 
-#include "kmemory.h"
-#include "logger.h"
-#include "kstring.h"
 #include "core/event.h"
+#include "logger.h"
+#include "memory/kmemory.h"
+#include "strings/kstring.h"
+
 
 #include "core/console.h"
 

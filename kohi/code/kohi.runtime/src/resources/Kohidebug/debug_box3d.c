@@ -1,8 +1,8 @@
 #include "debug_box3d.h"
 
-#include "core/identifier.h"
-#include "core/khandle.h"
-#include "core/kmemory.h"
+#include "identifiers/identifier.h"
+#include "identifiers/khandle.h"
+#include "memory/kmemory.h"
 #include "defines.h"
 #include "math/kmath.h"
 #include "renderer/renderer_frontend.h"

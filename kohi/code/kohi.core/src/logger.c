@@ -1,16 +1,16 @@
 #include "logger.h"
-#include "assert.h"
-#include "kstring.h"
-#include "kmemory.h"
+#include "kdebug/kassert.h"
+#include "memory/kmemory.h"
 #include "platform/platform.h"
 #include "platform/filesystem.h"
+#include "strings/kstring.h"
 
 #include <stdarg.h>
 
 // A console hook function pointer.
 static PFN_console_write console_hook = 0;
 
-//函数指针 也指钩子
+// 函数指针 也指钩子
 void logger_console_write_hook_set(PFN_console_write hook) {
     console_hook = hook;
 }
@@ -77,9 +77,14 @@ KAPI void log_output(log_level level, const char* message, ...) {
     // If the console hook is defined, make sure to forward messages to it, and it will pass along to consumers.
     // Otherwise the platform layer will be used directly.
     if (console_hook) {
-        console_hook(level,out_message);
+        console_hook(level, out_message);
     } else {
-        platform_console_write(0,level,out_message);
+        platform_console_write(0, level, out_message);
+    }
+
+    // Trigger a "debug break" for fatal errors.
+    if (level == LOG_LEVEL_FATAL) {
+        kdebug_break();
     }
 }
 

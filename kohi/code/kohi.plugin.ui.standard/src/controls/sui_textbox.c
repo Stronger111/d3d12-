@@ -2,9 +2,9 @@
 
 #include <containers/darray.h>
 #include <core/event.h>
-#include <core/kmemory.h>
-#include <core/kstring.h>
-#include <core/logger.h>
+#include <memory/kmemory.h>
+#include <strings/kstring.h>
+#include <logger.h>
 #include <core/systems_manager.h>
 #include <math/kmath.h>
 #include <renderer/renderer_frontend.h>
@@ -14,7 +14,7 @@
 #include "controls/sui_panel.h"
 #include "core/input.h"
 #include "defines.h"
-#include "math/geometry_utils.h"
+#include "math/geometry.h"
 #include "resources/resource_types.h"
 #include "standard_ui_system.h"
 #include "sui_label.h"

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "defines.h"
-#include "core/kmemory.h"
+#include "memory/kmemory.h"
 #include "resources/resource_types.h"
 
 struct resource_loader;

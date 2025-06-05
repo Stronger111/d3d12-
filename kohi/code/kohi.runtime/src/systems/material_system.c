@@ -4,11 +4,11 @@
 #include "containers/hashtable.h"
 #include "core/event.h"
 #include "core/frame_data.h"
-#include "core/kmemory.h"
-#include "core/kstring.h"
-#include "core/logger.h"
 #include "core/kvar.h"
 #include "defines.h"
+#include "memory/kmemory.h"
+#include "strings/kstring.h"
+#include "logger.h"
 #include "math/kmath.h"
 #include "renderer/renderer_frontend.h"
 #include "renderer/renderer_types.h"
@@ -148,7 +148,7 @@ static b8 assign_map(texture_map* map, const material_map* config, const char* m
 static b8 material_system_on_event(u16 code, void* sender, void* listener_inst, event_context context) {
     if (code == EVENT_CODE_KVAR_CHANGED) {
         if (strings_equali("use_pcf", context.data.c)) {
-            kvar_int_get("use_pcf", &state_ptr->use_pcf);  // Console 输入的值
+            kvar_i32_get("use_pcf", &state_ptr->use_pcf);  // Console 输入的值
             return true;
         }
     }
@@ -291,8 +291,8 @@ b8 material_system_initialize(u64* memory_requirement, void* state, void* config
     }
 
     // Add a kvar to track PCF filtering enabled/disabled
-    kvar_int_create("use_pcf", 1);  // on by default
-    kvar_int_get("use_pcf", &state_ptr->use_pcf);
+    kvar_i32_set("use_pcf",0, 1);  // on by default
+    kvar_i32_get("use_pcf", &state_ptr->use_pcf);
 
     event_register(EVENT_CODE_KVAR_CHANGED, 0, material_system_on_event);
 

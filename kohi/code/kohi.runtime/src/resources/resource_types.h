@@ -1,6 +1,6 @@
 #pragma once
 
-#include "identifier.h"
+#include "identifiers/identifier.h"
 #include "math/math_types.h"
 
 #define TERRAIN_MAX_MATERIAL_COUNT 4

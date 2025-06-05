@@ -1,9 +1,9 @@
 #include "geometry_system.h"
 
-#include "core/kmemory.h"
-#include "core/kstring.h"
-#include "core/logger.h"
-#include "math/geometry_utils.h"
+#include "memory/kmemory.h"
+#include "strings/kstring.h"
+#include "logger.h"
+#include "math/geometry.h"
 #include "renderer/renderer_frontend.h"
 #include "systems/material_system.h"
 
@@ -132,7 +132,8 @@ void geometry_system_release(geometry* geometry) {
                 ref->reference_count = 0;
                 ref->auto_release = false;
             }
-        } else {
+        }
+        else {
             KFATAL("Geometry id mismatch. Check registration logic, as this should never occur.");
         }
         return;
@@ -240,13 +241,15 @@ geometry_config geometry_system_generate_plane_config(f32 width, f32 height, u32
 
     if (name && string_length(name) > 0) {
         string_ncopy(config.name, name, GEOMETRY_NAME_MAX_LENGTH);
-    } else {
+    }
+    else {
         string_ncopy(config.name, DEFAULT_GEOMETRY_NAME, GEOMETRY_NAME_MAX_LENGTH);
     }
 
     if (material_name && string_length(material_name) > 0) {
         string_ncopy(config.material_name, material_name, MATERIAL_NAME_MAX_LENGTH);
-    } else {
+    }
+    else {
         string_ncopy(config.material_name, DEFAULT_MATERIAL_NAME, MATERIAL_NAME_MAX_LENGTH);
     }
 
@@ -311,88 +314,88 @@ geometry_config geometry_system_generate_cube_config(f32 width, f32 height, f32 
     vertex_3d verts[24];
 
     // Front face
-    verts[(0 * 4) + 0].position = (vec3){min_x, min_y, max_z};
-    verts[(0 * 4) + 1].position = (vec3){max_x, max_y, max_z};
-    verts[(0 * 4) + 2].position = (vec3){min_x, max_y, max_z};
-    verts[(0 * 4) + 3].position = (vec3){max_x, min_y, max_z};
-    verts[(0 * 4) + 0].texcoord = (vec2){min_uvx, min_uvy};
-    verts[(0 * 4) + 1].texcoord = (vec2){max_uvx, max_uvy};
-    verts[(0 * 4) + 2].texcoord = (vec2){min_uvx, max_uvy};
-    verts[(0 * 4) + 3].texcoord = (vec2){max_uvx, min_uvy};
-    verts[(0 * 4) + 0].normal = (vec3){0.0f, 0.0f, 1.0f};
-    verts[(0 * 4) + 1].normal = (vec3){0.0f, 0.0f, 1.0f};
-    verts[(0 * 4) + 2].normal = (vec3){0.0f, 0.0f, 1.0f};
-    verts[(0 * 4) + 3].normal = (vec3){0.0f, 0.0f, 1.0f};
+    verts[(0 * 4) + 0].position = (vec3){ min_x, min_y, max_z };
+    verts[(0 * 4) + 1].position = (vec3){ max_x, max_y, max_z };
+    verts[(0 * 4) + 2].position = (vec3){ min_x, max_y, max_z };
+    verts[(0 * 4) + 3].position = (vec3){ max_x, min_y, max_z };
+    verts[(0 * 4) + 0].texcoord = (vec2){ min_uvx, min_uvy };
+    verts[(0 * 4) + 1].texcoord = (vec2){ max_uvx, max_uvy };
+    verts[(0 * 4) + 2].texcoord = (vec2){ min_uvx, max_uvy };
+    verts[(0 * 4) + 3].texcoord = (vec2){ max_uvx, min_uvy };
+    verts[(0 * 4) + 0].normal = (vec3){ 0.0f, 0.0f, 1.0f };
+    verts[(0 * 4) + 1].normal = (vec3){ 0.0f, 0.0f, 1.0f };
+    verts[(0 * 4) + 2].normal = (vec3){ 0.0f, 0.0f, 1.0f };
+    verts[(0 * 4) + 3].normal = (vec3){ 0.0f, 0.0f, 1.0f };
 
     // Back face
-    verts[(1 * 4) + 0].position = (vec3){max_x, min_y, min_z};
-    verts[(1 * 4) + 1].position = (vec3){min_x, max_y, min_z};
-    verts[(1 * 4) + 2].position = (vec3){max_x, max_y, min_z};
-    verts[(1 * 4) + 3].position = (vec3){min_x, min_y, min_z};
-    verts[(1 * 4) + 0].texcoord = (vec2){min_uvx, min_uvy};
-    verts[(1 * 4) + 1].texcoord = (vec2){max_uvx, max_uvy};
-    verts[(1 * 4) + 2].texcoord = (vec2){min_uvx, max_uvy};
-    verts[(1 * 4) + 3].texcoord = (vec2){max_uvx, min_uvy};
-    verts[(1 * 4) + 0].normal = (vec3){0.0f, 0.0f, -1.0f};
-    verts[(1 * 4) + 1].normal = (vec3){0.0f, 0.0f, -1.0f};
-    verts[(1 * 4) + 2].normal = (vec3){0.0f, 0.0f, -1.0f};
-    verts[(1 * 4) + 3].normal = (vec3){0.0f, 0.0f, -1.0f};
+    verts[(1 * 4) + 0].position = (vec3){ max_x, min_y, min_z };
+    verts[(1 * 4) + 1].position = (vec3){ min_x, max_y, min_z };
+    verts[(1 * 4) + 2].position = (vec3){ max_x, max_y, min_z };
+    verts[(1 * 4) + 3].position = (vec3){ min_x, min_y, min_z };
+    verts[(1 * 4) + 0].texcoord = (vec2){ min_uvx, min_uvy };
+    verts[(1 * 4) + 1].texcoord = (vec2){ max_uvx, max_uvy };
+    verts[(1 * 4) + 2].texcoord = (vec2){ min_uvx, max_uvy };
+    verts[(1 * 4) + 3].texcoord = (vec2){ max_uvx, min_uvy };
+    verts[(1 * 4) + 0].normal = (vec3){ 0.0f, 0.0f, -1.0f };
+    verts[(1 * 4) + 1].normal = (vec3){ 0.0f, 0.0f, -1.0f };
+    verts[(1 * 4) + 2].normal = (vec3){ 0.0f, 0.0f, -1.0f };
+    verts[(1 * 4) + 3].normal = (vec3){ 0.0f, 0.0f, -1.0f };
 
     // Left
-    verts[(2 * 4) + 0].position = (vec3){min_x, min_y, min_z};
-    verts[(2 * 4) + 1].position = (vec3){min_x, max_y, max_z};
-    verts[(2 * 4) + 2].position = (vec3){min_x, max_y, min_z};
-    verts[(2 * 4) + 3].position = (vec3){min_x, min_y, max_z};
-    verts[(2 * 4) + 0].texcoord = (vec2){min_uvx, min_uvy};
-    verts[(2 * 4) + 1].texcoord = (vec2){max_uvx, max_uvy};
-    verts[(2 * 4) + 2].texcoord = (vec2){min_uvx, max_uvy};
-    verts[(2 * 4) + 3].texcoord = (vec2){max_uvx, min_uvy};
-    verts[(2 * 4) + 0].normal = (vec3){-1.0f, 0.0f, 0.0f};
-    verts[(2 * 4) + 1].normal = (vec3){-1.0f, 0.0f, 0.0f};
-    verts[(2 * 4) + 2].normal = (vec3){-1.0f, 0.0f, 0.0f};
-    verts[(2 * 4) + 3].normal = (vec3){-1.0f, 0.0f, 0.0f};
+    verts[(2 * 4) + 0].position = (vec3){ min_x, min_y, min_z };
+    verts[(2 * 4) + 1].position = (vec3){ min_x, max_y, max_z };
+    verts[(2 * 4) + 2].position = (vec3){ min_x, max_y, min_z };
+    verts[(2 * 4) + 3].position = (vec3){ min_x, min_y, max_z };
+    verts[(2 * 4) + 0].texcoord = (vec2){ min_uvx, min_uvy };
+    verts[(2 * 4) + 1].texcoord = (vec2){ max_uvx, max_uvy };
+    verts[(2 * 4) + 2].texcoord = (vec2){ min_uvx, max_uvy };
+    verts[(2 * 4) + 3].texcoord = (vec2){ max_uvx, min_uvy };
+    verts[(2 * 4) + 0].normal = (vec3){ -1.0f, 0.0f, 0.0f };
+    verts[(2 * 4) + 1].normal = (vec3){ -1.0f, 0.0f, 0.0f };
+    verts[(2 * 4) + 2].normal = (vec3){ -1.0f, 0.0f, 0.0f };
+    verts[(2 * 4) + 3].normal = (vec3){ -1.0f, 0.0f, 0.0f };
 
     // Right face
-    verts[(3 * 4) + 0].position = (vec3){max_x, min_y, max_z};
-    verts[(3 * 4) + 1].position = (vec3){max_x, max_y, min_z};
-    verts[(3 * 4) + 2].position = (vec3){max_x, max_y, max_z};
-    verts[(3 * 4) + 3].position = (vec3){max_x, min_y, min_z};
-    verts[(3 * 4) + 0].texcoord = (vec2){min_uvx, min_uvy};
-    verts[(3 * 4) + 1].texcoord = (vec2){max_uvx, max_uvy};
-    verts[(3 * 4) + 2].texcoord = (vec2){min_uvx, max_uvy};
-    verts[(3 * 4) + 3].texcoord = (vec2){max_uvx, min_uvy};
-    verts[(3 * 4) + 0].normal = (vec3){1.0f, 0.0f, 0.0f};
-    verts[(3 * 4) + 1].normal = (vec3){1.0f, 0.0f, 0.0f};
-    verts[(3 * 4) + 2].normal = (vec3){1.0f, 0.0f, 0.0f};
-    verts[(3 * 4) + 3].normal = (vec3){1.0f, 0.0f, 0.0f};
+    verts[(3 * 4) + 0].position = (vec3){ max_x, min_y, max_z };
+    verts[(3 * 4) + 1].position = (vec3){ max_x, max_y, min_z };
+    verts[(3 * 4) + 2].position = (vec3){ max_x, max_y, max_z };
+    verts[(3 * 4) + 3].position = (vec3){ max_x, min_y, min_z };
+    verts[(3 * 4) + 0].texcoord = (vec2){ min_uvx, min_uvy };
+    verts[(3 * 4) + 1].texcoord = (vec2){ max_uvx, max_uvy };
+    verts[(3 * 4) + 2].texcoord = (vec2){ min_uvx, max_uvy };
+    verts[(3 * 4) + 3].texcoord = (vec2){ max_uvx, min_uvy };
+    verts[(3 * 4) + 0].normal = (vec3){ 1.0f, 0.0f, 0.0f };
+    verts[(3 * 4) + 1].normal = (vec3){ 1.0f, 0.0f, 0.0f };
+    verts[(3 * 4) + 2].normal = (vec3){ 1.0f, 0.0f, 0.0f };
+    verts[(3 * 4) + 3].normal = (vec3){ 1.0f, 0.0f, 0.0f };
 
     // Bottom face
-    verts[(4 * 4) + 0].position = (vec3){max_x, min_y, max_z};
-    verts[(4 * 4) + 1].position = (vec3){min_x, min_y, min_z};
-    verts[(4 * 4) + 2].position = (vec3){max_x, min_y, min_z};
-    verts[(4 * 4) + 3].position = (vec3){min_x, min_y, max_z};
-    verts[(4 * 4) + 0].texcoord = (vec2){min_uvx, min_uvy};
-    verts[(4 * 4) + 1].texcoord = (vec2){max_uvx, max_uvy};
-    verts[(4 * 4) + 2].texcoord = (vec2){min_uvx, max_uvy};
-    verts[(4 * 4) + 3].texcoord = (vec2){max_uvx, min_uvy};
-    verts[(4 * 4) + 0].normal = (vec3){0.0f, -1.0f, 0.0f};
-    verts[(4 * 4) + 1].normal = (vec3){0.0f, -1.0f, 0.0f};
-    verts[(4 * 4) + 2].normal = (vec3){0.0f, -1.0f, 0.0f};
-    verts[(4 * 4) + 3].normal = (vec3){0.0f, -1.0f, 0.0f};
+    verts[(4 * 4) + 0].position = (vec3){ max_x, min_y, max_z };
+    verts[(4 * 4) + 1].position = (vec3){ min_x, min_y, min_z };
+    verts[(4 * 4) + 2].position = (vec3){ max_x, min_y, min_z };
+    verts[(4 * 4) + 3].position = (vec3){ min_x, min_y, max_z };
+    verts[(4 * 4) + 0].texcoord = (vec2){ min_uvx, min_uvy };
+    verts[(4 * 4) + 1].texcoord = (vec2){ max_uvx, max_uvy };
+    verts[(4 * 4) + 2].texcoord = (vec2){ min_uvx, max_uvy };
+    verts[(4 * 4) + 3].texcoord = (vec2){ max_uvx, min_uvy };
+    verts[(4 * 4) + 0].normal = (vec3){ 0.0f, -1.0f, 0.0f };
+    verts[(4 * 4) + 1].normal = (vec3){ 0.0f, -1.0f, 0.0f };
+    verts[(4 * 4) + 2].normal = (vec3){ 0.0f, -1.0f, 0.0f };
+    verts[(4 * 4) + 3].normal = (vec3){ 0.0f, -1.0f, 0.0f };
 
     // Top face
-    verts[(5 * 4) + 0].position = (vec3){min_x, max_y, max_z};
-    verts[(5 * 4) + 1].position = (vec3){max_x, max_y, min_z};
-    verts[(5 * 4) + 2].position = (vec3){min_x, max_y, min_z};
-    verts[(5 * 4) + 3].position = (vec3){max_x, max_y, max_z};
-    verts[(5 * 4) + 0].texcoord = (vec2){min_uvx, min_uvy};
-    verts[(5 * 4) + 1].texcoord = (vec2){max_uvx, max_uvy};
-    verts[(5 * 4) + 2].texcoord = (vec2){min_uvx, max_uvy};
-    verts[(5 * 4) + 3].texcoord = (vec2){max_uvx, min_uvy};
-    verts[(5 * 4) + 0].normal = (vec3){0.0f, 1.0f, 0.0f};
-    verts[(5 * 4) + 1].normal = (vec3){0.0f, 1.0f, 0.0f};
-    verts[(5 * 4) + 2].normal = (vec3){0.0f, 1.0f, 0.0f};
-    verts[(5 * 4) + 3].normal = (vec3){0.0f, 1.0f, 0.0f};
+    verts[(5 * 4) + 0].position = (vec3){ min_x, max_y, max_z };
+    verts[(5 * 4) + 1].position = (vec3){ max_x, max_y, min_z };
+    verts[(5 * 4) + 2].position = (vec3){ min_x, max_y, min_z };
+    verts[(5 * 4) + 3].position = (vec3){ max_x, max_y, max_z };
+    verts[(5 * 4) + 0].texcoord = (vec2){ min_uvx, min_uvy };
+    verts[(5 * 4) + 1].texcoord = (vec2){ max_uvx, max_uvy };
+    verts[(5 * 4) + 2].texcoord = (vec2){ min_uvx, max_uvy };
+    verts[(5 * 4) + 3].texcoord = (vec2){ max_uvx, min_uvy };
+    verts[(5 * 4) + 0].normal = (vec3){ 0.0f, 1.0f, 0.0f };
+    verts[(5 * 4) + 1].normal = (vec3){ 0.0f, 1.0f, 0.0f };
+    verts[(5 * 4) + 2].normal = (vec3){ 0.0f, 1.0f, 0.0f };
+    verts[(5 * 4) + 3].normal = (vec3){ 0.0f, 1.0f, 0.0f };
 
     kcopy_memory(config.vertices, verts, config.vertex_size * config.vertex_count);
 
@@ -409,13 +412,15 @@ geometry_config geometry_system_generate_cube_config(f32 width, f32 height, f32 
 
     if (name && string_length(name) > 0) {
         string_ncopy(config.name, name, GEOMETRY_NAME_MAX_LENGTH);
-    } else {
+    }
+    else {
         string_ncopy(config.name, DEFAULT_GEOMETRY_NAME, GEOMETRY_NAME_MAX_LENGTH);
     }
 
     if (material_name && string_length(material_name) > 0) {
         string_ncopy(config.material_name, material_name, MATERIAL_NAME_MAX_LENGTH);
-    } else {
+    }
+    else {
         string_ncopy(config.material_name, DEFAULT_MATERIAL_NAME, MATERIAL_NAME_MAX_LENGTH);
     }
 
@@ -450,7 +455,7 @@ static b8 create_default_geometries(geometry_system_state* state) {
     verts[3].texcoord.x = 1.0f;
     verts[3].texcoord.y = 0.0f;
 
-    u32 indices[6] = {0, 1, 2, 0, 3, 1};
+    u32 indices[6] = { 0, 1, 2, 0, 3, 1 };
 
     // Send the geometry off to the renderer to be uploaded to the GPU.
     if (!renderer_geometry_create(&state->default_geometry, sizeof(vertex_3d), 4, verts, sizeof(u32), 6, indices)) {

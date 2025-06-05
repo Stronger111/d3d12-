@@ -78,9 +78,11 @@ Renderer:
     https://www.renderdoc.net/download/
   vscode c++格式化指针对齐
     https://blog.csdn.net/xiaxinkai/article/details/113705651  Ctrl 加,打开
+  
 # 流程
 
 -Feature特性
+ CSG系统
 -JobSystem
  --Ring queue 循环队列 -> CPU调度工作
  --多线程从另一个线程调用另一个 会产生共享资源竞争 Semaphore

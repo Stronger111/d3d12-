@@ -1,13 +1,13 @@
 #include <containers/darray.h>
-#include <core/event.h>
-#include <core/kmemory.h>
-#include <core/kstring.h>
+#include <event.h>
+#include <kmemory.h>
+#include <kstring.h>
 #include <entry.h>
 #include <platform/platform.h>
 
-typedef b8 (*PFN_renderer_plugin_create)(renderer_plugin* out_plugin);
-typedef b8 (*PFN_audio_plugin_create)(audio_plugin* out_plugin);
-typedef u64 (*PFN_application_state_size)(void);
+typedef b8(*PFN_renderer_plugin_create)(renderer_plugin* out_plugin);
+typedef b8(*PFN_audio_plugin_create)(audio_plugin* out_plugin);
+typedef u64(*PFN_application_state_size)(void);
 
 b8 load_game_lib(application* app) {
     // Dynamically load game library

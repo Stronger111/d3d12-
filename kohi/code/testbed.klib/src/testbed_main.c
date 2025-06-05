@@ -2,13 +2,13 @@
 
 #include <containers/darray.h>
 #include <core/console.h>
-#include <core/event.h>
-#include <core/frame_data.h>
+#include <event.h>
+#include <frame_data.h>
 #include <core/input.h>
 #include <core/kclock.h>
-#include <core/kmemory.h>
-#include <core/kstring.h>
-#include <core/logger.h>
+#include <kmemory.h>
+#include <kstring.h>
+#include <logger.h>
 #include <core/metrics.h>
 #include <math/geometry_2d.h>
 #include <math/geometry_3d.h>
@@ -20,7 +20,7 @@
 #include <resources/terrain.h>
 
 #include "core/engine.h"
-#include "core/khandle.h"
+#include "khandle.h"
 #include "defines.h"
 #include "game_state.h"
 #include "math/math_types.h"
@@ -47,7 +47,7 @@
 #include "editor/editor_gizmo.h"
 
 // TODO: temp
-#include <core/identifier.h>
+#include <identifier.h>
 #include <resources/loaders/audio_loader.h>
 #include <resources/mesh.h>
 #include <resources/scene.h>
@@ -68,7 +68,7 @@
 #include "game_keybinds.h"
 // TODO: end temp
 #include "systems/timeline_system.h"
-#include "testbed_lib_version.h"
+#include "testbed.klib_version.h"
 
 /** @brief A private structure used to sort geometry by distance from the camera. */
 typedef struct geometry_distance {
@@ -123,37 +123,37 @@ b8 game_on_event(u16 code, void* sender, void* listener_inst, event_context cont
     testbed_game_state* state = (testbed_game_state*)game_inst->state;
 
     switch (code) {
-        case EVENT_CODE_OBJECT_HOVER_ID_CHANGED: {
-            state->hovered_object_id = context.data.u32[0];
-            return true;
+    case EVENT_CODE_OBJECT_HOVER_ID_CHANGED: {
+        state->hovered_object_id = context.data.u32[0];
+        return true;
+    }
+    case EVENT_CODE_SET_RENDER_MODE: {
+        i32 mode = context.data.i32[0];
+        switch (mode) {
+        default:
+        case RENDERER_VIEW_MODE_DEFAULT:
+            KDEBUG("Renderer mode set to default.");
+            state->render_mode = RENDERER_VIEW_MODE_DEFAULT;
+            break;
+        case RENDERER_VIEW_MODE_LIGHTING:
+            KDEBUG("Renderer mode set to lighting.");
+            state->render_mode = RENDERER_VIEW_MODE_LIGHTING;
+            break;
+        case RENDERER_VIEW_MODE_NORMALS:
+            KDEBUG("Renderer mode set to normals.");
+            state->render_mode = RENDERER_VIEW_MODE_NORMALS;
+            break;
+        case RENDERER_VIEW_MODE_CASCADES:
+            KDEBUG("Renderer mode set to cascades.");
+            state->render_mode = RENDERER_VIEW_MODE_CASCADES;
+            break;
+        case RENDERER_VIEW_MODE_WIREFRAME:
+            KDEBUG("Renderer mode set to wireframe.");
+            state->render_mode = RENDERER_VIEW_MODE_WIREFRAME;
+            break;
         }
-        case EVENT_CODE_SET_RENDER_MODE: {
-            i32 mode = context.data.i32[0];
-            switch (mode) {
-                default:
-                case RENDERER_VIEW_MODE_DEFAULT:
-                    KDEBUG("Renderer mode set to default.");
-                    state->render_mode = RENDERER_VIEW_MODE_DEFAULT;
-                    break;
-                case RENDERER_VIEW_MODE_LIGHTING:
-                    KDEBUG("Renderer mode set to lighting.");
-                    state->render_mode = RENDERER_VIEW_MODE_LIGHTING;
-                    break;
-                case RENDERER_VIEW_MODE_NORMALS:
-                    KDEBUG("Renderer mode set to normals.");
-                    state->render_mode = RENDERER_VIEW_MODE_NORMALS;
-                    break;
-                case RENDERER_VIEW_MODE_CASCADES:
-                    KDEBUG("Renderer mode set to cascades.");
-                    state->render_mode = RENDERER_VIEW_MODE_CASCADES;
-                    break;
-                case RENDERER_VIEW_MODE_WIREFRAME:
-                    KDEBUG("Renderer mode set to wireframe.");
-                    state->render_mode = RENDERER_VIEW_MODE_WIREFRAME;
-                    break;
-            }
-            return true;
-        }
+        return true;
+    }
     }
 
     return false;
@@ -167,7 +167,7 @@ b8 game_on_debug_event(u16 code, void* sender, void* listener_inst, event_contex
         const char* names[3] = {
             "cobblestone",
             "paving",
-            "paving2"};
+            "paving2" };
         static i8 choice = 2;
 
         // Save off the old names.
@@ -190,7 +190,8 @@ b8 game_on_debug_event(u16 code, void* sender, void* listener_inst, event_contex
             material_system_release(old_name);
         }
         return true;
-    } else if (code == EVENT_CODE_DEBUG1) {
+    }
+    else if (code == EVENT_CODE_DEBUG1) {
         if (state->main_scene.state < SCENE_STATE_LOADING) {
             KDEBUG("Loading main scene...");
             if (!load_main_scene(game_inst)) {
@@ -198,14 +199,16 @@ b8 game_on_debug_event(u16 code, void* sender, void* listener_inst, event_contex
             }
         }
         return true;
-    } else if (code == EVENT_CODE_DEBUG5) {
+    }
+    else if (code == EVENT_CODE_DEBUG5) {
         if (state->main_scene.state >= SCENE_STATE_LOADING) {
             KDEBUG("Saving main scene...");
             if (!save_main_scene(game_inst)) {
                 KERROR("Error saving main scene");
             }
         }
-    } else if (code == EVENT_CODE_DEBUG2) {
+    }
+    else if (code == EVENT_CODE_DEBUG2) {
         if (state->main_scene.state == SCENE_STATE_LOADED) {
             KDEBUG("Unloading scene...");
 
@@ -215,7 +218,8 @@ b8 game_on_debug_event(u16 code, void* sender, void* listener_inst, event_contex
             KDEBUG("Done.");
         }
         return true;
-    } else if (code == EVENT_CODE_DEBUG3) {
+    }
+    else if (code == EVENT_CODE_DEBUG3) {
         if (state->test_audio_file) {
             // Cycle between first 5 channels.
             static i8 channel_id = -1;
@@ -224,7 +228,8 @@ b8 game_on_debug_event(u16 code, void* sender, void* listener_inst, event_contex
             KTRACE("Playing audio on channel %u", channel_id);
             audio_system_channel_play(channel_id, state->test_audio_file, false);
         }
-    } else if (code == EVENT_CODE_DEBUG4) {
+    }
+    else if (code == EVENT_CODE_DEBUG4) {
         if (state->test_loop_audio_file) {
             static b8 playing = true;
             playing = !playing;
@@ -233,7 +238,8 @@ b8 game_on_debug_event(u16 code, void* sender, void* listener_inst, event_contex
                 if (!audio_system_channel_emitter_play(6, &state->test_emitter)) {
                     KERROR("Failed to play test emitter.");
                 }
-            } else {
+            }
+            else {
                 // Stop channel 6
                 audio_system_channel_stop(6);
             }
@@ -267,9 +273,11 @@ static b8 game_on_drag(u16 code, void* sender, void* listener_inst, event_contex
             state->using_gizmo = true;
             // Drag start -- change the interaction mode to "dragging".
             editor_gizmo_interaction_begin(&state->gizmo, state->world_camera, &r, EDITOR_GIZMO_INTERACTION_TYPE_MOUSE_DRAG);
-        } else if (code == EVENT_CODE_MOUSE_DRAGGED) {
+        }
+        else if (code == EVENT_CODE_MOUSE_DRAGGED) {
             editor_gizmo_handle_interaction(&state->gizmo, state->world_camera, &r, EDITOR_GIZMO_INTERACTION_TYPE_MOUSE_DRAG);
-        } else if (code == EVENT_CODE_MOUSE_DRAG_END) {
+        }
+        else if (code == EVENT_CODE_MOUSE_DRAG_END) {
             editor_gizmo_interaction_end(&state->gizmo);
             state->using_gizmo = false;
         }
@@ -280,108 +288,110 @@ static b8 game_on_drag(u16 code, void* sender, void* listener_inst, event_contex
 b8 game_on_button(u16 code, void* sender, void* listener_list, event_context context) {
     if (code == EVENT_CODE_BUTTON_PRESSED) {
         //
-    } else if (code == EVENT_CODE_BUTTON_RELEASED) {
+    }
+    else if (code == EVENT_CODE_BUTTON_RELEASED) {
         u16 button = context.data.u16[0];
         switch (button) {
-            case BUTTON_LEFT: {
-                i16 x = context.data.i16[1];
-                i16 y = context.data.i16[2];
-                testbed_game_state* state = (testbed_game_state*)listener_list;
+        case BUTTON_LEFT: {
+            i16 x = context.data.i16[1];
+            i16 y = context.data.i16[2];
+            testbed_game_state* state = (testbed_game_state*)listener_list;
 
-                // If the scene isn't loaded, don't do anything else.
-                if (state->main_scene.state < SCENE_STATE_LOADED) {
-                    return false;
-                }
+            // If the scene isn't loaded, don't do anything else.
+            if (state->main_scene.state < SCENE_STATE_LOADED) {
+                return false;
+            }
 
-                // If "manipulating gizmo " don't do below logic
-                if (state->using_gizmo) {
-                    return false;
-                }
+            // If "manipulating gizmo " don't do below logic
+            if (state->using_gizmo) {
+                return false;
+            }
 
-                mat4 view = camera_view_get(state->world_camera);
-                vec3 origin = camera_position_get(state->world_camera);
+            mat4 view = camera_view_get(state->world_camera);
+            vec3 origin = camera_position_get(state->world_camera);
 
-                viewport* v = &state->world_viewport;
-                // Only allow this action in the "primary" viewport.
-                if (point_in_rect_2d((vec2){(f32)x, (f32)y}, v->rect)) {
-                    ray r = ray_from_screen(
-                        vec2_create((f32)x, (f32)y),
-                        (v->rect),
-                        origin,
-                        view,
-                        v->projection);
-                    raycast_result r_result;
-                    if (scene_raycast(&state->main_scene, &r, &r_result)) {
-                        u32 hit_count = darray_length(r_result.hits);
-                        for (u32 i = 0; i < hit_count; ++i) {
-                            raycast_hit* hit = &r_result.hits[i];
-                            // TODO: Use Handle index to identify?
-                            KINFO("Hit!id:%u,dist:%f", hit->node_handle.handle_index, hit->distance);
+            viewport* v = &state->world_viewport;
+            // Only allow this action in the "primary" viewport.
+            if (point_in_rect_2d((vec2) { (f32)x, (f32)y }, v->rect)) {
+                ray r = ray_from_screen(
+                    vec2_create((f32)x, (f32)y),
+                    (v->rect),
+                    origin,
+                    view,
+                    v->projection);
+                raycast_result r_result;
+                if (scene_raycast(&state->main_scene, &r, &r_result)) {
+                    u32 hit_count = darray_length(r_result.hits);
+                    for (u32 i = 0; i < hit_count; ++i) {
+                        raycast_hit* hit = &r_result.hits[i];
+                        // TODO: Use Handle index to identify?
+                        KINFO("Hit!id:%u,dist:%f", hit->node_handle.handle_index, hit->distance);
 
-                            // create a debug line where the ray cast starts and ends (at the intersection)
-                            debug_line3d test_line;
-                            debug_line3d_create(r.origin, hit->position, k_handle_invalid(), &test_line);
-                            debug_line3d_initialize(&test_line);
-                            debug_line3d_load(&test_line);
-                            // Yellow for hits
-                            debug_line3d_colour_set(&test_line, (vec4){1.0f, 1.0f, 0.0f, 1.0f});
-
-                            darray_push(state->test_lines, test_line);
-
-                            // Create a debug box to show the intersection point
-                            debug_box3d test_box;
-
-                            debug_box3d_create((vec3){0.1f, 0.1f, 0.1f}, k_handle_invalid(), &test_box);
-                            debug_box3d_initialize(&test_box);
-                            debug_box3d_load(&test_box);
-
-                            extents_3d ext;
-                            ext.min = vec3_create(hit->position.x - 0.05f, hit->position.y - 0.05f, hit->position.z - 0.05f);
-                            ext.max = vec3_create(hit->position.x + 0.05f, hit->position.y + 0.05f, hit->position.z + 0.05f);
-                            debug_box3d_extents_set(&test_box, ext);
-
-                            darray_push(state->test_boxes, test_box);
-
-                            // Object selection
-                            if (i == 0) {
-                                state->selection.node_handle = hit->node_handle;
-                                state->selection.xform_handle = hit->xform_handle;
-                                state->selection.xform_parent_handle = hit->xform_parent_handle;
-                                if (!k_handle_is_invalid(state->selection.xform_handle)) {
-                                    // NOTE: is handle index what we should identify by?
-                                    KINFO("Selected object id %u", hit->node_handle.handle_index);
-                                    // state->gizmo.selected_xfrom=state->selection.xform;
-                                    editor_gizmo_selected_transform_set(&state->gizmo, state->selection.xform_handle, state->selection.xform_parent_handle);
-                                    // transform_parent_set(&state->gizmo.xform,state->selection.xform);
-                                }
-                            }
-                        }
-                    } else {
-                        KINFO("Not hit")
-
-                        // Create a debug line where the way cast starts and continue to .
+                        // create a debug line where the ray cast starts and ends (at the intersection)
                         debug_line3d test_line;
-                        debug_line3d_create(r.origin, vec3_add(r.origin, vec3_mul_scalar(r.direction, 100.0f)), k_handle_invalid(), &test_line);
+                        debug_line3d_create(r.origin, hit->position, k_handle_invalid(), &test_line);
                         debug_line3d_initialize(&test_line);
                         debug_line3d_load(&test_line);
-                        // Magenta for non-hits
-                        debug_line3d_colour_set(&test_line, (vec4){1.0f, 0.0f, 1.0f, 1.0f});
+                        // Yellow for hits
+                        debug_line3d_colour_set(&test_line, (vec4) { 1.0f, 1.0f, 0.0f, 1.0f });
 
                         darray_push(state->test_lines, test_line);
 
-                        if (k_handle_is_invalid(state->selection.xform_handle)) {
-                            KINFO("Object deselected.");
-                            state->selection.xform_handle = k_handle_invalid();
-                            state->selection.node_handle = k_handle_invalid();
-                            state->selection.xform_parent_handle = k_handle_invalid();
+                        // Create a debug box to show the intersection point
+                        debug_box3d test_box;
 
-                            editor_gizmo_selected_transform_set(&state->gizmo, state->selection.xform_handle, state->selection.xform_parent_handle);
+                        debug_box3d_create((vec3) { 0.1f, 0.1f, 0.1f }, k_handle_invalid(), & test_box);
+                        debug_box3d_initialize(&test_box);
+                        debug_box3d_load(&test_box);
+
+                        extents_3d ext;
+                        ext.min = vec3_create(hit->position.x - 0.05f, hit->position.y - 0.05f, hit->position.z - 0.05f);
+                        ext.max = vec3_create(hit->position.x + 0.05f, hit->position.y + 0.05f, hit->position.z + 0.05f);
+                        debug_box3d_extents_set(&test_box, ext);
+
+                        darray_push(state->test_boxes, test_box);
+
+                        // Object selection
+                        if (i == 0) {
+                            state->selection.node_handle = hit->node_handle;
+                            state->selection.xform_handle = hit->xform_handle;
+                            state->selection.xform_parent_handle = hit->xform_parent_handle;
+                            if (!k_handle_is_invalid(state->selection.xform_handle)) {
+                                // NOTE: is handle index what we should identify by?
+                                KINFO("Selected object id %u", hit->node_handle.handle_index);
+                                // state->gizmo.selected_xfrom=state->selection.xform;
+                                editor_gizmo_selected_transform_set(&state->gizmo, state->selection.xform_handle, state->selection.xform_parent_handle);
+                                // transform_parent_set(&state->gizmo.xform,state->selection.xform);
+                            }
                         }
-
-                        // TODO:hide gizmo,disable input,etc.
                     }
                 }
-            } break;
+                else {
+                    KINFO("Not hit")
+
+                        // Create a debug line where the way cast starts and continue to .
+                        debug_line3d test_line;
+                    debug_line3d_create(r.origin, vec3_add(r.origin, vec3_mul_scalar(r.direction, 100.0f)), k_handle_invalid(), &test_line);
+                    debug_line3d_initialize(&test_line);
+                    debug_line3d_load(&test_line);
+                    // Magenta for non-hits
+                    debug_line3d_colour_set(&test_line, (vec4) { 1.0f, 0.0f, 1.0f, 1.0f });
+
+                    darray_push(state->test_lines, test_line);
+
+                    if (k_handle_is_invalid(state->selection.xform_handle)) {
+                        KINFO("Object deselected.");
+                        state->selection.xform_handle = k_handle_invalid();
+                        state->selection.node_handle = k_handle_invalid();
+                        state->selection.xform_parent_handle = k_handle_invalid();
+
+                        editor_gizmo_selected_transform_set(&state->gizmo, state->selection.xform_handle, state->selection.xform_parent_handle);
+                    }
+
+                    // TODO:hide gizmo,disable input,etc.
+                }
+            }
+        } break;
         }
     }
     return false;
@@ -483,7 +493,7 @@ b8 application_initialize(struct application* game_inst) {
 
     // UI Standard System
     systems_manager_state* sys_mgr_state = engine_systems_manager_state_get(game_inst);
-    standard_ui_system_config standard_ui_cfg = {0};
+    standard_ui_system_config standard_ui_cfg = { 0 };
     standard_ui_cfg.max_control_count = 1024;
     if (!systems_manager_register(sys_mgr_state, K_SYSTEM_TYPE_STANDARD_UI_EXT, standard_ui_system_initialize, standard_ui_system_shutdown, standard_ui_system_update, standard_ui_system_render_prepare_frame, &standard_ui_cfg)) {
         KERROR("Failed to register standard ui system.");
@@ -554,17 +564,21 @@ b8 application_initialize(struct application* game_inst) {
     // Create test ui text objects
     if (!sui_label_control_create("testbed_mono_test_text", FONT_TYPE_BITMAP, "Ubuntu Mono 21px", 21, "Some test text 123,\n\tyo!", &state->test_text)) {
         KERROR("Failed to load basic ui bitmap text.");
-    } else {
+    }
+    else {
         if (!sui_label_control_load(&state->test_text)) {
             KERROR("Failed to load test text.");
-        } else {
+        }
+        else {
             void* sui_state = systems_manager_get_state(K_SYSTEM_TYPE_STANDARD_UI_EXT);
             if (!standard_ui_system_register_control(sui_state, &state->test_text)) {
                 KERROR("Unable to register control.");
-            } else {
+            }
+            else {
                 if (!standard_ui_system_control_add_child(sui_state, 0, &state->test_text)) {
                     KERROR("Failed to parent test text.");
-                } else {
+                }
+                else {
                     state->test_text.is_active = true;
                     if (!standard_ui_system_update_active(sui_state, &state->test_text)) {
                         KERROR("Unable to update active state.");
@@ -578,20 +592,24 @@ b8 application_initialize(struct application* game_inst) {
     sui_control_position_set(&state->test_text, vec3_create(20, game_inst->app_config.start_height - 75, 0));
 
     // Standard ui stuff.
-    if (!sui_panel_control_create("test_panel", (vec2){300.0f, 300.0f}, (vec4){0.0f, 0.0f, 0.0f, 0.5f}, &state->test_panel)) {
+    if (!sui_panel_control_create("test_panel", (vec2) { 300.0f, 300.0f }, (vec4) { 0.0f, 0.0f, 0.0f, 0.5f }, & state->test_panel)) {
         KERROR("Failed to create test panel.");
-    } else {
+    }
+    else {
         if (!sui_panel_control_load(&state->test_panel)) {
             KERROR("Failed to load test panel.");
-        } else {
-            xform_translate(state->test_panel.xform, (vec3){950, 350});
+        }
+        else {
+            xform_translate(state->test_panel.xform, (vec3) { 950, 350 });
             void* sui_state = systems_manager_get_state(K_SYSTEM_TYPE_STANDARD_UI_EXT);
             if (!standard_ui_system_register_control(sui_state, &state->test_panel)) {
                 KERROR("Unable to register control.");
-            } else {
+            }
+            else {
                 if (!standard_ui_system_control_add_child(sui_state, 0, &state->test_panel)) {
                     KERROR("Failed to parent test panel.");
-                } else {
+                }
+                else {
                     state->test_panel.is_active = true;
                     if (!standard_ui_system_update_active(sui_state, &state->test_panel)) {
                         KERROR("Unable to update active state.");
@@ -603,7 +621,8 @@ b8 application_initialize(struct application* game_inst) {
 
     if (!sui_button_control_create("test_button", &state->test_button)) {
         KERROR("Failed to create test button.");
-    } else {
+    }
+    else {
         // Assign a click handler.
         state->test_button.on_click = sui_test_button_on_click;
         // Move and rotate it some.
@@ -611,14 +630,17 @@ b8 application_initialize(struct application* game_inst) {
         // transform_translate_rotate(&state->test_button.xform, (vec3){50, 50, 0}, rotation);
         if (!sui_button_control_load(&state->test_button)) {
             KERROR("Failed to load test button.");
-        } else {
+        }
+        else {
             void* sui_state = systems_manager_get_state(K_SYSTEM_TYPE_STANDARD_UI_EXT);
             if (!standard_ui_system_register_control(sui_state, &state->test_button)) {
                 KERROR("Unable to register control.");
-            } else {
+            }
+            else {
                 if (!standard_ui_system_control_add_child(sui_state, &state->test_panel, &state->test_button)) {
                     KERROR("Failed to parent test button.");
-                } else {
+                }
+                else {
                     state->test_button.is_active = true;
                     if (!standard_ui_system_update_active(sui_state, &state->test_button)) {
                         KERROR("Unable to update active state.");
@@ -631,17 +653,21 @@ b8 application_initialize(struct application* game_inst) {
     if (!sui_label_control_create("testbed_UTF_test_sys_text", FONT_TYPE_SYSTEM, "Noto Sans CJK JP", 31, "Press 'L' to load a \n\tscene!\n\n\tこんにちは 한", &state->test_sys_text)) {
         KERROR("Failed to load basic ui system text.");
         return false;
-    } else {
+    }
+    else {
         if (!sui_label_control_load(&state->test_sys_text)) {
             KERROR("Failed to load test system text.");
-        } else {
+        }
+        else {
             void* sui_state = systems_manager_get_state(K_SYSTEM_TYPE_STANDARD_UI_EXT);
             if (!standard_ui_system_register_control(sui_state, &state->test_sys_text)) {
                 KERROR("Unable to register control.");
-            } else {
+            }
+            else {
                 if (!standard_ui_system_control_add_child(sui_state, 0, &state->test_sys_text)) {
                     KERROR("Failed to parent test text.");
-                } else {
+                }
+                else {
                     state->test_sys_text.is_active = true;
                     if (!standard_ui_system_update_active(sui_state, &state->test_sys_text)) {
                         KERROR("Unable to update active state.");
@@ -654,13 +680,13 @@ b8 application_initialize(struct application* game_inst) {
 
     // TODO: end temp load/prepare stuff
     state->world_camera = camera_system_acquire("world");
-    camera_position_set(state->world_camera, (vec3){5.83f, 4.35f, 18.68f});
-    camera_rotation_euler_set(state->world_camera, (vec3){-29.43f, -42.41f, 0.0f});
+    camera_position_set(state->world_camera, (vec3) { 5.83f, 4.35f, 18.68f });
+    camera_rotation_euler_set(state->world_camera, (vec3) { -29.43f, -42.41f, 0.0f });
 
     // TODO: temp test
     state->world_camera_2 = camera_system_acquire("world_2");
-    camera_position_set(state->world_camera_2, (vec3){5.83f, 4.35f, 18.68f});
-    camera_rotation_euler_set(state->world_camera_2, (vec3){-29.43f, -42.41f, 0.0f});
+    camera_position_set(state->world_camera_2, (vec3) { 5.83f, 4.35f, 18.68f });
+    camera_rotation_euler_set(state->world_camera_2, (vec3) { -29.43f, -42.41f, 0.0f });
     // camera_position_set(state->world_camera_2, vec3_zero());
     // camera_rotation_euler_set(state->world_camera_2, vec3_zero());
 
@@ -804,7 +830,7 @@ b8 application_update(application* game_inst, struct frame_data* p_frame_data) {
                 KCLAMP(ksin(get_engine_delta_time()) * 0.75f + 0.5f, 0.0f, 1.0f),
                 KCLAMP(ksin(get_engine_delta_time() - (K_2PI / 3)) * 0.75f + 0.5f, 0.0f, 1.0f),
                 KCLAMP(ksin(get_engine_delta_time() - (K_4PI / 3)) * 0.75f + 0.5f, 0.0f, 1.0f),
-                1.0f};
+                1.0f };
             state->p_light_1->data.position.z = 20.0f + ksin(get_engine_delta_time());
 
             // Make the audio emitter follow it
@@ -866,24 +892,24 @@ FPS: %5.1f(%4.1fms)        Pos=[%7.3f %7.3f %7.3f] Rot=[%7.3f, %7.3f, %7.3f]\n\
 Upd: %8.3fus, Prep: %8.3fus, Rend: %8.3fus, Tot: %8.3fus \n\
 Mouse: X=%-5d Y=%-5d   L=%s R=%s   NDC: X=%.6f, Y=%.6f\n\
 VSync: %s Drawn: %-5u (%-5u shadow pass) Hovered: %s%u",
-            fps,
-            frame_time,
-            pos.x, pos.y, pos.z,
-            rad_to_deg(rot.x), rad_to_deg(rot.y), rad_to_deg(rot.z),
-            total_update_avg_us,
-            total_prepare_avg_us,
-            total_render_avg_us,
-            total_avg,
-            mouse_x, mouse_y,
-            left_down ? "Y" : "N",
-            right_down ? "Y" : "N",
-            mouse_x_ndc,
-            mouse_y_ndc,
-            vsync_text,
-            p_frame_data->drawn_mesh_count,
-            p_frame_data->drawn_shadow_mesh_count,
-            state->hovered_object_id == INVALID_ID ? "none" : "",
-            state->hovered_object_id == INVALID_ID ? 0 : state->hovered_object_id);
+fps,
+frame_time,
+pos.x, pos.y, pos.z,
+rad_to_deg(rot.x), rad_to_deg(rot.y), rad_to_deg(rot.z),
+total_update_avg_us,
+total_prepare_avg_us,
+total_render_avg_us,
+total_avg,
+mouse_x, mouse_y,
+left_down ? "Y" : "N",
+right_down ? "Y" : "N",
+mouse_x_ndc,
+mouse_y_ndc,
+vsync_text,
+p_frame_data->drawn_mesh_count,
+p_frame_data->drawn_shadow_mesh_count,
+state->hovered_object_id == INVALID_ID ? "none" : "",
+state->hovered_object_id == INVALID_ID ? 0 : state->hovered_object_id);
         // Update the text control
         sui_label_text_set(&state->test_text, text_buffer);
     }
@@ -1082,21 +1108,21 @@ static void refresh_rendergraph_pfns(application* app) {
 static b8 create_rendergraphs(application* app) {
     testbed_game_state* state = (testbed_game_state*)app->state;
 
-    forward_rendergraph_config forward_config = {0};
+    forward_rendergraph_config forward_config = { 0 };
     forward_config.shadowmap_resolution = 2048;
     if (!forward_rendergraph_create(&forward_config, &state->forward_graph)) {
         KERROR("Forward rendergraph failed to Create.");
         return false;
     }
 
-    editor_rendergraph_config editor_config = {0};
+    editor_rendergraph_config editor_config = { 0 };
     editor_config.dummy = 0;
     if (!editor_rendergraph_create(&editor_config, &state->editor_graph)) {
         KERROR("Editor rendergraph failed to initialize.");
         return false;
     }
 
-    standard_ui_rendergraph_config sui_config = {0};
+    standard_ui_rendergraph_config sui_config = { 0 };
     sui_config.dummy = 0;
     if (!standard_ui_rendergraph_create(&sui_config, &state->standard_ui_graph)) {
         KERROR("Standard UI rendergraph failed to initialize.");

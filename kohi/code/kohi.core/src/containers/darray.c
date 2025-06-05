@@ -1,7 +1,7 @@
 #include "containers/darray.h"
 
-#include "kmemory.h"
 #include "logger.h"
+#include "memory/kmemory.h"
 
 void* _darray_create(u64 length, u64 stride, frame_allocator_int* allocator) {
     u64 header_size = sizeof(darray_header);
@@ -49,7 +49,7 @@ void* _darray_resize(void* array) {
 
     darray_header* new_header = (darray_header*)((u8*)temp - header_size);
     new_header->length = header->length;
-    
+
     kcopy_memory(temp, array, header->length * header->stride);
 
     darray_destroy(array);

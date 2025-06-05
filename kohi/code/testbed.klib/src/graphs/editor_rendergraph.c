@@ -1,7 +1,7 @@
 #include "editor_rendergraph.h"
 
 #include "containers/darray.h"
-#include "core/logger.h"
+#include "logger.h"
 #include "editor/editor_gizmo.h"
 #include "math/kmath.h"
 #include "passes/editor_pass.h"
@@ -90,10 +90,10 @@ b8 editor_rendergraph_frame_prepare(editor_rendergraph* graph, struct frame_data
             // f32 fixed_size = 0.1f;                            // TODO: Make this a configurable option for gizmo size.
             f32 scale_scalar = 1.0f;                    // ((2.0f * ktan(fov * 0.5f)) * dist) * fixed_size;
             graph->gizmo->scale_scalar = scale_scalar;  // Keep a copy of this for hit detection.
-            mat4 scale = mat4_scale((vec3){scale_scalar, scale_scalar, scale_scalar});
+            mat4 scale = mat4_scale((vec3) { scale_scalar, scale_scalar, scale_scalar });
             model = mat4_mul(model, scale);
 
-            geometry_render_data render_data = {0};
+            geometry_render_data render_data = { 0 };
             render_data.model = model;
             render_data.material = g->material;
             render_data.vertex_count = g->vertex_count;
@@ -107,7 +107,7 @@ b8 editor_rendergraph_frame_prepare(editor_rendergraph* graph, struct frame_data
 
 #ifdef _DEBUG
             {
-                geometry_render_data plane_normal_render_data = {0};
+                geometry_render_data plane_normal_render_data = { 0 };
                 plane_normal_render_data.model = xform_world_get(graph->gizmo->plane_normal_line.xform);
                 geometry* g = &graph->gizmo->plane_normal_line.geo;
                 plane_normal_render_data.material = 0;
@@ -122,7 +122,8 @@ b8 editor_rendergraph_frame_prepare(editor_rendergraph* graph, struct frame_data
 #endif
             ext_data->debug_geometry_count = darray_length(ext_data->debug_geometries);
         }
-    } else {
+    }
+    else {
         // Do not run these passes if the scene is not loaded.
         graph->editor_pass.pass_data.do_execute = false;
     }

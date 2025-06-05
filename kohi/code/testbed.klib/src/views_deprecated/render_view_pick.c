@@ -1,11 +1,10 @@
 #include "render_view_pick.h"
 
 #include "containers/darray.h"
-#include "core/event.h"
-#include "core/frame_data.h"
-#include "core/kmemory.h"
-#include "core/kstring.h"
-#include "core/logger.h"
+#include "event.h"
+#include "frame_data.h"
+#include "kmemory.h"
+#include "logger.h"
 #include "core/uuid.h"
 #include "math/kmath.h"
 #include "renderer/renderer_frontend.h"
@@ -64,10 +63,10 @@ static b8 render_view_on_event(u16 code, void* sender, void* listener_inst, even
     }
 
     switch (code) {
-        case EVENT_CODE_DEFAULT_RENDERTARGET_REFRESH_REQUIRED:
-            /* render_view_system_render_targets_regenerate(self); */
-            // This needs to be consumed by other views, so consider it _not_ handled.
-            return false;
+    case EVENT_CODE_DEFAULT_RENDERTARGET_REFRESH_REQUIRED:
+        /* render_view_system_render_targets_regenerate(self); */
+        // This needs to be consumed by other views, so consider it _not_ handled.
+        return false;
     }
 
     return false;
@@ -78,22 +77,22 @@ static void acquire_shader_instances(const struct render_view* self) {
 
     // Not saving the instance id because it doesn't matter.
     u32 instance;
-    shader_instance_resource_config instance_resource_config = {0};
-    instance_resource_config.uniform_config_count=0; //NOTE:no textures,so this doesn't matter
+    shader_instance_resource_config instance_resource_config = { 0 };
+    instance_resource_config.uniform_config_count = 0; //NOTE:no textures,so this doesn't matter
     instance_resource_config.uniform_configs = 0;
     // UI shader
-    if (!renderer_shader_instance_resources_acquire(data->ui_shader_info.s,&instance_resource_config, &instance)) {
+    if (!renderer_shader_instance_resources_acquire(data->ui_shader_info.s, &instance_resource_config, &instance)) {
         KFATAL("render_view_pick failed to acquire UI shader resources.");
         return;
     }
     // World shader
-    if (!renderer_shader_instance_resources_acquire(data->world_shader_info.s,&instance_resource_config, &instance)) {
+    if (!renderer_shader_instance_resources_acquire(data->world_shader_info.s, &instance_resource_config, &instance)) {
         KFATAL("render_view_pick failed to acquire World shader resources.");
         return;
     }
 
     // Terrain Shader
-    if (!renderer_shader_instance_resources_acquire(data->terrain_shader_info.s,&instance_resource_config, &instance)) {
+    if (!renderer_shader_instance_resources_acquire(data->terrain_shader_info.s, &instance_resource_config, &instance)) {
         KFATAL("render_view_pick failed to acquire Terrain shader resources.");
         return;
     }
@@ -390,7 +389,7 @@ b8 render_view_pick_on_render(const render_view* self, const render_view_packet*
         if (!shader_system_uniform_set_by_location(data->world_shader_info.view_location, &data->world_shader_info.view)) {
             KERROR("Failed to apply view matrix");
         }
-        shader_system_apply_global(true,p_frame_data);
+        shader_system_apply_global(true, p_frame_data);
 
         // Draw geometries. Start from 0 since world geometries are added first, and stop at the world geometry count.
         u32 world_geometry_count = !packet_data->world_mesh_data ? 0 : darray_length(packet_data->world_mesh_data);
@@ -411,7 +410,7 @@ b8 render_view_pick_on_render(const render_view* self, const render_view_packet*
             }
 
             b8 needs_update = !data->instance_updated[current_instance_id];
-            shader_system_apply_instance(needs_update,p_frame_data);
+            shader_system_apply_instance(needs_update, p_frame_data);
             data->instance_updated[current_instance_id] = true;
 
             // Apply the locals
@@ -439,7 +438,7 @@ b8 render_view_pick_on_render(const render_view* self, const render_view_packet*
             KERROR("Failed to apply view matrix");
         }
 
-        shader_system_apply_global(true,p_frame_data);
+        shader_system_apply_global(true, p_frame_data);
 
         // Draw geometries. Start from 0 since terrain geometries are added first, and stop at the terrain geometry count.
         u32 terrain_geometry_count = !packet_data->terrain_mesh_data ? 0 : darray_length(packet_data->terrain_mesh_data);
@@ -460,7 +459,7 @@ b8 render_view_pick_on_render(const render_view* self, const render_view_packet*
             }
 
             b8 needs_update = !data->instance_updated[current_instance_id];
-            shader_system_apply_instance(needs_update,p_frame_data);
+            shader_system_apply_instance(needs_update, p_frame_data);
             data->instance_updated[current_instance_id] = true;
 
             // Apply the locals
@@ -504,7 +503,7 @@ b8 render_view_pick_on_render(const render_view* self, const render_view_packet*
         if (!shader_system_uniform_set_by_location(data->ui_shader_info.view_location, &data->ui_shader_info.view)) {
             KERROR("Failed to apply view matrix");
         }
-        shader_system_apply_global(true,p_frame_data);
+        shader_system_apply_global(true, p_frame_data);
 
         // Draw geometries. Start off where world geometries left off.
         for (u32 i = world_geometry_count; i < packet->geometry_count; ++i) {
@@ -524,7 +523,7 @@ b8 render_view_pick_on_render(const render_view* self, const render_view_packet*
             }
 
             b8 needs_update = !data->instance_updated[current_instance_id];
-            shader_system_apply_instance(needs_update,p_frame_data);
+            shader_system_apply_instance(needs_update, p_frame_data);
             data->instance_updated[current_instance_id] = true;
 
             // Apply the locals
@@ -573,7 +572,7 @@ b8 render_view_pick_on_render(const render_view* self, const render_view_packet*
     texture* t = &data->colour_target_attachment_texture;
 
     // Read the pixel at the mouse coordinate.
-    u8 pixel_rgba[4] = {0};
+    u8 pixel_rgba[4] = { 0 };
     u8* pixel = &pixel_rgba[0];
 
     // Clamp to image size
@@ -601,9 +600,11 @@ b8 render_view_pick_attachment_target_regenerate(struct render_view* self, u32 p
 
     if (attachment->type == RENDER_TARGET_ATTACHMENT_TYPE_COLOUR) {
         attachment->texture = &data->colour_target_attachment_texture;
-    } else if (attachment->type & RENDER_TARGET_ATTACHMENT_TYPE_DEPTH || attachment->type & RENDER_TARGET_ATTACHMENT_TYPE_STENCIL) {
+    }
+    else if (attachment->type & RENDER_TARGET_ATTACHMENT_TYPE_DEPTH || attachment->type & RENDER_TARGET_ATTACHMENT_TYPE_STENCIL) {
         attachment->texture = &data->depth_target_attachment_texture;
-    } else {
+    }
+    else {
         KERROR("Unsupported attachment type 0x%x.", attachment->type);
         return false;
     }

@@ -1,16 +1,15 @@
 #include "xform_system.h"
 
-#include "kassert.h"
-#include "identifier.h"
-#include "khandle.h"
-#include "kmemory.h"
-#include "kstring.h"
-#include "logger.h"
-#include "core/systems_manager.h"
+#include "core/engine.h"
+#include "kdebug/kassert.h"
 #include "defines.h"
+#include "identifiers/identifier.h"
+#include "identifiers/khandle.h"
+#include "logger.h"
 #include "math/kmath.h"
 #include "math/math_types.h"
-#include "resource_types.h"
+#include "memory/kmemory.h"
+#include "strings/kstring.h"
 
 // Going with a SOA here so that like data is grouped together.
 typedef struct xform_system_state {
@@ -47,10 +46,6 @@ static k_handle handle_create(xform_system_state* state);
 static void handle_destroy(xform_system_state* state, k_handle* t);
 // Validates the handle itself, as well as compares it against the xform at the handle's index position.
 static b8 validate_handle(xform_system_state* state, k_handle handle);
-
-static xform_system_state* get_system_state(void) {
-    return systems_manager_get_state(K_SYSTEM_TYPE_XFORM);
-}
 
 b8 xform_system_initialize(u64* memory_requirement, void* state, void* config) {
     *memory_requirement = sizeof(xform_system_state);
@@ -121,8 +116,8 @@ b8 xform_system_update(void* state, struct frame_data* p_frame_data) {
 }
 
 k_handle xform_create(void) {
-    k_handle handle = { 0 };
-    xform_system_state* state = get_system_state();
+    k_handle handle = {0};
+    xform_system_state* state = engine_systems_get()->xform_system;
     if (state) {
         handle = handle_create(state);
         u32 i = handle.handle_index;
@@ -132,8 +127,7 @@ k_handle xform_create(void) {
         state->local_matrices[i] = mat4_identity();
         state->world_matrices[i] = mat4_identity();
         // NOTE:This is not added to the dirty list because the defaults form an identity matrix.
-    }
-    else {
+    } else {
         KERROR("Attemped to create a  transform before the system was initialized.");
         handle = k_handle_invalid();
     }
@@ -141,8 +135,8 @@ k_handle xform_create(void) {
 }
 
 k_handle xform_from_position(vec3 position) {
-    k_handle handle = { 0 };
-    xform_system_state* state = get_system_state();
+    k_handle handle = {0};
+    xform_system_state* state =engine_systems_get()->xform_system;
     if (state) {
         handle = handle_create(state);
         u32 i = handle.handle_index;
@@ -153,8 +147,7 @@ k_handle xform_from_position(vec3 position) {
         state->world_matrices[i] = mat4_identity();
         // Add to the dirty list.
         dirty_list_add(state, handle);
-    }
-    else {
+    } else {
         KERROR("Attemped to create a  transform before the system was initialized.");
         handle = k_handle_invalid();
     }
@@ -162,8 +155,8 @@ k_handle xform_from_position(vec3 position) {
 }
 
 k_handle xform_from_rotation(quat rotation) {
-    k_handle handle = { 0 };
-    xform_system_state* state = get_system_state();
+    k_handle handle = {0};
+    xform_system_state* state =engine_systems_get()->xform_system;
     if (state) {
         handle = handle_create(state);
         u32 i = handle.handle_index;
@@ -174,8 +167,7 @@ k_handle xform_from_rotation(quat rotation) {
         state->world_matrices[i] = mat4_identity();
         // Add to the dirty list.
         dirty_list_add(state, handle);
-    }
-    else {
+    } else {
         KERROR("Attemped to create a  transform before the system was initialized.");
         handle = k_handle_invalid();
     }
@@ -183,8 +175,8 @@ k_handle xform_from_rotation(quat rotation) {
 }
 
 k_handle xform_from_position_rotation(vec3 position, quat rotation) {
-    k_handle handle = { 0 };
-    xform_system_state* state = get_system_state();
+    k_handle handle = {0};
+    xform_system_state* state =engine_systems_get()->xform_system;
     if (state) {
         handle = handle_create(state);
         u32 i = handle.handle_index;
@@ -195,8 +187,7 @@ k_handle xform_from_position_rotation(vec3 position, quat rotation) {
         state->world_matrices[i] = mat4_identity();
         // Add to the dirty list.
         dirty_list_add(state, handle);
-    }
-    else {
+    } else {
         KERROR("Attemped to create a  transform before the system was initialized.");
         handle = k_handle_invalid();
     }
@@ -204,8 +195,8 @@ k_handle xform_from_position_rotation(vec3 position, quat rotation) {
 }
 
 k_handle xform_from_position_rotation_scale(vec3 position, quat rotation, vec3 scale) {
-    k_handle handle = { 0 };
-    xform_system_state* state = get_system_state();
+    k_handle handle = {0};
+    xform_system_state* state = engine_systems_get()->xform_system;
     if (state) {
         handle = handle_create(state);
         u32 i = handle.handle_index;
@@ -216,8 +207,7 @@ k_handle xform_from_position_rotation_scale(vec3 position, quat rotation, vec3 s
         state->world_matrices[i] = mat4_identity();
         // Add to the dirty list.
         dirty_list_add(state, handle);
-    }
-    else {
+    } else {
         KERROR("Attemped to create a  transform before the system was initialized.");
         handle = k_handle_invalid();
     }
@@ -231,11 +221,11 @@ k_handle xform_from_matrix(mat4 m) {
 }
 
 void xform_destroy(k_handle* t) {
-    handle_destroy(get_system_state(), t);
+    handle_destroy(engine_systems_get()->xform_system, t);
 }
 
 vec3 xform_position_get(k_handle t) {
-    xform_system_state* state = get_system_state();
+    xform_system_state* state =engine_systems_get()->xform_system;
     if (!validate_handle(state, t)) {
         KWARN("Invalid handle passed,nothing was done.");
         return vec3_zero();
@@ -245,29 +235,27 @@ vec3 xform_position_get(k_handle t) {
 }
 
 void xform_position_set(k_handle t, vec3 position) {
-    xform_system_state* state = get_system_state();
+    xform_system_state* state = engine_systems_get()->xform_system;
     if (!validate_handle(state, t)) {
         KWARN("Invalid handle passed,nothing was done.");
-    }
-    else {
+    } else {
         state->positions[t.handle_index] = position;
         dirty_list_add(state, t);
     }
 }
 
 void xform_translate(k_handle t, vec3 translation) {
-    xform_system_state* state = get_system_state();
+    xform_system_state* state =engine_systems_get()->xform_system;
     if (!validate_handle(state, t)) {
         KWARN("Invalid handle passed, nothing was done.");
-    }
-    else {
+    } else {
         state->positions[t.handle_index] = vec3_add(state->positions[t.handle_index], translation);
         dirty_list_add(state, t);
     }
 }
 
 quat xform_rotation_get(k_handle t) {
-    xform_system_state* state = get_system_state();
+    xform_system_state* state = engine_systems_get()->xform_system;
     if (!validate_handle(state, t)) {
         KWARN("Invalid handle passed, returning identity vector as rotation.");
         return quat_identity();
@@ -276,29 +264,27 @@ quat xform_rotation_get(k_handle t) {
 }
 
 void xform_rotation_set(k_handle t, quat rotation) {
-    xform_system_state* state = get_system_state();
+    xform_system_state* state = engine_systems_get()->xform_system;
     if (!validate_handle(state, t)) {
         KWARN("Invalid handle passed, nothing was done.");
-    }
-    else {
+    } else {
         state->rotations[t.handle_index] = rotation;
         dirty_list_add(state, t);
     }
 }
 
 void xform_rotate(k_handle t, quat rotation) {
-    xform_system_state* state = get_system_state();
+    xform_system_state* state = engine_systems_get()->xform_system;
     if (!validate_handle(state, t)) {
         KWARN("Invalid handle passed, nothing was done.");
-    }
-    else {
+    } else {
         state->rotations[t.handle_index] = quat_mul(state->rotations[t.handle_index], rotation);
         dirty_list_add(state, t);
     }
 }
 
 vec3 xform_scale_get(k_handle t) {
-    xform_system_state* state = get_system_state();
+    xform_system_state* state = engine_systems_get()->xform_system;
     if (!validate_handle(state, t)) {
         KWARN("Invalid handle passed, returning one vector as scale.");
         return vec3_zero();
@@ -307,33 +293,30 @@ vec3 xform_scale_get(k_handle t) {
 }
 
 void xform_scale_set(k_handle t, vec3 scale) {
-    xform_system_state* state = get_system_state();
+    xform_system_state* state = engine_systems_get()->xform_system;
     if (!validate_handle(state, t)) {
         KWARN("Invalid handle passed, nothing was done.");
-    }
-    else {
+    } else {
         state->scales[t.handle_index] = scale;
         dirty_list_add(state, t);
     }
 }
 
 void xform_scale(k_handle t, vec3 scale) {
-    xform_system_state* state = get_system_state();
+    xform_system_state* state = engine_systems_get()->xform_system;
     if (!validate_handle(state, t)) {
         KWARN("Invalid handle passed, nothing was done.");
-    }
-    else {
+    } else {
         state->scales[t.handle_index] = vec3_mul(state->scales[t.handle_index], scale);
         dirty_list_add(state, t);
     }
 }
 
 void xform_position_rotation_set(k_handle t, vec3 position, quat rotation) {
-    xform_system_state* state = get_system_state();
+    xform_system_state* state =engine_systems_get()->xform_system;
     if (!validate_handle(state, t)) {
         KWARN("Invalid handle passed, nothing was done.");
-    }
-    else {
+    } else {
         state->positions[t.handle_index] = position;
         state->rotations[t.handle_index] = rotation;
         dirty_list_add(state, t);
@@ -341,11 +324,10 @@ void xform_position_rotation_set(k_handle t, vec3 position, quat rotation) {
 }
 
 void xform_position_rotation_scale_set(k_handle t, vec3 position, quat rotation, vec3 scale) {
-    xform_system_state* state = get_system_state();
+    xform_system_state* state = engine_systems_get()->xform_system;
     if (!validate_handle(state, t)) {
         KWARN("Invalid handle passed, nothing was done.");
-    }
-    else {
+    } else {
         state->positions[t.handle_index] = position;
         state->rotations[t.handle_index] = rotation;
         state->scales[t.handle_index] = scale;
@@ -354,11 +336,10 @@ void xform_position_rotation_scale_set(k_handle t, vec3 position, quat rotation,
 }
 
 void xform_translate_rotate(k_handle t, vec3 translation, quat rotation) {
-    xform_system_state* state = get_system_state();
+    xform_system_state* state = engine_systems_get()->xform_system;
     if (!validate_handle(state, t)) {
         KWARN("Invalid handle passed, nothing was done.");
-    }
-    else {
+    } else {
         state->positions[t.handle_index] = vec3_add(state->positions[t.handle_index], translation);
         state->rotations[t.handle_index] = quat_mul(state->rotations[t.handle_index], rotation);
         dirty_list_add(state, t);
@@ -366,7 +347,7 @@ void xform_translate_rotate(k_handle t, vec3 translation, quat rotation) {
 }
 
 void xform_calculate_local(k_handle t) {
-    xform_system_state* state = get_system_state();
+    xform_system_state* state = engine_systems_get()->xform_system;
     if (!k_handle_is_invalid(t)) {
         u32 index = t.handle_index;
         // TODO: investigate mat4_from_translation_rotation_scale
@@ -376,14 +357,14 @@ void xform_calculate_local(k_handle t) {
 }
 
 void xform_world_set(k_handle t, mat4 world) {
-    xform_system_state* state = get_system_state();
+    xform_system_state* state = engine_systems_get()->xform_system;
     if (!k_handle_is_invalid(t)) {
         state->world_matrices[t.handle_index] = world;
     }
 }
 
 mat4 xform_world_get(k_handle t) {
-    xform_system_state* state = get_system_state();
+    xform_system_state* state = engine_systems_get()->xform_system;
     if (!k_handle_is_invalid(t)) {
         return state->world_matrices[t.handle_index];
     }
@@ -393,7 +374,7 @@ mat4 xform_world_get(k_handle t) {
 }
 
 mat4 xform_local_get(k_handle t) {
-    xform_system_state* state = get_system_state();
+    xform_system_state* state = engine_systems_get()->xform_system;
     if (!k_handle_is_invalid(t)) {
         u32 index = t.handle_index;
         return state->local_matrices[index];
@@ -403,75 +384,28 @@ mat4 xform_local_get(k_handle t) {
     return mat4_identity();
 }
 
-b8 string_to_xform_config(const char* str, scene_xform_config* out_xform) {
-    if (!str || !out_xform) {
-        return false;
-    }
-
-    kzero_memory(out_xform, sizeof(scene_xform_config));
-    f32 values[7] = { 0 };
-
-    i32 count = sscanf(
-        str,
-        "%f %f %f %f %f %f %f %f %f %f",
-        &out_xform->position.x, &out_xform->position.y, &out_xform->position.z,
-        &values[0], &values[1], &values[2], &values[3], &values[4], &values[5], &values[6]);
-
-    if (count == 10) {
-        // Treat as quat, load directly.
-        out_xform->rotation.x = values[0];
-        out_xform->rotation.y = values[1];
-        out_xform->rotation.z = values[2];
-        out_xform->rotation.w = values[3];
-
-        // Set scale
-        out_xform->scale.x = values[4];
-        out_xform->scale.y = values[5];
-        out_xform->scale.z = values[6];
-    }
-    else if (count == 9) {
-        quat x_rot = quat_from_axis_angle((vec3) { 1.0f, 0, 0 }, deg_to_rad(values[0]), true);
-        quat y_rot = quat_from_axis_angle((vec3) { 0, 1.0f, 0 }, deg_to_rad(values[1]), true);
-        quat z_rot = quat_from_axis_angle((vec3) { 0, 0, 1.0f }, deg_to_rad(values[2]), true);
-        out_xform->rotation = quat_mul(x_rot, quat_mul(y_rot, z_rot));
-
-        // Set scale
-        out_xform->scale.x = values[3];
-        out_xform->scale.y = values[4];
-        out_xform->scale.z = values[5];
-    }
-    else {
-        KWARN("Format error: invalid xform provided. Identity transform will be used.");
-        out_xform->position = vec3_zero();
-        out_xform->rotation = quat_identity();
-        out_xform->scale = vec3_one();
-        return false;
-    }
-
-    return true;
-}
 
 const char* xform_to_string(k_handle t) {
-    xform_system_state* state = get_system_state();
+    xform_system_state* state = engine_systems_get()->xform_system;
     if (!k_handle_is_invalid(t)) {
         u32 index = t.handle_index;
         vec3 position = state->positions[index];
         vec3 scale = state->scales[index];
         quat rotation = state->rotations[index];
 
-        char buffer[512] = { 0 };
+        char buffer[512] = {0};
         kzero_memory(buffer, sizeof(char) * 512);
         string_format(buffer, "%f %f %f %f %f %f %f %f %f %f",
-            position.x,
-            position.y,
-            position.z,
-            rotation.x,
-            rotation.y,
-            rotation.z,
-            rotation.w,
-            scale.x,
-            scale.y,
-            scale.z);
+                      position.x,
+                      position.y,
+                      position.z,
+                      rotation.x,
+                      rotation.y,
+                      rotation.z,
+                      rotation.w,
+                      scale.x,
+                      scale.y,
+                      scale.z);
         return string_duplicate(buffer);
     }
 

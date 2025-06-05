@@ -2,10 +2,10 @@
 
 #include "containers/darray.h"
 #include "core/frame_data.h"
-#include "core/kmemory.h"
-#include "core/kstring.h"
-#include "core/logger.h"
 #include "defines.h"
+#include "memory/kmemory.h"
+#include "strings/kstring.h"
+#include "logger.h"
 #include "renderer/renderer_frontend.h"
 #include "renderer/renderer_types.h"
 

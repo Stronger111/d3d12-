@@ -1,10 +1,10 @@
 #include "kmemory.h"
 
-#include "kmutex.h"
-#include "kstring.h"
 #include "logger.h"
 #include "memory/dynamic_allocator.h"
 #include "platform/platform.h"
+#include "strings/kstring.h"
+#include "threads/kmutex.h"
 
 // TODO: Custom string lib
 #include <stdio.h>
@@ -47,9 +47,9 @@ static const char* memory_tag_strings[MEMORY_TAG_MAX_TAGS] =
         "SYSTEM_FONT",
         "KEYMAP     ",
         "HASHTABLE  ",
+        "UI         ",
         "AUDIO      ",
-        "UI         "};
-
+        "REGISTRY   "};
 typedef struct memory_system_state {
     memory_system_configuration config;
     struct memory_stats stats;

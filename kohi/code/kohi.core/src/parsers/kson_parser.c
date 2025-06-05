@@ -2,10 +2,10 @@
 
 #include "containers/darray.h"
 #include "containers/stack.h"
-#include "core/asserts.h"
-#include "core/kmemory.h"
-#include "core/kstring.h"
-#include "core/logger.h"
+#include "kdebug/kassert.h"
+#include "memory/kmemory.h"
+#include "strings/kstring.h"
+#include "logger.h"
 
 b8 kson_parser_create(kson_parser* out_parser) {
     if (!out_parser) {
