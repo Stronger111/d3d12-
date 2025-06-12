@@ -3,7 +3,8 @@
 // Version reporting
 #include "kohi.runtime_version.h"
 
-#include "application_types.h"
+#include "application/application_config.h"
+#include "application/application_types.h"
 #include "console.h"
 #include "containers/darray.h"
 #include "containers/registry.h"
@@ -18,6 +19,7 @@
 #include "memory/linear_allocator.h"
 #include "memory/kmemory.h"
 #include "platform/platform.h"
+#include "plugins/plugin_types.h"
 #include "renderer/renderer_frontend.h"
 #include "strings/kstring.h"
 #include "systems/plugin_system.h"
@@ -71,6 +73,12 @@ typedef struct engine_state_t {
     // External systems state registry.
     kregistry external_systems_registry;
 
+    kruntime_plugin* renderer_plugin;
+    kruntime_plugin* audio_plugin;
+
+    //darray list of created windows.
+    kwindow* windows;
+
 } engine_state_t;
 
 static engine_state_t* engine_state;
@@ -98,11 +106,10 @@ static void frame_allocator_free_all(void) {
 
 // Event handlers
 static b8 engine_on_event(u16 code, void* sender, void* listener_inst, event_context context);
-static b8 engine_on_resized(u16 code, void* sender, void* listener_inst, event_context context);
 static void engine_on_filewatcher_file_deleted(u32 watcher_id);
 static void engine_on_filewatcher_file_written(u32 watcher_id);
 static void engine_on_window_closed(const struct kwindow* window);
-static void engine_on_window_resized(const struct kwindow* window, u16 width, u16 height);
+static void engine_on_window_resized(const struct kwindow* window);
 static void engine_on_process_key(keys key, b8 pressed);
 static void engine_on_process_mouse_button(mouse_buttons button, b8 pressed);
 static void engine_on_process_mouse_move(i16 x, i16 y);
@@ -137,22 +144,16 @@ b8 engine_create(application* game_inst) {
     engine_state->game_inst = game_inst;
     engine_state->is_running = false;
     engine_state->is_suspended = false;
-    engine_state->resizing = false;
-    engine_state->frames_since_resize = 0;
 
     // Setup a registry for external systems to register themselves to .
     kregistry_create(&engine_state->external_systems_registry);
-
-    // TODO: Handle plugins more gracefully
-    game_inst->app_config.renderer_plugin = game_inst->render_plugin;
-    game_inst->app_config.audio_plugin = game_inst->audio_plugin;
 
     // Engine systems
     engine_system_states* systems = &engine_state->systems;
 
     // Platform initialization first (NOTE: NOT window creation - that should happen much later).
     {
-        platform_system_config plat_config = {0};
+        platform_system_config plat_config = { 0 };
         plat_config.application_name = game_inst->app_config.name;
         systems->platform_memory_requirement = 0;
         platform_system_startup(&systems->platform_memory_requirement, 0, &plat_config);
@@ -194,22 +195,19 @@ b8 engine_create(application* game_inst) {
 
     // Plugin system
     {
-        // TODO: Parse plugin system config from app config.(see entry.c)
-        plugin_system_config plugin_sys_config = {0};
-        plugin_sys_config.plugins = darray_create(plugin_system_plugin_config);
+        //Get the generic config from application config first.
+        application_system_config generic_sys_config = { 0 };
+        if (!application_config_system_config_get(&game_inst->app_config, "plugin_system", &generic_sys_config)) {
+            KERROR("No configuration exists in app config for the plugin system,This configuration is required.");
+            return false;
+        }
 
-        // renderer plugin
-        plugin_system_plugin_config renderer_plugin_config = {0};
-        renderer_plugin_config.name = "kohi.plugin.renderer.vulkan";
-        darray_push(plugin_sys_config.plugins, renderer_plugin_config);
-        // audio plugin
-        plugin_system_plugin_config audio_plugin_config = {0};
-        audio_plugin_config.name = "kohi.plugin.audio.openal";
-        darray_push(plugin_sys_config.plugins, audio_plugin_config);
-        // standard ui plugin
-        plugin_system_plugin_config ui_plugin_config = {0};
-        ui_plugin_config.name = "kohi.plugin.ui.standard";
-        darray_push(plugin_sys_config.plugins, ui_plugin_config);
+        //Parse plugin system config from app config.
+        plugin_system_config plugin_sys_config = { 0 };
+        if (!plugin_system_deserialize_config(generic_sys_config.configuration_str, &plugin_sys_config)) {
+            KERROR("Failed to deserialize plugin system config,which is required.");
+            return false;
+        }
 
         plugin_system_intialize(&systems->plugin_system_memory_requirement, 0, &plugin_sys_config);
         systems->plugin_system = kallocate(systems->plugin_system_memory_requirement, MEMORY_TAG_ENGINE);
@@ -238,7 +236,7 @@ b8 engine_create(application* game_inst) {
             return false;
         }
 
-        // TODO:After event system, register watcher and input callbacks
+        //After event system, register watcher and input callbacks
         platform_register_watcher_deleted_callback(engine_on_filewatcher_file_deleted);
         platform_register_watcher_written_callback(engine_on_filewatcher_file_written);
         platform_register_window_closed_callback(engine_on_window_closed);
@@ -290,9 +288,19 @@ b8 engine_create(application* game_inst) {
 
     // Renderer System
     {
-        renderer_system_config renderer_sys_config = {0};
-        renderer_sys_config.application_name = game_inst->app_config.name;
-        renderer_sys_config.plugin = game_inst->app_config.renderer_plugin;
+        // Get the generic config from application config first.
+        application_system_config generic_sys_config = { 0 };
+        if (!application_config_system_config_get(&game_inst->app_config, "renderer", &generic_sys_config)) {
+            KERROR("No configuration exists in app config for the renderer system. This configuration is required.");
+            return false;
+        }
+
+        renderer_system_config renderer_sys_config = { 0 };
+        if (!renderer_system_deserialize_config(generic_sys_config.configuration_str, &renderer_sys_config)) {
+            KERROR("Failed to deserialize renderer system config, which is required.");
+            return false;
+        }
+
         renderer_system_initialize(&systems->renderer_system_memory_requirement, 0, &renderer_sys_config);
         systems->renderer_system = kallocate(systems->renderer_system_memory_requirement, MEMORY_TAG_ENGINE);
         if (!renderer_system_initialize(&systems->renderer_system_memory_requirement, systems->renderer_system, &renderer_sys_config)) {
@@ -309,7 +317,8 @@ b8 engine_create(application* game_inst) {
         if (thread_count < 1) {
             KFATAL("Error: Platform reported processor count (minus one for main thread) as %i. Need at least one additional thread for the job system.", thread_count);
             return false;
-        } else {
+        }
+        else {
             KTRACE("Available threads: %i", thread_count);
         }
 
@@ -330,17 +339,19 @@ b8 engine_create(application* game_inst) {
         if (max_thread_count == 1 || !renderer_multithreaded) {
             // Everything on one job thread.
             job_thread_types[0] |= (JOB_TYPE_GPU_RESOURCE | JOB_TYPE_RESOURCE_LOAD);
-        } else if (max_thread_count == 2) {
+        }
+        else if (max_thread_count == 2) {
             // Split things between the 2 threads
             job_thread_types[0] |= JOB_TYPE_GPU_RESOURCE;
             job_thread_types[1] |= JOB_TYPE_RESOURCE_LOAD;
-        } else {
+        }
+        else {
             // Dedicate the first 2 threads to these things, pass off general tasks to other threads.
             job_thread_types[0] = JOB_TYPE_GPU_RESOURCE;
             job_thread_types[1] = JOB_TYPE_RESOURCE_LOAD;
         }
 
-        job_system_config job_sys_config = {0};
+        job_system_config job_sys_config = { 0 };
         job_sys_config.max_job_thread_count = thread_count;
         job_sys_config.type_masks = job_thread_types;
         job_system_initialize(&systems->job_system_memory_requirement, 0, &job_sys_config);
@@ -354,8 +365,9 @@ b8 engine_create(application* game_inst) {
 
     // Audio system
     {
-        audio_system_config audio_sys_config = {0};
-        audio_sys_config.plugin = game_inst->app_config.audio_plugin;
+        audio_system_config audio_sys_config = { 0 };
+        // FIXME: Resolve from application config.
+        audio_sys_config.plugin = 0; // game_inst->app_config->audio_plugin;
         audio_sys_config.audio_channel_count = 8;
         audio_system_initialize(&systems->audio_system_memory_requirement, 0, &audio_sys_config);
         systems->audio_system = kallocate(systems->audio_system_memory_requirement, MEMORY_TAG_ENGINE);
@@ -367,7 +379,7 @@ b8 engine_create(application* game_inst) {
 
     // Xform
     {
-        xform_system_config xform_sys_config = {0};
+        xform_system_config xform_sys_config = { 0 };
         xform_sys_config.initial_slot_count = 128;  // TODO: expose to app config.
         xform_system_initialize(&systems->xform_system_memory_requirement, 0, &xform_sys_config);
         systems->xform_system = kallocate(systems->xform_system_memory_requirement, MEMORY_TAG_ENGINE);
@@ -379,7 +391,7 @@ b8 engine_create(application* game_inst) {
 
     // Timeline
     {
-        timeline_system_config timeline_config = {0};
+        timeline_system_config timeline_config = { 0 };
         timeline_config.dummy = 1;
         timeline_system_initialize(&systems->timeline_system_memory_requirement, 0, 0);
         systems->timeline_system = kallocate(systems->timeline_system_memory_requirement, MEMORY_TAG_ENGINE);
@@ -391,7 +403,7 @@ b8 engine_create(application* game_inst) {
 
     // Texture System
     {
-        texture_system_config texture_sys_config = {0};
+        texture_system_config texture_sys_config = { 0 };
         texture_sys_config.max_texture_count = 65536;
         texture_system_initialize(&systems->texture_system_memory_requirement, 0, &texture_sys_config);
         systems->texture_system = kallocate(systems->texture_system_memory_requirement, MEMORY_TAG_ENGINE);
@@ -413,7 +425,7 @@ b8 engine_create(application* game_inst) {
 
     // Material System
     {
-        material_system_config material_sys_config = {0};
+        material_system_config material_sys_config = { 0 };
         material_sys_config.max_material_count = 4096;
         material_system_initialize(&systems->material_system_memory_requirement, 0, &material_sys_config);
         systems->material_system = kallocate(systems->material_system_memory_requirement, MEMORY_TAG_ENGINE);
@@ -425,7 +437,7 @@ b8 engine_create(application* game_inst) {
 
     // Geometry system
     {
-        geometry_system_config geometry_sys_config = {0};
+        geometry_system_config geometry_sys_config = { 0 };
         geometry_sys_config.max_geometry_count = 4096;
         geometry_system_initialize(&systems->geometry_system_memory_requirement, 0, &geometry_sys_config);
         systems->geometry_system = kallocate(systems->geometry_system_memory_requirement, MEMORY_TAG_ENGINE);
@@ -447,7 +459,7 @@ b8 engine_create(application* game_inst) {
 
     // Camera System
     {
-        camera_system_config camera_sys_config = {0};
+        camera_system_config camera_sys_config = { 0 };
         camera_sys_config.max_camera_count = 61;
         camera_system_initialize(&systems->camera_system_memory_requirement, 0, &camera_sys_config);
         systems->camera_system = kallocate(systems->camera_system_memory_requirement, MEMORY_TAG_ENGINE);
@@ -465,8 +477,32 @@ b8 engine_create(application* game_inst) {
         return false;
     }
 
-    // TODO: Reach into platform and open new window(s) in accordance with app config.
+    // Reach into platform and open new window(s) in accordance with app config.
     // Notify renderer of window(s)/setup surface(s), etc.
+    u32 window_count = darray_length(game_inst->app_config.windows);
+    //FIXME: Multiple window support at the engine level.
+    if (window_count > 1) {
+        KFATAL("Multiple windows are not yet implemented at the engine level. Please juse stick to one for now.");
+        return false;
+    }
+
+    for (u32 i = 0;i < window_count;++i) {
+        kwindow_config* window_config = &game_inst->app_config.windows[i];
+        kwindow new_window = { 0 };
+        if (!platform_window_create(window_config, &new_window, true)) {
+            KERROR("Failed to create window '%s'.", window_config->name);
+            return false;
+        }
+
+        //Tell the renderer about the window.
+        if (!renderer_on_window_created(engine_state->systems.renderer_system, &new_window)) {
+            KERROR("The renderer failed to create resources for the window '%s'.", window_config->name);
+            return false;
+        }
+
+        //Add to tracked window list.
+        darray_push(engine_state->windows, new_window);
+    }
 
     // TODO: Handle post-boot items in systems that require app config.
     //
@@ -483,7 +519,8 @@ b8 engine_create(application* game_inst) {
     // Allocate for the  application's frame data.
     if (game_inst->app_config.app_frame_data_size > 0) {
         engine_state->p_frame_data.application_frame_data = kallocate(game_inst->app_config.app_frame_data_size, MEMORY_TAG_GAME);
-    } else {
+    }
+    else {
         engine_state->p_frame_data.application_frame_data = 0;
     }
 
@@ -512,10 +549,12 @@ b8 engine_run(application* game_inst) {
     f64 target_frame_seconds = 1.0f / 60;
     f64 frame_elapsed_time = 0;  // 帧过去的时间
 
-    KINFO("stuff");
     char* mem_usage = get_memory_usage_str();
     KINFO(mem_usage);
     string_free(mem_usage);
+
+    //FIXME: Need a better way to select the active window.
+    kwindow* w = &engine_state->windows[0];
 
     while (engine_state->is_running) {
         if (!platform_pump_messages()) {
@@ -541,24 +580,30 @@ b8 engine_run(application* game_inst) {
             // update metrics
             metrics_update(frame_elapsed_time);
 
+            if (!renderer_frame_prepare(engine_state->systems.renderer_system, &engine_state->p_frame_data)) {
+                continue;
+            }
+
             // Make sure the window is not currently being resized by waiting a designed
             // number of frames after the last resize operation before performing the backend updates.
-            if (engine_state->resizing) {
-                engine_state->frames_since_resize++;
+            if (w->resizing) {
+                w->frames_since_resize++;
 
                 // If the required number of frames have passed since the resize,go ahead and perform the actual updates.
-                if (engine_state->frames_since_resize >= 30) {
-                    renderer_on_resized(engine_state->width, engine_state->height);
+                //FIXME: Configurable delay here instead of magic 30 frames.
+                if (w->frames_since_resize >= 30) {
+                    renderer_on_window_resized(engine_state->systems.renderer_system, w);
                     // NOTE: Don't bother checking the result of this,since this will likely
                     // recreate the swapchain and boot to the next frame anyway.
-                    renderer_frame_prepare(&engine_state->p_frame_data);
+                    renderer_frame_prepare_window_surface(engine_state->systems.renderer_system, w, &engine_state->p_frame_data);
 
                     // Notify the application of the resize.
-                    engine_state->game_inst->on_resize(engine_state->game_inst, engine_state->width, engine_state->height);
+                    engine_state->game_inst->on_window_resize(engine_state->game_inst, w);
 
-                    engine_state->frames_since_resize = 0;
-                    engine_state->resizing = false;
-                } else {
+                    w->frames_since_resize = 0;
+                    w->resizing = false;
+                }
+                else {
                     // Skip rendering the frame and try again next time.
                     // NOTE: Simulate a frame being "drawn" at 60 FPS.
                     platform_sleep(16);
@@ -568,12 +613,12 @@ b8 engine_run(application* game_inst) {
                 continue;
             }
 
-            if (!renderer_frame_prepare(&engine_state->p_frame_data)) {
+            if (!renderer_frame_prepare_window_surface(engine_state->systems.renderer_system, w, &engine_state->p_frame_data)) {
                 // This can also happen not just from a resize above, but also if a renderer flag
                 // (such as VSync) changed, which may also require resource recreation. To handle this,
                 // Notify the application of a resize event, which it can then pass on to its rendergraph(s)
                 // as needed.
-                engine_state->game_inst->on_resize(engine_state->game_inst, engine_state->width, engine_state->height);
+                engine_state->game_inst->on_window_resize(engine_state->game_inst, w);
                 continue;
             }
 
@@ -583,14 +628,15 @@ b8 engine_run(application* game_inst) {
                 break;
             }
 
-            if (!renderer_begin(&engine_state->p_frame_data)) {
+            //Start recording to the command list.
+            if (!renderer_frame_command_list_begin(engine_state->systems.renderer_system, &engine_state->p_frame_data)) {
                 KFATAL("Failed to begin renderer.Shutting down.");
                 engine_state->is_running = false;
                 break;
             }
 
             // Begin "prepare_frame" render event grouping.
-            renderer_begin_debug_label("prepare_frame", (vec3){1.0f, 1.0f, 0.0f});
+            renderer_begin_debug_label("prepare_frame", (vec3) { 1.0f, 1.0f, 0.0f });
             // TODO: frame prepare for systems that need it.
 
             // Have the application generate the render packet.
@@ -609,11 +655,21 @@ b8 engine_run(application* game_inst) {
                 break;
             }
 
-            // End the frame.
-            renderer_end(&engine_state->p_frame_data);
+            // End the recording to the command list.
+            if (!renderer_frame_command_list_end(engine_state->systems.renderer_system, &engine_state->p_frame_data)) {
+                KFATAL("Failed to end renderer command list,Shutting down.");
+                engine_state->is_running = false;
+                break;
+            }
+
+            if (!renderer_frame_submit(engine_state->systems.renderer_system, &engine_state->p_frame_data)) {
+                KFATAL("Failed to submit work to the renderer for frame rendering.");
+                engine_state->is_running = false;
+                break;
+            }
 
             // Present the frame.
-            if (!renderer_present(&engine_state->p_frame_data)) {
+            if (!renderer_frame_present(engine_state->systems.renderer_system,w,&engine_state->p_frame_data)) {
                 KERROR("The call to renderer_present failed. This is likely unrecoverable. Shutting down.");
                 engine_state->is_running = false;
                 break;
@@ -689,7 +745,6 @@ b8 engine_run(application* game_inst) {
 void engine_on_event_system_initialized(void) {
     // Register for engine-level events.
     event_register(EVENT_CODE_APPLICATION_QUIT, 0, engine_on_event);
-    event_register(EVENT_CODE_RESIZED, 0, engine_on_resized);
 }
 
 const struct frame_data* engine_frame_data_get(struct application* game_inst) {
@@ -706,64 +761,30 @@ k_handle engine_external_system_register(u64 system_state_memory_requirement) {
     return kregistry_add_entry(&engine_state->external_systems_registry, 0, system_state_memory_requirement, true);
 }
 
- void* engine_external_system_state_get(k_handle system_handle){
+void* engine_external_system_state_get(k_handle system_handle) {
     // Acquire the system state, but without any listener/callback.
     return kregistry_entry_acquire(&engine_state->external_systems_registry, system_handle, 0, 0);
- }
+}
 
 static b8 engine_on_event(u16 code, void* sender, void* listener_inst, event_context context) {
     switch (code) {
-        case EVENT_CODE_APPLICATION_QUIT: {
-            KINFO("EVENT_CODE_APPLICATION_QUIT recieved.shutting down.\n");
-            engine_state->is_running = false;
-            return true;
-        }
+    case EVENT_CODE_APPLICATION_QUIT: {
+        KINFO("EVENT_CODE_APPLICATION_QUIT recieved.shutting down.\n");
+        engine_state->is_running = false;
+        return true;
     }
-    return false;
-}
-
-static b8 engine_on_resized(u16 code, void* sender, void* listener_inst, event_context context) {
-    if (code == EVENT_CODE_RESIZED) {
-        // Flag as resizing and store the change,but wait to regenerate.
-        engine_state->resizing = true;
-        // Also reset the frame count since the last resize operation.
-        engine_state->frames_since_resize = 0;
-
-        u16 width = context.data.u16[0];
-        u16 height = context.data.u16[1];
-
-        // check if different,If so, triggle a resize event
-        if (width != engine_state->width || height != engine_state->height) {
-            engine_state->width = width;
-            engine_state->height = height;
-
-            KDEBUG("Window resize:%i %i", width, height);
-
-            // Handle minimization
-            if (width == 0 || height == 0) {
-                KINFO("Window minimized,suspending application.");
-                engine_state->is_suspended = true;
-                return true;
-            } else {
-                if (engine_state->is_suspended) {
-                    KINFO("Window restored,resuming application.");
-                    engine_state->is_suspended = false;
-                }
-            }
-        }
     }
-    // Event purposely not handled to allow other listeners to get this.
     return false;
 }
 
 static void engine_on_filewatcher_file_deleted(u32 watcher_id) {
-    event_context context = {0};
+    event_context context = { 0 };
     context.data.u32[0] = watcher_id;
     event_fire(EVENT_CODE_WATCHED_FILE_DELETED, 0, context);
 }
 
 static void engine_on_filewatcher_file_written(u32 watcher_id) {
-    event_context context = {0};
+    event_context context = { 0 };
     context.data.u32[0] = watcher_id;
     event_fire(EVENT_CODE_WATCHED_FILE_WRITTEN, 0, context);
 }
@@ -771,15 +792,23 @@ static void engine_on_filewatcher_file_written(u32 watcher_id) {
 static void engine_on_window_closed(const struct kwindow* window) {
     if (window) {
         // TODO: handle window closes independently.
-        event_fire(EVENT_CODE_APPLICATION_QUIT, 0, (event_context){});
+        event_fire(EVENT_CODE_APPLICATION_QUIT, 0, (event_context) {});
     }
 }
 
-static void engine_on_window_resized(const struct kwindow* window, u16 width, u16 height) {
-    event_context context;
-    context.data.u16[0] = width;
-    context.data.u16[1] = height;
-    event_fire(EVENT_CODE_RESIZED, 0, context);
+static void engine_on_window_resized(const struct kwindow* window) {
+    //Handle minimization
+    if (window->width == 0 || window->height == 0) {
+        KINFO("Window minimized,suspending application.");
+        //FIXME: This should be per-window,not global.
+        engine_state->is_suspended = true;
+    }
+    else {
+        if (engine_state->is_suspended) {
+            KINFO("Window restored, resuming application.");
+            engine_state->is_suspended = false;
+        }
+    }
 }
 
 static void engine_on_process_key(keys key, b8 pressed) {

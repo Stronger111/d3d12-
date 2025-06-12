@@ -120,3 +120,13 @@ KAPI b8 filesystem_read_all_text(file_handle* handle, char* out_text, u64* out_b
  * @returns True if successful; otherwise false.
  */
 KAPI b8 filesystem_write(file_handle* handle, u64 data_size, const void* data, u64* out_bytes_written);
+
+/**
+ * @brief Opens and reads all text content of the file at the provided path.
+ * No file handle required. File is closed automatically.
+ * NOTE: This function also handles size disparity between text read in and files that contain CRLF.
+ *
+ * @param filepath The path to the file to read.
+ * @returns A string containing the file contents if successful; otherwise 0/null.
+ */
+KAPI const char* filesystem_read_entire_text_file(const char* filepath);

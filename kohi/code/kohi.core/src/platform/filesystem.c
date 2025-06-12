@@ -2,6 +2,7 @@
 
 #include "logger.h"
 #include "memory/kmemory.h"
+#include "strings/kstring.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -11,7 +12,7 @@
 b8 filesystem_exists(const char* path) {
 #ifdef _MSC_VER
     struct _stat buffer;
-    return _stat(path, &buffer)==0;
+    return _stat(path, &buffer) == 0;
 #else
     struct stat buffer;
     return (stat(path, &buffer) == 0);
@@ -25,11 +26,14 @@ b8 filesystem_open(const char* path, file_modes mode, b8 binary, file_handle* ou
 
     if ((mode & FILE_MODE_READ) != 0 && (mode & FILE_MODE_WRITE) != 0) {
         mode_str = binary ? "w+b" : "w+";
-    } else if ((mode & FILE_MODE_READ) != 0 && (mode & FILE_MODE_WRITE) == 0) {
+    }
+    else if ((mode & FILE_MODE_READ) != 0 && (mode & FILE_MODE_WRITE) == 0) {
         mode_str = binary ? "rb" : "r";
-    } else if ((mode & FILE_MODE_READ) == 0 && (mode & FILE_MODE_WRITE) != 0) {
+    }
+    else if ((mode & FILE_MODE_READ) == 0 && (mode & FILE_MODE_WRITE) != 0) {
         mode_str = binary ? "wb" : "w";
-    } else {
+    }
+    else {
         KERROR("Invalid mode passed while trying to open file:'%s'", path);
         return false;
     }
@@ -105,7 +109,7 @@ b8 filesystem_read_all_bytes(file_handle* handle, u8* out_bytes, u64* out_bytes_
     if (handle->handle && out_bytes && out_bytes_read) {
         // File size
         u64 size = 0;
-        if(!filesystem_size(handle, &size)) {
+        if (!filesystem_size(handle, &size)) {
             return false;
         }
         *out_bytes_read = fread(out_bytes, 1, size, (FILE*)handle->handle);
@@ -118,7 +122,7 @@ b8 filesystem_read_all_text(file_handle* handle, char* out_text, u64* out_bytes_
     if (handle->handle && out_text && out_bytes_read) {
         // File size
         u64 size = 0;
-        if(!filesystem_size(handle, &size)) {
+        if (!filesystem_size(handle, &size)) {
             return false;
         }
 
@@ -138,4 +142,29 @@ b8 filesystem_write(file_handle* handle, u64 data_size, const void* data, u64* o
         return true;
     }
     return false;
+}
+
+const char* filesystem_read_entire_text_file(const char* filepath) {
+    file_handle f;
+    if (!filesystem_open(filepath, FILE_MODE_READ, false, &f)) {
+        return 0;
+    }
+
+    //File size
+    u64 size = 0;
+    if (!filesystem_size(f.handle, &size)) {
+        return false;
+    }
+    char* buf = kallocate(size, MEMORY_TAG_STRING);
+    u64 bytes_read = fread(buf, 1, size, (FILE*)f.handle);
+
+    // It's possible that bytes_read < size because of CRLF (i.e. on Windows)
+    // that are ignored when reading here. If so, return a duplicate of the string
+    // (effectively trimming it) instead of the allocated one above to avoid leaks.
+    if (bytes_read < size) {
+        const char* copy = string_duplicate(buf);
+        kfree(buf, size, MEMORY_TAG_STRING);
+        return copy;
+    }
+    return buf;
 }

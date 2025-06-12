@@ -1,13 +1,14 @@
 #include "rendergraph.h"
 
 #include "containers/darray.h"
+#include "core/engine.h"
 #include "core/frame_data.h"
 #include "defines.h"
-#include "memory/kmemory.h"
-#include "strings/kstring.h"
 #include "logger.h"
+#include "memory/kmemory.h"
 #include "renderer/renderer_frontend.h"
 #include "renderer/renderer_types.h"
+#include "strings/kstring.h"
 
 static b8 regenerate_render_targets(rendergraph* graph, rendergraph_pass* pass, u16 width, u16 height);
 
@@ -32,6 +33,7 @@ void rendergraph_destroy(rendergraph* graph) {
             graph->name = 0;
         }
 
+        // Destroy self-owned render targets.
         if (graph->passes) {
             // Destroy render passes.
             u32 pass_count = darray_length(graph->passes);
@@ -39,13 +41,15 @@ void rendergraph_destroy(rendergraph* graph) {
                 rendergraph_pass* pass = graph->passes[i];
 
                 // Destroy render target.
-                for (u32 p = 0; p < pass->pass.render_target_count; ++p) {
-                    render_target* target = &pass->pass.targets[p];
+                if (pass->owned_render_targets) {
+                    u32 render_target_count = darray_length(pass->owned_render_targets);
+                    for (u32 p = 0; p < render_target_count; ++p) {
+                        render_target* target = &pass->owned_render_targets[p];
 
-                    // Destroy the target if it exists.
-                    renderer_render_target_destroy(target, true);
+                        // Destroy the target if it exists.
+                        renderer_render_target_destroy(target, true);
+                    }
                 }
-
                 // Destroy the pass itself.
                 pass->destroy(pass);
             }
@@ -67,7 +71,7 @@ b8 rendergraph_global_source_add(rendergraph* graph, const char* name, rendergra
         return false;
     }
 
-    rendergraph_source source = {0};
+    rendergraph_source source = { 0 };
     source.name = string_duplicate(name);
     source.type = type;
     source.origin = origin;
@@ -107,7 +111,7 @@ b8 rendergraph_pass_create(rendergraph* graph, const char* name, b8 (*create_pfn
 
 // 添加Pass资源
 b8 rendergraph_pass_source_add(rendergraph* graph, const char* pass_name, const char* source_name, rendergraph_source_type type,
-                               rendergraph_source_origin origin) {
+    rendergraph_source_origin origin) {
     if (!graph) {
         return false;
     }
@@ -136,7 +140,7 @@ b8 rendergraph_pass_source_add(rendergraph* graph, const char* pass_name, const 
         }
     }
 
-    rendergraph_source source = {0};
+    rendergraph_source source = { 0 };
     source.name = string_duplicate(source_name);
     source.type = type;
     source.origin = origin;
@@ -174,7 +178,7 @@ b8 rendergraph_pass_sink_add(rendergraph* graph, const char* pass_name, const ch
         }
     }
 
-    rendergraph_sink sink = {0};
+    rendergraph_sink sink = { 0 };
     sink.name = string_duplicate(sink_name);
     darray_push(pass->sinks, sink);
 
@@ -182,7 +186,7 @@ b8 rendergraph_pass_sink_add(rendergraph* graph, const char* pass_name, const ch
 }
 
 b8 rendergraph_pass_set_sink_linkage(rendergraph* graph, const char* pass_name, const char* sink_name, const char* source_pass_name,
-                                     const char* source_name) {
+    const char* source_name) {
     if (!graph) {
         return false;
     }
@@ -227,7 +231,8 @@ b8 rendergraph_pass_set_sink_linkage(rendergraph* graph, const char* pass_name, 
                 break;
             }
         }
-    } else {
+    }
+    else {
         // Pass source.
         rendergraph_pass* source_pass = 0;
         u32 pass_count = darray_length(graph->passes);
@@ -267,7 +272,7 @@ b8 rendergraph_finalize(rendergraph* graph) {
     }
 
     // Get global texture references for global sources. 给全局RT赋引用
-    u32 global_source_count = darray_length(graph->global_sources);
+    /*u32 global_source_count = darray_length(graph->global_sources);
     for (u32 i = 0; i < global_source_count; ++i) {
         rendergraph_source* source = &graph->global_sources[i];
         if (source->origin == RENDERGRAPH_SOURCE_ORIGIN_GLOBAL) {
@@ -276,15 +281,17 @@ b8 rendergraph_finalize(rendergraph* graph) {
             for (u32 j = 0; j < attachment_count; ++j) {
                 if (source->type == RENDERGRAPH_SOURCE_TYPE_RENDER_TARGET_COLOUR) {
                     source->textures[i] = renderer_window_attachment_get(i);
-                } else if (source->type == RENDERGRAPH_SOURCE_TYPE_RENDER_TARGET_DEPTH_STENCIL) {
+                }
+                else if (source->type == RENDERGRAPH_SOURCE_TYPE_RENDER_TARGET_DEPTH_STENCIL) {
                     source->textures[i] = renderer_depth_attachment_get(i);
-                } else {
+                }
+                else {
                     KERROR("Unsupported source type:0x%x", source->type);
                     return false;
                 }
             }
         }
-    }
+    }*/
 
     // Verify that something is linked up to the global colour source. 必须有pass使用全局ColorBuffer
     rendergraph_pass* backbuffer_first_user = 0;
@@ -341,7 +348,8 @@ b8 rendergraph_finalize(rendergraph* graph) {
                         }
                     }
                 }
-            } else if (source->type == RENDERGRAPH_SOURCE_TYPE_RENDER_TARGET_DEPTH_STENCIL) {
+            }
+            else if (source->type == RENDERGRAPH_SOURCE_TYPE_RENDER_TARGET_DEPTH_STENCIL) {
                 if (source->origin == RENDERGRAPH_SOURCE_ORIGIN_OTHER) {
                     // Other is a reference to the source output of another pass.
                     // Search all other pass' sinks to see if any have this source
@@ -361,13 +369,15 @@ b8 rendergraph_finalize(rendergraph* graph) {
                             break;
                         }
                     }
-                } else if (source->origin == RENDERGRAPH_SOURCE_ORIGIN_SELF) {
+                }
+                else if (source->origin == RENDERGRAPH_SOURCE_ORIGIN_SELF) {
                     // If the origin is self,hook up the textures to the source.
                     if (pass->source_populate) {
                         if (!pass->source_populate(pass, source)) {
                             KERROR("Failed to populate source '%s'.", source->name);
                         }
-                    } else {
+                    }
+                    else {
                         KERROR("Rendergraph pass '%s':source '%s' is set to RENDERGRAPH_SOURCE_ORIGIN_SELF but does not have source_populate defined.");
                         return false;
                     }
@@ -422,7 +432,8 @@ b8 rendergraph_load_resources(rendergraph* graph) {
                     if (!pass->source_populate(pass, source)) {
                         KERROR("Failed to populate source '%s'.", source->name);
                     }
-                } else {
+                }
+                else {
                     KERROR("Rendergraph pass '%s':source '%s' is set to RENDERGRAPH_SOURCE_ORIGIN_SELF but does not have source_populate defined.");
                     return false;
                 }
@@ -471,7 +482,12 @@ static b8 regenerate_render_targets(rendergraph* graph, rendergraph_pass* pass, 
     if (!graph || !pass) {
         return false;
     }
+    // FIXME: This function shouldn't even exist. If the rendergraph_pass has rendertargets it owns, it will
+   // also be aware of when those need regenerating, and won't need a call like this to facilitate it.
+   // This and all the PFNs relatedto it can likely be removed completely.
 
+   /*
+    // If the rendergraph pass owns render tagets, regenerate them.
     for (u32 i = 0; i < pass->pass.render_target_count; ++i) {
         render_target* target = &pass->pass.targets[i];
 
@@ -484,13 +500,16 @@ static b8 regenerate_render_targets(rendergraph* graph, rendergraph_pass* pass, 
             if (attachment->source == RENDER_TARGET_ATTACHMENT_SOURCE_DEFAULT) {
                 if (attachment->type == RENDER_TARGET_ATTACHMENT_TYPE_COLOUR) {
                     attachment->texture = renderer_window_attachment_get(i);
-                } else if (attachment->type & RENDER_TARGET_ATTACHMENT_TYPE_DEPTH || attachment->type & RENDER_TARGET_ATTACHMENT_TYPE_STENCIL) {
+                }
+                else if (attachment->type & RENDER_TARGET_ATTACHMENT_TYPE_DEPTH || attachment->type & RENDER_TARGET_ATTACHMENT_TYPE_STENCIL) {
                     attachment->texture = renderer_depth_attachment_get(i);
-                } else {
+                }
+                else {
                     KERROR("Unsupported attachment type: 0x%x", attachment->type);
                     return false;
                 }
-            } else if (attachment->source == RENDER_TARGET_ATTACHMENT_SOURCE_SELF) {
+            }
+            else if (attachment->source == RENDER_TARGET_ATTACHMENT_SOURCE_SELF) {
                 // Regenerate,if needed/supported for the pass.
                 if (pass->attachment_textures_regenerate) {
                     if (!pass->attachment_textures_regenerate(pass, width, height)) {
@@ -513,13 +532,12 @@ static b8 regenerate_render_targets(rendergraph* graph, rendergraph_pass* pass, 
 
         // Create the underlying render target.
         renderer_render_target_create(target->attachment_count,
-                                      target->attachments,
-                                      &pass->pass,
-                                      use_custom_size ? target->attachments[0].texture->width : width,
-                                      use_custom_size ? target->attachments[0].texture->height : height,
-                                      0,
-                                      &pass->pass.targets[i]);
-    }
-
+            target->attachments,
+            &pass->pass,
+            use_custom_size ? target->attachments[0].texture->width : width,
+            use_custom_size ? target->attachments[0].texture->height : height,
+            0,
+            &pass->pass.targets[i]);
+    }*/
     return true;
 }

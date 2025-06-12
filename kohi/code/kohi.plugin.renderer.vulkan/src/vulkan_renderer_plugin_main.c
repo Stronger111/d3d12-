@@ -4,9 +4,9 @@
 #include <memory/kmemory.h>
 
 #include "kohi.plugin.renderer.vulkan_version.h"
-#include "renderer/vulkan/vulkan_backend.h"
+#include "vulkan_backend.h"
 
-b8 plugin_create(renderer_plugin* out_plugin) {
+b8 plugin_create(renderer_backend_interface* out_plugin) {
     out_plugin->initialize = vulkan_renderer_backend_initialize;
     out_plugin->shutdown = vulkan_renderer_backend_shutdown;
     out_plugin->begin_debug_label = vulkan_renderer_begin_debug_label;
@@ -30,7 +30,7 @@ b8 plugin_create(renderer_plugin* out_plugin) {
 
     out_plugin->renderpass_begin = vulkan_renderer_renderpass_begin;
     out_plugin->renderpass_end = vulkan_renderer_renderpass_end;
-    out_plugin->resized = vulkan_renderer_backend_on_resized;
+    out_plugin->window_resized = vulkan_renderer_backend_on_window_resized;
     out_plugin->texture_create = vulkan_renderer_texture_create;
     out_plugin->texture_destroy = vulkan_renderer_texture_destroy;
     out_plugin->texture_create_writeable = vulkan_renderer_texture_create_writeable;
@@ -90,6 +90,6 @@ b8 plugin_create(renderer_plugin* out_plugin) {
     return true;
 }
 
-void plugin_destroy(renderer_plugin* plugin) {
-    kzero_memory(plugin, sizeof(renderer_plugin));
+void plugin_destroy(renderer_backend_interface* plugin) {
+    kzero_memory(plugin, sizeof(renderer_backend_interface));
 }

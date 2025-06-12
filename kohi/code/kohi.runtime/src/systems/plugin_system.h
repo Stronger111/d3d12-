@@ -18,7 +18,7 @@ typedef struct plugin_system_plugin_config {
     // Name of the plugin.
     const char* name;
     // To be deserialized by the plugin itself since it knows how this should be laid out.
-    kson_object plugin_config;
+    const char* config_str;
 } plugin_system_plugin_config;
 
 /**
@@ -32,6 +32,8 @@ typedef struct plugin_system_config {
 struct frame_data;
 struct kwindow;
 
+b8 plugin_system_deserialize_config(const char* config_str, plugin_system_config* out_config);
+
 b8 plugin_system_intialize(u64* memory_requirement, struct plugin_system_state* state, struct plugin_system_config* config);
 
 void plugin_system_shutdown(struct plugin_system_state* state);
@@ -43,4 +45,6 @@ b8 plugin_system_render(struct plugin_system_state* state, struct frame_data* p_
 b8 plugin_system_on_window_resize(struct plugin_system_state* state, struct kwindow* window, u16 width, u16 height);
 
 KAPI b8 plugin_system_load_plugin(struct plugin_system_state* state, const char* name, const char* config);
+
+KAPI kruntime_plugin* plugin_system_get(struct plugin_system_state* state, const char* name);
 #endif

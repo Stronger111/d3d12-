@@ -1,4 +1,4 @@
-#include "platform/platform.h"
+#include "platform.h"
 
 // window platform layer
 #if _WIN32  // FIXME: macro doesn't highlight correctly in vscode
@@ -29,11 +29,11 @@ typedef struct win32_file_watch {
     FILETIME last_write_time;
 } win32_file_watch;
 
-typedef struct kwindow {
-    const char* title;
+typedef struct kwindow_platform_state {
+    //const char* title;
     // 窗口句柄
     HWND hwnd;
-} kwindow;
+} kwindow_platform_state;
 
 typedef struct platform_state {
     win32_handle_info handle;
@@ -137,15 +137,15 @@ void platform_system_shutdown(struct platform_state* state) {
     }
 }
 
-b8 platform_window_create(kwindow_config config, struct kwindow* window, b8 show_immediately) {
+b8 platform_window_create(const kwindow_config* config, struct kwindow* window, b8 show_immediately) {
     if (!window) {
         return false;
     }
     // create window
-    i32 client_x = config.position_x;
-    i32 client_y = config.position_y;
-    u32 client_width = config.width;
-    u32 client_height = config.height;
+    i32 client_x = config->position_x;
+    i32 client_y = config->position_y;
+    u32 client_width = config->width;
+    u32 client_height = config->height;
 
     i32 window_x = client_x;
     i32 window_y = client_y;
@@ -159,7 +159,7 @@ b8 platform_window_create(kwindow_config config, struct kwindow* window, b8 show
     window_style |= WS_MINIMIZEBOX;
     window_style |= WS_THICKFRAME;
     // Obtain the size of the border
-    RECT border_rect = {0, 0, 0, 0};
+    RECT border_rect = { 0, 0, 0, 0 };
     AdjustWindowRectEx(&border_rect, window_style, 0, window_ex_style);
 
     // In this case, the border rectangle is negative
@@ -170,17 +170,23 @@ b8 platform_window_create(kwindow_config config, struct kwindow* window, b8 show
     window_width += border_rect.right - border_rect.left;
     window_height += border_rect.bottom - border_rect.top;
 
-    if (config.title) {
-        window->title = string_duplicate(config.title);
-    } else {
-        window->title = string_duplicate("Kohi Engine Window");
+    if (config->title) {
+        window->title = string_duplicate(config->title);
+    }
+    else {
+        window->title = string_duplicate("Kohi Game  Engine Window");
     }
 
-    window->hwnd = CreateWindowExA(window_ex_style, "kohi_window_class",
-                                   window->title, window_style, window_x, window_y, window_width, window_height,
-                                   0, 0, state_ptr->handle.h_instance, 0);
+    window->width = client_width;
+    window->height = client_height;
+    //TODO:DXS
+    window->platform_state = kallocate(sizeof(kwindow_platform_state), MEMORY_TAG_UNKNOWN);
 
-    if (window->hwnd == 0) {
+    window->platform_state->hwnd = CreateWindowExA(window_ex_style, "kohi_window_class",
+        window->title, window_style, window_x, window_y, window_width, window_height,
+        0, 0, state_ptr->handle.h_instance, 0);
+
+    if (window->platform_state->hwnd == 0) {
         MessageBoxA(0, "window creation failed!", "Error!", MB_ICONEXCLAMATION | MB_OK);
         KFATAL("window creation failed!");
         return FALSE;
@@ -194,15 +200,15 @@ void platform_window_destroy(struct kwindow* window) {
         for (u32 i = 0; i < len; ++i) {
             if (state_ptr->windows[i] == window) {
                 KTRACE("Destroying window...");
-                DestroyWindow(window->hwnd);
-                window->hwnd = 0;
+                DestroyWindow(window->platform_state->hwnd);
+                window->platform_state->hwnd = 0;
                 state_ptr->windows[i] = 0;
                 break;
             }
         }
         KERROR("Destroying a window that was somehow not registered with the platform layer.");
-        DestroyWindow(window->hwnd);
-        window->hwnd = 0;
+        DestroyWindow(window->platform_state->hwnd);
+        window->platform_state->hwnd = 0;
     }
 }
 
@@ -215,7 +221,7 @@ b8 platform_window_show(struct kwindow* window) {
     i32 show_window_command_flags = should_activate ? SW_SHOW : SW_SHOWNOACTIVATE;
     // If initially minimized, use SW_MINIMIZE : SW_SHOWMINNOACTIVE;
     // If initially maximized, use SW_SHOWMAXIMIZED : SW_MAXIMIZE
-    ShowWindow(window->hwnd, show_window_command_flags);
+    ShowWindow(window->platform_state->hwnd, show_window_command_flags);
 
     return true;
 }
@@ -226,7 +232,7 @@ b8 platform_window_hide(struct kwindow* window) {
     }
     // Yep... it's the same function with a flag passed to hide...
     i32 show_window_command_flags = SW_HIDE;
-    ShowWindow(window->hwnd, show_window_command_flags);
+    ShowWindow(window->platform_state->hwnd, show_window_command_flags);
 
     return true;
 }
@@ -244,7 +250,7 @@ b8 platform_window_title_set(struct kwindow* window, const char* title) {
     }
 
     // If the function succeeds,the return value is nonzero.
-    return (SetWindowText(window->hwnd, title) != 0);
+    return (SetWindowText(window->platform_state->hwnd, title) != 0);
 }
 
 b8 platform_pump_messages(void) {
@@ -288,12 +294,13 @@ void platform_console_write(struct platform_state* platform, log_level level, co
     CONSOLE_SCREEN_BUFFER_INFO csbi;
     if (state_ptr) {
         csbi = is_error ? state_ptr->err_output_csbi : state_ptr->std_output_csbi;
-    } else {
+    }
+    else {
         GetConsoleScreenBufferInfo(console_handle, &csbi);
     }
 
     // FATAL,ERROR,WARN,INFO,DEBUG,TRACE
-    static u8 levels[6] = {64, 4, 6, 2, 1, 8};
+    static u8 levels[6] = { 64, 4, 6, 2, 1, 8 };
     SetConsoleTextAttribute(console_handle, levels[level]);
     OutputDebugStringA(message);
     u64 length = strlen(message);
@@ -306,7 +313,7 @@ void platform_console_write(struct platform_state* platform, log_level level, co
 void platform_console_write_error(const char* message, u8 colour) {
     HANDLE console_handle = GetStdHandle(STD_ERROR_HANDLE);
 
-    static u8 levels[6] = {64, 4, 6, 2, 1, 8};
+    static u8 levels[6] = { 64, 4, 6, 2, 1, 8 };
     SetConsoleTextAttribute(console_handle, levels[colour]);
 
     OutputDebugStringA(message);
@@ -317,7 +324,8 @@ void platform_console_write_error(const char* message, u8 colour) {
     CONSOLE_SCREEN_BUFFER_INFO csbi;
     if (state_ptr) {
         csbi = state_ptr->err_output_csbi;
-    } else {
+    }
+    else {
         GetConsoleScreenBufferInfo(GetStdHandle(STD_ERROR_HANDLE), &csbi);
     }
     SetConsoleTextAttribute(console_handle, csbi.wAttributes);
@@ -422,7 +430,8 @@ b8 kthread_wait_timeout(kthread* thread, u64 wait_ms) {
         DWORD exit_code = WaitForSingleObject(thread->internal_data, wait_ms);
         if (exit_code == WAIT_OBJECT_0) {
             return true;
-        } else if (exit_code == WAIT_TIMEOUT) {
+        }
+        else if (exit_code == WAIT_TIMEOUT) {
             return false;
         }
     }
@@ -478,14 +487,14 @@ b8 kmutex_lock(kmutex* mutex) {
 
     DWORD result = WaitForSingleObject(mutex->internal_data, INFINITE);
     switch (result) {
-            // The thread got ownership of the mutex
-        case WAIT_OBJECT_0:
-            // KTRACE("Mutex locked.");
-            return true;
-            // The thread got ownership of an abandoned mutex.
-        case WAIT_ABANDONED:
-            KERROR("Mutex lock failed.");
-            return false;
+        // The thread got ownership of the mutex
+    case WAIT_OBJECT_0:
+        // KTRACE("Mutex locked.");
+        return true;
+        // The thread got ownership of an abandoned mutex.
+    case WAIT_ABANDONED:
+        KERROR("Mutex lock failed.");
+        return false;
     }
     // KTRACE("Mutex locked.");
     return true;
@@ -542,23 +551,23 @@ b8 ksemaphore_wait(ksemaphore* semaphore, u64 timeout_ms) {
 
     DWORD result = WaitForSingleObject(semaphore->internal_data, timeout_ms);
     switch (result) {
-        case WAIT_ABANDONED:
-            KERROR("The specified object is a mutex object that was not released by the thread that owned the mutex object before the owning thread terminated. Ownership of the mutex object is granted to the calling thread and the mutex state is set to nonsignaled. If the mutex was protecting persistent state information, you should check it for consistency.");
-            return false;
-        case WAIT_OBJECT_0:
-            // The state is signaled
-            return true;
-        case WAIT_TIMEOUT:
-            KERROR("Semaphore wait timeout occurred.");
-            return false;
-        case WAIT_FAILED:
-            KERROR("WaitForSingleObject failed.");
-            // TODO: GetLastError and print message.
-            return false;
-        default:
-            KERROR("An unknown error occurred while waiting on a semphore.");
-            // TODO: GetLastError and print message.
-            return false;
+    case WAIT_ABANDONED:
+        KERROR("The specified object is a mutex object that was not released by the thread that owned the mutex object before the owning thread terminated. Ownership of the mutex object is granted to the calling thread and the mutex state is set to nonsignaled. If the mutex was protecting persistent state information, you should check it for consistency.");
+        return false;
+    case WAIT_OBJECT_0:
+        // The state is signaled
+        return true;
+    case WAIT_TIMEOUT:
+        KERROR("Semaphore wait timeout occurred.");
+        return false;
+    case WAIT_FAILED:
+        KERROR("WaitForSingleObject failed.");
+        // TODO: GetLastError and print message.
+        return false;
+    default:
+        KERROR("An unknown error occurred while waiting on a semphore.");
+        // TODO: GetLastError and print message.
+        return false;
     }
     // W: wait/decrement,blocks when 0
     // L: wait/decrement,blocks when 0
@@ -653,7 +662,7 @@ void* platform_dynamic_library_load_function(const char* name, dynamic_library* 
         return 0;
     }
 
-    dynamic_library_function f = {0};
+    dynamic_library_function f = { 0 };
     f.pfn = f_addr;
     f.name = string_duplicate(name);
     darray_push(library->functions, f);
@@ -707,9 +716,11 @@ platform_error_code platform_copy_file(const char* source, const char* dest, b8 
         DWORD err = GetLastError();
         if (err == ERROR_FILE_NOT_FOUND) {
             return PLATFORM_ERROR_FILE_NOT_FOUND;
-        } else if (err == ERROR_SHARING_VIOLATION) {
+        }
+        else if (err == ERROR_SHARING_VIOLATION) {
             return PLATFORM_ERROR_FILE_LOCKED;
-        } else {
+        }
+        else {
             return PLATFORM_ERROR_UNKNOWN;
         }
     }
@@ -752,7 +763,7 @@ static b8 register_watch(const char* file_path, u32* out_watch_id) {
         }
     }
     // If no empty slot is available, create and push a new entry.
-    win32_file_watch w = {0};
+    win32_file_watch w = { 0 };
     w.id = count;
     w.file_path = string_duplicate(file_path);
     w.last_write_time = data.ftLastWriteTime;
@@ -805,7 +816,8 @@ static void platform_update_watches(void) {
                 // This means the file has been deleted, remove from watch.
                 if (state_ptr->watcher_deleted_callback) {
                     state_ptr->watcher_deleted_callback(f->id);
-                } else {
+                }
+                else {
                     KWARN("Watcher file was deleted but no handler callback was set. Make sure to call platform_register_watcher_deleted_callback()");
                 }
                 // event_context context = {0};
@@ -831,7 +843,8 @@ static void platform_update_watches(void) {
                 // event_fire(EVENT_CODE_WATCHED_FILE_WRITTEN, 0, context);
                 if (state_ptr->watcher_written_callback) {
                     state_ptr->watcher_written_callback(f->id);
-                } else {
+                }
+                else {
                     KWARN("Watcher file was deleted but no handler callback was set. Make sure to call platform_register_watcher_written_callback()");
                 }
             }
@@ -843,7 +856,7 @@ static kwindow* window_from_handle(HWND hwnd) {
     u32 len = darray_length(state_ptr->windows);
     for (u32 i = 0; i < len; ++i) {
         kwindow* w = state_ptr->windows[i];
-        if (w && w->hwnd == hwnd) {
+        if (w && w->platform_state->hwnd == hwnd) {
             return state_ptr->windows[i];
         }
     }
@@ -852,138 +865,140 @@ static kwindow* window_from_handle(HWND hwnd) {
 
 LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARAM l_param) {
     switch (msg) {
-        case WM_ERASEBKGND:
-            return 1;
-        case WM_CLOSE: {
-            if (state_ptr->window_closed_callback) {
-                kwindow* w = window_from_handle(hwnd);
-                if (!w) {
-                    KERROR("Recieved a window close event for a non-registered window!");
-                    return 0;
-                }
-                state_ptr->window_closed_callback(w);
-            }
-            return 0;
-        }
-        case WM_DESTROY:
-            PostQuitMessage(0);
-            return 0;
-        case WM_DPICHANGED:
-            // x- and y-axis DPI are always the same, so just grab one.
-            i32 x_dpi = GET_X_LPARAM(w_param);
-
-            // Store off the device pixel ratio.
-            state_ptr->device_pixel_ratio = (f32)x_dpi / USER_DEFAULT_SCREEN_DPI;
-            KINFO("Display device pixel ratio is: %.2f", state_ptr->device_pixel_ratio);
-            return 0;
-        case WM_SIZE: {
-            // Get the updated size
-            RECT r;
-            GetClientRect(hwnd, &r);
-            u32 width = r.right - r.left;
-            u32 height = r.bottom - r.top;
-
-            {
-                HMONITOR monitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
-
-                MONITORINFO monitor_info = {0};
-                monitor_info.cbSize = sizeof(MONITORINFO);
-                if (!GetMonitorInfoA(monitor, &monitor_info)) {
-                    KWARN("Failed to get monitor info. ");
-                }
-                KINFO("monitor: %u", monitor_info.rcMonitor.left);
-            }
-            // fire the event. The application layer should pick this up,but not handle it
-            // as it shouldn't be visible to other parts of the application.
+    case WM_ERASEBKGND:
+        return 1;
+    case WM_CLOSE: {
+        if (state_ptr->window_closed_callback) {
             kwindow* w = window_from_handle(hwnd);
             if (!w) {
-                KERROR("Recieved a window resize event for a non-registered window!");
+                KERROR("Recieved a window close event for a non-registered window!");
                 return 0;
             }
-            state_ptr->window_resized_callback(w, width, height);
-        } break;
-        case WM_KEYDOWN:
-        case WM_SYSKEYDOWN:
-        case WM_KEYUP:
-        case WM_SYSKEYUP: {
-            if (state_ptr->process_key) {
-                // Key pressed/released
-                b8 pressed = (msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN);
-                keys key = (u16)w_param;  // 按键代码
-                // Check for extended code
-                b8 is_extended = (HIWORD(l_param) & KF_EXTENDED) == KF_EXTENDED;
+            state_ptr->window_closed_callback(w);
+        }
+        return 0;
+    }
+    case WM_DESTROY:
+        PostQuitMessage(0);
+        return 0;
+    case WM_DPICHANGED:
+        // x- and y-axis DPI are always the same, so just grab one.
+        i32 x_dpi = GET_X_LPARAM(w_param);
 
-                // keypress only determines if _any_alt_ctrl_shift key is pressed. Determine which one if so
-                if (w_param == VK_MENU) {
-                    key = is_extended ? KEY_RALT : KEY_LALT;
-                } else if (w_param == VK_SHIFT) {
-                    // Annoyingly,KF_EXTENED is not set for shift keys.
-                    u32 left_shift = MapVirtualKey(VK_LSHIFT, MAPVK_VK_TO_VSC);
-                    u32 scancode = ((l_param & (0xFF << 16)) >> 16);
-                    key = scancode == left_shift ? KEY_LSHIFT : KEY_RSHIFT;
-                } else if (w_param == VK_CONTROL) {
-                    key = is_extended ? KEY_RCONTROL : KEY_LCONTROL;
-                }
+        // Store off the device pixel ratio.
+        state_ptr->device_pixel_ratio = (f32)x_dpi / USER_DEFAULT_SCREEN_DPI;
+        KINFO("Display device pixel ratio is: %.2f", state_ptr->device_pixel_ratio);
+        return 0;
+    case WM_SIZE: {
+        // Get the updated size
+        RECT r;
+        GetClientRect(hwnd, &r);
+        // u32 width = r.right - r.left;
+        // u32 height = r.bottom - r.top;
 
-                // HACK: This is gross windows keybind crap.
-                if (key == VK_OEM_1) {
-                    key = KEY_SEMICOLON;
-                }
+        {
+            HMONITOR monitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
 
-                // Pass to the input subsytem for processing
-                state_ptr->process_key(key, pressed);
-                // Return 0 to prevent default window behaviour for some keypress such as alt.
+            MONITORINFO monitor_info = { 0 };
+            monitor_info.cbSize = sizeof(MONITORINFO);
+            if (!GetMonitorInfoA(monitor, &monitor_info)) {
+                KWARN("Failed to get monitor info. ");
             }
+            KINFO("monitor: %u", monitor_info.rcMonitor.left);
+        }
+        // fire the event. The application layer should pick this up,but not handle it
+        // as it shouldn't be visible to other parts of the application.
+        kwindow* w = window_from_handle(hwnd);
+        if (!w) {
+            KERROR("Recieved a window resize event for a non-registered window!");
             return 0;
         }
-        case WM_MOUSEMOVE: {
-            if (state_ptr->process_mouse_move) {
-                // Mouse move
-                i32 x_position = GET_X_LPARAM(l_param);
-                i32 y_position = GET_Y_LPARAM(l_param);
+        state_ptr->window_resized_callback(w);
+    } break;
+    case WM_KEYDOWN:
+    case WM_SYSKEYDOWN:
+    case WM_KEYUP:
+    case WM_SYSKEYUP: {
+        if (state_ptr->process_key) {
+            // Key pressed/released
+            b8 pressed = (msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN);
+            keys key = (u16)w_param;  // 按键代码
+            // Check for extended code
+            b8 is_extended = (HIWORD(l_param) & KF_EXTENDED) == KF_EXTENDED;
 
-                // Pass over to the input subsystem.
-                state_ptr->process_mouse_move(x_position, y_position);
+            // keypress only determines if _any_alt_ctrl_shift key is pressed. Determine which one if so
+            if (w_param == VK_MENU) {
+                key = is_extended ? KEY_RALT : KEY_LALT;
             }
-        } break;
-        case WM_MOUSEWHEEL: {
-            if (state_ptr->process_mouse_wheel) {
-                i32 z_delta = GET_WHEEL_DELTA_WPARAM(w_param);
-                if (z_delta != 0) {
-                    // Flatten the input to an OS-independent (-1, 1)
-                    z_delta = (z_delta < 0) ? -1 : 1;
-                    state_ptr->process_mouse_wheel(z_delta);
-                }
+            else if (w_param == VK_SHIFT) {
+                // Annoyingly,KF_EXTENED is not set for shift keys.
+                u32 left_shift = MapVirtualKey(VK_LSHIFT, MAPVK_VK_TO_VSC);
+                u32 scancode = ((l_param & (0xFF << 16)) >> 16);
+                key = scancode == left_shift ? KEY_LSHIFT : KEY_RSHIFT;
             }
-        } break;
-        case WM_LBUTTONDOWN:
-        case WM_MBUTTONDOWN:
-        case WM_RBUTTONDOWN:
-        case WM_LBUTTONUP:
-        case WM_MBUTTONUP:
-        case WM_RBUTTONUP: {
-            if (state_ptr->process_mouse_button) {
-                b8 pressed = msg == WM_LBUTTONDOWN || msg == WM_RBUTTONDOWN || msg == WM_MBUTTONDOWN;
-                mouse_buttons mouse_button = MOUSE_BUTTON_MAX;
-                switch (msg) {
-                    case WM_LBUTTONUP:
-                        mouse_button = MOUSE_BUTTON_LEFT;
-                        break;
-                    case WM_MBUTTONDOWN:
-                    case WM_MBUTTONUP:
-                        mouse_button = MOUSE_BUTTON_MIDDLE;
-                        break;
-                    case WM_RBUTTONDOWN:
-                    case WM_RBUTTONUP:
-                        mouse_button = MOUSE_BUTTON_RIGHT;
-                        break;
-                }
-                // Pass over to the input subsystem.
-                if (mouse_button != MOUSE_BUTTON_MAX) {
-                    state_ptr->process_mouse_button(mouse_button, pressed);
-                }
+            else if (w_param == VK_CONTROL) {
+                key = is_extended ? KEY_RCONTROL : KEY_LCONTROL;
             }
-        } break;
+
+            // HACK: This is gross windows keybind crap.
+            if (key == VK_OEM_1) {
+                key = KEY_SEMICOLON;
+            }
+
+            // Pass to the input subsytem for processing
+            state_ptr->process_key(key, pressed);
+            // Return 0 to prevent default window behaviour for some keypress such as alt.
+        }
+        return 0;
+    }
+    case WM_MOUSEMOVE: {
+        if (state_ptr->process_mouse_move) {
+            // Mouse move
+            i32 x_position = GET_X_LPARAM(l_param);
+            i32 y_position = GET_Y_LPARAM(l_param);
+
+            // Pass over to the input subsystem.
+            state_ptr->process_mouse_move(x_position, y_position);
+        }
+    } break;
+    case WM_MOUSEWHEEL: {
+        if (state_ptr->process_mouse_wheel) {
+            i32 z_delta = GET_WHEEL_DELTA_WPARAM(w_param);
+            if (z_delta != 0) {
+                // Flatten the input to an OS-independent (-1, 1)
+                z_delta = (z_delta < 0) ? -1 : 1;
+                state_ptr->process_mouse_wheel(z_delta);
+            }
+        }
+    } break;
+    case WM_LBUTTONDOWN:
+    case WM_MBUTTONDOWN:
+    case WM_RBUTTONDOWN:
+    case WM_LBUTTONUP:
+    case WM_MBUTTONUP:
+    case WM_RBUTTONUP: {
+        if (state_ptr->process_mouse_button) {
+            b8 pressed = msg == WM_LBUTTONDOWN || msg == WM_RBUTTONDOWN || msg == WM_MBUTTONDOWN;
+            mouse_buttons mouse_button = MOUSE_BUTTON_MAX;
+            switch (msg) {
+            case WM_LBUTTONUP:
+                mouse_button = MOUSE_BUTTON_LEFT;
+                break;
+            case WM_MBUTTONDOWN:
+            case WM_MBUTTONUP:
+                mouse_button = MOUSE_BUTTON_MIDDLE;
+                break;
+            case WM_RBUTTONDOWN:
+            case WM_RBUTTONUP:
+                mouse_button = MOUSE_BUTTON_RIGHT;
+                break;
+            }
+            // Pass over to the input subsystem.
+            if (mouse_button != MOUSE_BUTTON_MAX) {
+                state_ptr->process_mouse_button(mouse_button, pressed);
+            }
+        }
+    } break;
     }
     return DefWindowProc(hwnd, msg, w_param, l_param);
 }

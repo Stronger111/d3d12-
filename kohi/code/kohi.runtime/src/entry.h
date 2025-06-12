@@ -1,4 +1,3 @@
-
 /**
  * @file entry.h
  * @author Travis Vroman (travis@kohiengine.com)
@@ -11,31 +10,69 @@
  * @version 1.0
  * @date 2022-01-10
  *
- * @copyright Kohi Game Engine is Copyright (c) Travis Vroman 2021-2022
+ * @copyright Kohi Game Engine is Copyright (c) Travis Vroman 2021-2024
  *
  */
+
+ /*! \mainpage Home Page
+  *
+  * \section intro Introduction
+  *
+  * This site contains the auto-generated API documentation for the Kohi Game Engine.
+  *
+  * \section information Information
+  *
+  * \subsection mainsite Main Website
+  * See [kohiengine.com](https://kohiengine.com) for the newest project updates.
+  *
+  * \subsection twitch Twitch
+  * The Twitch channel is where development happens LIVE on stream.
+  *
+  * Link: [Twitch Channel](https://twitch.tv/travisvroman)
+  *
+  * \subsection yt YouTube
+  * The YouTube channel contains all of the archives of the Twitch streams, as well as the original video series for the Kohi Game Engine. It also contains lots of other content outside of this project.
+  *
+  * Link: [YouTube Channel](https://youtube.com/travisvroman)
+  */
 #pragma once
 
-#include "application_types.h"
+#include "application/application_config.h"
+#include "application/application_types.h"
 #include "core/engine.h"
-#include "core/logger.h"
+#include "logger.h"
+#include "platform/filesystem.h"
 
-/** @brief Externally-defined function to create a application, provided by the consumer
- * of this library.
- * @param out_app A pointer which holds the created application object as provided by the consumer.
- * @returns True on successful creation; otherwise false.
- */
+  /** @brief Externally-defined function to create a application, provided by the consumer
+   * of this library.
+   * @param out_app A pointer which holds the created application object as provided by the consumer.
+   * @returns True on successful creation; otherwise false.
+   */
 extern b8 create_application(application* out_app);
 
 extern b8 initialize_application(application* app);
 
 int main(void) {
+    //TODO: load up application config file, get it parsed and ready to hand off.
     // Request the application instance from the application
-    application app_inst = {0};
+    application app_inst = { 0 };
+
+    const char* app_file_content = filesystem_read_entire_text_file("app_config.kson");
+    if (!app_file_content) {
+        KFATAL("Failed to read app_config.kson file text. Application cannot start.");
+        return -68;
+    }
+
+    if (!application_config_parse_file_content(app_file_content, &app_inst.app_config)) {
+        KFATAL("Failed to parse application config. Cannot start.");
+        return -69;
+    }
+
     if (!create_application(&app_inst)) {
         KFATAL("Could not create application!");
         return -1;
     }
+    
     // Ensure the function pointer exist
     if (!app_inst.render_frame || !app_inst.prepare_frame || !app_inst.update || !app_inst.initialize || !app_inst.on_resize) {
         KFATAL("The application function pointers must be assigned!");

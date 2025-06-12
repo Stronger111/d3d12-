@@ -18,10 +18,10 @@
  * @param out_renderer_backend A pointer to hold the newly-created renderer plugin.
  * @return True if successful; otherwise false.
  */
-KAPI b8 plugin_create(renderer_plugin* out_plugin);
+KAPI b8 plugin_create(renderer_backend_interface* out_plugin);
 /**
  * @brief Destroys the given renderer backend.
  *
  * @param renderer_backend A pointer to the plugin to be destroyed.
  */
-KAPI void plugin_destroy(renderer_plugin* plugin);
+KAPI void plugin_destroy(renderer_backend_interface* plugin);

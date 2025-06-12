@@ -228,7 +228,11 @@
         "dynamic_allocator.h": "c",
         "kmutex.h": "c",
         "metrics.h": "c",
-        "vulkan_renderer_plugin_main.h": "c"
+        "vulkan_renderer_plugin_main.h": "c",
+        "plugin_types.h": "c",
+        "application_config.h": "c",
+        "ios": "c",
+        "freelist.h": "c"
     },
     // File copyright documentation tag.  Array of strings will be converted to one line per element.  Can template {year}.
     "doxdocgen.file.copyrightTag": [

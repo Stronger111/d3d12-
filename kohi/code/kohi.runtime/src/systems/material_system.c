@@ -2,17 +2,18 @@
 
 #include "containers/darray.h"
 #include "containers/hashtable.h"
+#include "core/engine.h"
 #include "core/event.h"
 #include "core/frame_data.h"
 #include "core/kvar.h"
 #include "defines.h"
-#include "memory/kmemory.h"
-#include "strings/kstring.h"
 #include "logger.h"
 #include "math/kmath.h"
+#include "memory/kmemory.h"
 #include "renderer/renderer_frontend.h"
 #include "renderer/renderer_types.h"
 #include "resources/resource_types.h"
+#include "strings/kstring.h"
 #include "systems/light_system.h"
 #include "systems/resource_system.h"
 #include "systems/shader_system.h"
@@ -128,6 +129,9 @@ typedef struct material_system_state {
 
     mat4 directional_light_space[MAX_SHADOW_CASCADE_COUNT];
 
+    // Keep a pointer to the renderer state for quick access.
+    struct renderer_system_state* renderer;
+
     i32 use_pcf;
 } material_system_state;
 
@@ -173,6 +177,10 @@ b8 material_system_initialize(u64* memory_requirement, void* state, void* config
     }
 
     state_ptr = state;
+
+    // Keep a pointer to the renderer system state for quick access.
+    state_ptr->renderer = engine_systems_get()->renderer_system;
+
     state_ptr->config = *typed_config;
 
     state_ptr->pbr_shader_id = INVALID_ID;
@@ -291,7 +299,7 @@ b8 material_system_initialize(u64* memory_requirement, void* state, void* config
     }
 
     // Add a kvar to track PCF filtering enabled/disabled
-    kvar_i32_set("use_pcf",0, 1);  // on by default
+    kvar_i32_set("use_pcf", 0, 1);  // on by default
     kvar_i32_get("use_pcf", &state_ptr->use_pcf);
 
     event_register(EVENT_CODE_KVAR_CHANGED, 0, material_system_on_event);
@@ -386,7 +394,8 @@ static material* material_system_acquire_reference(const char* name, b8 auto_rel
             m->id = ref.handle;
             // KTRACE("Material '%s' does not yet exist. Created, and ref_count is now %i.", config.name, ref.reference_count);
 
-        } else {
+        }
+        else {
             // KTRACE("Material '%s' already exists, ref_count increased to %i.", config.name, ref.reference_count);
             *needs_creation = false;
         }
@@ -495,7 +504,7 @@ material* material_system_acquire_terrain_material(const char* material_name, u3
 
         // Shadow maps  can't be configured,so set them up here.
         {
-            material_map map_config = {0};
+            material_map map_config = { 0 };
             map_config.filter_mag = map_config.filter_min = TEXTURE_FILTER_MODE_LINEAR;
             map_config.repeat_u = map_config.repeat_v = map_config.repeat_w = TEXTURE_REPEAT_CLAMP_TO_BORDER;
             map_config.name = "shadow_map";
@@ -508,7 +517,7 @@ material* material_system_acquire_terrain_material(const char* material_name, u3
 
         // IBL -cubemap for irradiance
         {
-            material_map map_config = {0};
+            material_map map_config = { 0 };
             map_config.filter_mag = map_config.filter_min = TEXTURE_FILTER_MODE_LINEAR;
             map_config.repeat_u = map_config.repeat_v = map_config.repeat_w = TEXTURE_REPEAT_REPEAT;
             map_config.name = "ibl_cube";
@@ -525,7 +534,7 @@ material* material_system_acquire_terrain_material(const char* material_name, u3
         // Last irradiance map
 
         // Setup a configuration to get instance resource for this material.
-        shader_instance_resource_config instance_resource_config = {0};
+        shader_instance_resource_config instance_resource_config = { 0 };
         // Map count for this type is known.
         instance_resource_config.uniform_config_count = 3;  // NOTE:This includes material maps, shadow maps and irradiance map.
         instance_resource_config.uniform_configs = kallocate(sizeof(shader_instance_uniform_texture_config) * instance_resource_config.uniform_config_count, MEMORY_TAG_ARRAY);
@@ -568,7 +577,8 @@ material* material_system_acquire_terrain_material(const char* material_name, u3
         // NOTE:end terrain-specific load_material
         if (m->generation == INVALID_ID) {
             m->generation = 0;
-        } else {
+        }
+        else {
             m->generation++;
         }
     }
@@ -597,7 +607,8 @@ material* material_system_acquire_from_config(material_config* config) {
 
         if (m->generation == INVALID_ID) {
             m->generation = 0;
-        } else {
+        }
+        else {
             m->generation++;
         }
     }
@@ -632,13 +643,15 @@ void material_system_release(const char* name) {
             ref.handle = INVALID_ID;
             ref.auto_release = false;
             KTRACE("Released material '%s'., Material unloaded because reference count=0 and auto_release=true.", name_copy);
-        } else {
+        }
+        else {
             KTRACE("Released material '%s', now has a reference count of '%i' (auto_release=%s).", name_copy, ref.reference_count, ref.auto_release ? "true" : "false");
         }
 
         // Update the entry.
         hashtable_set(&state_ptr->registered_material_table, name_copy, &ref);
-    } else {
+    }
+    else {
         KERROR("material_system_release failed to release material '%s'.", name);
     }
 }
@@ -672,12 +685,15 @@ material* material_system_get_default_terrain(void) {
     }
 
 b8 material_system_apply_global(u32 shader_id, struct frame_data* p_frame_data, const mat4* projection, const mat4* view,
-                                const vec4* ambient_colour, const vec3* view_position, u32 render_mode) {
+    const vec4* ambient_colour, const vec3* view_position, u32 render_mode) {
     shader* s = shader_system_get_by_id(shader_id);
     if (!s) {
         return false;
     }
-    if (s->render_frame_number == p_frame_data->renderer_frame_number && s->draw_index == p_frame_data->draw_index) {
+
+    u64 renderer_frame_number = renderer_system_frame_number_get(state_ptr->renderer);
+
+    if (s->render_frame_number == renderer_frame_number) {
         return true;
     }
 
@@ -696,8 +712,9 @@ b8 material_system_apply_global(u32 shader_id, struct frame_data* p_frame_data, 
         directional_light* dir_light = light_system_directional_light_get();
         if (dir_light) {
             MATERIAL_APPLY_OR_FAIL(shader_system_uniform_set_by_location(state_ptr->terrain_locations.dir_light, &dir_light->data));
-        } else {
-            directional_light_data data = {0};
+        }
+        else {
+            directional_light_data data = { 0 };
             MATERIAL_APPLY_OR_FAIL(shader_system_uniform_set_by_location(state_ptr->terrain_locations.dir_light, &data));
         }
         // Global Shader Options
@@ -706,7 +723,8 @@ b8 material_system_apply_global(u32 shader_id, struct frame_data* p_frame_data, 
         // HACK:Read this is from somewhere (or have global setter?)
         f32 bias = 0.00005f;
         MATERIAL_APPLY_OR_FAIL(shader_system_uniform_set_by_location(state_ptr->terrain_locations.bias, &bias));
-    } else if (shader_id == state_ptr->pbr_shader_id) {
+    }
+    else if (shader_id == state_ptr->pbr_shader_id) {
         MATERIAL_APPLY_OR_FAIL(shader_system_uniform_set_by_location(state_ptr->pbr_locations.projection, projection));
         MATERIAL_APPLY_OR_FAIL(shader_system_uniform_set_by_location(state_ptr->pbr_locations.view, view));
         // TODO: set cascade splits like dir lights and shadow map, etc.
@@ -723,14 +741,15 @@ b8 material_system_apply_global(u32 shader_id, struct frame_data* p_frame_data, 
         // HACK:Read this is from somewhere (or have global setter?)
         f32 bias = 0.00005f;
         MATERIAL_APPLY_OR_FAIL(shader_system_uniform_set_by_location(state_ptr->pbr_locations.bias, &bias));
-    } else {
+    }
+    else {
         KERROR("material_system_apply_global(): Unrecognized shader id '%d' ", shader_id);
         return false;
     }
     MATERIAL_APPLY_OR_FAIL(shader_system_apply_global(true, p_frame_data));
 
     // Sync the frame number
-    s->render_frame_number = p_frame_data->renderer_frame_number;
+    s->render_frame_number = renderer_frame_number;
     return true;
 }
 
@@ -759,8 +778,9 @@ b8 material_system_apply_instance(material* m, struct frame_data* p_frame_data, 
             directional_light* dir_light = light_system_directional_light_get();
             if (dir_light) {
                 MATERIAL_APPLY_OR_FAIL(shader_system_uniform_set_by_location(state_ptr->pbr_locations.dir_light, &dir_light->data));
-            } else {
-                directional_light_data data = {0};
+            }
+            else {
+                directional_light_data data = { 0 };
                 MATERIAL_APPLY_OR_FAIL(shader_system_uniform_set_by_location(state_ptr->pbr_locations.dir_light, &data));
             }
             // Point lights.
@@ -778,7 +798,8 @@ b8 material_system_apply_instance(material* m, struct frame_data* p_frame_data, 
             }
 
             MATERIAL_APPLY_OR_FAIL(shader_system_uniform_set_by_location(state_ptr->pbr_locations.num_p_lights, &p_light_count));
-        } else if (m->shader_id == state_ptr->terrain_shader_id) {
+        }
+        else if (m->shader_id == state_ptr->terrain_shader_id) {
             // Apply material maps, all as one layered texture.
             // m->maps[SAMP_TERRAIN_MATERIAL_ARRAY_MAP].texture = state_ptr->shadow_texture ? state_ptr->shadow_texture : texture_system_get_default_terrain_texture();
             MATERIAL_APPLY_OR_FAIL(shader_system_uniform_set_by_location(state_ptr->terrain_locations.material_textures, &m->maps[SAMP_TERRAIN_MATERIAL_ARRAY_MAP]));
@@ -812,7 +833,8 @@ b8 material_system_apply_instance(material* m, struct frame_data* p_frame_data, 
             }
 
             MATERIAL_APPLY_OR_FAIL(shader_system_uniform_set_by_location(state_ptr->terrain_locations.num_p_lights, &p_light_count));
-        } else {
+        }
+        else {
             KERROR("material_system_apply_instance(): Unrecognized shader id '%d' on shader '%s'.", m->shader_id, m->name);
             return false;
         }
@@ -827,7 +849,8 @@ b8 material_system_apply_local(material* m, const mat4* model, frame_data* p_fra
     b8 result = false;
     if (m->shader_id == state_ptr->pbr_shader_id) {
         result = shader_system_uniform_set_by_location(state_ptr->pbr_locations.model, model);
-    } else if (m->shader_id == state_ptr->terrain_shader_id) {
+    }
+    else if (m->shader_id == state_ptr->terrain_shader_id) {
         result = shader_system_uniform_set_by_location(state_ptr->terrain_locations.model, model);
     }
     shader_system_apply_local(p_frame_data);
@@ -852,7 +875,8 @@ b8 material_system_irradiance_set(texture* irradiance_cube_texture) {
         }
 
         state_ptr->irradiance_cube_texture = irradiance_cube_texture;
-    } else {
+    }
+    else {
         // Null sets us back to default state.
         state_ptr->irradiance_cube_texture = texture_system_get_default_cube_texture();
     }
@@ -890,7 +914,8 @@ static b8 assign_map(texture_map* map, const material_map* config, const char* m
             KWARN("Unable to load texture '%s' for material '%s', using default.", config->texture_name, material_name);
             map->texture = default_tex;
         }
-    } else {
+    }
+    else {
         // This is done when a texture is not configured, as opposed to when it is configured and not found (above).
         map->texture = default_tex;
     }
@@ -912,7 +937,7 @@ static b8 load_material(material_config* config, material* m) {
     // Type
     m->type = config->type;
     shader* selected_shader = 0;
-    shader_instance_resource_config instance_resource_config = {0};
+    shader_instance_resource_config instance_resource_config = { 0 };
 
     // Process the material config by type
     if (config->type == MATERIAL_TYPE_PBR) {
@@ -933,7 +958,8 @@ static b8 load_material(material_config* config, material* m) {
             if (strings_equali(config->properties[i].name, "diffuse_colour")) {
                 // Diffuse colour
                 properties->diffuse_colour = config->properties[i].value_v4;
-            } else if (strings_equali(config->properties[i].name, "shininess")) {
+            }
+            else if (strings_equali(config->properties[i].name, "shininess")) {
                 // Shininess
                 properties->shininess = config->properties[i].value_f32;
             }
@@ -950,11 +976,11 @@ static b8 load_material(material_config* config, material* m) {
             mat_maps_assigned[i] = false;
         }
         b8 ibl_cube_assigned = false;
-        const char* map_names[PBR_MATERIAL_TEXTURE_COUNT] = {"albedo", "normal", "combined"};
+        const char* map_names[PBR_MATERIAL_TEXTURE_COUNT] = { "albedo", "normal", "combined" };
         texture* default_textures[PBR_MATERIAL_TEXTURE_COUNT] = {
             texture_system_get_default_diffuse_texture(),
             texture_system_get_default_normal_texture(),
-            texture_system_get_default_combined_texture()};
+            texture_system_get_default_combined_texture() };
 
         // Attempt to match configured names to those required by PBR materials.
         // This also ensures the maps are in the proper order.
@@ -982,7 +1008,8 @@ static b8 load_material(material_config* config, material* m) {
                     return false;
                 }
                 ibl_cube_assigned = true;
-            } else {
+            }
+            else {
                 // NOTE: Ignore unexpected maps,but warn about it.
                 KWARN("Configuration for materila '%s' contains a map named '%s', which will be ignored for PBR material type.", config->name, config->maps[i].name);
             }
@@ -991,7 +1018,7 @@ static b8 load_material(material_config* config, material* m) {
         // Enusre all maps are always assigned, even if only with defaults.
         for (u32 i = 0; i < PBR_MATERIAL_TEXTURE_COUNT; ++i) {
             if (!mat_maps_assigned[i]) {
-                material_map map_config = {0};
+                material_map map_config = { 0 };
                 map_config.filter_mag = map_config.filter_min = TEXTURE_FILTER_MODE_LINEAR;
                 map_config.repeat_u = map_config.repeat_v = map_config.repeat_w = TEXTURE_REPEAT_REPEAT;
                 map_config.name = string_duplicate(map_names[i]);
@@ -1008,7 +1035,7 @@ static b8 load_material(material_config* config, material* m) {
         // TODO:May not want this to be configurable as a map,but rather provided by the scene from a reflection probe.
         if (!ibl_cube_assigned) {
             // Make sure the metallic map is always assigned.
-            material_map map_config = {0};
+            material_map map_config = { 0 };
             map_config.filter_mag = map_config.filter_min = TEXTURE_FILTER_MODE_LINEAR;
             map_config.repeat_u = map_config.repeat_v = map_config.repeat_w = TEXTURE_REPEAT_REPEAT;
             map_config.name = "ibl_cube";
@@ -1020,7 +1047,7 @@ static b8 load_material(material_config* config, material* m) {
 
         // Shadow maps  can't be configured, so set them up here.
         {
-            material_map map_config = {0};
+            material_map map_config = { 0 };
             map_config.filter_mag = map_config.filter_min = TEXTURE_FILTER_MODE_LINEAR;
             map_config.repeat_u = map_config.repeat_v = map_config.repeat_w = TEXTURE_REPEAT_CLAMP_TO_BORDER;
             map_config.name = "shadow_map";
@@ -1059,7 +1086,8 @@ static b8 load_material(material_config* config, material* m) {
         ibl_cube_texture->texture_maps = kallocate(sizeof(texture_map) * ibl_cube_texture->texture_map_count, MEMORY_TAG_ARRAY);
         ibl_cube_texture->texture_maps[0] = &m->maps[SAMP_IRRADIANCE_MAP];
 
-    } else if (config->type == MATERIAL_TYPE_CUSTOM) {
+    }
+    else if (config->type == MATERIAL_TYPE_CUSTOM) {
         // Gather a list of pointers to texture maps;
         // Send it off to the renderer to acquire resources.
         // Custom materials
@@ -1088,43 +1116,43 @@ static b8 load_material(material_config* config, material* m) {
             if (config->properties[i].size > 0) {
                 void* data = 0;
                 switch (config->properties[i].type) {
-                    case SHADER_UNIFORM_TYPE_INT8:
-                        data = &config->properties[i].value_i8;
-                        break;
-                    case SHADER_UNIFORM_TYPE_UINT8:
-                        data = &config->properties[i].value_u8;
-                        break;
-                    case SHADER_UNIFORM_TYPE_INT16:
-                        data = &config->properties[i].value_i16;
-                        break;
-                    case SHADER_UNIFORM_TYPE_UINT16:
-                        data = &config->properties[i].value_u16;
-                        break;
-                    case SHADER_UNIFORM_TYPE_INT32:
-                        data = &config->properties[i].value_i32;
-                        break;
-                    case SHADER_UNIFORM_TYPE_UINT32:
-                        data = &config->properties[i].value_u32;
-                        break;
-                    case SHADER_UNIFORM_TYPE_FLOAT32:
-                        data = &config->properties[i].value_f32;
-                        break;
-                    case SHADER_UNIFORM_TYPE_FLOAT32_2:
-                        data = &config->properties[i].value_v2;
-                        break;
-                    case SHADER_UNIFORM_TYPE_FLOAT32_3:
-                        data = &config->properties[i].value_v3;
-                        break;
-                    case SHADER_UNIFORM_TYPE_FLOAT32_4:
-                        data = &config->properties[i].value_v4;
-                        break;
-                    case SHADER_UNIFORM_TYPE_MATRIX_4:
-                        data = &config->properties[i].value_mat4;
-                        break;
-                    default:
-                        // TODO: custom size?
-                        KWARN("Unable to process shader uniform type %d (index %u) for material '%s'. Skipping.", config->properties[i].type, i, m->name);
-                        continue;
+                case SHADER_UNIFORM_TYPE_INT8:
+                    data = &config->properties[i].value_i8;
+                    break;
+                case SHADER_UNIFORM_TYPE_UINT8:
+                    data = &config->properties[i].value_u8;
+                    break;
+                case SHADER_UNIFORM_TYPE_INT16:
+                    data = &config->properties[i].value_i16;
+                    break;
+                case SHADER_UNIFORM_TYPE_UINT16:
+                    data = &config->properties[i].value_u16;
+                    break;
+                case SHADER_UNIFORM_TYPE_INT32:
+                    data = &config->properties[i].value_i32;
+                    break;
+                case SHADER_UNIFORM_TYPE_UINT32:
+                    data = &config->properties[i].value_u32;
+                    break;
+                case SHADER_UNIFORM_TYPE_FLOAT32:
+                    data = &config->properties[i].value_f32;
+                    break;
+                case SHADER_UNIFORM_TYPE_FLOAT32_2:
+                    data = &config->properties[i].value_v2;
+                    break;
+                case SHADER_UNIFORM_TYPE_FLOAT32_3:
+                    data = &config->properties[i].value_v3;
+                    break;
+                case SHADER_UNIFORM_TYPE_FLOAT32_4:
+                    data = &config->properties[i].value_v4;
+                    break;
+                case SHADER_UNIFORM_TYPE_MATRIX_4:
+                    data = &config->properties[i].value_mat4;
+                    break;
+                default:
+                    // TODO: custom size?
+                    KWARN("Unable to process shader uniform type %d (index %u) for material '%s'. Skipping.", config->properties[i].type, i, m->name);
+                    continue;
                 }
 
                 // Copy the block and move up.
@@ -1169,7 +1197,8 @@ static b8 load_material(material_config* config, material* m) {
                 uniform_config->texture_maps[j] = &m->maps[map_offset + i];
             }
         }
-    } else {
+    }
+    else {
         KERROR("Unknown material type: %d. Material '%s' cannot be loaded.", config->type, m->name);
         return false;
     }
@@ -1258,7 +1287,7 @@ static b8 create_default_pbr_material(material_system_state* state) {
 
     // Setup a configuration to get instance resources for this material.
     material* m = &state->default_pbr_material;
-    shader_instance_resource_config instance_resource_config = {0};
+    shader_instance_resource_config instance_resource_config = { 0 };
     // Map count for this type is known.
     instance_resource_config.uniform_config_count = 3;  // NOTE:This includes materials maps, shadow maps and irradiance map.
     instance_resource_config.uniform_configs = kallocate(sizeof(shader_instance_uniform_texture_config) * instance_resource_config.uniform_config_count, MEMORY_TAG_ARRAY);
@@ -1341,32 +1370,32 @@ static b8 create_default_terrain_material(material_system_state* state) {
     // Last irradiance map
 
    // Setup a configuration to get instance resources for this material.
-   shader_instance_resource_config instance_resource_config = {0};
-   // Map count for this type is known.
-   instance_resource_config.uniform_config_count = 3;  // NOTE: This includes material maps, shadow maps and irradiance map.
-   instance_resource_config.uniform_configs = kallocate(sizeof(shader_instance_uniform_texture_config) * instance_resource_config.uniform_config_count, MEMORY_TAG_ARRAY);
+    shader_instance_resource_config instance_resource_config = { 0 };
+    // Map count for this type is known.
+    instance_resource_config.uniform_config_count = 3;  // NOTE: This includes material maps, shadow maps and irradiance map.
+    instance_resource_config.uniform_configs = kallocate(sizeof(shader_instance_uniform_texture_config) * instance_resource_config.uniform_config_count, MEMORY_TAG_ARRAY);
 
-   // Material textures
-   material* m = &state_ptr->default_terrain_material;
-   shader_instance_uniform_texture_config* mat_textures = &instance_resource_config.uniform_configs[0];
-   mat_textures->uniform_location = state_ptr->terrain_locations.material_textures;
-   mat_textures->texture_map_count = 1;
-   mat_textures->texture_maps = kallocate(sizeof(texture_map*) * mat_textures->texture_map_count, MEMORY_TAG_ARRAY);
-   mat_textures->texture_maps[SAMP_TERRAIN_MATERIAL_ARRAY_MAP] = &m->maps[SAMP_TERRAIN_MATERIAL_ARRAY_MAP];
+    // Material textures
+    material* m = &state_ptr->default_terrain_material;
+    shader_instance_uniform_texture_config* mat_textures = &instance_resource_config.uniform_configs[0];
+    mat_textures->uniform_location = state_ptr->terrain_locations.material_textures;
+    mat_textures->texture_map_count = 1;
+    mat_textures->texture_maps = kallocate(sizeof(texture_map*) * mat_textures->texture_map_count, MEMORY_TAG_ARRAY);
+    mat_textures->texture_maps[SAMP_TERRAIN_MATERIAL_ARRAY_MAP] = &m->maps[SAMP_TERRAIN_MATERIAL_ARRAY_MAP];
 
-   // Shadow textures
-   shader_instance_uniform_texture_config* shadow_textures = &instance_resource_config.uniform_configs[1];
-   shadow_textures->uniform_location = state_ptr->terrain_locations.shadow_textures;
-   shadow_textures->texture_map_count = 1;
-   shadow_textures->texture_maps = kallocate(sizeof(texture_map*) * shadow_textures->texture_map_count, MEMORY_TAG_ARRAY);
-   shadow_textures->texture_maps[0] = &m->maps[SAMP_TERRAIN_SHADOW_MAP];
+    // Shadow textures
+    shader_instance_uniform_texture_config* shadow_textures = &instance_resource_config.uniform_configs[1];
+    shadow_textures->uniform_location = state_ptr->terrain_locations.shadow_textures;
+    shadow_textures->texture_map_count = 1;
+    shadow_textures->texture_maps = kallocate(sizeof(texture_map*) * shadow_textures->texture_map_count, MEMORY_TAG_ARRAY);
+    shadow_textures->texture_maps[0] = &m->maps[SAMP_TERRAIN_SHADOW_MAP];
 
-   // IBL cube texture
-   shader_instance_uniform_texture_config* ibl_cube_texture = &instance_resource_config.uniform_configs[2];
-   ibl_cube_texture->uniform_location = state_ptr->terrain_locations.ibl_cube_texture;
-   ibl_cube_texture->texture_map_count = 1;
-   ibl_cube_texture->texture_maps = kallocate(sizeof(texture_map*) * ibl_cube_texture->texture_map_count, MEMORY_TAG_ARRAY);
-   ibl_cube_texture->texture_maps[0] = &m->maps[SAMP_TERRAIN_IRRADIANCE_MAP];
+    // IBL cube texture
+    shader_instance_uniform_texture_config* ibl_cube_texture = &instance_resource_config.uniform_configs[2];
+    ibl_cube_texture->uniform_location = state_ptr->terrain_locations.ibl_cube_texture;
+    ibl_cube_texture->texture_map_count = 1;
+    ibl_cube_texture->texture_maps = kallocate(sizeof(texture_map*) * ibl_cube_texture->texture_map_count, MEMORY_TAG_ARRAY);
+    ibl_cube_texture->texture_maps[0] = &m->maps[SAMP_TERRAIN_IRRADIANCE_MAP];
 
 
     // Acquire the resources

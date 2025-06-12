@@ -1,15 +1,16 @@
 #include "shadow_map_pass.h"
 
 #include "containers/darray.h"
-#include "memory/kmemory.h"
-#include "strings/kstring.h"
-#include "logger.h"
 #include "defines.h"
+#include "logger.h"
+#include "math/math_types.h"
+#include "memory/kmemory.h"
 #include "renderer/renderer_frontend.h"
 #include "renderer/renderer_types.h"
 #include "renderer/rendergraph.h"
 #include "renderer/viewport.h"
 #include "resources/resource_types.h"
+#include "strings/kstring.h"
 #include "systems/resource_system.h"
 #include "systems/shader_system.h"
 #include "systems/texture_system.h"
@@ -23,8 +24,7 @@ typedef struct shadow_map_shader_locations {
 } shadow_map_shader_locations;
 
 typedef struct cascade_resources {
-    // One target per cascade.
-    render_target* targets;
+    render_target target;
 } cascade_resources;
 
 typedef struct shadow_shader_instance_data {
@@ -41,7 +41,7 @@ typedef struct shadow_map_pass_internal_data {
     // Custom projection matrix for shadow pass.
     viewport camera_viewport;
 
-    texture* depth_textures;
+    texture depth_texture;
 
     // One per cascade.
     cascade_resources cascades[MAX_CASCADE_COUNT];
@@ -93,6 +93,11 @@ b8 shadow_map_pass_initialize(rendergraph_pass* self) {
     shadow_map_pass_internal_data* internal_data = self->internal_data;
 
     // Create the depth attachments,one per frame.
+    // FIXME: Should not be worrying about frame count here - this should
+    // be handled and managed within the renderer backend. The texture system
+    // should perhaps have a flag that could be passed to indicate this, but this
+    // actual logic shouldn't be here.
+    // UPDATE: This should be done via a texture flag.
     u8 frame_count = renderer_window_attachment_count_get();
 
     internal_data->depth_textures = kallocate(sizeof(texture) * frame_count, MEMORY_TAG_RENDERER);
@@ -113,15 +118,14 @@ b8 shadow_map_pass_initialize(rendergraph_pass* self) {
     }
 
     // Setup the renderpass.
-    renderpass_config shadowmap_pass_config = {0};
+    renderpass_config shadowmap_pass_config = { 0 };
     shadowmap_pass_config.name = "Renderpass.Shadowmap";
-    shadowmap_pass_config.clear_colour = (vec4){0.0f, 0.0f, 0.2f, 1.0f};
+    shadowmap_pass_config.clear_colour = (vec4){ 0.0f, 0.0f, 0.2f, 1.0f };
     shadowmap_pass_config.clear_flags = RENDERPASS_CLEAR_DEPTH_BUFFER_FLAG;
     shadowmap_pass_config.depth = 1.0f;
     shadowmap_pass_config.stencil = 0;
     shadowmap_pass_config.target.attachment_count = 1;
     shadowmap_pass_config.target.attachments = kallocate(sizeof(render_target_attachment_config) * shadowmap_pass_config.target.attachment_count, MEMORY_TAG_ARRAY);
-    shadowmap_pass_config.render_target_count = frame_count;
 
     // Depth attachment
     render_target_attachment_config* shadowpass_target_depth = &shadowmap_pass_config.target.attachments[0];
@@ -156,7 +160,8 @@ b8 shadow_map_pass_initialize(rendergraph_pass* self) {
 
         // Get a pointer to the shader
         internal_data->s = shader_system_get(shadowmap_shader_name);
-    } else {
+    }
+    else {
         KTRACE("Shader '%s' already exists,using it.", shadowmap_shader_name);
     }
 
@@ -187,7 +192,8 @@ b8 shadow_map_pass_initialize(rendergraph_pass* self) {
         resource_system_unload(&terrain_shadowmap_shader_config_resource);
         // Get a pointer to the shader
         internal_data->ts = shader_system_get(terrain_shadowmap_shader_name);
-    } else {
+    }
+    else {
         KTRACE("Shader '%s' already exists,using it.", terrain_shadowmap_shader_name);
     }
 
@@ -238,12 +244,12 @@ b8 shadow_map_pass_load_resources(rendergraph_pass* self) {
 
     // Reserve an instance id for the default "material" to render to.
     {
-        texture_map* maps[1] = {&internal_data->default_colour_map};
+        texture_map* maps[1] = { &internal_data->default_colour_map };
         shader* s = internal_data->s;
         u16 atlas_location = s->uniforms[s->instance_sampler_indices[0]].index;
-        shader_instance_resource_config instance_resource_config = {0};
+        shader_instance_resource_config instance_resource_config = { 0 };
         // Map count for this type is known
-        shader_instance_uniform_texture_config colour_texture = {0};
+        shader_instance_uniform_texture_config colour_texture = { 0 };
         colour_texture.uniform_location = atlas_location;
         colour_texture.texture_map_count = 1;
         colour_texture.texture_maps = maps;
@@ -255,12 +261,12 @@ b8 shadow_map_pass_load_resources(rendergraph_pass* self) {
 
     // Reserve an instance id for the default "material" to render to.
     {
-        texture_map* terrain_maps[1] = {&internal_data->default_terrain_colour_map};
+        texture_map* terrain_maps[1] = { &internal_data->default_terrain_colour_map };
         shader* s = internal_data->ts;
         u16 atlas_location = s->uniforms[s->instance_sampler_indices[0]].index;
-        shader_instance_resource_config instance_resource_config = {0};
+        shader_instance_resource_config instance_resource_config = { 0 };
         // Map count for this type is known
-        shader_instance_uniform_texture_config colour_texture = {0};
+        shader_instance_uniform_texture_config colour_texture = { 0 };
         colour_texture.uniform_location = atlas_location;
         colour_texture.texture_map_count = 1;
         colour_texture.texture_maps = terrain_maps;
@@ -273,7 +279,7 @@ b8 shadow_map_pass_load_resources(rendergraph_pass* self) {
     // NOTE: Setup a default viewport. The only component that is used for this is the underlying
     // viewport rect, but is required to be set by the renderer before beginning a renderpass.
     // The projection matrix within this is not used,therefore the fov and clip planes do not matter.
-    vec4 viewport_rect = {0, 0, internal_data->config.resolution, internal_data->config.resolution};
+    vec4 viewport_rect = { 0, 0, internal_data->config.resolution, internal_data->config.resolution };
     if (!viewport_create(viewport_rect, 0.0f, 0.0f, 0.0f, RENDERER_PROJECTION_MATRIX_TYPE_ORTHOGRAPHIC, &internal_data->camera_viewport)) {
         KERROR("Failed to create viewport for shadow map pass.");
         return false;
@@ -389,12 +395,12 @@ b8 shadow_map_pass_execute(rendergraph_pass* self, frame_data* p_frame_data) {
                 u32 instance_id;
 
                 // Use the same map for all.
-                texture_map* maps[1] = {&internal_data->default_colour_map};
+                texture_map* maps[1] = { &internal_data->default_colour_map };
                 shader* s = internal_data->s;
                 u16 atlas_location = s->uniforms[s->instance_sampler_indices[0]].index;
-                shader_instance_resource_config instance_resource_config = {0};
+                shader_instance_resource_config instance_resource_config = { 0 };
                 // Map count for this type is known.
-                shader_instance_uniform_texture_config colour_texture = {0};
+                shader_instance_uniform_texture_config colour_texture = { 0 };
                 colour_texture.uniform_location = atlas_location;
                 colour_texture.texture_map_count = 1;
                 colour_texture.texture_maps = maps;
@@ -431,7 +437,8 @@ b8 shadow_map_pass_execute(rendergraph_pass* self, frame_data* p_frame_data) {
                 shadow_shader_instance_data* instance = &internal_data->instances[g->material->internal_id + 1];
                 render_number = &instance->render_frame_number;
                 draw_index = &instance->render_draw_index;
-            } else {
+            }
+            else {
                 // use the default instance.
                 bind_id = internal_data->default_instance_id;
                 // Use the default colour map.
@@ -501,7 +508,7 @@ b8 shadow_map_pass_execute(rendergraph_pass* self, frame_data* p_frame_data) {
             }
         }
 
-        shader_system_apply_global(needs_update,p_frame_data);
+        shader_system_apply_global(needs_update, p_frame_data);
 
         for (u32 i = 0; i < terrain_geometry_count; ++i) {
             geometry_render_data* terrain = &ext_data->terrain_geometries[i];
@@ -518,7 +525,7 @@ b8 shadow_map_pass_execute(rendergraph_pass* self, frame_data* p_frame_data) {
                 KERROR("Failed to apply shadowmap color_map uniform to terrain geometry.");
                 return false;
             }
-            shader_system_apply_instance(needs_update,p_frame_data);
+            shader_system_apply_instance(needs_update, p_frame_data);
 
             // Sync the frame number and draw index.
             *render_number = p_frame_data->renderer_frame_number;
@@ -547,28 +554,14 @@ void shadow_map_pass_destroy(rendergraph_pass* self) {
         if (self->internal_data) {
             shadow_map_pass_internal_data* internal_data = self->internal_data;
 
-            // Destroy the attachments,one per frame.
-            u8 attachment_count = renderer_window_attachment_count_get();
-
             // Renderpass attachments.
             for (u32 i = 0; i < MAX_CASCADE_COUNT; ++i) {
                 cascade_resources* cascade = &internal_data->cascades[i];
-                // Targets per frame.
-                for (u32 f = 0; f < attachment_count; ++f) {
-                    // One render target per pass
-                    render_target* target = &cascade->targets[f];
-
-                    // Create the underlying render target.
-                    renderer_render_target_destroy(target, true);
-                }
-                kfree(cascade->targets, sizeof(render_target) * attachment_count, MEMORY_TAG_ARRAY);
+                // Create the underlying render target.
+                renderer_render_target_destroy(&cascade->target, true);
             }
 
-            for (u8 i = 0; i < attachment_count; ++i) {
-                renderer_texture_destroy(&internal_data->depth_textures[i]);
-            }
-
-            kfree(internal_data->depth_textures, sizeof(texture) * attachment_count, MEMORY_TAG_ARRAY);
+            renderer_texture_destroy(&internal_data->depth_texture);
 
             renderer_texture_map_resources_release(&internal_data->default_colour_map);
             renderer_texture_map_resources_release(&internal_data->default_terrain_colour_map);
@@ -594,6 +587,7 @@ b8 shadow_map_pass_source_populate(struct rendergraph_pass* self, rendergraph_so
         return false;
     }
     shadow_map_pass_internal_data* internal_data = self->internal_data;
+    // FIXME: Should just be frame-agnostic, single source texture.
     u32 frame_count = renderer_window_attachment_count_get();
     if (!source->textures) {
         source->textures = kallocate(sizeof(texture*) * frame_count, MEMORY_TAG_ARRAY);

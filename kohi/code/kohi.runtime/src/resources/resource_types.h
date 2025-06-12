@@ -1,6 +1,7 @@
 #pragma once
 
 #include "identifiers/identifier.h"
+#include "identifiers/khandle.h"
 #include "math/math_types.h"
 
 #define TERRAIN_MAX_MATERIAL_COUNT 4
@@ -102,13 +103,15 @@ typedef enum primitive_topology_type {
 
 typedef enum texture_flag {
     /** @brief Indicates if the texture has transparency. */
-    TEXTURE_FLAG_HAS_TRANSPARENCY = 0x1,
+    TEXTURE_FLAG_HAS_TRANSPARENCY = 0x01,
     /** @brief Indicates if the texture can be written (rendered) to. */
-    TEXTURE_FLAG_IS_WRITEABLE = 0x2,
+    TEXTURE_FLAG_IS_WRITEABLE = 0x02,
     /** @brief Indicates if the texture was created via wrapping vs traditional creation. */
-    TEXTURE_FLAG_IS_WRAPPED = 0x4,
+    TEXTURE_FLAG_IS_WRAPPED = 0x04,
     /** @brief Indicates the texture is a depth texture. */
-    TEXTURE_FLAG_DEPTH = 0x8
+    TEXTURE_FLAG_DEPTH = 0x08,
+    /** @brief Indicates that this texture should account for renderer buffering (i.e. double/triple buffering) */
+    TEXTURE_FLAG_RENDERER_BUFFERING=0x10,
 } texture_flag;
 
 /** @brief Holds bit flags for textures.. */
@@ -130,6 +133,7 @@ typedef enum texture_type {
 
 typedef struct texture {
     /** @brief The unique texture identifier. */
+    //TODO:replace with uuid to match handle.
     u32 id;
     /** @brief The texture type. */
     texture_type type;
@@ -143,15 +147,12 @@ typedef struct texture {
     u16 array_size;
     /** @brief Holds various flags for this texture. */
     texture_flag_bits flags;
-    /** @brief The texture generation. Incremented every time the data is
-     * reloaded. */
-    u32 generation;
     /** @brief The texture name. */
-    char name[TEXTURE_NAME_MAX_LENGTH];
-    /** @brief The raw texture data (pixels).---->Vulkan_image */
-    void* internal_data;
+    char* name;
     /** @brief The number of mip maps the internal texture has. Must always be at least 1. */
     u32 mip_levels;
+    /** @brief The the handle to renderer-specific texture data. */
+    k_handle renderer_texture_handle;
 } texture;
 
 /** @brief Represents supported the texture filtering modes. */
