@@ -1048,12 +1048,12 @@ static b8 create_texture(texture* t, texture_type type, u32 width, u32 height, u
         case TEXTURE_TYPE_CUBE: {
             char texture_names[6][TEXTURE_NAME_MAX_LENGTH];
             // +X,-X,+Y,-Y,+Z,-Z in _cubemap_ space, which is LH y-down
-            string_format(texture_names[0], "%s_r", t->name);  // Right texture
-            string_format(texture_names[1], "%s_l", t->name);  // Left texture
-            string_format(texture_names[2], "%s_u", t->name);  // Up texture
-            string_format(texture_names[3], "%s_d", t->name);  // Down texture
-            string_format(texture_names[4], "%s_f", t->name);  // Front texture
-            string_format(texture_names[5], "%s_b", t->name);  // Back texture
+            string_format_unsafe(texture_names[0], "%s_r", t->name);  // Right texture
+            string_format_unsafe(texture_names[1], "%s_l", t->name);  // Left texture
+            string_format_unsafe(texture_names[2], "%s_u", t->name);  // Up texture
+            string_format_unsafe(texture_names[3], "%s_d", t->name);  // Down texture
+            string_format_unsafe(texture_names[4], "%s_f", t->name);  // Front texture
+            string_format_unsafe(texture_names[5], "%s_b", t->name);  // Back texture
 
             u8* pixels = load_and_combine_cube_textures(texture_names, &t->width, &t->height, &t->channel_count);
             if (!pixels) {

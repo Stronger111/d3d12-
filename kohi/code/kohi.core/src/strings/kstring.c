@@ -6,13 +6,12 @@
 #include <string.h>
 
 #include "containers/darray.h"
-#include "memory/kmemory.h"
 #include "logger.h"
 #include "math/kmath.h"
+#include "memory/kmemory.h"
 
 #ifndef _MSC_VER
 #include <strings.h>
-#include "kstring.h"
 #endif
 u64 string_length(const char* str) {
     return strlen(str);
@@ -28,16 +27,20 @@ KAPI u32 string_utf8_length(const char* str) {
         if (c >= 0 && c < 127) {
             // Normal ascii character, don't increment again.
             // i += 0; // Basically doing this.
-        } else if ((c & 0xE0) == 0xC0) {
+        }
+        else if ((c & 0xE0) == 0xC0) {
             // Double-byte character, increment once more.
             i += 1;
-        } else if ((c & 0xF0) == 0xE0) {
+        }
+        else if ((c & 0xF0) == 0xE0) {
             // Triple-byte character, increment twice more.
             i += 2;
-        } else if ((c & 0xF8) == 0xF0) {
+        }
+        else if ((c & 0xF8) == 0xF0) {
             // 4-byte character, increment thrice more.
             i += 3;
-        } else {
+        }
+        else {
             // NOTE: Not supporting 5 and 6-byte characters; return as invalid UTF-8.
             KERROR("kstring string_utf8_length() - Not supporting 5 and 6-byte characters; Invalid UTF-8.");
             return 0;
@@ -54,31 +57,35 @@ b8 bytes_to_codepoint(const char* bytes, u32 offset, i32* out_codepoint, u8* out
         *out_advance = 1;
         *out_codepoint = codepoint;  // 字符位置指针
         return true;
-    } else if ((codepoint & 0xE0) == 0xC0) {
+    }
+    else if ((codepoint & 0xE0) == 0xC0) {
         // Double-byte character
         codepoint = ((bytes[offset + 0] & 0b00011111) << 6) +
-                    (bytes[offset + 1] & 0b00111111);
+            (bytes[offset + 1] & 0b00111111);
         *out_advance = 2;
         *out_codepoint = codepoint;
         return true;
-    } else if ((codepoint & 0xF0) == 0xE0) {
+    }
+    else if ((codepoint & 0xF0) == 0xE0) {
         // Triple-byte character
         codepoint = ((bytes[offset + 0] & 0b00001111) << 12) +
-                    ((bytes[offset + 1] & 0b00111111) << 6) +
-                    (bytes[offset + 2] & 0b00111111);
+            ((bytes[offset + 1] & 0b00111111) << 6) +
+            (bytes[offset + 2] & 0b00111111);
         *out_advance = 3;
         *out_codepoint = codepoint;
         return true;
-    } else if ((codepoint & 0xF8) == 0xF0) {
+    }
+    else if ((codepoint & 0xF8) == 0xF0) {
         // 4-byte character
         codepoint = ((bytes[offset + 0] & 0b00000111) << 18) +
-                    ((bytes[offset + 1] & 0b00111111) << 12) +
-                    ((bytes[offset + 2] & 0b00111111) << 6) +
-                    (bytes[offset + 3] & 0b00111111);
+            ((bytes[offset + 1] & 0b00111111) << 12) +
+            ((bytes[offset + 2] & 0b00111111) << 6) +
+            (bytes[offset + 3] & 0b00111111);
         *out_advance = 4;
         *out_codepoint = codepoint;
         return true;
-    } else {
+    }
+    else {
         // NOTE: Not supporting 5 and 6-byte characters; return as invalid UTF-8.
         *out_advance = 0;
         *out_codepoint = 0;
@@ -89,40 +96,40 @@ b8 bytes_to_codepoint(const char* bytes, u32 offset, i32* out_codepoint, u8* out
 
 b8 codepoint_is_whitespace(i32 codepoint) {
     switch (codepoint) {
-        case 0x0009:  //  character tabulation (\t)
-        case 0x000A:  // line feed (\n)
-        case 0x000B:  // line tabulation/vertical tab (\v)
-        case 0x000C:  // form feed (\f)
-        case 0x000D:  // carriage return (\r)
-        case 0x0020:  // space (' ')
-        case 0x0085:  // next line
-        case 0x00A0:  // no-break space
-        case 0x1680:  // ogham space mark
-        case 0x180E:  // mongolian vowel separator
-        case 0x2000:  // en quad
-        case 0x2001:  // em quad
-        case 0x2002:  // en space
-        case 0x2003:  // em space
-        case 0x2004:  // three-per-em space
-        case 0x2005:  // four-per-em space
-        case 0x2006:  // six-per-em space
-        case 0x2007:  // figure space
-        case 0x2008:  // punctuation space
-        case 0x2009:  // thin space
-        case 0x200A:  // hair space
-        case 0x200B:  // zero width space
-        case 0x200C:  // zero width non-joiner
-        case 0x200D:  // zero width joiner
-        case 0x2028:  // line separator
-        case 0x2029:  // paragraph separator
-        case 0x202F:  // narrow no-break space
-        case 0x205F:  // medium mathematical space
-        case 0x2060:  // word joiner
-        case 0x3000:  // ideographic space
-        case 0xFEFF:  // zero width non-breaking space
-            return true;
-        default:
-            return false;
+    case 0x0009:  //  character tabulation (\t)
+    case 0x000A:  // line feed (\n)
+    case 0x000B:  // line tabulation/vertical tab (\v)
+    case 0x000C:  // form feed (\f)
+    case 0x000D:  // carriage return (\r)
+    case 0x0020:  // space (' ')
+    case 0x0085:  // next line
+    case 0x00A0:  // no-break space
+    case 0x1680:  // ogham space mark
+    case 0x180E:  // mongolian vowel separator
+    case 0x2000:  // en quad
+    case 0x2001:  // em quad
+    case 0x2002:  // en space
+    case 0x2003:  // em space
+    case 0x2004:  // three-per-em space
+    case 0x2005:  // four-per-em space
+    case 0x2006:  // six-per-em space
+    case 0x2007:  // figure space
+    case 0x2008:  // punctuation space
+    case 0x2009:  // thin space
+    case 0x200A:  // hair space
+    case 0x200B:  // zero width space
+    case 0x200C:  // zero width non-joiner
+    case 0x200D:  // zero width joiner
+    case 0x2028:  // line separator
+    case 0x2029:  // paragraph separator
+    case 0x202F:  // narrow no-break space
+    case 0x205F:  // medium mathematical space
+    case 0x2060:  // word joiner
+    case 0x3000:  // ideographic space
+    case 0xFEFF:  // zero width non-breaking space
+        return true;
+    default:
+        return false;
     }
 }
 
@@ -140,7 +147,8 @@ void string_free(char* str) {
         // called without the memory system being initialized (i.e.unit tests)
         u64 length = string_length(str);
         kfree(str, length + 1, MEMORY_TAG_STRING);
-    } else {
+    }
+    else {
         // TODO: report null ptr?
     }
 }
@@ -168,21 +176,49 @@ KAPI b8 strings_nequali(const char* str0, const char* str1, u64 length) {
 #endif
 }
 
-i32 string_format(char* dest, const char* format, ...) {
+char* string_format_unsafe(const char* format, ...) {
+    if (!format) {
+        return 0;
+    }
+
+    __builtin_va_list arg_ptr;
+    va_start(arg_ptr, format);
+    char* result = string_format_v(format, arg_ptr);
+    va_end(arg_ptr);
+    return result;
+}
+
+char* string_format_v(const char* format, void* va_listp) {
+    if (!format) {
+        return 0;
+    }
+
+    i32 length = vsnprintf(0, 0, format, va_listp);
+    char* buffer = kallocate(length + 1, MEMORY_TAG_STRING);
+    if (!buffer) {
+        return 0;
+    }
+    vsnprintf(buffer, length + 1, format, va_listp);
+    return buffer;
+}
+
+// TODO: remove unsafe/deprecated
+i32 string_format_unsafe(char* dest, const char* format, ...) {
     if (dest) {
         __builtin_va_list arg_ptr;
         va_start(arg_ptr, format);
-        i32 written = string_format_v(dest, format, arg_ptr);
+        i32 written = string_format_v_unsafe(dest, format, arg_ptr);
         va_end(arg_ptr);
         return written;
     }
     return -1;
 }
 
-i32 string_format_v(char* dest, const char* format, void* va_listp) {
+// TODO: remove unsafe/deprecated
+i32 string_format_v_unsafe(char* dest, const char* format, void* va_listp) {
     if (dest) {
         // Big, but can fit on the stack.
-        char buffer[32000];
+        char buffer[32000] = {0};
         i32 written = vsnprintf(buffer, 32000, format, va_listp);
         buffer[written] = 0;
         kcopy_memory(dest, buffer, written + 1);
@@ -191,6 +227,7 @@ i32 string_format_v(char* dest, const char* format, void* va_listp) {
     }
     return -1;
 }
+
 char* string_empty(char* str) {
     if (str) {
         str[0] = 0;  // 第一个字符设置为0
@@ -246,7 +283,8 @@ void string_mid(char* dest, const char* source, i32 start, i32 length) {
         // 堆栈上溢或者下溢 会损坏其他地方内存
         // start+length dest Buffer大小为512 start长度为519 大于512时重置的内存超过 自身范围导致内存 出错  操作了不属于自己的内存块
         dest[j] = 0;
-    } else {
+    }
+    else {
         // If a negative value is passed, proceed to the end of the string.
         u64 j = 0;
         for (u64 i = start; source[i]; ++i, ++j) {
@@ -382,22 +420,22 @@ b8 string_to_mat4(const char* str, mat4* out_mat) {
 
     kzero_memory(out_mat, sizeof(mat4));
     i32 result = sscanf(str, "%f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f",
-                        &out_mat->data[0],
-                        &out_mat->data[1],
-                        &out_mat->data[2],
-                        &out_mat->data[3],
-                        &out_mat->data[4],
-                        &out_mat->data[5],
-                        &out_mat->data[6],
-                        &out_mat->data[7],
-                        &out_mat->data[8],
-                        &out_mat->data[9],
-                        &out_mat->data[10],
-                        &out_mat->data[11],
-                        &out_mat->data[12],
-                        &out_mat->data[13],
-                        &out_mat->data[14],
-                        &out_mat->data[15]);
+        &out_mat->data[0],
+        &out_mat->data[1],
+        &out_mat->data[2],
+        &out_mat->data[3],
+        &out_mat->data[4],
+        &out_mat->data[5],
+        &out_mat->data[6],
+        &out_mat->data[7],
+        &out_mat->data[8],
+        &out_mat->data[9],
+        &out_mat->data[10],
+        &out_mat->data[11],
+        &out_mat->data[12],
+        &out_mat->data[13],
+        &out_mat->data[14],
+        &out_mat->data[15]);
     return result != -1;
 }
 
@@ -414,7 +452,7 @@ KAPI b8 string_to_vec4(const char* str, vec4* out_vector) {
 const char* vec4_to_string(vec4 v) {
     char buffer[100];
     kzero_memory(buffer, sizeof(char) * 100);
-    string_format(buffer, "%f %f %f %f", v.x, v.y, v.z, v.w);
+    string_format_unsafe(buffer, "%f %f %f %f", v.x, v.y, v.z, v.w);
     return string_duplicate(buffer);
 }
 
@@ -451,7 +489,7 @@ b8 string_to_f32(const char* str, f32* f) {
 const char* f32_to_string(f32 f) {
     char buffer[20];
     kzero_memory(buffer, sizeof(char) * 20);
-    string_format(buffer, "%f", f);
+    string_format_unsafe(buffer, "%f", f);
     return string_duplicate(buffer);
 }
 
@@ -468,7 +506,7 @@ b8 string_to_f64(const char* str, f64* f) {
 const char* f64_to_string(f64 f) {
     char buffer[25];
     kzero_memory(buffer, sizeof(char) * 25);
-    string_format(buffer, "%f", f);
+    string_format_unsafe(buffer, "%f", f);
     return string_duplicate(buffer);
 }
 
@@ -485,7 +523,7 @@ b8 string_to_i8(const char* str, i8* i) {
 const char* i8_to_string(i8 i) {
     char buffer[25];
     kzero_memory(buffer, sizeof(char) * 25);
-    string_format(buffer, "%hhi", i);
+    string_format_unsafe(buffer, "%hhi", i);
     return string_duplicate(buffer);
 }
 
@@ -502,7 +540,7 @@ b8 string_to_i16(const char* str, i16* i) {
 const char* i16_to_string(i16 i) {
     char buffer[25];
     kzero_memory(buffer, sizeof(char) * 25);
-    string_format(buffer, "%hi", i);
+    string_format_unsafe(buffer, "%hi", i);
     return string_duplicate(buffer);
 }
 
@@ -519,7 +557,7 @@ b8 string_to_i32(const char* str, i32* i) {
 const char* i32_to_string(i32 i) {
     char buffer[25];
     kzero_memory(buffer, sizeof(char) * 25);
-    string_format(buffer, "%i", i);
+    string_format_unsafe(buffer, "%i", i);
     return string_duplicate(buffer);
 }
 
@@ -536,7 +574,7 @@ b8 string_to_i64(const char* str, i64* i) {
 const char* i64_to_string(i64 i) {
     char buffer[25];
     kzero_memory(buffer, sizeof(char) * 25);
-    string_format(buffer, "%lli", i);
+    string_format_unsafe(buffer, "%lli", i);
     return string_duplicate(buffer);
 }
 
@@ -597,7 +635,7 @@ KAPI u32 string_split(const char* str, char delimiter, char*** str_darray, b8 tr
     u32 trimmed_length = 0;
     u32 entry_count = 0;
     u32 length = string_length(str);
-    char buffer[16384] = {0};  // If a single entry goes beyond this, well... just don't do that.
+    char buffer[16384] = { 0 };  // If a single entry goes beyond this, well... just don't do that.
     u32 current_length = 0;
     // Iterate each character until a delimiter is reached.
     for (u32 i = 0; i < length; ++i) {
@@ -618,7 +656,8 @@ KAPI u32 string_split(const char* str, char delimiter, char*** str_darray, b8 tr
                 char* entry = kallocate(sizeof(char) * (trimmed_length + 1), MEMORY_TAG_STRING);
                 if (trimmed_length == 0) {
                     entry[0] = 0;
-                } else {
+                }
+                else {
                     string_ncopy(entry, result, trimmed_length);
                     entry[trimmed_length] = 0;
                 }
@@ -651,7 +690,8 @@ KAPI u32 string_split(const char* str, char delimiter, char*** str_darray, b8 tr
         char* entry = kallocate(sizeof(char) * (trimmed_length + 1), MEMORY_TAG_STRING);
         if (trimmed_length == 0) {
             entry[0] = 0;
-        } else {
+        }
+        else {
             string_ncopy(entry, result, trimmed_length);
             entry[trimmed_length] = 0;
         }
@@ -749,7 +789,7 @@ b8 string_parse_array_length(const char* str, u32* out_length) {
     }
 
     // Extract text from between the brackets.
-    char num_string[20] = {0};
+    char num_string[20] = { 0 };
     string_mid(num_string, str, open_index + 1, close_index - open_index);
     return string_to_u32(num_string, out_length);
 }

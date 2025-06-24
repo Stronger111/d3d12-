@@ -64,14 +64,14 @@ KAPI void log_output(log_level level, const char* message, ...) {
     char out_message[32000];
     kzero_memory(out_message, sizeof(out_message));
 
-    string_format(out_message, "%s%s\n", level_strings[level], out_message);
+    string_format_unsafe(out_message, "%s%s\n", level_strings[level], out_message);
     // Format original message.
     // NOTE: Oddly enough, MS's headers override the GCC/Clang va_list type with a "typedef char* va_list" in some
     // cases, and as a result throws a strange error here. The workaround for now is to just use __builtin_va_list,
     // which is the type GCC/Clang's va_start expects.
     __builtin_va_list arg_ptr;
     va_start(arg_ptr, message);
-    string_format_v(out_message, message, arg_ptr);
+    string_format_v_unsafe(out_message, message, arg_ptr);
     va_end(arg_ptr);
 
     // If the console hook is defined, make sure to forward messages to it, and it will pass along to consumers.

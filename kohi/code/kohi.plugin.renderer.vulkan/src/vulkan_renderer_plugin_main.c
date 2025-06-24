@@ -59,8 +59,8 @@ b8 plugin_create(renderer_backend_interface* out_plugin) {
     out_plugin->texture_map_resources_acquire = vulkan_renderer_texture_map_resources_acquire;
     out_plugin->texture_map_resources_release = vulkan_renderer_texture_map_resources_release;
 
-    out_plugin->render_target_create = vulkan_renderer_render_target_create;
-    out_plugin->render_target_destroy = vulkan_renderer_render_target_destroy;
+    out_plugin->framebuffer_create = vulkan_renderer_framebuffer_create;
+    out_plugin->framebuffer_destroy = vulkan_renderer_framebuffer_destroy;
 
     out_plugin->renderpass_create = vulkan_renderpass_create;
     out_plugin->renderpass_destroy = vulkan_renderpass_destroy;

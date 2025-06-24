@@ -31,7 +31,7 @@ typedef struct ui_pass_internal_data {
     sui_shader_locations sui_locations;
 } ui_pass_internal_data;
 
-b8 ui_pass_create(rendergraph_pass* self, void* config) {
+b8 ui_pass_create(rendergraph_node* self, void* config) {
     if (!self) {
         return false;
     }
@@ -42,7 +42,7 @@ b8 ui_pass_create(rendergraph_pass* self, void* config) {
     return true;
 }
 
-b8 ui_pass_initialize(struct rendergraph_pass* self) {
+b8 ui_pass_initialize(struct rendergraph_node* self) {
     if (!self) {
         return false;
     }
@@ -52,27 +52,27 @@ b8 ui_pass_initialize(struct rendergraph_pass* self) {
     renderpass_config ui_pass_config;
     ui_pass_config.name = "Renderpass.UI";
     ui_pass_config.clear_colour = (vec4){0.0f, 0.0f, 0.2f, 1.0f};
-    ui_pass_config.clear_flags = RENDERPASS_CLEAR_DEPTH_BUFFER_FLAG | RENDERPASS_CLEAR_STENCIL_BUFFER_FLAG;
+    ui_pass_config.clear_flags = RENDERPASS_CLEAR_DEPTH_BUFFER_FLAG_BIT | RENDERPASS_CLEAR_STENCIL_BUFFER_FLAG_BIT;
     ui_pass_config.depth = 1.0f;
     ui_pass_config.stencil = 0;
     ui_pass_config.target.attachment_count = 2;
-    ui_pass_config.target.attachments = kallocate(sizeof(render_target_attachment_config) * ui_pass_config.target.attachment_count, MEMORY_TAG_ARRAY);
+    ui_pass_config.target.attachments = kallocate(sizeof(framebuffer_attachment_config) * ui_pass_config.target.attachment_count, MEMORY_TAG_ARRAY);
     ui_pass_config.render_target_count = renderer_window_attachment_count_get();
 
-    render_target_attachment_config* ui_target_attachment = &ui_pass_config.target.attachments[0];
+    framebuffer_attachment_config* ui_target_attachment = &ui_pass_config.target.attachments[0];
     // Colour attachment.
-    ui_target_attachment->type = RENDER_TARGET_ATTACHMENT_TYPE_COLOUR;
+    ui_target_attachment->type = RENDERER_ATTACHMENT_TYPE_FLAG_COLOUR_BIT;
     ui_target_attachment->source = RENDER_TARGET_ATTACHMENT_SOURCE_DEFAULT;
-    ui_target_attachment->load_operation = RENDER_TARGET_ATTACHMENT_LOAD_OPERATION_LOAD;
-    ui_target_attachment->store_operation = RENDER_TARGET_ATTACHMENT_STORE_OPERATION_STORE;
+    ui_target_attachment->load_operation = RENDERER_ATTACHMENT_LOAD_OPERATION_LOAD;
+    ui_target_attachment->store_operation = RENDERER_ATTACHMENT_STORE_OPERATION_STORE;
     ui_target_attachment->present_after = true;
 
     // Depth/stencil attachment.
-    render_target_attachment_config* ui_depth_attachment = &ui_pass_config.target.attachments[1];
-    ui_depth_attachment->type = RENDER_TARGET_ATTACHMENT_TYPE_DEPTH | RENDER_TARGET_ATTACHMENT_TYPE_STENCIL;
+    framebuffer_attachment_config* ui_depth_attachment = &ui_pass_config.target.attachments[1];
+    ui_depth_attachment->type = RENDERER_ATTACHMENT_TYPE_FLAG_DEPTH_BIT | RENDERER_ATTACHMENT_TYPE_FLAG_STENCIL_BIT;
     ui_depth_attachment->source = RENDER_TARGET_ATTACHMENT_SOURCE_DEFAULT;
-    ui_depth_attachment->load_operation = RENDER_TARGET_ATTACHMENT_LOAD_OPERATION_DONT_CARE;
-    ui_depth_attachment->store_operation = RENDER_TARGET_ATTACHMENT_STORE_OPERATION_STORE;
+    ui_depth_attachment->load_operation = RENDERER_ATTACHMENT_LOAD_OPERATION_DONT_CARE;
+    ui_depth_attachment->store_operation = RENDERER_ATTACHMENT_STORE_OPERATION_STORE;
     ui_depth_attachment->present_after = false;
 
     if (!renderer_renderpass_create(&ui_pass_config, &self->pass)) {
@@ -107,7 +107,7 @@ b8 ui_pass_initialize(struct rendergraph_pass* self) {
     return true;
 }
 
-b8 ui_pass_execute(struct rendergraph_pass* self, struct frame_data* p_frame_data) {
+b8 ui_pass_execute(struct rendergraph_node* self, struct frame_data* p_frame_data) {
     if (!self) {
         return false;
     }
@@ -217,7 +217,7 @@ b8 ui_pass_execute(struct rendergraph_pass* self, struct frame_data* p_frame_dat
     return true;
 }
 
-void ui_pass_destroy(struct rendergraph_pass* self) {
+void ui_pass_destroy(struct rendergraph_node* self) {
     if (self) {
         if (self->internal_data) {
             // Destroy the pass

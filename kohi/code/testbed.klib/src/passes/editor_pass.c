@@ -19,7 +19,7 @@ typedef struct editor_pass_internal_data {
     debug_shader_locations debug_locations;
 } editor_pass_internal_data;
 
-b8 editor_pass_create(struct rendergraph_pass* self,void* config) {
+b8 editor_pass_create(struct rendergraph_node* self,void* config) {
     if (!self) {
         return false;
     }
@@ -30,7 +30,7 @@ b8 editor_pass_create(struct rendergraph_pass* self,void* config) {
     return true;
 }
 
-b8 editor_pass_initialize(struct rendergraph_pass* self) {
+b8 editor_pass_initialize(struct rendergraph_node* self) {
     if (!self) {
         return false;
     }
@@ -41,26 +41,26 @@ b8 editor_pass_initialize(struct rendergraph_pass* self) {
     renderpass_config editor_pass_config = {0};
     editor_pass_config.name = "Renderpass.Testbed.EditorWorld";
     editor_pass_config.clear_colour = (vec4){0.0f, 0.0f, 0.0f, 1.0f};
-    editor_pass_config.clear_flags = RENDERPASS_CLEAR_DEPTH_BUFFER_FLAG | RENDERPASS_CLEAR_STENCIL_BUFFER_FLAG;
+    editor_pass_config.clear_flags = RENDERPASS_CLEAR_DEPTH_BUFFER_FLAG_BIT | RENDERPASS_CLEAR_STENCIL_BUFFER_FLAG_BIT;
     editor_pass_config.depth = 1.0f;
     editor_pass_config.stencil = 0;
     editor_pass_config.target.attachment_count = 2;
-    editor_pass_config.target.attachments = kallocate(sizeof(render_target_attachment_config) * editor_pass_config.target.attachment_count, MEMORY_TAG_ARRAY);
+    editor_pass_config.target.attachments = kallocate(sizeof(framebuffer_attachment_config) * editor_pass_config.target.attachment_count, MEMORY_TAG_ARRAY);
 
     // Colour attachment
-    render_target_attachment_config* editor_target_colour = &editor_pass_config.target.attachments[0];
-    editor_target_colour->type = RENDER_TARGET_ATTACHMENT_TYPE_COLOUR;
+    framebuffer_attachment_config* editor_target_colour = &editor_pass_config.target.attachments[0];
+    editor_target_colour->type = RENDERER_ATTACHMENT_TYPE_FLAG_COLOUR_BIT;
     editor_target_colour->source = RENDER_TARGET_ATTACHMENT_SOURCE_DEFAULT;
-    editor_target_colour->load_operation = RENDER_TARGET_ATTACHMENT_LOAD_OPERATION_LOAD;
-    editor_target_colour->store_operation = RENDER_TARGET_ATTACHMENT_STORE_OPERATION_STORE;
+    editor_target_colour->load_operation = RENDERER_ATTACHMENT_LOAD_OPERATION_LOAD;
+    editor_target_colour->store_operation = RENDERER_ATTACHMENT_STORE_OPERATION_STORE;
     editor_target_colour->present_after = false;
 
     // Depth attachment
-    render_target_attachment_config* editor_target_depth = &editor_pass_config.target.attachments[1];
-    editor_target_depth->type = RENDER_TARGET_ATTACHMENT_TYPE_DEPTH;
+    framebuffer_attachment_config* editor_target_depth = &editor_pass_config.target.attachments[1];
+    editor_target_depth->type = RENDERER_ATTACHMENT_TYPE_FLAG_DEPTH_BIT;
     editor_target_depth->source = RENDER_TARGET_ATTACHMENT_SOURCE_DEFAULT;
-    editor_target_depth->load_operation = RENDER_TARGET_ATTACHMENT_LOAD_OPERATION_DONT_CARE;
-    editor_target_depth->store_operation = RENDER_TARGET_ATTACHMENT_STORE_OPERATION_STORE;
+    editor_target_depth->load_operation = RENDERER_ATTACHMENT_LOAD_OPERATION_DONT_CARE;
+    editor_target_depth->store_operation = RENDERER_ATTACHMENT_STORE_OPERATION_STORE;
     editor_target_depth->present_after = false;
 
     if (!renderer_renderpass_create(&editor_pass_config, &self->pass)) {
@@ -82,7 +82,7 @@ b8 editor_pass_initialize(struct rendergraph_pass* self) {
     return true;
 }
 
-b8 editor_pass_execute(struct rendergraph_pass* self, struct frame_data* p_frame_data) {
+b8 editor_pass_execute(struct rendergraph_node* self, struct frame_data* p_frame_data) {
     if (!self) {
         return false;
     }
@@ -134,7 +134,7 @@ b8 editor_pass_execute(struct rendergraph_pass* self, struct frame_data* p_frame
     return true;
 }
 
-void editor_pass_destroy(struct rendergraph_pass* self) {
+void editor_pass_destroy(struct rendergraph_node* self) {
     if (self) {
         if (self->internal_data) {
             // Destroy the pass.

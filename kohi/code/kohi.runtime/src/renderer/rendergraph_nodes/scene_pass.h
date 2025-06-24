@@ -5,7 +5,7 @@
 #include "math/math_types.h"
 #include "renderer/passes/shadow_map_pass.h"
 
-struct rendergraph_pass;
+struct rendergraph_node;
 struct frame_data;
 struct texture;
 
@@ -30,10 +30,10 @@ typedef struct scene_pass_extended_data {
     mat4 directional_light_projections[MAX_CASCADE_COUNT];
 } scene_pass_extended_data;
 
-b8 scene_pass_create(struct rendergraph_pass* self,void* config);
-b8 scene_pass_initialize(struct rendergraph_pass* self);
-b8 scene_pass_load_resources(struct rendergraph_pass* self);
-b8 scene_pass_execute(struct rendergraph_pass* self, struct frame_data* p_frame_data);
-void scene_pass_destroy(struct rendergraph_pass* self);
+b8 scene_pass_create(struct rendergraph_node* self,void* config);
+b8 scene_pass_initialize(struct rendergraph_node* self);
+b8 scene_pass_load_resources(struct rendergraph_node* self);
+b8 scene_pass_execute(struct rendergraph_node* self, struct frame_data* p_frame_data);
+void scene_pass_destroy(struct rendergraph_node* self);
 
 #endif

@@ -33,7 +33,7 @@ typedef struct scene_pass_internal_data {
     texture_map* shadow_maps;
 } scene_pass_internal_data;
 
-b8 scene_pass_create(struct rendergraph_pass* self, void* config) {
+b8 scene_pass_create(struct rendergraph_node* self, void* config) {
     if (!self) {
         return false;
     }
@@ -44,7 +44,7 @@ b8 scene_pass_create(struct rendergraph_pass* self, void* config) {
     return true;
 }
 
-b8 scene_pass_initialize(struct rendergraph_pass* self) {
+b8 scene_pass_initialize(struct rendergraph_node* self) {
     if (!self) {
         return false;
     }
@@ -55,27 +55,27 @@ b8 scene_pass_initialize(struct rendergraph_pass* self) {
     renderpass_config scene_pass_config = {0};
     scene_pass_config.name = "Renderpass.World";
     scene_pass_config.clear_colour = (vec4){0.0f, 0.0f, 0.2f, 1.0f};
-    scene_pass_config.clear_flags = RENDERPASS_CLEAR_DEPTH_BUFFER_FLAG | RENDERPASS_CLEAR_STENCIL_BUFFER_FLAG;
+    scene_pass_config.clear_flags = RENDERPASS_CLEAR_DEPTH_BUFFER_FLAG_BIT | RENDERPASS_CLEAR_STENCIL_BUFFER_FLAG_BIT;
     scene_pass_config.depth = 1.0f;
     scene_pass_config.stencil = 0;
     scene_pass_config.target.attachment_count = 2;
-    scene_pass_config.target.attachments = kallocate(sizeof(render_target_attachment_config) * scene_pass_config.target.attachment_count, MEMORY_TAG_ARRAY);
+    scene_pass_config.target.attachments = kallocate(sizeof(framebuffer_attachment_config) * scene_pass_config.target.attachment_count, MEMORY_TAG_ARRAY);
     scene_pass_config.render_target_count = renderer_window_attachment_count_get();
 
     // Colour attachment
-    render_target_attachment_config* scene_target_colour = &scene_pass_config.target.attachments[0];
-    scene_target_colour->type = RENDER_TARGET_ATTACHMENT_TYPE_COLOUR;
+    framebuffer_attachment_config* scene_target_colour = &scene_pass_config.target.attachments[0];
+    scene_target_colour->type = RENDERER_ATTACHMENT_TYPE_FLAG_COLOUR_BIT;
     scene_target_colour->source = RENDER_TARGET_ATTACHMENT_SOURCE_DEFAULT;
-    scene_target_colour->load_operation = RENDER_TARGET_ATTACHMENT_LOAD_OPERATION_LOAD;
-    scene_target_colour->store_operation = RENDER_TARGET_ATTACHMENT_STORE_OPERATION_STORE;
+    scene_target_colour->load_operation = RENDERER_ATTACHMENT_LOAD_OPERATION_LOAD;
+    scene_target_colour->store_operation = RENDERER_ATTACHMENT_STORE_OPERATION_STORE;
     scene_target_colour->present_after = false;
 
     // Depth attachment
-    render_target_attachment_config* scene_target_depth = &scene_pass_config.target.attachments[1];
-    scene_target_depth->type = RENDER_TARGET_ATTACHMENT_TYPE_DEPTH;
+    framebuffer_attachment_config* scene_target_depth = &scene_pass_config.target.attachments[1];
+    scene_target_depth->type = RENDERER_ATTACHMENT_TYPE_FLAG_DEPTH_BIT;
     scene_target_depth->source = RENDER_TARGET_ATTACHMENT_SOURCE_DEFAULT;
-    scene_target_depth->load_operation = RENDER_TARGET_ATTACHMENT_LOAD_OPERATION_DONT_CARE;
-    scene_target_depth->store_operation = RENDER_TARGET_ATTACHMENT_STORE_OPERATION_STORE;
+    scene_target_depth->load_operation = RENDERER_ATTACHMENT_LOAD_OPERATION_DONT_CARE;
+    scene_target_depth->store_operation = RENDERER_ATTACHMENT_STORE_OPERATION_STORE;
     scene_target_depth->present_after = false;
 
     if (!renderer_renderpass_create(&scene_pass_config, &self->pass)) {
@@ -141,7 +141,7 @@ b8 scene_pass_initialize(struct rendergraph_pass* self) {
     return true;
 }
 
-b8 scene_pass_load_resources(struct rendergraph_pass* self) {
+b8 scene_pass_load_resources(struct rendergraph_node* self) {
     if (!self) {
         return false;
     }
@@ -183,7 +183,7 @@ b8 scene_pass_load_resources(struct rendergraph_pass* self) {
     return true;
 }
 
-b8 scene_pass_execute(struct rendergraph_pass* self, struct frame_data* p_frame_data) {
+b8 scene_pass_execute(struct rendergraph_node* self, struct frame_data* p_frame_data) {
     if (!self) {
         return false;
     }
@@ -368,7 +368,7 @@ b8 scene_pass_execute(struct rendergraph_pass* self, struct frame_data* p_frame_
     return true;
 }
 
-void scene_pass_destroy(struct rendergraph_pass* self) {
+void scene_pass_destroy(struct rendergraph_node* self) {
     if (self) {
         if (self->internal_data) {
             scene_pass_internal_data* internal_data = self->internal_data;

@@ -1,33 +1,41 @@
 #include "vulkan_swapchain.h"
 
-#include "memory/kmemory.h"
-#include "strings/kstring.h"
+#include "defines.h"
 #include "logger.h"
-#include "systems/texture_system.h"
+#include "memory/kmemory.h"
+#include "platform/platform.h"
+#include "renderer/renderer_frontend.h"
+#include "renderer/renderer_types.h"
+#include "resources/resource_types.h"
+#include "strings/kstring.h"
 #include "vulkan_device.h"
-#include "vulkan_image.h"
+#include "vulkan_types.h"
 #include "vulkan_utils.h"
 
-static void create(vulkan_context* context, u32 width, u32 height, renderer_config_flags flags, vulkan_swapchain* swapchain);
-static void destroy(vulkan_context* context, vulkan_swapchain* swapchain);
+static b8 create(renderer_backend_interface* backend, kwindow* window, renderer_config_flags flags, vulkan_swapchain* swapchain);
+static void destroy(renderer_backend_interface* backend, vulkan_swapchain* swapchain);
 
-void vulkan_swapchain_create(vulkan_context* context, u32 width, u32 height, renderer_config_flags flags, vulkan_swapchain* out_swapchain) {
+void vulkan_swapchain_create(renderer_backend_interface* backend, kwindow* window, renderer_config_flags flags, vulkan_swapchain* out_swapchain) {
     // Simple create a new one
-    create(context, width, height, flags, out_swapchain);
+    create(backend, window, flags, out_swapchain);
 }
 
-void vulkan_swapchain_recreate(vulkan_context* context, u32 width, u32 height, vulkan_swapchain* swapchain) {
+void vulkan_swapchain_recreate(struct renderer_backend_interface* backend, struct kwindow* window, vulkan_swapchain* swapchain) {
     // Destroy the old and create a new one
-    destroy(context, swapchain);
-    create(context, width, height, swapchain->flags, swapchain);
+    destroy(backend, swapchain);
+    create(backend, window, swapchain->flags, swapchain);
 }
 
-void vulkan_swapchain_destroy(vulkan_context* context, vulkan_swapchain* swapchain) {
-    destroy(context, swapchain);
+void vulkan_swapchain_destroy(struct renderer_backend_interface* backend, vulkan_swapchain* swapchain) {
+    destroy(backend, swapchain);
 }
 
-static void create(vulkan_context* context, u32 width, u32 height, renderer_config_flags flags, vulkan_swapchain* swapchain) {
-    VkExtent2D swapchain_extent = {width, height};
+static b8 create(renderer_backend_interface* backend, kwindow* window, renderer_config_flags flags, vulkan_swapchain* swapchain) {
+    vulkan_context* context = backend->internal_context;
+    kwindow_renderer_state* window_internal = window->renderer_state;
+    kwindow_renderer_backend_state* window_backend = window_internal->backend_state;
+
+    VkExtent2D swapchain_extent = { window->width, window->height };
 
     // Choose a swap surface format.
     b8 found = false;
@@ -62,14 +70,15 @@ static void create(vulkan_context* context, u32 width, u32 height, renderer_conf
                 }
             }
         }
-    } else {
+    }
+    else {
         present_mode = VK_PRESENT_MODE_IMMEDIATE_KHR;
     }
 
     // Requery swapchain support.
     vulkan_device_query_swapchain_support(
         context->device.physical_device,
-        context->surface,
+        window_backend->surface,
         &context->device.swapchain_support);
 
     // Swapchain extent
@@ -91,8 +100,8 @@ static void create(vulkan_context* context, u32 width, u32 height, renderer_conf
     swapchain->max_frames_in_flight = image_count - 1;
 
     // Swapchain create info
-    VkSwapchainCreateInfoKHR swapchain_create_info = {VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR};
-    swapchain_create_info.surface = context->surface;
+    VkSwapchainCreateInfoKHR swapchain_create_info = { VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR };
+    swapchain_create_info.surface = window_backend->surface;
     swapchain_create_info.minImageCount = image_count;
     swapchain_create_info.imageFormat = swapchain->image_format.format;
     swapchain_create_info.imageColorSpace = swapchain->image_format.colorSpace;
@@ -104,11 +113,12 @@ static void create(vulkan_context* context, u32 width, u32 height, renderer_conf
     if (context->device.graphics_queue_index != context->device.present_queue_index) {
         u32 queueFamilyIndices[] = {
             (u32)context->device.graphics_queue_index,
-            (u32)context->device.present_queue_index};
+            (u32)context->device.present_queue_index };
         swapchain_create_info.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
         swapchain_create_info.queueFamilyIndexCount = 2;
         swapchain_create_info.pQueueFamilyIndices = queueFamilyIndices;
-    } else {
+    }
+    else {
         swapchain_create_info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
         swapchain_create_info.queueFamilyIndexCount = 0;
         swapchain_create_info.pQueueFamilyIndices = 0;
@@ -152,7 +162,8 @@ static void create(vulkan_context* context, u32 width, u32 height, renderer_conf
                 return;
             }
         }
-    } else {
+    }
+    else {
         for (u32 i = 0; i < swapchain->image_count; ++i) {
             // Just update the dimensions.
             texture_system_resize(&swapchain->render_textures[i], swapchain_extent.width, swapchain_extent.height, false);
@@ -173,7 +184,7 @@ static void create(vulkan_context* context, u32 width, u32 height, renderer_conf
     for (u32 i = 0; i < swapchain->image_count; ++i) {
         vulkan_image* image = (vulkan_image*)swapchain->render_textures[i].internal_data;
 
-        VkImageViewCreateInfo view_info = {VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO};
+        VkImageViewCreateInfo view_info = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
         view_info.image = image->handle;
         view_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
         view_info.format = swapchain->image_format.format;
@@ -199,8 +210,8 @@ static void create(vulkan_context* context, u32 width, u32 height, renderer_conf
 
     // Create depth/stencil images and its view
     for (u32 i = 0; i < context->swapchain.image_count; ++i) {
-        char formatted_name[TEXTURE_NAME_MAX_LENGTH] = {0};
-        string_format(formatted_name, "__kohi_default_depth_stencil_texture_%u", i);
+        char formatted_name[TEXTURE_NAME_MAX_LENGTH] = { 0 };
+        string_format_unsafe(formatted_name, "__kohi_default_depth_stencil_texture_%u", i);
 
         vulkan_image* image = kallocate(sizeof(vulkan_image), MEMORY_TAG_TEXTURE);
         vulkan_image_create(
@@ -233,19 +244,27 @@ static void create(vulkan_context* context, u32 width, u32 height, renderer_conf
     }
 
     KINFO("Swapchain created successfully.");
+    return true;
 }
 
-static void destroy(vulkan_context* context, vulkan_swapchain* swapchain) {
-    vkDeviceWaitIdle(context->device.logical_device);
+static void destroy(renderer_backend_interface* backend, vulkan_swapchain* swapchain) {
+    vulkan_context* context = backend->internal_context;
+
+    kwindow* window = swapchain->owning_window;
+    kwindow_renderer_state* window_internal = window->renderer_state;
+    kwindow_renderer_backend_state* window_backend = window_internal->backend_state;
+
     for (u32 i = 0; i < context->swapchain.image_count; ++i) {
         vulkan_image_destroy(context, (vulkan_image*)swapchain->depth_textures[i].internal_data);
         swapchain->depth_textures[i].internal_data = 0;
     }
 
-    // Only destroy the views ,not the images,since those are owned by the swachain and are thus
-    // destroyed when it is
+    vkDeviceWaitIdle(context->device.logical_device);
+
+    // Only destroy the colourbuffer views, not the images, since those are owned by the swapchain and are thus
+     // destroyed when it is
     for (u32 i = 0; i < swapchain->image_count; ++i) {
-        vulkan_image* image = (vulkan_image*)swapchain->render_textures[i].internal_data;
+        vulkan_image* image = &texture_data->images[i];
         vkDestroyImageView(context->device.logical_device, image->view, context->allocator);
     }
 

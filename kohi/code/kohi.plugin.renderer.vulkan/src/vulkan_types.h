@@ -14,8 +14,6 @@
 
 #include <vulkan/vulkan.h>
 
-#include "containers/freelist.h"
-#include "containers/hashtable.h"
 #include "kdebug/kassert.h"
 #include "defines.h"
 #include "renderer/renderer_types.h"
@@ -102,8 +100,10 @@ typedef struct vulkan_image {
     VkDeviceMemory memory;
     /** @brief The view for the image, which is used to access the image. */
     VkImageView view;
+    VkImageSubresourceRange view_subresource_range;
     /** @brief If there are multiple layers, one view per layer exists here. ImageView 数组 */
     VkImageView* layer_views;
+    VkImageSubresourceRange* layer_view_subresource_ranges;
     /** @brief The GPU memory requirements for this image. */
     VkMemoryRequirements memory_requirements;
     /** @brief Memory property flags */
@@ -132,9 +132,18 @@ typedef struct texture_internal_data {
     // Number of vulkan_images in the array. This is typically 1 unless the texture
    // requires the frame_count to be taken into account.
     u32 image_count;
-    // Array of images. Used when image_count > 1.
+    // Array of images.
     vulkan_image* images;
 }texture_internal_data;
+
+// Struct definition for renderer-specific framebuffer data.
+typedef struct framebuffer_internal_data {
+    // The number of VkFramebuffers in the array. Typically 1 unless the attachment
+       // requires the frame_count to be taken into account.
+    u32 framebuffer_count;
+    // Arrat of framebuffers.
+    VkFramebuffer* framebuffers;
+}framebuffer_internal_data;
 
 typedef enum vulkan_render_pass_state {
     READY,
@@ -149,33 +158,35 @@ typedef enum vulkan_render_pass_state {
  * @brief A representation of the Vulkan renderpass.
  */
 typedef struct vulkan_renderpass {
+    /** @brief The internal renderpass handle. */
     VkRenderPass handle;
-
-    /** @brief The depth clear value. */
-    f32 depth;
-    /** @brief The stencil clear value. */
-    u32 stencil;
-
+    /** @brief Indicates renderpass state. */
     vulkan_render_pass_state state;
+
+    // darray
+    VkClearValue* clear_values;
+    /* u32 clear_value_count; */
 } vulkan_renderpass;
 
 typedef struct vulkan_swapchain {
+    /** @brief The swapchain image format. */
     VkSurfaceFormatKHR image_format;
+    /**
+  * @brief The maximum number of "images in flight" (images simultaneously being rendered to).
+  * Typically one less than the total number of images available.
+  */
     u8 max_frames_in_flight;
+
     /** @brief Indicates various flags used for swapchain instantiation. */
     renderer_config_flags flags;
-    VkSwapchainKHR handle;
-    u32 image_count;
-    /** @brief An array of to render targets, which contain swapchain images. */
-    texture* render_textures;
-    /** @brief An array of depth textures, one per frame. 深度纹理数组  */
-    texture* depth_textures;
 
-    /**
-     * @brief Render targets used for on-screen rendering, one per frame.
-     * The images contained in these are created and owned by the swapchain.
-     * */
-    render_target render_targets[3];
+    /** @brief The swapchain internal handle. */
+    VkSwapchainKHR handle;
+    /** @brief The number of swapchain images. */
+    u32 image_count;
+
+    /** @brief Track the owning window in case something is needed from it. */
+    struct kwindow* owning_window;
 } vulkan_swapchain;
 
 typedef enum vulkan_command_buffer_state {
@@ -418,8 +429,13 @@ typedef struct vulkan_shader {
 // Forward declare shader compiler.
 struct shaderc_comppiler;
 
+
 /**
  * @brief The Vulkan-specific backend window state.
+ *
+ * This owns all resources associated with the window (i.e swapchain)
+ * and anything tied to it or max_frames_in_flight (sync objects, staging
+ * buffer, command buffers, etc.).
  */
 typedef struct kwindow_renderer_backend_state {
     /** @brief The internal Vulkan surface for the window to be drawn to. */
@@ -428,23 +444,29 @@ typedef struct kwindow_renderer_backend_state {
     vulkan_swapchain swapchain;
     /** @brief The current image index. */
     u32 image_index;
+    /** @brief The current frame index ( % by max_frames_in_flight). */
+    u32 current_frame;
+
     /** @brief Indicates if the swapchain is currently being recreated. */
     b8 recreating_swapchain;
-    /** @brief Render targets used for world rendering. @note One per frame. */
-    render_target world_render_targets[3];
-    // The framebuffer current width.
-    u32 framebuffer_width;
+    /** @brief The graphics command buffers, one per swapchain image. */
+    vulkan_command_buffer* graphics_command_buffers;
 
-    // The framebuffer current height.
-    u32 framebuffer_height;
+    /** @brief The semaphores used to indicate image availability, one per frame in flight. */
+    VkSemaphore* image_available_semaphores;
+    /** @brief The semaphores used to indicate queue availability, one per frame in flight. */
+    VkSemaphore* queue_complete_semaphores;
 
-    // Current generation of framebuffer size.If it does not match framebuffer_size_last_generation,
-    // a new one should be generated.
+    /**
+    * @brief The in-flight fences, used to indicate to the application when a frame is
+    * busy/ready. One per frame in flight.
+    */
+    VkFence* in_flight_fences;
+    /** @brief Resusable staging buffers (one per frame in flight) to transfer data from a resource to a GPU-only buffer. */
+    renderbuffer* staging;
+
     u64 framebuffer_size_generation;
-
-    // The generation of the framebuffer when it was last created. Set to framebuffer_size_generation
-    // when updated
-    u64 framebuffer_size_last_generation;
+    u64 framebuffer_previous_size_generation;
 }kwindow_renderer_backend_state;
 /**
  * @brief The overall Vulkan context for the backend. Holds and maintains
@@ -459,6 +481,10 @@ typedef struct vulkan_context {
 
     /** @brief The instance-level api patch version. */
     u32 api_patch;
+    /** @brief The currently cached colour buffer clear value. */
+    VkClearColorValue colour_clear_value;
+    /** @brief The currently cached depth/stencil buffer clear value. */
+    VkClearDepthStencilValue depth_stencil_clear_value;
 
     /** @brief The viewport rectangle. */
     vec4 viewport_rect;
@@ -484,20 +510,8 @@ typedef struct vulkan_context {
 
     vulkan_device device;
 
-    // darray
-    vulkan_command_buffer* graphics_command_buffers;
-
-    // darray
-    VkSemaphore* image_available_semaphores;
-
-    // darray
-    VkSemaphore* queue_complete_semaphores;
-
-    u32 in_flight_fence_count;
-    VkFence in_flight_fences[2];
-
-    u32 current_frame;
-
+    /** @brief A pointer to the current window whose resources should be used as default to render to. */
+    struct kwindow* current_window;
     b8 render_flag_changed;
 
     b8 validation_enabled;
@@ -525,9 +539,6 @@ typedef struct vulkan_context {
 
     /** @brief A pointer to the currently bound shader. */
     struct shader* bound_shader;
-
-    /** @brief Resusable staging buffers (one per frame in flight) to transfer data from a resource to a GPU-only buffer. */
-    renderbuffer staging[2];
 
     /**
      * Used for dynamic compilation of vulkan shaders (using the shaderc lib.)

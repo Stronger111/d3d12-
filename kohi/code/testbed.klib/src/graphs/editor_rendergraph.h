@@ -13,7 +13,7 @@ typedef struct editor_rendergraph {
 
     struct editor_gizmo* gizmo;
 
-    rendergraph_pass editor_pass;
+    rendergraph_node editor_pass;
 
 } editor_rendergraph;
 

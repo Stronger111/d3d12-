@@ -1,8 +1,10 @@
-#include "skybox_pass.h"
+#include "skybox_rendergraph_node.h"
 
-#include "memory/kmemory.h"
+#include "containers/darray.h"
 #include "logger.h"
+#include "memory/kmemory.h"
 #include "renderer/renderer_frontend.h"
+#include "renderer/renderer_types.h"
 #include "renderer/rendergraph.h"
 #include "resources/skybox.h"
 #include "systems/resource_system.h"
@@ -17,20 +19,62 @@ typedef struct skybox_shader_locations {
 typedef struct skybox_pass_internal_data {
     shader* s;
     skybox_shader_locations locations;
+
+    //The internal renderer renderpass.
+    renderpass internal_pass;
+
+    rendergraph_source* colourbuffer_source;
+
+    skybox* sb;
 } skybox_pass_internal_data;
 
-b8 skybox_pass_create(struct rendergraph_pass* self,void* config) {
+b8 skybox_rendergraph_node_create(struct rendergraph_node* self, const rendergraph_node_config* config) {
     if (!self) {
+        KERROR("skybox_pass_create requires a valid pointer to a pass");
+        return false;
+    }
+    if (!config) {
+        KERROR("skybox_pass_create requires a valid configuration.");
         return false;
     }
 
-    self->internal_data = kallocate(sizeof(skybox_pass_internal_data), MEMORY_TAG_RENDERER);
-    self->pass_data.ext_data = kallocate(sizeof(skybox_pass_extended_data), MEMORY_TAG_RENDERER);
+    //Take a copy of the config.
+    self->config = kallocate(sizeof(rendergraph_node_config), MEMORY_TAG_RENDERER);
+    kcopy_memory(self->config, config, sizeof(rendergraph_node_config));
 
+    //Setup internal data.
+    self->internal_data = kallocate(sizeof(skybox_pass_internal_data), MEMORY_TAG_RENDERER);
+    skybox_pass_internal_data* internal_data = self->internal_data;
+
+    // LEFTOFF:
+    // - Change rendergraph to gather required resources at the beginning
+    //   of a frame (i.e. global.colourbuffer from current window's render target).
+    // - Convert rendergraph passes to use configured sinks.
+    // - Remove public functions to add sources, sinks and set sink linkages. This will be done via config.
+    // - Remove specialized rendergraphs, will be replaced by "templates" (forward, editor, etc.)
+    // - Remove all public functions from rendergraph passes regarding recreation of attachments.
+    //   These should be handled internally.
+    // - Remove concept of source render target types (i.e colour or depth) - not really needed.
+    // - Remove concept of source origin (i.e. self, global, etc.)
+    // - Add logic to resolve graph dependencies once all passes have been setup to resolve
+    //   source/sink linkage by lookup (i.e '<pass_name>.<source_name>').
+    // - Sources should automatically be added internally by the rendergraph pass, not externally
+    //   as is done currently in specialized graphs.
+    // - Rename rendergraph_pass -> rendergraph_node.
+
+        // Add source(s), typically to be used as outputs for other passes to pick up.
+    rendergraph_source source_colourbuffer = { 0 };
+    source_colourbuffer.name="colourbuffer";
+    source_colourbuffer.type=RENDERGRAPH_RESOURCE_TYPE_TEXTURE;
+    darray_push(self->sources, source_colourbuffer);
+
+    // Keep an internal convenience pointer to the source.
+    internal_data->colourbuffer_source=&self->sources[0];
+    
     return true;
 }
 
-b8 skybox_pass_initialize(struct rendergraph_pass* self) {
+b8 skybox_rendergraph_node_initialize(struct rendergraph_node* self) {
     if (!self) {
         return false;
     }
@@ -38,25 +82,17 @@ b8 skybox_pass_initialize(struct rendergraph_pass* self) {
     skybox_pass_internal_data* internal_data = self->internal_data;
 
     // Setup the renderpass.
-    // Renderpass config - SKYBOX.
-    renderpass_config skybox_pass_config = {0};
+    renderpass_config skybox_pass_config = { 0 };
     skybox_pass_config.name = "Renderpass.Skybox";
-    skybox_pass_config.clear_colour = (vec4){0.0f, 0.0f, 0.2f, 1.0f};
-    skybox_pass_config.clear_flags = RENDERPASS_CLEAR_COLOUR_BUFFER_FLAG;
-    skybox_pass_config.depth = 1.0f;
-    skybox_pass_config.stencil = 0;
+    skybox_pass_config.clear_flags = 0; // NOTE: This pass no longer responsible for clears. // RENDERPASS_CLEAR_COLOUR_BUFFER_FLAG;
     skybox_pass_config.target.attachment_count = 1;
     // TODO: leaking this?
-    skybox_pass_config.target.attachments = kallocate(sizeof(render_target_attachment_config) * skybox_pass_config.target.attachment_count, MEMORY_TAG_ARRAY);
-    skybox_pass_config.render_target_count = renderer_window_attachment_count_get();
+    skybox_pass_config.target.attachments = kallocate(sizeof(framebuffer_attachment_config) * skybox_pass_config.target.attachment_count, MEMORY_TAG_ARRAY);
 
     // Color attachment.
-    render_target_attachment_config* skybox_target_colour = &skybox_pass_config.target.attachments[0];
-    skybox_target_colour->type = RENDER_TARGET_ATTACHMENT_TYPE_COLOUR;
-    skybox_target_colour->source = RENDER_TARGET_ATTACHMENT_SOURCE_DEFAULT;
-    skybox_target_colour->load_operation = RENDER_TARGET_ATTACHMENT_LOAD_OPERATION_DONT_CARE;
-    skybox_target_colour->store_operation = RENDER_TARGET_ATTACHMENT_STORE_OPERATION_STORE;
-    skybox_target_colour->present_after = false;
+    framebuffer_attachment_config* skybox_target_colour = &skybox_pass_config.target.attachments[0];
+    skybox_target_colour->type = RENDERER_ATTACHMENT_TYPE_FLAG_COLOUR_BIT;
+    skybox_target_colour->load_operation = RENDERER_ATTACHMENT_LOAD_OPERATION_DONT_CARE;
 
     if (!renderer_renderpass_create(&skybox_pass_config, &self->pass)) {
         KERROR("Skybox rendergraph pass - Failed to create skybox renderpass ");
@@ -86,7 +122,7 @@ b8 skybox_pass_initialize(struct rendergraph_pass* self) {
     return true;
 }
 
-b8 skybox_pass_execute(struct rendergraph_pass* self, struct frame_data* p_frame_data) {
+b8 skybox_rendergraph_node_execute(struct rendergraph_node* self, struct frame_data* p_frame_data) {
     if (!self) {
         return false;
     }
@@ -121,7 +157,7 @@ b8 skybox_pass_execute(struct rendergraph_pass* self, struct frame_data* p_frame
             KERROR("Failed to apply skybox view uniform.");
             return false;
         }
-        shader_system_apply_global(true,p_frame_data);
+        shader_system_apply_global(true, p_frame_data);
 
         // Instance
         shader_system_bind_instance(ext_data->sb->instance_id);
@@ -130,7 +166,7 @@ b8 skybox_pass_execute(struct rendergraph_pass* self, struct frame_data* p_frame
             return false;
         }
         b8 needs_update = ext_data->sb->render_frame_number != p_frame_data->renderer_frame_number || ext_data->sb->draw_index != p_frame_data->draw_index;
-        shader_system_apply_instance(needs_update,p_frame_data);
+        shader_system_apply_instance(needs_update, p_frame_data);
 
         // Sync the frame number and draw index.
         ext_data->sb->render_frame_number = p_frame_data->renderer_frame_number;
@@ -157,7 +193,7 @@ b8 skybox_pass_execute(struct rendergraph_pass* self, struct frame_data* p_frame
     return true;
 }
 
-void skybox_pass_destroy(struct rendergraph_pass* self) {
+void skybox_rendergraph_node_destroy(struct rendergraph_node* self) {
     if (self) {
         if (self->internal_data) {
             // Destroy the pass.
@@ -165,5 +201,12 @@ void skybox_pass_destroy(struct rendergraph_pass* self) {
             kfree(self->internal_data, sizeof(skybox_pass_internal_data), MEMORY_TAG_RENDERER);
             self->internal_data = 0;
         }
+    }
+}
+
+void skybox_rendergraph_node_set_skybox(struct rendergraph_node* self, struct skybox* sb) {
+    if (self) {
+        skybox_pass_internal_data* internal_data=self->internal_data;
+        internal_data->sb = sb;
     }
 }

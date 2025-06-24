@@ -8,6 +8,7 @@
 #include "core/frame_data.h"
 #include "kdebug/kassert.h"
 #include "defines.h"
+#include "identifiers/identifier.h"
 #include "logger.h"
 #include "math/kmath.h"
 #include "math/math_types.h"
@@ -20,7 +21,6 @@
 #include "resources/resource_types.h"
 #include "strings/kstring.h"
 #include "systems/material_system.h"
-#include "systems/resource_system.h"
 #include "systems/shader_system.h"
 #include "systems/texture_system.h"
 #include "vulkan_command_buffer.h"
@@ -34,7 +34,6 @@
 // For runtime shader compilation.
 #include <shaderc/shaderc.h>
 #include <shaderc/status.h>
-
 // NOTE: If wanting to trace allocations, uncomment this.
 // #ifndef KVULKAN_ALLOCATOR_TRACE
 // #define KVULKAN_ALLOCATOR_TRACE 1
@@ -50,193 +49,24 @@ VKAPI_ATTR VkBool32 VKAPI_CALL vk_debug_callback(VkDebugUtilsMessageSeverityFlag
 
 static i32 find_memory_index(vulkan_context* context, u32 type_filter, u32 property_flags);
 
-static void create_command_buffers(vulkan_context* context);
-static b8 recreate_swapchain(vulkan_context* context);
+static void create_command_buffers(vulkan_context* context, kwindow* window);
+static b8 recreate_swapchain(renderer_backend_interface* backend, kwindow* window);
 static b8 create_shader_module(vulkan_context* context, shader* s, shader_stage_config* config, vulkan_shader_stage* out_stage);
 static b8 vulkan_buffer_copy_range_internal(vulkan_context* context, VkBuffer source, u64 source_offset, VkBuffer dest, u64 dest_offset, u64 size, b8 queue_wait);
 
+static vulkan_command_buffer* get_current_command_buffer(vulkan_context* context);
+static u32 get_current_image_index(vulkan_context* context);
+
+// FIXME: May want to have this as a configurable option instead.
+// Forward declarations of custom vulkan allocator functions.
 #if KVULKAN_USE_CUSTOM_ALLOCATOR == 1
-/**
- * @brief Implementation of PFN_vkAllocationFunction.
- * @link https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/PFN_vkAllocationFunction.html
- *
- * @param user_data User data specified in the allocator by the application.
- * @param size The size in bytes of the requested allocation.
- * @param alignment The requested alignment of the allocation in bytes. Must be a power of two.
- * @param allocationScope The allocation scope and lifetime.
- * @return A memory block if successful; otherwise 0.
- */
-void* vulkan_alloc_allocation(void* user_data, size_t size, size_t alignment, VkSystemAllocationScope allocation_scope) {
-    // Null MUST be returned if this fails.
-    if (size == 0) {
-        return 0;
-    }
-
-    void* result = kallocate_aligned(size, (u16)alignment, MEMORY_TAG_VULKAN);
-#ifdef KVULKAN_ALLOCATOR_TRACE
-    KTRACE("Allocated block %p. Size=%llu, Alignment=%llu", result, size, alignment);
-#endif
-
-    return result;
-}
-
-/**
- * @brief Implementation of PFN_vkFreeFunction.
- * @link https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/PFN_vkFreeFunction.html
- *
- * @param user_data User data specified in the allocator by the application.
- * @param memory The allocation to be freed.
- */
-void vulkan_alloc_free(void* user_data, void* memory) {
-    if (!memory) {
-#ifdef KVULKAN_ALLOCATOR_TRACE
-        KTRACE("Block is null, nothing to free: %p", memory);
-#endif
-        return;
-    }
-
-#ifdef KVULKAN_ALLOCATOR_TRACE
-    KTRACE("Attempting to free block %p...", memory);
-#endif
-    u64 size;
-    u16 alignment;
-    b8 result = kmemory_get_size_alignment(memory, &size, &alignment);
-    if (result) {
-#ifdef KVULKAN_ALLOCATOR_TRACE
-        KTRACE("Block %p found with size/alignment: %llu/%u. Freeing aligned block...", memory, size, alignment);
-#endif
-        kfree_aligned(memory, size, alignment, MEMORY_TAG_VULKAN);
-    }
-    else {
-        KERROR("vulkan_alloc_free failed to get alignment lookup for block %p.", memory);
-    }
-}
-
-/**
- * @brief Implementation of PFN_vkReallocationFunction.
- * @link https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/PFN_vkReallocationFunction.html
- *
- * @param user_data User data specified in the allocator by the application.
- * @param original Either NULL or a pointer previously returned by vulkan_alloc_allocation.
- * @param size The size in bytes of the requested allocation.
- * @param alignment The requested alignment of the allocation in bytes. Must be a power of two.
- * @param allocation_scope The scope and lifetime of the allocation.
- * @return A memory block if successful; otherwise 0.
- */
-void* vulkan_alloc_reallocation(void* user_data, void* original, size_t size, size_t alignment, VkSystemAllocationScope allocation_scope) {
-    if (!original) {
-        return vulkan_alloc_allocation(user_data, size, alignment, allocation_scope);
-    }
-
-    if (size == 0) {
-        vulkan_alloc_free(user_data, original);
-        return 0;
-    }
-
-    // NOTE: if pOriginal is not null, the same alignment must be used for the new allocation as original.
-    u64 alloc_size;
-    u16 alloc_alignment;
-    b8 is_aligned = kmemory_get_size_alignment(original, &alloc_size, &alloc_alignment);
-    if (!is_aligned) {
-        KERROR("vulkan_alloc_reallocation of unaligned block %p", original);
-        return 0;
-    }
-
-    if (alloc_alignment != alignment) {
-        KERROR("Attempted realloc using a different alignment of %llu than the original of %hu.", alignment, alloc_alignment);
-        return 0;
-    }
-
-#ifdef KVULKAN_ALLOCATOR_TRACE
-    KTRACE("Attempting to realloc block %p...", original);
-#endif
-
-    void* result = vulkan_alloc_allocation(user_data, size, alloc_alignment, allocation_scope);
-    if (result) {
-#ifdef KVULKAN_ALLOCATOR_TRACE
-        KTRACE("Block %p reallocated to %p, copying data...", original, result);
-#endif
-
-        // Copy over the original memory.
-        kcopy_memory(result, original, alloc_size);
-#ifdef KVULKAN_ALLOCATOR_TRACE
-        KTRACE("Freeing original aligned block %p...", original);
-#endif
-        // Free the original memory only if the new allocation was successful.
-        kfree_aligned(original, alloc_size, alloc_alignment, MEMORY_TAG_VULKAN);
-    }
-    else {
-#ifdef KVULKAN_ALLOCATOR_TRACE
-        KERROR("Failed to realloc %p.", original);
-#endif
-    }
-
-    return result;
-}
-
-/**
- * @brief Implementation of PFN_vkInternalAllocationNotification.
- * Purely informational, nothing can really be done with this except to track it.
- * @link https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/PFN_vkInternalAllocationNotification.html
- *
- * @param pUserData User data specified in the allocator by the application.
- * @param size The size of the allocation in bytes.
- * @param allocationType The type of internal allocation.
- * @param allocationScope The scope and lifetime of the allocation.
- */
-void vulkan_alloc_internal_alloc(void* pUserData, size_t size, VkInternalAllocationType allocationType, VkSystemAllocationScope allocationScope) {
-#ifdef KVULKAN_ALLOCATOR_TRACE
-    KTRACE("External allocation of size: %llu", size);
-#endif
-    kallocate_report((u64)size, MEMORY_TAG_VULKAN_EXT);
-}
-
-/**
- * @brief Implementation of PFN_vkInternalFreeNotification.
- * Purely informational, nothing can really be done with this except to track it.
- * @link https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/PFN_vkInternalFreeNotification.html
- *
- * @param pUserData User data specified in the allocator by the application.
- * @param size The size of the allocation to be freed in bytes.
- * @param allocationType The type of internal allocation.
- * @param allocationScope The scope and lifetime of the allocation.
- */
-void vulkan_alloc_internal_free(void* pUserData, size_t size, VkInternalAllocationType allocationType, VkSystemAllocationScope allocationScope) {
-#ifdef KVULKAN_ALLOCATOR_TRACE
-    KTRACE("External free of size: %llu", size);
-#endif
-    kfree_report((u64)size, MEMORY_TAG_VULKAN_EXT);
-}
-
-/**
- * @brief Create a vulkan allocator object, filling out the function pointers
- * in the provided struct.
- *
- * @param callbacks A pointer to the allocation callbacks structure to be filled out.
- * @return b8 True on success; otherwise false.
- */
-
- /**
-  * @brief Create a vulkan allocator object, filling out the function pointers
-  * in the provided struct.
-  *
-  * @param callbacks A pointer to the allocation callbacks structure to be filled out.
-  * @return b8 True on success; otherwise false.
-  */
-b8 create_vulkan_allocator(vulkan_context* context, VkAllocationCallbacks* callbacks) {
-    if (callbacks) {
-        callbacks->pfnAllocation = vulkan_alloc_allocation;
-        callbacks->pfnReallocation = vulkan_alloc_reallocation;
-        callbacks->pfnFree = vulkan_alloc_free;
-        callbacks->pfnInternalAllocation = vulkan_alloc_internal_alloc;
-        callbacks->pfnInternalFree = vulkan_alloc_internal_free;
-        callbacks->pUserData = context;
-        return true;
-    }
-
-    return false;
-}
-#endif  // KVULKAN_USE_CUSTOM_ALLOCATOR == 1
+static void* vulkan_alloc_allocation(void* user_data, size_t size, size_t alignment, VkSystemAllocationScope allocation_scope);
+static void vulkan_alloc_free(void* user_data, void* memory);
+static void* vulkan_alloc_reallocation(void* user_data, void* original, size_t size, size_t alignment, VkSystemAllocationScope allocation_scope);
+static void vulkan_alloc_internal_alloc(void* pUserData, size_t size, VkInternalAllocationType allocationType, VkSystemAllocationScope allocationScope);
+static void vulkan_alloc_internal_free(void* pUserData, size_t size, VkInternalAllocationType allocationType, VkSystemAllocationScope allocationScope);
+static b8 create_vulkan_allocator(vulkan_context* context, VkAllocationCallbacks* callbacks);
+#endif // KVULKAN_USE_CUSTOM_ALLOCATOR == 1
 
 b8 vulkan_renderer_backend_initialize(renderer_backend_interface* backend, const renderer_backend_config* config, u8* out_window_render_target_count) {
     backend->internal_context_size = sizeof(vulkan_context);
@@ -246,6 +76,10 @@ b8 vulkan_renderer_backend_initialize(renderer_backend_interface* backend, const
     if (config->flags & RENDERER_CONFIG_FLAG_ENABLE_VALIDATION) {
         context->validation_enabled = true;
     }
+
+    //Note down the internal size requirements for various resources.
+    backend->texture_internal_data_size = sizeof(texture_internal_data);
+    backend->framebuffer_internal_data_size = sizeof(framebuffer_internal_data);
 
     // Function pointers
     context->find_memory_index = find_memory_index;
@@ -262,12 +96,6 @@ b8 vulkan_renderer_backend_initialize(renderer_backend_interface* backend, const
 #else
     context->allocator = 0;
 #endif
-
-    // Just set some default values for the framebuffer for now.
-    // It doesn't really matyer what these are because they will be
-    // overridden, but are needed for swapchain creation.
-    context->framebuffer_width = 800;
-    context->framebuffer_height = 600;
 
     // Get the currently-installed instance version. Not necessarily what the device
     // Uses.though.Use this to create the instance though.
@@ -291,12 +119,13 @@ b8 vulkan_renderer_backend_initialize(renderer_backend_interface* backend, const
     // Obtain a list of required extensions
     const char** required_extensions = darray_create(const char*);
     darray_push(required_extensions, &VK_KHR_SURFACE_EXTENSION_NAME);  // Generic surface extension
-    platform_get_required_extension_names(&required_extensions);
+    vulkan_platform_get_required_extension_names(&required_extensions);       // Platform-specific extension(s)
+    u32 required_extension_count = 0;
 #if defined(_DEBUG)
     darray_push(required_extensions, &VK_EXT_DEBUG_UTILS_EXTENSION_NAME);  // debug utilities
 
     KDEBUG("Required extensions:");
-    u32 required_extension_count = darray_length(required_extensions);
+    required_extension_count = darray_length(required_extensions);
     for (u32 i = 0; i < required_extension_count; ++i) {
         KDEBUG(required_extensions[i]);
     }
@@ -445,7 +274,7 @@ b8 vulkan_renderer_backend_initialize(renderer_backend_interface* backend, const
 
     // Surface
     KDEBUG("Creating Vulkan surface...");
-    if (!platform_create_vulkan_surface(context)) {
+    if (!vulkan_platform_create_vulkan_surface(context)) {
         KERROR("Failed to create platform surface!");
         return false;
     }
@@ -457,43 +286,8 @@ b8 vulkan_renderer_backend_initialize(renderer_backend_interface* backend, const
         return false;
     }
 
-    // Swapchain
-    vulkan_swapchain_create(context, context->framebuffer_width, context->framebuffer_height, config->flags, &context->swapchain);
-    // Save off the number of images we have as the number of render targets needed.
-    *out_window_render_target_count = context->swapchain.image_count;
-
-    // Create command buffer
-    create_command_buffers(context);
-
-    // Create sync objects 创建同步对象
-    context->image_available_semaphores = darray_reserve(VkSemaphore, context->swapchain.max_frames_in_flight);
-    context->queue_complete_semaphores = darray_reserve(VkSemaphore, context->swapchain.max_frames_in_flight);
-
-    for (u8 i = 0; i < context->swapchain.max_frames_in_flight; ++i) {
-        VkSemaphoreCreateInfo semaphore_create_info = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
-        vkCreateSemaphore(context->device.logical_device, &semaphore_create_info, context->allocator, &context->image_available_semaphores[i]);
-        vkCreateSemaphore(context->device.logical_device, &semaphore_create_info, context->allocator, &context->queue_complete_semaphores[i]);
-
-        // Create the fence in a signaled state.indicating that the first frame has already been "rendered".
-        // This will prevent the application from waiting indefinitely for the first frame to render since it
-        // cannot be rendered until a frame is "rendered" before it
-        VkFenceCreateInfo fence_create_info = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
-        fence_create_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-        VK_CHECK(vkCreateFence(context->device.logical_device, &fence_create_info, context->allocator, &context->in_flight_fences[i]));
-    }
-
     // Samplers array.
     context->samplers = darray_create(VkSampler);
-
-    // Staging buffers , one per frame-in-flight.
-    const u64 staging_buffer_size = 512 * 1000 * 1000;
-    for (u32 i = 0; i < context->swapchain.max_frames_in_flight; ++i) {
-        if (!renderer_renderbuffer_create("staging", RENDERBUFFER_TYPE_STAGING, staging_buffer_size, RENDERBUFFER_TRACK_TYPE_LINEAR, &context->staging[i])) {
-            KERROR("Failed to create staging buffer.");
-            return false;
-        }
-        renderer_renderbuffer_bind(&context->staging[i], 0);
-    }
 
     // Create a shader compiler to be used.
     context->shader_compiler = shaderc_compiler_initialize();
@@ -513,53 +307,8 @@ void vulkan_renderer_backend_shutdown(renderer_backend_interface* backend) {
         context->shader_compiler = 0;
     }
 
-    // Destroy in the opposite order of creation
-    // Destroy Buffers
-    for (u32 i = 0; i < context->swapchain.max_frames_in_flight; ++i) {
-        renderer_renderbuffer_destroy(&context->staging[i]);
-    }
-
-    // Sync objects
-    for (u8 i = 0; i < context->swapchain.max_frames_in_flight; ++i) {
-        if (context->image_available_semaphores[i]) {
-            vkDestroySemaphore(context->device.logical_device, context->image_available_semaphores[i], context->allocator);
-            context->image_available_semaphores[i] = 0;
-        }
-
-        if (context->queue_complete_semaphores[i]) {
-            vkDestroySemaphore(context->device.logical_device, context->queue_complete_semaphores[i], context->allocator);
-            context->queue_complete_semaphores[i] = 0;
-        }
-
-        vkDestroyFence(context->device.logical_device, context->in_flight_fences[i], context->allocator);
-    }
-    darray_destroy(context->image_available_semaphores);
-    context->image_available_semaphores = 0;
-
-    darray_destroy(context->queue_complete_semaphores);
-    context->queue_complete_semaphores = 0;
-
-    // Command Buffers
-    for (u32 i = 0; i < context->swapchain.image_count; ++i) {
-        if (context->graphics_command_buffers[i].handle) {
-            vulkan_command_buffer_free(context, context->device.graphics_command_pool, &context->graphics_command_buffers[i]);
-            context->graphics_command_buffers[i].handle = 0;
-        }
-    }
-    darray_destroy(context->graphics_command_buffers);
-    context->graphics_command_buffers = 0;
-
-    // Swapchain
-    vulkan_swapchain_destroy(context, &context->swapchain);
-
     KDEBUG("Destroying Vulkan device...");
     vulkan_device_destroy(context);
-
-    KDEBUG("Destroying Vulkan surface...");
-    if (context->surface) {
-        vkDestroySurfaceKHR(context->instance, context->surface, context->allocator);
-        context->surface = 0;
-    }
 
     if (backend->internal_context) {
         kfree(backend->internal_context, backend->internal_context_size, MEMORY_TAG_RENDERER);
@@ -584,17 +333,268 @@ void vulkan_renderer_backend_shutdown(renderer_backend_interface* backend) {
     }
 }
 
+b8 vulkan_renderer_on_window_created(renderer_backend_interface* backend, struct kwindow* window) {
+    KASSERT(backend && window);
+
+    vulkan_context* context = (vulkan_context*)backend->internal_context;
+    kwindow_renderer_state* window_internal = window->renderer_state;
+
+    //Setup backend-specific state for the window.
+    window_internal->backend_state = kallocate(sizeof(kwindow_renderer_backend_state), MEMORY_TAG_RENDERER);
+    kwindow_renderer_backend_state* window_backend = window_internal->backend_state;
+
+    //Create per-frame-in-flight resources.
+    {
+        u8 max_frames_in_flight = window_backend->swapchain.max_frames_in_flight;
+        // Sync objects are owned by the window since they go hand-in-hand
+       // with the swapchain and window resources.
+        window_backend->image_available_semaphores = kallocate(sizeof(VkSemaphore) * max_frames_in_flight, MEMORY_TAG_ARRAY);
+        window_backend->queue_complete_semaphores = kallocate(sizeof(VkSemaphore) * max_frames_in_flight, MEMORY_TAG_RENDERER);
+        window_backend->in_flight_fences = kallocate(sizeof(VkFence) * max_frames_in_flight, MEMORY_TAG_ARRAY);
+
+        // The staging buffer also goes here since it is tied to the frame.
+        // TODO: Reduce this to a single buffer split by max_frames_in_flight.
+        const u64 staging_buffer_size = 512 * 1000 * 1000;
+        window_backend->staging = kallocate(sizeof(renderbuffer) * max_frames_in_flight, MEMORY_TAG_ARRAY);
+
+        for (u8 i = 0;i < max_frames_in_flight;++i) {
+            VkSemaphoreCreateInfo semaphore_create_info = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
+            vkCreateSemaphore(context->device.logical_device, &semaphore_create_info, context->allocator, &window_backend->image_available_semaphores[i]);
+            vkCreateSemaphore(context->device.logical_device, &semaphore_create_info, context->allocator, &window_backend->queue_complete_semaphores[i]);
+
+            // Create the fence in a signaled state, indicating that the first frame has
+          // already been "rendered". This will prevent the application from waiting
+          // indefinitely for the first frame to render since it cannot be rendered
+          // until a frame is "rendered" before it.
+            VkFenceCreateInfo fence_create_info = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
+            fence_create_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+            VK_CHECK(vkCreateFence(context->device.logical_device, &fence_create_info, context->allocator, &window_backend->in_flight_fences[i]));
+
+            // Staging buffer.
+           // TODO: Reduce this to a single buffer split by max_frames_in_flight.
+            if (!renderer_renderbuffer_create("staging", RENDERBUFFER_TYPE_STAGING, staging_buffer_size, RENDERBUFFER_TRACK_TYPE_LINEAR, &window_backend->staging[i])) {
+                KERROR("Failed to create staging buffer.");
+                return false;
+            }
+            renderer_renderbuffer_bind(&window_backend->staging[i], 0);
+        }
+    }
+
+    // Create command buffers.
+    create_command_buffers(context, window);
+
+    // Create the surface
+    KDEBUG("Creating Vulkan surface for window '%s'...", window->name);
+    if (!vulkan_platform_create_vulkan_surface(context, window)) {
+        KERROR("Failed to create platform surface for window '%s'!", window->name);
+        return false;
+    }
+    KDEBUG("Vulkan surface created for window '%s'.", window->name);
+
+    //Create swapchain. This also handles colourbuffer creation.
+    if (!vulkan_swapchain_create(context, window->width, window->height, config->flags, &window_backend->swapchain)) {
+        KERROR("Failed to create Vulkan swapchain during creation of window '%s'. See logs for details.", window->name);
+        return false;
+    }
+
+    //Re-detect supported device depth format.
+    if (!vulkan_device_detect_depth_format(&context->device)) {
+        context->device.depth_format = VK_FORMAT_UNDEFINED;
+        KFATAL("Failed to find a supported format!");
+        return false;
+    }
+
+    //Create the depthbuffer.
+    KDEBUG("Creating Vulkan depthbuffer for window '%s'...", window->name);
+    if (k_handle_is_invalid(window_internal->depthbuffer.renderer_texture_handle)) {
+        // If invalid, then a new one needs to be created. This does not reach out to the
+        // texture system to create this, but handles it internally instead. This is because
+        // the process for this varies greatly between backends.
+        if (!renderer_texture_resources_acquire(
+            backend->frontend_state,
+            TEXTURE_TYPE_2D,
+            window->width,
+            window->height,
+            4,
+            1,
+            1,
+            // NOTE: This should be a wrapped texture, so the frontend does not try to
+            // acquire the resources we already have here.
+            // Also flag as a depth texture
+            TEXTURE_FLAG_IS_WRAPPED | TEXTURE_FLAG_IS_WRITEABLE | TEXTURE_FLAG_RENDERER_BUFFERING | TEXTURE_FLAG_DEPTH,
+            &window_internal->depthbuffer.renderer_texture_handle)) {
+            KFATAL("Failed to acquire internal texture resources for window.depthbuffer");
+            return false;
+        }
+    }
+
+    // Get the texture_internal_data based on the existing or newly-created handle above.
+    // Use that to setup the internal images/views for the colourbuffer texture.
+    texture_internal_data* texture_data = renderer_texture_resources_get(backend->frontend_state, window_internal->depthbuffer.renderer_texture_handle);
+    if (!texture_data) {
+        KFATAL("Unable to get internal data for depthbuffer image. Window creation failed.");
+        return false;
+    }
+
+    // Name is meaningless here, but might be useful for debugging.
+    if (!window_internal->depthbuffer.name) {
+        window_internal->depthbuffer.name = string_duplicate("__window_depthbuffer_texture__");
+    }
+
+    texture_data->image_count = window_backend->swapchain.image_count;
+    if (!texture_data->images) {
+        // Also have to setup the internal data.
+        texture_data->images = kallocate(sizeof(vulkan_image) * texture_data->image_count, MEMORY_TAG_TEXTURE);
+    }
+
+    //Update the parameters and setup a view for each image.
+    for (u32 i = 0;i < texture_data->image_count;++i) {
+        vulkan_image* image = &texture_data->images[i];
+
+        // Construct a unique name for each image.
+        char formatted_name[TEXTURE_NAME_MAX_LENGTH] = { 0 };
+        string_format_unsafe(formatted_name, "__kohi_default_depth_stencil_texture_%u", i);
+
+        // Create the actual backing image.
+        vulkan_image_create(
+            context,
+            TEXTURE_TYPE_2D,
+            window->width,
+            window->height,
+            1,
+            context->device.depth_format,
+            VK_IMAGE_TILING_OPTIMAL,
+            VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+            true,
+            VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT,
+            formatted_name,
+            1,
+            image
+        );
+
+        // Doesn't really do anything... but track it anyways.
+        window->renderer_state->depthbuffer.channel_count = context->device.depth_channel_count;
+
+        //Setup a debug name for the image
+        VK_SET_DEBUG_OBJECT_NAME(context, VK_OBJECT_TYPE_IMAGE, image->handle, image->name);
+
+        //Create the view for this image.
+        VkImageViewCreateInfo view_create_info = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
+        view_create_info.image = image->handle;
+        view_create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        view_create_info.format = context->device.depth_format;
+        image->view_subresource_range.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+        image->view_subresource_range.baseMipLevel = 0;
+        image->view_subresource_range.levelCount = 1;
+        image->view_subresource_range.baseArrayLayer = 0;
+        image->view_subresource_range.layerCount = 1;
+        view_create_info.subresourceRange = image->view_subresource_range;
+        VK_CHECK(vkCreateImageView(context->device.logical_device, &view_create_info, context->allocator, &image->view));
+    }
+    KINFO("Vulkan depthbuffer created successfully.");
+
+    // If there is not yet a current window, assign it now.
+    if (!context->current_window) {
+        context->current_window = window;
+    }
+    return true;
+}
+
+void vulkan_renderer_on_window_destroyed(renderer_backend_interface* backend, struct kwindow* window) {
+    vulkan_context* context = (vulkan_context*)backend->internal_context;
+    kwindow_renderer_state* window_internal = window->renderer_state;
+    kwindow_renderer_backend_state* window_backend = window_internal->backend_state;
+
+    u32 max_frames_in_flight = window_backend->swapchain.max_frames_in_flight;
+
+    //Destroy per-frame-in-flight resources.
+    {
+        for (u32 i = 0;i < max_frames_in_flight;++i) {
+            //Destroy staging buffers
+            renderer_renderbuffer_destroy(&window_backend->staging[i]);
+
+            //sync objects
+            if (window_backend->image_available_semaphores[i]) {
+                vkDestroySemaphore(context->device.logical_device, window_backend->image_available_semaphores[i], context->allocator);
+                window_backend->image_available_semaphores[i] = 0;
+            }
+            if (window_backend->queue_complete_semaphores[i]) {
+                vkDestroySemaphore(context->device.logical_device, window_backend->queue_complete_semaphores[i], context->allocator);
+                window_backend->queue_complete_semaphores[i] = 0;
+            }
+            vkDestroyFence(context->device.logical_device, window_backend->in_flight_fences[i], context->allocator);
+        }
+        kfree(window_backend->image_available_semaphores, sizeof(VkSemaphore) * max_frames_in_flight, MEMORY_TAG_ARRAY);
+        window_backend->image_available_semaphores = 0;
+
+        kfree(window_backend->queue_complete_semaphores, sizeof(VkSemaphore) * max_frames_in_flight, MEMORY_TAG_ARRAY);
+        window_backend->queue_complete_semaphores = 0;
+
+        kfree(window_backend->in_flight_fences, sizeof(VkFence) * max_frames_in_flight, MEMORY_TAG_ARRAY);
+        window_backend->in_flight_fences = 0;
+
+        kfree(window_backend->staging, sizeof(renderbuffer) * max_frames_in_flight, MEMORY_TAG_ARRAY);
+        window_backend->staging = 0;
+    }
+
+    // Destroy per-swapchain-image resources.
+    {
+        for (u32 i = 0;i < window_backend->swapchain.image_count;++i) {
+            //Command buffers
+            if (window_backend->graphics_command_buffers[i].handle) {
+                vulkan_command_buffer_free(&context, context->device.graphics_command_pool, &window_backend->graphics_command_buffers[i]);
+                window_backend->graphics_command_buffers[i].handle = 0;
+            }
+        }
+        kfree(window_backend->graphics_command_buffers, sizeof(vulkan_command_buffer) * window_backend->swapchain.image_count, MEMORY_TAG_ARRAY);
+        window_backend->graphics_command_buffers = 0;
+
+        //destroy depthbuffer images/views.
+        texture_internal_data* texture_data = renderer_texture_resources_get(backend->frontend_state, window_internal->depthbuffer.renderer_texture_handle);
+        if (!texture_data) {
+            KWARN("Unable to get internal data for depthbuffer image. Underlying resources may not be properly destroyed.");
+        }
+        else {
+            //Free the name.
+            if (window_internal->depthbuffer.name) {
+                string_free(window_internal->depthbuffer.name);
+                window_internal->depthbuffer.name = 0;
+            }
+
+            //Destroy each backing image.
+            if (texture_data->images) {
+                for (u32 i = 0; i < texture_data->image_count; ++i) {
+                    vulkan_image_destroy(context, &texture_data->images[i]);
+                }
+                //Free the internal data
+                kfree(texture_data->images, sizeof(vulkan_image) * texture_data->image_count, MEMORY_TAG_TEXTURE);
+            }
+        }
+    }
+    // Swapchain
+    KDEBUG("Destroying Vulkan swapchain for window '%s'...", window->name);
+    vulkan_swapchain_destroy(backend, &window_backend->swapchain);
+
+    KDEBUG("Destroying Vulkan surface for window '%s'...", window->name);
+    if (window_backend->surface) {
+        vkDestroySurfaceKHR(context->instance, window_backend->surface, context->allocator);
+        window_backend->surface = 0;
+    }
+
+    //Free teh backend state.
+    kfree(window_internal->backend_state, sizeof(kwindow_renderer_backend_state), MEMORY_TAG_RENDERER);
+    window_internal->backend_state = 0;
+}
+
 void vulkan_renderer_backend_on_window_resized(renderer_backend_interface* backend, struct kwindow* window) {
     // Cold-cast the context
     vulkan_context* context = (vulkan_context*)backend->internal_context;
     kwindow_renderer_backend_state* backend_window = window->renderer_state->backend_state;
     // Update the "framebuffer size generation", a counter which indicates when the
     // framebuffer size has been updated
-    // backend_window->framebuffer_width = width;
-    // backend_window->framebuffer_height = height;
     backend_window->framebuffer_size_generation++;
-
-    KINFO("vulkan renderer backends->resized:w/h/gen:%i/%i/%llu", backend_window->framebuffer_size_generation);
+    KINFO("Vulkan renderer backend->resized: w/h/gen: %i/%i/%llu", window->width, window->height, backend_window->framebuffer_size_generation);
 }
 
 void vulkan_renderer_begin_debug_label(renderer_backend_interface* backend, const char* label_text, vec3 colour) {
@@ -626,8 +626,11 @@ b8 vulkan_renderer_frame_prepare_window_surface(renderer_backend_interface* back
     vulkan_context* context = (vulkan_context*)backend->internal_context;
     vulkan_device* device = &context->device;
 
+    kwindow_renderer_state* window_internal = window->renderer_state;
+    kwindow_renderer_backend_state* window_backend = window_internal->backend_state;
+
     // Check if recreating swap chain and boot out.
-    if (context->recreating_swapchain) {
+    if (window_backend->recreating_swapchain) {
         VkResult result = vkDeviceWaitIdle(device->logical_device);
         if (!vulkan_result_is_success(result)) {
             KERROR("vulkan_renderer_backend_begin_frame vkDeviceWaitIdle(1) failed:'%s'", vulkan_result_string(result, true));
@@ -637,7 +640,7 @@ b8 vulkan_renderer_frame_prepare_window_surface(renderer_backend_interface* back
 
     // Check if the framebuffer has been resized, if so ,a new swapchain must be created.
     // Also include a vsync changed check.
-    if (context->framebuffer_size_generation != context->framebuffer_size_last_generation || context->render_flag_changed) {
+    if (window_backend->framebuffer_size_generation != window_backend->framebuffer_previous_size_generation || context->render_flag_changed) {
         VkResult result = vkDeviceWaitIdle(device->logical_device);
         if (!vulkan_result_is_success(result)) {
             KERROR("vulkan_renderer_backend_begin_frame vkDeviceWaitIdle(2) failed:'%s'", vulkan_result_string(result, true));
@@ -650,7 +653,7 @@ b8 vulkan_renderer_frame_prepare_window_surface(renderer_backend_interface* back
 
         // If the swapchain recreation failed (because, for example,the window was minimized)
         // boot out before unsetting the flag
-        if (!recreate_swapchain(context)) {
+        if (!recreate_swapchain(backend, window)) {
             return false;
         }
 
@@ -659,7 +662,7 @@ b8 vulkan_renderer_frame_prepare_window_surface(renderer_backend_interface* back
     }
 
     // Wait for the execution of the current frame to complete. the fence being free will allow this one to move on
-    VkResult result = vkWaitForFences(device->logical_device, 1, &context->in_flight_fences[context->current_frame], true, UINT64_MAX_T);
+    VkResult result = vkWaitForFences(device->logical_device, 1, &window_backend->in_flight_fences[window_backend->current_frame], true, UINT64_MAX_T);
     if (!vulkan_result_is_success(result)) {
         KFATAL("In-flight fence wait failure! error: %s", vulkan_result_string(result, true));
         return false;
@@ -669,15 +672,17 @@ b8 vulkan_renderer_frame_prepare_window_surface(renderer_backend_interface* back
     // This same semaphore will later be waited on by the queue submission to ensure this image is available.
     result = vkAcquireNextImageKHR(
         context->device.logical_device,
-        context->swapchain.handle,
+        window_backend->swapchain.handle,
         UINT64_MAX_T,
-        context->image_available_semaphores[context->current_frame],
+        window_backend->image_available_semaphores[window_backend->current_frame],
         0,
-        &context->image_index);
+        &window_backend->image_index);
 
     if (result == VK_ERROR_OUT_OF_DATE_KHR) {
         // Trigger swapchain recreation,then boot out of the render loop.
-        vulkan_swapchain_recreate(context, context->framebuffer_width, context->framebuffer_height, &context->swapchain);
+        if (!vulkan_swapchain_recreate(backend, window, &window_backend->swapchain)) {
+            KFATAL("Failed to recreate swapchain.");
+        }
         return false;
     }
     else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
@@ -686,10 +691,10 @@ b8 vulkan_renderer_frame_prepare_window_surface(renderer_backend_interface* back
     }
 
     // Reset the fence for use on the next frame.
-    VK_CHECK(vkResetFences(context->device.logical_device, 1, &context->in_flight_fences[context->current_frame]));
+    VK_CHECK(vkResetFences(context->device.logical_device, 1, &window_backend->in_flight_fences[window_backend->current_frame]));
 
     // Reset staging buffer.
-    if (!renderer_renderbuffer_clear(&context->staging[context->current_frame], false)) {
+    if (!renderer_renderbuffer_clear(&window_backend->staging[window_backend->current_frame], false)) {
         KERROR("Failed to clear staging buffer.");
         return false;
     }
@@ -698,8 +703,13 @@ b8 vulkan_renderer_frame_prepare_window_surface(renderer_backend_interface* back
 
 b8 vulkan_renderer_frame_command_list_begin(renderer_backend_interface* backend, struct frame_data* p_frame_data) {
     vulkan_context* context = (vulkan_context*)backend->internal_context;
+
+    kwindow* window = context->current_window;
+    kwindow_renderer_state* window_internal = window->renderer_state;
+    kwindow_renderer_backend_state* window_backend = window_internal->backend_state;
+
     // Begin recording commands.
-    vulkan_command_buffer* command_buffer = &context->graphics_command_buffers[context->image_index];
+    vulkan_command_buffer* command_buffer = &window_backend->graphics_command_buffers[window_backend->image_index];
 
     vulkan_command_buffer_reset(command_buffer);
     vulkan_command_buffer_begin(command_buffer, false, false, false);
@@ -725,13 +735,18 @@ b8 vulkan_renderer_frame_command_list_begin(renderer_backend_interface* backend,
 
 b8 vulkan_renderer_frame_command_list_end(renderer_backend_interface* backend, struct frame_data* p_frame_data) {
     vulkan_context* context = (vulkan_context*)backend->internal_context;
-    vulkan_command_buffer* command_buffer = &context->graphics_command_buffers[context->image_index];
+    kwindow_renderer_backend_state* window_backend = context->current_window->renderer_state->backend_state;
+    vulkan_command_buffer* command_buffer = &window_backend->graphics_command_buffers[window_backend->image_index];
 
     //Just end the command buffer.
     vulkan_command_buffer_end(command_buffer);
 }
 
 b8 vulkan_renderer_frame_submit(struct renderer_backend_interface* backend, struct frame_data* p_frame_data) {
+    vulkan_context* context = (vulkan_context*)backend->internal_context;
+    kwindow_renderer_backend_state* window_backend = context->current_window->renderer_state->backend_state;
+    vulkan_command_buffer* command_buffer = &window_backend->graphics_command_buffers[window_backend->image_index];
+
     // Submit the queue and wait for the operation to complete
     // Begin queue submission
     VkSubmitInfo submit_info = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
@@ -741,21 +756,12 @@ b8 vulkan_renderer_frame_submit(struct renderer_backend_interface* backend, stru
     submit_info.pCommandBuffers = &command_buffer->handle;
 
     // The semaphore(s) to be signaled when the queue is complete
-    if (backend->draw_index == 0) {
-        submit_info.signalSemaphoreCount = 1;
-        submit_info.pSignalSemaphores = &context->queue_complete_semaphores[context->current_frame];
-    }
-    else {
-        submit_info.signalSemaphoreCount = 0;
-    }
+    submit_info.signalSemaphoreCount = 1;
+    submit_info.pSignalSemaphores = &window_backend->queue_complete_semaphores[window_backend->current_frame];
+
     // Wait semaphore ensures that the operation cannot begin until the image is available.
-    if (backend->draw_index == 0) {
-        submit_info.waitSemaphoreCount = 1;
-        submit_info.pWaitSemaphores = &context->image_available_semaphores[context->current_frame];
-    }
-    else {
-        submit_info.waitSemaphoreCount = 0;
-    }
+    submit_info.waitSemaphoreCount = 1;
+    submit_info.pWaitSemaphores = &window_backend->image_available_semaphores[window_backend->current_frame];
 
     // Each semaphore waits on the corresponding pipeline stage to complete. 1:1 ratio.
     // VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT prevents subsequent colour attachment
@@ -763,47 +769,40 @@ b8 vulkan_renderer_frame_submit(struct renderer_backend_interface* backend, stru
     VkPipelineStageFlags flags[1] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
     submit_info.pWaitDstStageMask = flags;
 
-    VkResult result = vkQueueSubmit(context->device.graphics_queue, 1, &submit_info, context->in_flight_fences[context->current_frame]);
+    VkResult result = vkQueueSubmit(context->device.graphics_queue, 1, &submit_info, window_backend->in_flight_fences[window_backend->current_frame]);
 
     if (result != VK_SUCCESS) {
-        KERROR("vkQueueSubmit failed with result:%s", vulkan_result_string(result, true));
+        KERROR("vkQueueSubmit failed with result: %s", vulkan_result_string(result, true));
         return false;
     }
 
     vulkan_command_buffer_update_submitted(command_buffer);
     // End queue submission
 
-    // For timing purposes, wait for the queue to complete.
-    // This gives an accurate picture of how long the render takes, including the
-    // work submitted to the actual queue.
-    // TODO: may want a semaphore here instead to monitor this.
-    // vkWaitForFences(context->device.logical_device, 1, &context->in_flight_fences[context->current_frame], true, UINT64_MAX);
     return true;
 }
 
 b8 vulkan_renderer_frame_present(renderer_backend_interface* backend, struct kwindow* window, struct frame_data* p_frame_data) {
     // Cold-cast the context
     vulkan_context* context = (vulkan_context*)backend->internal_context;
+    /* kwindow_renderer_backend_state* window_backend = context->current_window->renderer_state->backend_state; */
+    kwindow_renderer_backend_state* window_backend = window->renderer_state->backend_state;
 
     // Return the image to the swapchain for presentation
     VkPresentInfoKHR present_info = { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
     present_info.waitSemaphoreCount = 1;
-    present_info.pWaitSemaphores = &context->queue_complete_semaphores[context->current_frame];
+    present_info.pWaitSemaphores = &window_backend->queue_complete_semaphores[window_backend->current_frame];
     present_info.swapchainCount = 1;
-    present_info.pSwapchains = &context->swapchain.handle;
-    present_info.pImageIndices = &context->image_index;
+    present_info.pSwapchains = &window_backend->swapchain.handle;
+    present_info.pImageIndices = &window_backend->image_index;
     present_info.pResults = 0;
 
-    // HACK: By waiting on the transfer queue, we avoid a segfault here for some reason. This shouldn't
-    // be needed since it _should_ be waiting on the pWaitSemaphores, which _should_ be
-    // signaled by the queue's completion after submission. And strangely, it's specifically the
-    // _transfer_ queue, even though the one being used for presentation here is the present queue.
-    // TODO: Need to dive a bit deeper on this to figure it out.
-    // vkQueueWaitIdle(context->device.transfer_queue);
     VkResult result = vkQueuePresentKHR(context->device.present_queue, &present_info);
     if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
         // Swapchain is out of data, suboptimal or a framebuffer resize has occurred.Triggle swapchain recreation.
-        vulkan_swapchain_recreate(context, context->framebuffer_width, context->framebuffer_height, &context->swapchain);
+        if (!vulkan_swapchain_recreate(backend, window, &window_backend->swapchain)) {
+            KFATAL("Failed to recreate swapchain after presentation");
+        }
         KDEBUG("Swapchain recreated because swapchain returned out of data or suboptimal.");
     }
     else if (result != VK_SUCCESS) {
@@ -811,7 +810,7 @@ b8 vulkan_renderer_frame_present(renderer_backend_interface* backend, struct kwi
     }
 
     // Increment (and loop) the index.
-    context->current_frame = (context->current_frame + 1) % context->swapchain.max_frames_in_flight;
+    window_backend->current_frame = (window_backend->current_frame + 1) % window_backend->swapchain.max_frames_in_flight;
 
     return true;
 }
@@ -828,7 +827,7 @@ void vulkan_renderer_viewport_set(renderer_backend_interface* backend, vec4 rect
     viewport.minDepth = 0.0f;
     viewport.maxDepth = 1.0f;
 
-    vulkan_command_buffer* command_buffer = &context->graphics_command_buffers[context->image_index];
+    vulkan_command_buffer* command_buffer = get_current_command_buffer(context);
 
     vkCmdSetViewport(command_buffer->handle, 0, 1, &viewport);
 }
@@ -849,7 +848,7 @@ void vulkan_renderer_scissor_set(renderer_backend_interface* backend, vec4 rect)
     scissor.extent.width = rect.z;
     scissor.extent.height = rect.w;
 
-    vulkan_command_buffer* command_buffer = &context->graphics_command_buffers[context->image_index];
+    vulkan_command_buffer* command_buffer = get_current_command_buffer(context);
 
     vkCmdSetScissor(command_buffer->handle, 0, 1, &scissor);
 }
@@ -863,7 +862,7 @@ void vulkan_renderer_scissor_reset(renderer_backend_interface* backend) {
 
 void vulkan_renderer_winding_set(struct renderer_backend_interface* backend, renderer_winding winding) {
     vulkan_context* context = (vulkan_context*)backend->internal_context;
-    vulkan_command_buffer* command_buffer = &context->graphics_command_buffers[context->image_index];
+    vulkan_command_buffer* command_buffer = get_current_command_buffer(context);
 
     VkFrontFace vk_winding = winding == RENDERER_WINDING_COUNTER_CLOCKWISE ? VK_FRONT_FACE_COUNTER_CLOCKWISE : VK_FRONT_FACE_CLOCKWISE;
     if (context->device.support_flags & VULKAN_DEVICE_SUPPORT_FLAG_NATIVE_DYNAMIC_STATE_BIT) {
@@ -926,7 +925,7 @@ static VkCompareOp vulkan_renderer_get_compare_op(renderer_compare_op op) {
 
 void vulkan_renderer_set_stencil_test_enabled(struct renderer_backend_interface* backend, b8 enabled) {
     vulkan_context* context = (vulkan_context*)backend->internal_context;
-    vulkan_command_buffer* command_buffer = &context->graphics_command_buffers[context->image_index];
+    vulkan_command_buffer* command_buffer = get_current_command_buffer(context);
 
     if (context->device.support_flags & VULKAN_DEVICE_SUPPORT_FLAG_NATIVE_DYNAMIC_STATE_BIT) {
         vkCmdSetStencilTestEnable(command_buffer->handle, (VkBool32)enabled);
@@ -941,7 +940,7 @@ void vulkan_renderer_set_stencil_test_enabled(struct renderer_backend_interface*
 
 void vulkan_renderer_set_depth_test_enabled(struct renderer_backend_interface* backend, b8 enabled) {
     vulkan_context* context = (vulkan_context*)backend->internal_context;
-    vulkan_command_buffer* command_buffer = &context->graphics_command_buffers[context->image_index];
+    vulkan_command_buffer* command_buffer = get_current_command_buffer(context);
 
     if (context->device.support_flags & VULKAN_DEVICE_SUPPORT_FLAG_NATIVE_DYNAMIC_STATE_BIT) {
         vkCmdSetDepthTestEnable(command_buffer->handle, (VkBool32)enabled);
@@ -956,14 +955,14 @@ void vulkan_renderer_set_depth_test_enabled(struct renderer_backend_interface* b
 
 void vulkan_renderer_set_stencil_reference(struct renderer_backend_interface* backend, u32 reference) {
     vulkan_context* context = (vulkan_context*)backend->internal_context;
-    vulkan_command_buffer* command_buffer = &context->graphics_command_buffers[context->image_index];
+    vulkan_command_buffer* command_buffer = get_current_command_buffer(context);
 
     vkCmdSetStencilReference(command_buffer->handle, VK_STENCIL_FACE_FRONT_AND_BACK, reference);
 }
 
 void vulkan_renderer_set_stencil_op(struct renderer_backend_interface* backend, renderer_stencil_op fail_op, renderer_stencil_op pass_op, renderer_stencil_op depth_fail_op, renderer_compare_op compare_op) {
     vulkan_context* context = (vulkan_context*)backend->internal_context;
-    vulkan_command_buffer* command_buffer = &context->graphics_command_buffers[context->image_index];
+    vulkan_command_buffer* command_buffer = get_current_command_buffer(context);
 
     if (context->device.support_flags & VULKAN_DEVICE_SUPPORT_FLAG_NATIVE_DYNAMIC_STATE_BIT) {
         vkCmdSetStencilOp(
@@ -990,7 +989,7 @@ void vulkan_renderer_set_stencil_op(struct renderer_backend_interface* backend, 
 
 void vulkan_renderer_set_stencil_compare_mask(struct renderer_backend_interface* backend, u32 compare_mask) {
     vulkan_context* context = (vulkan_context*)backend->internal_context;
-    vulkan_command_buffer* command_buffer = &context->graphics_command_buffers[context->image_index];
+    vulkan_command_buffer* command_buffer = get_current_command_buffer(context);
 
     // Supported of vulkan 1.0,so no need to check for dynamic state support.
     vkCmdSetStencilCompareMask(command_buffer->handle, VK_STENCIL_FACE_FRONT_AND_BACK, compare_mask);
@@ -998,17 +997,16 @@ void vulkan_renderer_set_stencil_compare_mask(struct renderer_backend_interface*
 
 void vulkan_renderer_set_stencil_write_mask(struct renderer_backend_interface* backend, u32 write_mask) {
     vulkan_context* context = (vulkan_context*)backend->internal_context;
-    vulkan_command_buffer* command_buffer = &context->graphics_command_buffers[context->image_index];
+    vulkan_command_buffer* command_buffer = get_current_command_buffer(context);
 
     // Supported of vulkan 1.0,so no need to check for dynamic state support.
     vkCmdSetStencilWriteMask(command_buffer->handle, VK_STENCIL_FACE_FRONT_AND_BACK, write_mask);
 }
 
 // 重要组织Pass
-b8 vulkan_renderer_renderpass_begin(renderer_backend_interface* backend, renderpass* pass, render_target* target) {
-    // Cold-cast the context
+b8 vulkan_renderer_renderpass_begin(renderer_backend_interface* backend, renderpass* pass, framebuffer_internal_data* framebuffer) {
     vulkan_context* context = (vulkan_context*)backend->internal_context;
-    vulkan_command_buffer* command_buffer = &context->graphics_command_buffers[context->image_index];
+    vulkan_command_buffer* command_buffer = get_current_command_buffer(context);
 
     // Begin the render pass.
     vulkan_renderpass* internal_data = pass->internal_data;
@@ -1017,7 +1015,7 @@ b8 vulkan_renderer_renderpass_begin(renderer_backend_interface* backend, renderp
 
     VkRenderPassBeginInfo begin_info = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
     begin_info.renderPass = internal_data->handle;
-    begin_info.framebuffer = target->internal_framebuffer;
+    begin_info.framebuffer = framebuffer->framebuffer_count == 1 ? framebuffer->framebuffers[0] : framebuffer->framebuffers[context->current_window->renderer_state->backend_state->image_index];
     begin_info.renderArea.offset.x = v->rect.x;
     begin_info.renderArea.offset.y = v->rect.y;
     begin_info.renderArea.extent.width = v->rect.width;
@@ -1025,43 +1023,43 @@ b8 vulkan_renderer_renderpass_begin(renderer_backend_interface* backend, renderp
 
     // KTRACE("Renderpass '%s' is using framebuffer at 0x%x", pass->name, target->internal_framebuffer);
 
-    begin_info.clearValueCount = 0;
-    begin_info.pClearValues = 0;
+    begin_info.clearValueCount = darray_length(internal_data->clear_values);
+    begin_info.pClearValues = internal_data->clear_values;;
 
-    VkClearValue clear_values[2];
-    kzero_memory(clear_values, sizeof(VkClearValue) * 2);
-    b8 do_clear_colour = (pass->clear_flags & RENDERPASS_CLEAR_COLOUR_BUFFER_FLAG) != 0;
-    if (do_clear_colour) {
-        kcopy_memory(clear_values[begin_info.clearValueCount].color.float32, pass->clear_colour.elements, sizeof(f32) * 4);
-        begin_info.clearValueCount++;
-    }
-    else {
-        // If the first attachment is colour, add a clear value anyway, but don't bother copying data since it will be ignored.
-        // This must be done because each attachment must have l clear value,even if it isn't used.
-        if (target->attachments[0].type == RENDER_TARGET_ATTACHMENT_TYPE_COLOUR) {
-            begin_info.clearValueCount++;
-        }
-    }
+    // VkClearValue clear_values[2];
+    // kzero_memory(clear_values, sizeof(VkClearValue) * 2);
+    // b8 do_clear_colour = (pass->clear_flags & RENDERPASS_CLEAR_COLOUR_BUFFER_FLAG_BIT) != 0;
+    // if (do_clear_colour) {
+    //     kcopy_memory(clear_values[begin_info.clearValueCount].color.float32, pass->clear_colour.elements, sizeof(f32) * 4);
+    //     begin_info.clearValueCount++;
+    // }
+    // else {
+    //     // If the first attachment is colour, add a clear value anyway, but don't bother copying data since it will be ignored.
+    //     // This must be done because each attachment must have l clear value,even if it isn't used.
+    //     if (target->attachments[0].type == RENDERER_ATTACHMENT_TYPE_FLAG_COLOUR_BIT) {
+    //         begin_info.clearValueCount++;
+    //     }
+    // }
 
-    b8 do_clear_depth = (pass->clear_flags & RENDERPASS_CLEAR_DEPTH_BUFFER_FLAG) != 0;
-    b8 do_clear_stencil = (pass->clear_flags & RENDERPASS_CLEAR_STENCIL_BUFFER_FLAG) != 0;
-    if (do_clear_depth || do_clear_stencil) {
-        kcopy_memory(clear_values[begin_info.clearValueCount].color.float32, pass->clear_colour.elements, sizeof(f32) * 4);
-        clear_values[begin_info.clearValueCount].depthStencil.depth = internal_data->depth;
+    // b8 do_clear_depth = (pass->clear_flags & RENDERPASS_CLEAR_DEPTH_BUFFER_FLAG_BIT) != 0;
+    // b8 do_clear_stencil = (pass->clear_flags & RENDERPASS_CLEAR_STENCIL_BUFFER_FLAG_BIT) != 0;
+    // if (do_clear_depth || do_clear_stencil) {
+    //     kcopy_memory(clear_values[begin_info.clearValueCount].color.float32, pass->clear_colour.elements, sizeof(f32) * 4);
+    //     clear_values[begin_info.clearValueCount].depthStencil.depth = internal_data->depth;
 
-        clear_values[begin_info.clearValueCount].depthStencil.stencil = do_clear_stencil ? internal_data->stencil : 0;
-        begin_info.clearValueCount++;
-    }
-    else {
-        for (u32 i = 0; i < target->attachment_count; ++i) {
-            if (target->attachments[i].type & RENDER_TARGET_ATTACHMENT_TYPE_DEPTH || target->attachments[i].type & RENDER_TARGET_ATTACHMENT_TYPE_STENCIL) {
-                // If there is a depth attachment, make sure to add the clear count, but don't bother copying the data.
-                begin_info.clearValueCount++;
-            }
-        }
-    }
+    //     clear_values[begin_info.clearValueCount].depthStencil.stencil = do_clear_stencil ? internal_data->stencil : 0;
+    //     begin_info.clearValueCount++;
+    // }
+    // else {
+    //     for (u32 i = 0; i < target->attachment_count; ++i) {
+    //         if (target->attachments[i].type & RENDERER_ATTACHMENT_TYPE_FLAG_DEPTH_BIT || target->attachments[i].type & RENDERER_ATTACHMENT_TYPE_FLAG_STENCIL_BIT) {
+    //             // If there is a depth attachment, make sure to add the clear count, but don't bother copying the data.
+    //             begin_info.clearValueCount++;
+    //         }
+    //     }
+    // }
 
-    begin_info.pClearValues = begin_info.clearValueCount > 0 ? clear_values : 0;
+    // begin_info.pClearValues = begin_info.clearValueCount > 0 ? clear_values : 0;
 
     vkCmdBeginRenderPass(command_buffer->handle, &begin_info, VK_SUBPASS_CONTENTS_INLINE);
     command_buffer->state = COMMAND_BUFFER_STATE_IN_RENDER_PASS;
@@ -1075,7 +1073,7 @@ b8 vulkan_renderer_renderpass_begin(renderer_backend_interface* backend, renderp
 
 b8 vulkan_renderer_renderpass_end(renderer_backend_interface* backend, renderpass* pass) {
     vulkan_context* context = (vulkan_context*)backend->internal_context;
-    vulkan_command_buffer* command_buffer = &context->graphics_command_buffers[context->image_index];
+    vulkan_command_buffer* command_buffer = get_current_command_buffer(context);
 
     // End the renderpass
     vkCmdEndRenderPass(command_buffer->handle);
@@ -1085,54 +1083,175 @@ b8 vulkan_renderer_renderpass_end(renderer_backend_interface* backend, renderpas
     return true;
 }
 
-//TODO: remove deprecated
-void vulkan_renderer_texture_create(renderer_backend_interface* backend, const u8* pixels, texture* t) {
+void vulkan_renderer_clear_colour_set(renderer_backend_interface* backend, vec4 clear_colour) {
     vulkan_context* context = (vulkan_context*)backend->internal_context;
-    // Internal data creation
-    // TODO: Use an allocator for this.
-    t->internal_data = (vulkan_image*)kallocate(sizeof(vulkan_image), MEMORY_TAG_TEXTURE);
-    vulkan_image* image = (vulkan_image*)t->internal_data;
-    u32 size = t->width * t->height * t->channel_count * (t->type == TEXTURE_TYPE_CUBE ? 6 : t->array_size);
 
-    // NOTE: Assums 8 bits per channel.
-    VkFormat image_format = VK_FORMAT_R8G8B8A8_UNORM;
+    //Clamp values
+    for (u8 i = 0;i < 4;++i) {
+        clear_colour.elements[i] = KCLAMP(clear_colour.elements[i], 0.0f, 1.0f);
+    }
 
-    // NOTE: Lots of assumptions here. different texture types will require
-    // different options here.
-    vulkan_image_create(
-        context,
-        t->type,
-        t->width,
-        t->height,
-        t->array_size,
-        image_format,
-        VK_IMAGE_TILING_OPTIMAL,
-        VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-        true,
-        VK_IMAGE_ASPECT_COLOR_BIT,
-        t->name,
-        t->mip_levels,
-        image);
-
-    // Load the data
-    vulkan_renderer_texture_write_data(backend, t, 0, size, pixels, false);
-
-    t->generation++;
+    //Cache the clear colour for the next colour clear operation.
+    kcopy_memory(context->colour_clear_value.float32, clear_colour.elements, sizeof(f32) * 4);
 }
 
-void vulkan_renderer_texture_destroy(renderer_backend_interface* backend, texture* texture) {
+void vulkan_renderer_clear_depth_set(renderer_backend_interface* backend, f32 depth) {
     vulkan_context* context = (vulkan_context*)backend->internal_context;
+    // Ensure the value is blamped
+    depth = KCLAMP(depth, 0.0f, 1.0f);
+    // Cache the depth for the next depth clear operation.
+    context->depth_stencil_clear_value.depth = depth;
+}
+
+void vulkan_renderer_clear_stencil_set(renderer_backend_interface* backend, u32 stencil) {
+    vulkan_context* context = (vulkan_context*)backend->internal_context;
+    // Cache the depth for the next stencil clear operation.
+    context->depth_stencil_clear_value.stencil = stencil;
+}
+
+void vulkan_renderer_clear_colour_texture(renderer_backend_interface* backend, struct texture_internal_data* tex_internal) {
+    // Cold-cast the context
+    vulkan_context* context = (vulkan_context*)backend->internal_context;
+    vulkan_command_buffer* command_buffer = get_current_command_buffer(context);
+
+    //If a per-frame texture,get the appropriate image index, Otherwise it's just the first one
+    vulkan_image* image = tex_internal->image_count == 1 ? &tex_internal->images[0] : &tex_internal->images[get_current_image_index(context)];
+
+    //Clear the image.
+    vkCmdClearColorImage(command_buffer->handle, image->handle, // TODO: detect the actual current layout?
+        VK_IMAGE_LAYOUT_SHARED_PRESENT_KHR,
+        &context->colour_clear_value, image->layer_count, image->layer_count == 1 ? &image->view_subresource_range : image->layer_view_subresource_ranges);
+}
+
+void vulkan_renderer_clear_depth_stencil(renderer_backend_interface* backend, struct texture_internal_data* tex_internal) {
+    // Cold-cast the context
+    vulkan_context* context = (vulkan_context*)backend->internal_context;
+    vulkan_command_buffer* command_buffer = get_current_command_buffer(context);
+
+    //If a per-frame texture,get the appropriate image index, Otherwise it's just the first one
+    vulkan_image* image = tex_internal->image_count == 1 ? &tex_internal->images[0] : &tex_internal->images[get_current_image_index(context)];
+
+    //Clear the image.
+    vkCmdClearDepthStencilImage(command_buffer->handle, image->handle, // TODO: detect the actual current layout?
+        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        &context->depth_stencil_clear_value, image->layer_count, image->layer_count == 1 ? &image->view_subresource_range : image->layer_view_subresource_ranges);
+}
+
+VKAPI_ATTR VkBool32 VKAPI_CALL vk_debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT message_severity,
+    VkDebugUtilsMessageTypeFlagsEXT message_types, const VkDebugUtilsMessengerCallbackDataEXT* callback_data, void* user_data) {
+    switch (message_severity) {
+    default:
+    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
+        KERROR(callback_data->pMessage);
+        break;
+    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
+        KWARN(callback_data->pMessage);
+        break;
+    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
+        KINFO(callback_data->pMessage);
+        break;
+    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
+        KTRACE(callback_data->pMessage);
+        break;
+    }
+    return VK_FALSE;
+}
+
+static i32 find_memory_index(vulkan_context* context, u32 type_filter, u32 property_flags) {
+    VkPhysicalDeviceMemoryProperties memory_properties;
+    vkGetPhysicalDeviceMemoryProperties(context->device.physical_device, &memory_properties);
+
+    for (u32 i = 0; i < memory_properties.memoryTypeCount; ++i) {
+        // check each memory type to see if its bit is set to 1
+        if (type_filter & (1 << i) && (memory_properties.memoryTypes[i].propertyFlags & property_flags) == property_flags) {
+            return i;
+        }
+    }
+
+    KWARN("Unable to find suitable memory type!");
+    return -1;
+}
+
+static void create_command_buffers(vulkan_context* context, kwindow* window) {
+    kwindow_renderer_backend_state* window_backend = window->renderer_state->backend_state;
+
+    //Create new command buffers according to the swapchain image count.
+    u32 new_image_count = window_backend->swapchain.image_count;
+    window_backend->graphics_command_buffers = kallocate(sizeof(vulkan_command_buffer) * new_image_count, MEMORY_TAG_ARRAY);
+
+    for (u32 i = 0; i < new_image_count; ++i) {
+        kzero_memory(&window_backend->graphics_command_buffers[i], sizeof(vulkan_command_buffer));
+
+        //Allocate a new buffer.
+        vulkan_command_buffer_allocate(context, context->device.graphics_command_pool, true, &window_backend->graphics_command_buffers[i]);
+    }
+
+    KDEBUG("Vulkan command buffers created.");
+}
+
+static b8 recreate_swapchain(renderer_backend_interface* backend, kwindow* window) {
+    vulkan_context* context = backend->internal_context;
+    kwindow_renderer_state* window_internal = window->renderer_state;
+    kwindow_renderer_backend_state* window_backend = window_internal->backend_state;
+
+    // If already being recreated, do not try again.
+    if (window_backend->recreating_swapchain) {
+        KDEBUG("recreate_swapchain called when already recreating.Booting.");
+        return false;
+    }
+
+    // Detect if the window is too small to drawn to
+    if (window->width == 0 || window->height == 0) {
+        KDEBUG("recreate_swapchain called when window is < 1 in a dimension. Booting.");
+        return false;
+    }
+
+    // Mark as recreating if the dimensions are valid
+    window_backend->recreating_swapchain = true;
+
+    //Use the old swapchain count to free swapchain-image-count related items.
+    u32 old_swapchain_image_count = window_backend->swapchain.image_count;
+
+    // Wait for any operations to complete.
     vkDeviceWaitIdle(context->device.logical_device);
 
-    vulkan_image* image = (vulkan_image*)texture->internal_data;
-    if (image) {
-        vulkan_image_destroy(context, image);
-        kzero_memory(image, sizeof(vulkan_image));
+    // Requery support
+    vulkan_device_query_swapchain_support(context->device.physical_device, window_backend->surface, &context->device.swapchain_support);
+    //Redetect the depth format.
+    vulkan_device_detect_depth_format(&context->device);
 
-        kfree(texture->internal_data, sizeof(vulkan_image), MEMORY_TAG_TEXTURE);
+    // 重新创建 先销毁在创建
+      // Recreate the swapchain.
+    if (!vulkan_swapchain_recreate(backend, window, &window_backend->swapchain)) {
+        // TODO: Should this be fatal? Or keep trying?
+        KERROR("Failed to recreate swapchain. See logs for details.");
+        return false;
     }
-    kzero_memory(texture, sizeof(struct texture));
+
+    // Sync the framebuffer size generation.
+    window_backend->framebuffer_previous_size_generation = window_backend->framebuffer_size_generation;
+
+    // Free old command buffers.
+    if (window_backend->graphics_command_buffers) {
+        // Free the old command buffers first. Use the old image count for this, if it changed.
+        for (u32 i = 0;i < old_swapchain_image_count;++i) {
+            if (window_backend->graphics_command_buffers[i].handle) {
+                vulkan_command_buffer_free(context, context->device.graphics_command_pool, &window_backend->graphics_command_buffers[i]);
+            }
+        }
+        kfree(window_backend->graphics_command_buffers, sizeof(vulkan_command_buffer) * old_swapchain_image_count, MEMORY_TAG_ARRAY);
+        window_backend->graphics_command_buffers = 0;
+    }
+
+    // Indicate to listeners that a render target refresh is required. 监听交换链的都会进行刷新目标
+    // TODO: Might remove this.
+    event_fire(EVENT_CODE_DEFAULT_RENDERTARGET_REFRESH_REQUIRED, 0, (event_context) { 0 });
+
+    create_command_buffers(context, window);
+
+    // Clear the recreating flag.
+    window_backend->recreating_swapchain = false;
+    return true;
 }
 
 static VkFormat channel_count_to_format(u8 channel_count, VkFormat default_format) {
@@ -1150,23 +1269,24 @@ static VkFormat channel_count_to_format(u8 channel_count, VkFormat default_forma
     }
 }
 
-b8 vulkan_renderer_texture_resources_acquire(renderer_backend_interface* backend, texture_internal_data* texture_data, texture_type type, u32 width, u32 height, u8 channel_count, u8 mip_levels, u16 array_size, texture_flag_bits flags) {
+b8 vulkan_renderer_texture_resources_acquire(renderer_backend_interface* backend, texture_internal_data* texture_data, const char* name, texture_type type, u32 width, u32 height, u8 channel_count, u8 mip_levels, u16 array_size, texture_flag_bits flags) {
     vulkan_context* context = (vulkan_context*)backend->internal_context;
     // Internal data creation.
     if (flags & TEXTURE_FLAG_RENDERER_BUFFERING) {
-        //Need to generate as many images as we have frames.
-        texture_data->image_count=context.render_target_count; //TODO: May need to get from elsewhere.
-    }else{
+        //Need to generate as many images as we have swapchain images.
+        texture_data->image_count = context->current_window->renderer_state->backend_state->swapchain.image_count; //TODO: May need to get from elsewhere.
+    }
+    else {
         //Only one needed.
-        texture_data->image_count=1;
+        texture_data->image_count = 1;
     }
 
-    texture_data->images =kallocate(sizeof(vulkan_image)*texture_data->image_count, MEMORY_TAG_TEXTURE);
+    texture_data->images = kallocate(sizeof(vulkan_image) * texture_data->image_count, MEMORY_TAG_TEXTURE);
 
     VkImageUsageFlagBits usage;
     VkImageAspectFlagBits aspect;
     VkFormat image_format;
-    if (t->flags & TEXTURE_FLAG_DEPTH) {
+    if (flags & TEXTURE_FLAG_DEPTH) {
         usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;  // 深度需要采样
         aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
         image_format = context->device.depth_format;
@@ -1174,20 +1294,22 @@ b8 vulkan_renderer_texture_resources_acquire(renderer_backend_interface* backend
     else {
         usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
         aspect = VK_IMAGE_ASPECT_COLOR_BIT;
-        image_format = channel_count_to_format(t->channel_count, VK_FORMAT_R8G8B8A8_UNORM);
+        image_format = channel_count_to_format(channel_count, VK_FORMAT_R8G8B8A8_UNORM);
     }
 
-     // Create one image per frame (or just one image)
+    // Create one image per frame (or just one image)
     for (u32 i = 0; i < texture_data->image_count; ++i) {
+        char* image_name = string_format("%s_vkimage_%d", name, i);
         vulkan_image_create(
-            context, t->type, t->width, t->height, t->array_size, image_format,
+            context, type, width, height, array_size, image_format,
             VK_IMAGE_TILING_OPTIMAL, usage,
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, true, aspect,
-            t->name, t->mip_levels, &texture_data->images[i]);
+            image_name, mip_levels, &texture_data->images[i]);
+        string_free(image_name);
     }
 
     //Since data has not been uploaded yet, the generation should be INVALID_ID.
-    texture_data->generation=INVALID_ID;
+    texture_data->generation = INVALID_ID;
 }
 
 void vulkan_renderer_texture_resources_release(renderer_backend_interface* backend, texture_internal_data* texture_data) {
@@ -1313,7 +1435,7 @@ void vulkan_renderer_texture_read_data(renderer_backend_interface* backend, stru
             renderbuffer staging;
             char bufname[256];
             kzero_memory(bufname, 256);
-            string_format(bufname, "renderbuffer_texture_read_staging");
+            string_format_unsafe(bufname, "renderbuffer_texture_read_staging");
             if (!renderer_renderbuffer_create(bufname, RENDERBUFFER_TYPE_READ, size, RENDERBUFFER_TRACK_TYPE_NONE, &staging)) {
                 KERROR("Failed to create staging buffer for texture read.");
                 return;
@@ -1377,7 +1499,7 @@ void vulkan_renderer_texture_read_pixel(renderer_backend_interface* backend, str
             renderbuffer staging;
             char bufname[256];
             kzero_memory(bufname, 256);
-            string_format(bufname, "renderbuffer_texture_read_pixel_staging");
+            string_format_unsafe(bufname, "renderbuffer_texture_read_pixel_staging");
             if (!renderer_renderbuffer_create(bufname, RENDERBUFFER_TYPE_READ, sizeof(u8) * 4, RENDERBUFFER_TRACK_TYPE_NONE, &staging)) {
                 KERROR("Failed to create staging buffer for texture pixel read.");
                 return;
@@ -2015,7 +2137,7 @@ b8 vulkan_renderer_shader_initialize(renderer_backend_interface* backend, shader
     u64 total_buffer_size = s->global_ubo_stride + (s->ubo_stride * internal_shader->max_instances);
     char bufname[256];
     kzero_memory(bufname, 256);
-    string_format(bufname, "renderbuffer_global_uniform");
+    string_format_unsafe(bufname, "renderbuffer_global_uniform");
     if (!renderer_renderbuffer_create(bufname, RENDERBUFFER_TYPE_UNIFORM, total_buffer_size, RENDERBUFFER_TRACK_TYPE_FREELIST, &internal_shader->uniform_buffer)) {
         KERROR("Vulkan buffer creation failed for object shader.");
         return false;
@@ -2052,7 +2174,7 @@ b8 vulkan_renderer_shader_initialize(renderer_backend_interface* backend, shader
 #ifdef _DEBUG
         for (u32 i = 0; i < 3; ++i) {
             char desc_set_object_name[512] = { 0 };
-            string_format(desc_set_object_name, "desc_set_shader_%s_global_frame_%u", s->name, i);
+            string_format_unsafe(desc_set_object_name, "desc_set_shader_%s_global_frame_%u", s->name, i);
             VK_SET_DEBUG_OBJECT_NAME(context, VK_OBJECT_TYPE_DESCRIPTOR_SET, internal_shader->global_descriptor_sets[i], desc_set_object_name);
         }
 #endif
@@ -2473,7 +2595,7 @@ b8 vulkan_renderer_texture_map_resources_acquire(renderer_backend_interface* bac
     }
 
     char formatted_name[TEXTURE_NAME_MAX_LENGTH] = { 0 };
-    string_format(formatted_name, "%s_texmap_sampler", map->texture->name);
+    string_format_unsafe(formatted_name, "%s_texmap_sampler", map->texture->name);
     VK_SET_DEBUG_OBJECT_NAME(context, VK_OBJECT_TYPE_SAMPLER, context->samplers[selected_id], formatted_name);
     map->internal_id = selected_id;
 
@@ -2608,7 +2730,7 @@ b8 vulkan_renderer_shader_instance_resources_acquire(renderer_backend_interface*
 #ifdef _DEBUG
     for (u32 i = 0; i < 3; ++i) {
         char desc_set_object_name[512] = { 0 };
-        string_format(desc_set_object_name, "desc_set_shader_%s_instance_frame_%u", s->name, i);
+        string_format_unsafe(desc_set_object_name, "desc_set_shader_%s_instance_frame_%u", s->name, i);
         VK_SET_DEBUG_OBJECT_NAME(context, VK_OBJECT_TYPE_DESCRIPTOR_SET, instance_state->descriptor_sets[i], desc_set_object_name);
     }
 #endif
@@ -2838,112 +2960,10 @@ static b8 create_shader_module(vulkan_context* context, shader* s, shader_stage_
     return true;
 }
 
-VKAPI_ATTR VkBool32 VKAPI_CALL vk_debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT message_severity,
-    VkDebugUtilsMessageTypeFlagsEXT message_types, const VkDebugUtilsMessengerCallbackDataEXT* callback_data, void* user_data) {
-    switch (message_severity) {
-    default:
-    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
-        KERROR(callback_data->pMessage);
-        break;
-    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
-        KWARN(callback_data->pMessage);
-        break;
-    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
-        KINFO(callback_data->pMessage);
-        break;
-    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
-        KTRACE(callback_data->pMessage);
-        break;
-    }
-    return VK_FALSE;
-}
-
-static i32 find_memory_index(vulkan_context* context, u32 type_filter, u32 property_flags) {
-    VkPhysicalDeviceMemoryProperties memory_properties;
-    vkGetPhysicalDeviceMemoryProperties(context->device.physical_device, &memory_properties);
-
-    for (u32 i = 0; i < memory_properties.memoryTypeCount; ++i) {
-        // check each memory type to see if its bit is set to 1
-        if (type_filter & (1 << i) && (memory_properties.memoryTypes[i].propertyFlags & property_flags) == property_flags) {
-            return i;
-        }
-    }
-
-    KWARN("Unable to find suitable memory type!");
-    return -1;
-}
-
-static void create_command_buffers(vulkan_context* context) {
-    if (!context->graphics_command_buffers) {
-        context->graphics_command_buffers = darray_reserve(vulkan_command_buffer, context->swapchain.image_count);
-        for (u32 i = 0; i < context->swapchain.image_count; ++i) {
-            kzero_memory(&context->graphics_command_buffers[i], sizeof(vulkan_command_buffer));
-        }
-    }
-
-    for (u32 i = 0; i < context->swapchain.image_count; ++i) {
-        if (context->graphics_command_buffers[i].handle) {
-            vulkan_command_buffer_free(context, context->device.graphics_command_pool, &context->graphics_command_buffers[i]);
-        }
-        kzero_memory(&context->graphics_command_buffers[i], sizeof(vulkan_command_buffer));
-        vulkan_command_buffer_allocate(context, context->device.graphics_command_pool, true, &context->graphics_command_buffers[i]);
-    }
-
-    KDEBUG("Vulkan command buffers created.");
-}
-
-static b8 recreate_swapchain(vulkan_context* context) {
-    // If already being recreated, do not try again.
-    if (context->recreating_swapchain) {
-        KDEBUG("recreate_swapchain called when already recreating.Booting.");
-        return false;
-    }
-
-    // Detect if the window is too small to drawn to
-    if (context->framebuffer_width == 0 || context->framebuffer_height == 0) {
-        KDEBUG("recreate_swapchain called when window is < 1 in a dimension.Booting.");
-        return false;
-    }
-
-    // Mark as recreating if the dimensions are valid
-    context->recreating_swapchain = true;
-
-    // Wait for any operations to complete.
-    vkDeviceWaitIdle(context->device.logical_device);
-
-    // Requery support
-    vulkan_device_query_swapchain_support(context->device.physical_device, context->surface, &context->device.swapchain_support);
-    vulkan_device_detect_depth_format(&context->device);
-
-    // 重新创建 先销毁在创建
-    vulkan_swapchain_recreate(context, context->framebuffer_width, context->framebuffer_height, &context->swapchain);
-
-    // Update framebuffer size generation
-    context->framebuffer_size_last_generation = context->framebuffer_size_generation;
-
-    // cleanup swapchain
-    for (u32 i = 0; i < context->swapchain.image_count; ++i) {
-        vulkan_command_buffer_free(context, context->device.graphics_command_pool, &context->graphics_command_buffers[i]);
-    }
-
-    // Indicate to listeners that a render target refresh is required. 监听交换链的都会进行刷新目标
-    event_context event_context = { 0 };
-    event_fire(EVENT_CODE_DEFAULT_RENDERTARGET_REFRESH_REQUIRED, 0, event_context);
-
-    create_command_buffers(context);
-
-    // Clear the recreating flag.
-    context->recreating_swapchain = false;
-    return true;
-}
-
 b8 vulkan_renderpass_create(renderer_backend_interface* backend, const renderpass_config* config, renderpass* out_renderpass) {
     vulkan_context* context = (vulkan_context*)backend->internal_context;
     out_renderpass->internal_data = kallocate(sizeof(vulkan_renderpass), MEMORY_TAG_RENDERER);
     vulkan_renderpass* internal_data = (vulkan_renderpass*)out_renderpass->internal_data;
-
-    internal_data->depth = config->depth;
-    internal_data->stencil = config->stencil;
 
     // Main supass
     VkSubpassDescription subpass = {};
@@ -2954,57 +2974,69 @@ b8 vulkan_renderpass_create(renderer_backend_interface* backend, const renderpas
     VkAttachmentDescription* colour_attachment_descs = darray_create(VkAttachmentDescription);
     VkAttachmentDescription* depth_attachment_descs = darray_create(VkAttachmentDescription);
 
+    internal_data->clear_values = darray_create(VkClearValue);
+
     // Can always just look at the first target since they are all the same (one per frame).
     // render_target* target = &out_renderpass->targets[0];
-    for (u32 i = 0; i < config->target.attachment_count; ++i) {
-        render_target_attachment_config* attachment_config = &config->target.attachments[i];
+    for (u32 i = 0; i < config->attachment_count; ++i) {
+        renderpass_attachment_config* attachment_config = &config->attachment_configs[i];
 
         VkAttachmentDescription attachment_desc = {};
-        if (attachment_config->type == RENDER_TARGET_ATTACHMENT_TYPE_COLOUR) {
+        if (attachment_config->type == RENDERER_ATTACHMENT_TYPE_FLAG_COLOUR_BIT) {
             // Colour attachment
-            b8 do_clear_colour = (out_renderpass->clear_flags & RENDERPASS_CLEAR_COLOUR_BUFFER_FLAG) != 0;
+            b8 do_clear_colour = (attachment_config->clear_flags & RENDERPASS_CLEAR_COLOUR_BUFFER_FLAG_BIT) != 0;
+            b8 is_loading = false;
+            b8 is_storing = false;
+            //TODO:DXS
+            attachment_desc.format = context->swapchain.image_format.format;
 
-            if (attachment_config->source == RENDER_TARGET_ATTACHMENT_SOURCE_DEFAULT) {
-                attachment_desc.format = context->swapchain.image_format.format;
-            }
-            else {
-                // TODO: configureable format?
-                attachment_desc.format = VK_FORMAT_R8G8B8A8_UNORM;
-            }
+            // TODO: configurable format? Probably should have a way to determine attachment source (i.e. is it writing to the window colourbuffer?)
+            /* attachment_desc.format = VK_FORMAT_R8G8B8A8_UNORM; */
 
             attachment_desc.samples = VK_SAMPLE_COUNT_1_BIT;
             // attachment_desc.loadOp = do_clear_colour ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
 
+            //Add a clear value even if it isn't used.
+            VkClearValue colour_clear = { 0 };
+            kcopy_memory(colour_clear.color.float32, &attachment_config->clear_colour, sizeof(vec4));
+
+            darray_push(internal_data->clear_values, colour_clear);
+
             // Determine which load operation to use.
-            if (attachment_config->load_operation == RENDER_TARGET_ATTACHMENT_LOAD_OPERATION_DONT_CARE) {
+            switch (attachment_config->load_op) {
+            case RENDERER_ATTACHMENT_LOAD_OPERATION_DONT_CARE:
                 // If we don't care, the only other thing that needs checking is if the attachment is being cleared.
                 attachment_desc.loadOp = do_clear_colour ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-            }
-            else {
+                break;
+            case RENDERER_ATTACHMENT_LOAD_OPERATION_LOAD:
                 // If we are loading, check if we are also clearing. This combination doesn't make sense, and should be warned about.
-                if (attachment_config->load_operation == RENDER_TARGET_ATTACHMENT_LOAD_OPERATION_LOAD) {
-                    if (do_clear_colour) {
-                        KWARN("Colour attachment load operation set to load, but is also set to clear. This combination is invalid, and will err toward clearing. Verify attachment configuration.");
-                        attachment_desc.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-                    }
-                    else {
-                        attachment_desc.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-                    }
+                if (do_clear_colour) {
+                    KWARN("Colour attachment load operation set to load, but is also set to clear. This combination is invalid, and will err toward clearing. Verify attachment configuration.");
+                    attachment_desc.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
                 }
                 else {
-                    KFATAL("Invalid and unsupported combination of load operation (0x%x) and clear flags (0x%x) for colour attachment.", attachment_desc.loadOp, out_renderpass->clear_flags);
-                    return false;
+                    attachment_desc.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+                    is_loading = true;
                 }
+                break;
+            default:
+                KFATAL(
+                    "Invalid and unsupported combination of load operation (0x%x)"
+                    "and clear flags (0x%x) for colour attachment.",
+                    attachment_desc.loadOp, out_renderpass->clear_flags);
+                return false;
             }
 
             // Determine which store operation to use.
-            if (attachment_config->store_operation == RENDER_TARGET_ATTACHMENT_STORE_OPERATION_DONT_CARE) {
+            switch (attachment_config->store_op) {
+            case RENDERER_ATTACHMENT_STORE_OPERATION_DONT_CARE:
                 attachment_desc.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-            }
-            else if (attachment_config->store_operation == RENDER_TARGET_ATTACHMENT_STORE_OPERATION_STORE) {
+                break;
+            case RENDERER_ATTACHMENT_STORE_OPERATION_STORE:
                 attachment_desc.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-            }
-            else {
+                is_storing = true;
+                break;
+            default:
                 KFATAL("Invalid store operation (0x%x) set for depth attachment. Check configuration.", attachment_config->store_operation);
                 return false;
             }
@@ -3013,84 +3045,137 @@ b8 vulkan_renderpass_create(renderer_backend_interface* backend, const renderpas
             attachment_desc.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
             attachment_desc.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
             // If loading, that means coming from another pass, meaning the format should be VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL. Otherwise it is undefined.
-            attachment_desc.initialLayout = attachment_config->load_operation == RENDER_TARGET_ATTACHMENT_LOAD_OPERATION_LOAD ? VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL : VK_IMAGE_LAYOUT_UNDEFINED;
-            // If this is the last pass writing to this attachment, present after should be set to true.
-            attachment_desc.finalLayout = attachment_config->present_after ? VK_IMAGE_LAYOUT_PRESENT_SRC_KHR : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;  // Transitioned to after the render pass
+            attachment_desc.initialLayout = is_loading ? VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL : VK_IMAGE_LAYOUT_UNDEFINED;
+            // If the renderpass is set to present colour, then this attachment should be
+            // transitioned to a layout for that when the pass completes. Otherwise, it should
+            // wind up in a format where the attachment may be used in another pass.
+            switch (attachment_config->post_pass_use) {
+            case RENDERER_ATTACHMENT_USE_COLOUR_PRESENT:
+                attachment_desc.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+                break;
+            case RENDERER_ATTACHMENT_USE_COLOUR_ATTACHMENT:
+            case RENDERER_ATTACHMENT_USE_COLOUR_SHADER_WRITE:
+                attachment_desc.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+                break;
+            case RENDERER_ATTACHMENT_USE_COLOUR_SHADER_READ:
+                attachment_desc.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+                break;
+            case RENDERER_ATTACHMENT_USE_DEPTH_STENCIL_ATTACHMENT:
+            case RENDERER_ATTACHMENT_USE_DEPTH_STENCIL_SHADER_READ:
+            case RENDERER_ATTACHMENT_USE_DEPTH_STENCIL_SHADER_WRITE:
+                KERROR("Cannot set a depth stencil use on a colour attachment. Check renderpass attachment configuration.");
+                return false;
+            default:
+                // NOTE: If not one of the above uses, but set to store, chances are the
+                   // image content will be used for _something_. Default to attachment.
+                if (is_storing) {
+                    KWARN("Colour attachment use not set to present, read, or attachment, but is set to store. Falling back to attachment.");
+                    attachment_desc.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+                }
+                else {
+                    // If this is here, then why is this being written to at all?
+                    KWARN("Colour attachment use not set to present or attachment and is also NOT set to store. Selecting undefined, but why have this attachment in the first place?");
+                    attachment_desc.finalLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+                }
+                break;
+            }
             attachment_desc.flags = 0;
 
             // Push to colour attachment array
             darray_push(colour_attachment_descs, attachment_desc);
         }
-        else if (attachment_config->type & RENDER_TARGET_ATTACHMENT_TYPE_DEPTH || attachment_config->type & RENDER_TARGET_ATTACHMENT_TYPE_STENCIL) {
+        else if (attachment_config->type & RENDERER_ATTACHMENT_TYPE_FLAG_DEPTH_BIT || attachment_config->type & RENDERER_ATTACHMENT_TYPE_FLAG_STENCIL_BIT) {
             // Depth attachment.
-            b8 do_clear_depth = (out_renderpass->clear_flags & RENDERPASS_CLEAR_DEPTH_BUFFER_FLAG) != 0;
-            b8 do_clear_stencil = (out_renderpass->clear_flags & RENDERPASS_CLEAR_STENCIL_BUFFER_FLAG) != 0;
+            b8 do_clear_depth = (attachment_config->clear_flags & RENDERPASS_CLEAR_DEPTH_BUFFER_FLAG_BIT) != 0;
+            b8 do_clear_stencil = (attachment_config->clear_flags & RENDERPASS_CLEAR_STENCIL_BUFFER_FLAG_BIT) != 0;
+            b8 is_loading = false;
+            b8 is_storing = false;
 
-            if (attachment_config->source == RENDER_TARGET_ATTACHMENT_SOURCE_DEFAULT) {
-                attachment_desc.format = context->device.depth_format;
-            }
-            else {
-                // TODO: There may be a more optimal format to use when not the default depth target.
-                attachment_desc.format = context->device.depth_format;
-            }
+            //Add a clear vaule even if it isn't used.
+            VkClearValue depth_stencil_clear = { 0 };
+            depth_stencil_clear.depthStencil.depth = attachment_config->clear_depth;
+            depth_stencil_clear.depthStencil.stencil = attachment_config->clear_stencil;
+            darray_push(internal_data->clear_values, depth_stencil_clear);
+
+            attachment_desc.format = context->device.depth_format;
 
             attachment_desc.samples = VK_SAMPLE_COUNT_1_BIT;
             // Determine which load operation to use.
-            if (attachment_config->load_operation == RENDER_TARGET_ATTACHMENT_LOAD_OPERATION_DONT_CARE) {
+
+            switch (attachment_config->load_op) {
+            case RENDERER_ATTACHMENT_LOAD_OPERATION_DONT_CARE:
                 // If we don't care, the only other thing that needs checking is if the attachment is being cleared.
                 attachment_desc.loadOp = do_clear_depth ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE;
                 attachment_desc.stencilLoadOp = do_clear_stencil ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-
-            }
-            else {
+                break;
+            case RENDERER_ATTACHMENT_LOAD_OPERATION_LOAD:
                 // If we are loading, check if we are also clearing. This combination doesn't make sense, and should be warned about.
-                if (attachment_config->load_operation == RENDER_TARGET_ATTACHMENT_LOAD_OPERATION_LOAD) {
-                    // Depth
-                    if (do_clear_depth) {
-                        KWARN("Depth attachment load operation set to load, but is also set to clear. This combination is invalid, and will err toward clearing. Verify attachment configuration.");
-                        attachment_desc.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-                    }
-                    else {
-                        attachment_desc.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-                    }
-                    // Stencil
-                    if (do_clear_stencil) {
-                        KWARN(
-                            "Stencil attachment load operation set to load, but is also "
-                            "set to clear. This combination is invalid, and will err "
-                            "toward clearing. Verify attachment configuration.");
-                        attachment_desc.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-                    }
-                    else {
-                        attachment_desc.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-                    }
-
+                if (do_clear_depth || do_clear_stencil) {
+                    KWARN(
+                        "Depth/stencil attachment load operation set to load, but is also "
+                        "set to clear. This combination is invalid, and will err "
+                        "toward clearing. Verify attachment configuration.");
+                    attachment_desc.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
                 }
                 else {
-                    KFATAL("Invalid and unsupported combination of load operation (0x%x) and clear flags (0x%x) for depth attachment.", attachment_desc.loadOp, out_renderpass->clear_flags);
-                    return false;
+                    attachment_desc.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+                    is_loading = true;
                 }
+                break;
+            default:
+                KFATAL("Invalid and unsupported combination of load operation (0x%x) and clear flags (0x%x) for depth attachment.", attachment_desc.loadOp, out_renderpass->clear_flags);
+                break;
             }
+
             // Determine which store operation to use.
-            if (attachment_config->store_operation == RENDER_TARGET_ATTACHMENT_STORE_OPERATION_DONT_CARE) {
+            switch (attachment_config->store_operation) {
+            case RENDERER_ATTACHMENT_STORE_OPERATION_DONT_CARE:
                 attachment_desc.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
                 attachment_desc.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-            }
-            else if (attachment_config->store_operation == RENDER_TARGET_ATTACHMENT_STORE_OPERATION_STORE) {
+                break;
+            case RENDERER_ATTACHMENT_STORE_OPERATION_STORE:
                 attachment_desc.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
                 attachment_desc.stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
-            }
-            else {
+                is_storing = true;
+                break;
+            default:
                 KFATAL("Invalid store operation (0x%x) set for depth attachment. Check configuration.", attachment_config->store_operation);
                 return false;
             }
-            // If coming from a previous pass, should already be VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL. Otherwise undefined.
-            attachment_desc.initialLayout = attachment_config->load_operation == RENDER_TARGET_ATTACHMENT_LOAD_OPERATION_LOAD ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL : VK_IMAGE_LAYOUT_UNDEFINED;
-            // Final layout for depth stencil attachments is always this.
-            attachment_desc.finalLayout =
-                attachment_config->present_after ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL : VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
-            // Push to colour attachments array.
+            // If coming from a previous pass, should already be VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL. Otherwise undefined.
+            attachment_desc.initialLayout = is_loading ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL : VK_IMAGE_LAYOUT_UNDEFINED;
+            switch (attachment_config->post_pass_use) {
+            case RENDERER_ATTACHMENT_USE_DEPTH_STENCIL_SHADER_READ:
+                attachment_desc.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+                break;
+            case RENDERER_ATTACHMENT_USE_DEPTH_STENCIL_ATTACHMENT:
+            case RENDERER_ATTACHMENT_USE_DEPTH_STENCIL_SHADER_WRITE:
+                attachment_desc.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+                break;
+            case RENDERER_ATTACHMENT_USE_COLOUR_ATTACHMENT:
+            case RENDERER_ATTACHMENT_USE_COLOUR_PRESENT:
+            case RENDERER_ATTACHMENT_USE_COLOUR_SHADER_READ:
+            case RENDERER_ATTACHMENT_USE_COLOUR_SHADER_WRITE:
+                KERROR("Cannot set a colour use on a depth stencil attachment. Check renderpass attachment configuration.");
+                return false;
+            default:
+                // NOTE: If not one of the above uses, but set to store, chances are the
+                // image content will be used for _something_. Default to attachment.
+                if (is_storing) {
+                    KWARN("Depth/stencil attachment use not set to read or attachment, but is set to store. Falling back to attachment.");
+                    attachment_desc.finalLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
+                }
+                else {
+                    // If this is here, then why is this being written to at all?
+                    KWARN("Depth/stencil attachment use not set to read or attachment and is also NOT set to store. Selecting undefined, but why have this attachment in the first place?");
+                    attachment_desc.finalLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+                }
+                break;
+            }
+            attachment_desc.flags = 0;
+
+            // Push to depth attachments array.
             darray_push(depth_attachment_descs, attachment_desc);
         }
         // Push to general array.
@@ -3150,7 +3235,7 @@ b8 vulkan_renderpass_create(renderer_backend_interface* backend, const renderpas
     subpass.pPreserveAttachments = 0;
 
     // Render pass dependencies. TODO: make this configurable.
-    VkSubpassDependency dependency;
+    VkSubpassDependency dependency = { 0 };
     dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
     dependency.dstSubpass = 0;
     dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
@@ -3207,57 +3292,95 @@ void vulkan_renderpass_destroy(renderer_backend_interface* backend, renderpass* 
     }
 }
 
-b8 vulkan_renderer_render_target_create(renderer_backend_interface* backend,
-    u8 attachment_count,
-    render_target_attachment* attachments,
-    renderpass* pass,
-    u32 width,
-    u32 height,
-    u16 layer_index,
-    render_target* out_target) {
+b8 vulkan_renderer_framebuffer_create(renderer_backend_interface* backend, const struct framebuffer_config* config, struct framebuffer_internal_data* internal_data) {
+    // NOTE: In order to keep the concept of multiple frames internal, if the framebuffer
+   // is double-/triple-/whatever-buffered, that many framebuffers will also need to be
+   // created.
     vulkan_context* context = (vulkan_context*)backend->internal_context;
-    // Max number of attachments
-    VkImageView attachment_views[32] = { 0 };
-    for (u32 i = 0; i < attachment_count; ++i) {
-        vulkan_image* internal = (vulkan_image*)attachments[i].texture->internal_data;
-        if (internal->layer_views) {
-            attachment_views[i] = internal->layer_views[layer_index];
-        }
-        else {
-            attachment_views[i] = internal->view;
-        }
+
+    // Setup array to hold framebuffer(s).
+   // TODO: device->image_count to window->image_count
+    internal_data->framebuffer_count = config->account_for_renderer_frames ? context->device.image_count : 1;
+    internal_data->framebuffers = kallocate(sizeof(VkFramebuffer) * internal_data->framebuffer_count, MEMORY_TAG_ARRAY);
+    // Get the smallest attachment size and use that as the width/height.
+    // This is because the Vulkan spec states that the framebuffer must be less than or equal to the
+    // smallest attachment. Technically, so too must the renderpass using it.
+    // Ideally though, they should all be the same size.
+    u32 min_width = 99999999;
+    u32 min_height = 99999999;
+    for (u32 i = 0;i < config->attachment_count;++i) {
+        min_width = kmin(config->attachments[i].width, min_width);
+        min_height = kmin(config->attachments[i].height, min_height);
     }
+
+    if (min_width < 1 || min_height < 1) {
+        KERROR("FrameBuffer cannot use attachments whose  width is less than 1.");
+        return false;
+    }
+
+    //Each framebuffer (one per frame)
+    for (u32 f = 0;f < internal_data->framebuffer_count;++f) {
+        // Get a flattened list of attachment views for the framebuffer.
+        VkImageView attachment_views[32] = { 0 };// NOTE: Max number of attachments
+
+        for (u32 i = 0; i < config->attachment_count; ++i) {
+            texture_internal_data* internal = config->attachments[i].texture->texture_internal_data;
+            // Verify the the image count is correct for the attachment.
+            if (internal->image_count != internal_data->framebuffer_count) {
+                KERROR("Attachment image count/framebuffer count mismatch.");
+                return false;
+            }
+
+            //Get the view from the image matching the current  framebuffer index.
+            vulkan_image* image = &internal->images[f];
+            if (image->layer_views) {
+                attachment_views[i] = image->layer_views[layer_indices[i]];
+            }
+            else {
+                // Verify that attachment textur has the same number of internal Vulkan images to facilitate this.
+                if (config->account_for_renderer_frames) {
+                    KERROR("Attempting to create a framebuffer which should account for renderer frames, but attachment index %u is only setup with a single backing image.");
+                    return false;
+                }
+                attachment_views[i] = image->view;
+            }
+        }
+        // TODO: Because of Vulkan's insistance on tightly coupling renderpasses to framebuffers,
+       // create a dummy renderpass based on the attachment config we already have here. This would
+       // prevent the need to pass in a renderpass from the front end. At least in therory.
+
+           // Create the framebuffer based on this info.
+        VkFramebufferCreateInfo framebuffer_create_info = { VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO };
+        framebuffer_create_info.renderPass = ((vulkan_renderpass*)pass->internal_data)->handle;
+        framebuffer_create_info.attachmentCount = config->attachment_count;
+        framebuffer_create_info.pAttachments = attachment_views;
+        framebuffer_create_info.width = min_width;
+        framebuffer_create_info.height = min_height;
+        framebuffer_create_info.layers = 1;
+
+        VK_CHECK(vkCreateFramebuffer(context->device.logical_device, &framebuffer_create_info, context->allocator, &internal_data->framebuffers[f]));
+
+
+        char formatted_name[512] = { 0 };
+        string_format_unsafe(formatted_name, "pass_%s_framebuffer_%u_x_%u", pass->name, min_width, min_height);
+        VK_SET_DEBUG_OBJECT_NAME(context, VK_OBJECT_TYPE_FRAMEBUFFER, internal_data->framebuffers[f], formatted_name);
+        KTRACE("Created framebuffer ' %s ' at 0x%x.", formatted_name, internal_data->framebuffers[f]);
+    }
+    // Keep a copy of the attachments passed in.
     kcopy_memory(out_target->attachments, attachments, sizeof(render_target_attachment) * attachment_count);
-    //TODO: Because of Vulkan's insistance on tighely coupling renderpasses to framebuffers,
-    //create a dummy renderpass based on the attachment config we already have here. This would 
-    //prevent the need to pass in a renderpass from the front end. At least in therory.
-    VkFramebufferCreateInfo framebuffer_create_info = { VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO };
-    framebuffer_create_info.renderPass = ((vulkan_renderpass*)pass->internal_data)->handle;
-    framebuffer_create_info.attachmentCount = attachment_count;
-    framebuffer_create_info.pAttachments = attachment_views;
-    framebuffer_create_info.width = width;
-    framebuffer_create_info.height = height;
-    framebuffer_create_info.layers = 1;
-
-    VK_CHECK(vkCreateFramebuffer(context->device.logical_device, &framebuffer_create_info, context->allocator, (VkFramebuffer*)&out_target->internal_framebuffer));
-
-    char formatted_name[512] = { 0 };
-    string_format(formatted_name, "pass_%s_framebuffer_%u_x_%u", pass->name, width, height);
-    VK_SET_DEBUG_OBJECT_NAME(context, VK_OBJECT_TYPE_FRAMEBUFFER, out_target->internal_framebuffer, formatted_name);
-    KTRACE("Created framebuffer ' %s ' at 0x%x.", formatted_name, out_target->internal_framebuffer);
     return true;
 }
 
-void vulkan_renderer_render_target_destroy(renderer_backend_interface* backend, render_target* target, b8 free_internal_memory) {
+void vulkan_renderer_framebuffer_destroy(renderer_backend_interface* backend, framebuffer_internal_data* internal_data) {
     vulkan_context* context = (vulkan_context*)backend->internal_context;
-    if (target && target->internal_framebuffer) {
-        vkDestroyFramebuffer(context->device.logical_device, (VkFramebuffer)target->internal_framebuffer, context->allocator);
-        target->internal_framebuffer = 0;
-        if (free_internal_memory) {
-            kfree(target->attachments, sizeof(render_target_attachment) * target->attachment_count, MEMORY_TAG_ARRAY);
-            target->attachments = 0;
-            target->attachment_count = 0;
+    if (internal_data && internal_data->framebuffers) {
+        for (u32 i = 0;i < internal_data->framebuffer_count;++i) {
+            vkDestroyFramebuffer(context->device.logical_device, internal_data->framebuffers[i], context->allocator);
         }
+
+        kfree(internal_data->framebuffers, sizeof(VkFramebuffer) * internal_data->framebuffer_count, MEMORY_TAG_RENDERER);
+        internal_data->framebuffers = 0;
+        internal_data->framebuffer_count = 0;
     }
 }
 
@@ -3585,7 +3708,7 @@ b8 vulkan_buffer_read(renderer_backend_interface* backend, renderbuffer* buffer,
         renderbuffer read;
         char bufname[256];
         kzero_memory(bufname, 256);
-        string_format(bufname, "renderbuffer_read");
+        string_format_unsafe(bufname, "renderbuffer_read");
         if (!renderer_renderbuffer_create(bufname, RENDERBUFFER_TYPE_READ, size, RENDERBUFFER_TRACK_TYPE_NONE, &read)) {
             KERROR("vulkan_buffer_read() - Failed to create read buffer.");
             return false;
@@ -3732,3 +3855,199 @@ void vulkan_renderer_wait_for_idle(renderer_backend_interface* backend) {
         VK_CHECK(vkDeviceWaitIdle(context->device.logical_device));
     }
 }
+
+/**
+ * =================== VULKAN ALLOCATOR ===================
+ */
+
+#if KVULKAN_USE_CUSTOM_ALLOCATOR == 1
+ /**
+  * @brief Implementation of PFN_vkAllocationFunction.
+  * @link https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/PFN_vkAllocationFunction.html
+  *
+  * @param user_data User data specified in the allocator by the application.
+  * @param size The size in bytes of the requested allocation.
+  * @param alignment The requested alignment of the allocation in bytes. Must be a power of two.
+  * @param allocationScope The allocation scope and lifetime.
+  * @return A memory block if successful; otherwise 0.
+  */
+void* vulkan_alloc_allocation(void* user_data, size_t size, size_t alignment, VkSystemAllocationScope allocation_scope) {
+    // Null MUST be returned if this fails.
+    if (size == 0) {
+        return 0;
+    }
+
+    void* result = kallocate_aligned(size, (u16)alignment, MEMORY_TAG_VULKAN);
+#ifdef KVULKAN_ALLOCATOR_TRACE
+    KTRACE("Allocated block %p. Size=%llu, Alignment=%llu", result, size, alignment);
+#endif
+
+    return result;
+}
+
+/**
+ * @brief Implementation of PFN_vkFreeFunction.
+ * @link https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/PFN_vkFreeFunction.html
+ *
+ * @param user_data User data specified in the allocator by the application.
+ * @param memory The allocation to be freed.
+ */
+void vulkan_alloc_free(void* user_data, void* memory) {
+    if (!memory) {
+#ifdef KVULKAN_ALLOCATOR_TRACE
+        KTRACE("Block is null, nothing to free: %p", memory);
+#endif
+        return;
+    }
+
+#ifdef KVULKAN_ALLOCATOR_TRACE
+    KTRACE("Attempting to free block %p...", memory);
+#endif
+    u64 size;
+    u16 alignment;
+    b8 result = kmemory_get_size_alignment(memory, &size, &alignment);
+    if (result) {
+#ifdef KVULKAN_ALLOCATOR_TRACE
+        KTRACE("Block %p found with size/alignment: %llu/%u. Freeing aligned block...", memory, size, alignment);
+#endif
+        kfree_aligned(memory, size, alignment, MEMORY_TAG_VULKAN);
+    }
+    else {
+        KERROR("vulkan_alloc_free failed to get alignment lookup for block %p.", memory);
+    }
+}
+
+/**
+ * @brief Implementation of PFN_vkReallocationFunction.
+ * @link https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/PFN_vkReallocationFunction.html
+ *
+ * @param user_data User data specified in the allocator by the application.
+ * @param original Either NULL or a pointer previously returned by vulkan_alloc_allocation.
+ * @param size The size in bytes of the requested allocation.
+ * @param alignment The requested alignment of the allocation in bytes. Must be a power of two.
+ * @param allocation_scope The scope and lifetime of the allocation.
+ * @return A memory block if successful; otherwise 0.
+ */
+void* vulkan_alloc_reallocation(void* user_data, void* original, size_t size, size_t alignment, VkSystemAllocationScope allocation_scope) {
+    if (!original) {
+        return vulkan_alloc_allocation(user_data, size, alignment, allocation_scope);
+    }
+
+    if (size == 0) {
+        vulkan_alloc_free(user_data, original);
+        return 0;
+    }
+
+    // NOTE: if pOriginal is not null, the same alignment must be used for the new allocation as original.
+    u64 alloc_size;
+    u16 alloc_alignment;
+    b8 is_aligned = kmemory_get_size_alignment(original, &alloc_size, &alloc_alignment);
+    if (!is_aligned) {
+        KERROR("vulkan_alloc_reallocation of unaligned block %p", original);
+        return 0;
+    }
+
+    if (alloc_alignment != alignment) {
+        KERROR("Attempted realloc using a different alignment of %llu than the original of %hu.", alignment, alloc_alignment);
+        return 0;
+    }
+
+#ifdef KVULKAN_ALLOCATOR_TRACE
+    KTRACE("Attempting to realloc block %p...", original);
+#endif
+
+    void* result = vulkan_alloc_allocation(user_data, size, alloc_alignment, allocation_scope);
+    if (result) {
+#ifdef KVULKAN_ALLOCATOR_TRACE
+        KTRACE("Block %p reallocated to %p, copying data...", original, result);
+#endif
+
+        // Copy over the original memory.
+        kcopy_memory(result, original, alloc_size);
+#ifdef KVULKAN_ALLOCATOR_TRACE
+        KTRACE("Freeing original aligned block %p...", original);
+#endif
+        // Free the original memory only if the new allocation was successful.
+        kfree_aligned(original, alloc_size, alloc_alignment, MEMORY_TAG_VULKAN);
+    }
+    else {
+#ifdef KVULKAN_ALLOCATOR_TRACE
+        KERROR("Failed to realloc %p.", original);
+#endif
+    }
+
+    return result;
+}
+
+/**
+ * @brief Implementation of PFN_vkInternalAllocationNotification.
+ * Purely informational, nothing can really be done with this except to track it.
+ * @link https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/PFN_vkInternalAllocationNotification.html
+ *
+ * @param pUserData User data specified in the allocator by the application.
+ * @param size The size of the allocation in bytes.
+ * @param allocationType The type of internal allocation.
+ * @param allocationScope The scope and lifetime of the allocation.
+ */
+void vulkan_alloc_internal_alloc(void* pUserData, size_t size, VkInternalAllocationType allocationType, VkSystemAllocationScope allocationScope) {
+#ifdef KVULKAN_ALLOCATOR_TRACE
+    KTRACE("External allocation of size: %llu", size);
+#endif
+    kallocate_report((u64)size, MEMORY_TAG_VULKAN_EXT);
+}
+
+/**
+ * @brief Implementation of PFN_vkInternalFreeNotification.
+ * Purely informational, nothing can really be done with this except to track it.
+ * @link https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/PFN_vkInternalFreeNotification.html
+ *
+ * @param pUserData User data specified in the allocator by the application.
+ * @param size The size of the allocation to be freed in bytes.
+ * @param allocationType The type of internal allocation.
+ * @param allocationScope The scope and lifetime of the allocation.
+ */
+void vulkan_alloc_internal_free(void* pUserData, size_t size, VkInternalAllocationType allocationType, VkSystemAllocationScope allocationScope) {
+#ifdef KVULKAN_ALLOCATOR_TRACE
+    KTRACE("External free of size: %llu", size);
+#endif
+    kfree_report((u64)size, MEMORY_TAG_VULKAN_EXT);
+}
+
+/**
+ * @brief Create a vulkan allocator object, filling out the function pointers
+ * in the provided struct.
+ *
+ * @param callbacks A pointer to the allocation callbacks structure to be filled out.
+ * @return b8 True on success; otherwise false.
+ */
+
+ /**
+  * @brief Create a vulkan allocator object, filling out the function pointers
+  * in the provided struct.
+  *
+  * @param callbacks A pointer to the allocation callbacks structure to be filled out.
+  * @return b8 True on success; otherwise false.
+  */
+b8 create_vulkan_allocator(vulkan_context* context, VkAllocationCallbacks* callbacks) {
+    if (callbacks) {
+        callbacks->pfnAllocation = vulkan_alloc_allocation;
+        callbacks->pfnReallocation = vulkan_alloc_reallocation;
+        callbacks->pfnFree = vulkan_alloc_free;
+        callbacks->pfnInternalAllocation = vulkan_alloc_internal_alloc;
+        callbacks->pfnInternalFree = vulkan_alloc_internal_free;
+        callbacks->pUserData = context;
+        return true;
+    }
+
+    return false;
+}
+
+static vulkan_command_buffer* get_current_command_buffer(vulkan_context* context) {
+    kwindow_renderer_backend_state* window_backend = context->current_window->renderer_state->backend_state;
+    return &window_backend->graphics_command_buffers[window_backend->image_index];
+}
+
+static u32 get_current_image_index(vulkan_context* context) {
+    return context->current_window->renderer_state->backend_state->image_index;
+}
+#endif  // KVULKAN_USE_CUSTOM_ALLOCATOR == 1

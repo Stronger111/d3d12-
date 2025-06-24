@@ -26,11 +26,17 @@
 #include "systems/shader_system.h"
 
 struct texture_internal_data;
+struct framebuffer_internal_data;
 
 typedef struct texture_lookup {
     u64 uniqueid;
     struct texture_internal_data* data;
 }texture_lookup;
+
+typedef struct framebuffer_lookup {
+    u64 uniqueid;
+    struct framebuffer_internal_data* data;
+}framebuffer_lookup;
 
 typedef struct renderer_system_state {
     /** @brief The current frame number. */
@@ -45,6 +51,9 @@ typedef struct renderer_system_state {
 
     // darray Collection of renderer-specific texture data.
     texture_lookup* textures;
+
+    // darray Collection on renderer-specific framebuffer data.
+    framebuffer_lookup* framebuffers;
 
     /** @brief The object vertex buffer, used to hold geometry vertices. */
     renderbuffer geometry_vertex_buffer;
@@ -130,11 +139,11 @@ b8 renderer_system_initialize(u64* memory_requirement, struct renderer_system_st
 
     // Geometry vertex buffer
     // TODO: make this configurable.
-    char bufname[256];
-    kzero_memory(bufname, 256);
-    string_format(bufname, "renderbuffer_vertexbuffer_globalgeometry");
+    // char bufname[256];
+    // kzero_memory(bufname, 256);
+    // string_format_unsafe(bufname, "renderbuffer_vertexbuffer_globalgeometry");
     const u64 vertex_buffer_size = sizeof(vertex_3d) * 20 * 1024 * 1024;
-    if (!renderer_renderbuffer_create(bufname, RENDERBUFFER_TYPE_VERTEX, vertex_buffer_size, RENDERBUFFER_TRACK_TYPE_FREELIST, &state->geometry_vertex_buffer)) {
+    if (!renderer_renderbuffer_create("renderbuffer_vertexbuffer_globalgeometry", RENDERBUFFER_TYPE_VERTEX, vertex_buffer_size, RENDERBUFFER_TRACK_TYPE_FREELIST, &state->geometry_vertex_buffer)) {
         KERROR("Error creating vertex buffer.");
         return false;
     }
@@ -142,10 +151,10 @@ b8 renderer_system_initialize(u64* memory_requirement, struct renderer_system_st
 
     // Geometry index buffer
     // TODO: Make this configurable.
-    kzero_memory(bufname, 256);
-    string_format(bufname, "renderbuffer_indexbuffer_globalgeometry");
+    // kzero_memory(bufname, 256);
+    // string_format_unsafe(bufname, "renderbuffer_indexbuffer_globalgeometry");
     const u64 index_buffer_size = sizeof(u32) * 100 * 1024 * 1024;
-    if (!renderer_renderbuffer_create(bufname, RENDERBUFFER_TYPE_INDEX, index_buffer_size, RENDERBUFFER_TRACK_TYPE_FREELIST, &state->geometry_index_buffer)) {
+    if (!renderer_renderbuffer_create("renderbuffer_indexbuffer_globalgeometry", RENDERBUFFER_TYPE_INDEX, index_buffer_size, RENDERBUFFER_TRACK_TYPE_FREELIST, &state->geometry_index_buffer)) {
         KERROR("Error creating index buffer.");
         return false;
     }
@@ -184,9 +193,36 @@ b8 renderer_on_window_created(struct renderer_system_state* state, struct kwindo
     //Create a new window state and register it.
     window->renderer_state = kallocate(sizeof(kwindow_renderer_state), MEMORY_TAG_RENDERER);
 
-    //Create backend resource (i.e swapchain,framebuffers,etc.).
+    //Start with invalid colour/depth buffer texture handles.
+    window->renderer_state->colourbuffer.renderer_texture_handle = k_handle_invalid();
+    window->renderer_state->depthbuffer.renderer_texture_handle = k_handle_invalid();
+
+    //Create backend resource (i.e swapchain,surface,image,etc.).
     if (!state->backend->window_create(state->backend, window)) {
         KERROR("Renderer backend failed to create resources for new window. See logs for details.");
+        return false;
+    }
+
+    //Alsos setup a framebuffer for it.
+    framebuffer_config fb_config = { 0 };
+    fb_config.pass = 0;  //TODO:Don't requrie this rubbish
+    fb_config.attachment_count = 2;
+    fb_config.attachments = kallocate(sizeof(framebuffer_attachment_config) * fb_config.attachment_count, MEMORY_TAG_ARRAY);
+    fb_config.layer_indices = 0;
+    fb_config.account_for_renderer_frames = true;
+
+    //Colour attachment - every window gets one of these by default.
+    framebuffer_attachment_config* colour_attachement = &fb_config.attachments[0];
+    colour_attachement->type = RENDERER_ATTACHMENT_TYPE_FLAG_COLOUR_BIT;
+    colour_attachement->target = &window->renderer_state->colourbuffer;
+    // Depth attachment - every window gets one of these by default as well.
+    framebuffer_attachment_config* depth_attachement = &fb_config.attachments[1];
+    depth_attachement->type = RENDERER_ATTACHMENT_TYPE_FLAG_DEPTH_BIT | RENDERER_ATTACHMENT_TYPE_FLAG_STENCIL_BIT;
+    depth_attachement->target = &window->renderer_state->depthbuffer;
+
+    //Create the framebuffer.
+    if (!renderer_framebuffer_create(state, &fb_config, &window->renderer_state->framebuffer_handle)) {
+        KFATAL("Failed to create default framebuffer for window '%s'. Process failed.", window->name);
         return false;
     }
     return true;
@@ -194,6 +230,9 @@ b8 renderer_on_window_created(struct renderer_system_state* state, struct kwindo
 
 void renderer_on_window_destroyed(struct renderer_system_state* state, struct kwindow* window) {
     if (window) {
+        //Releasing the resource for the default depthbuffer should destroy backing resoureces too.
+        renderer_texture_resources_release(state, window->renderer_state->depthbuffer.renderer_texture_handle);
+
         //destroy on backend first.
         state->backend->window_destroy(state->backend, window);
     }
@@ -308,7 +347,7 @@ void renderer_set_stencil_write_mask(u32 write_mask) {
     state_ptr->backend->set_stencil_write_mask(state_ptr->backend, write_mask);
 }
 
-b8 renderer_texture_resources_acquire(struct renderer_system_state* state, texture_type type, u32 width, u32 height, u8 channel_count, u8 mip_level, u16 array_size, texture_flag_bits flags, k_handle* out_renderer_texture_handle) {
+b8 renderer_texture_resources_acquire(struct renderer_system_state* state, const char* name, texture_type type, u32 width, u32 height, u8 channel_count, u8 mip_level, u16 array_size, texture_flag_bits flags, k_handle* out_renderer_texture_handle) {
     if (!state) {
         return false;
     }
@@ -318,7 +357,16 @@ b8 renderer_texture_resources_acquire(struct renderer_system_state* state, textu
     }
 
     struct texture_internal_data* data = kallocate(state->backend->texture_internal_data_size, MEMORY_TAG_RENDERER);
-    b8 success = state->backend->texture_resources_acquire(state->backend, data, type, width, height, channel_count, mip_level, array_size, flags);
+    b8 success;
+    if (flags && TEXTURE_FLAG_IS_WRAPPED) {
+        // If the texure is considered "wrapped" (i.e. internal resources are created somwhere else,
+        // such as swapchain images), then don't reach out to the backend to create resources. Just
+        // count it as a success and proceed to get a handle.
+        success = true;
+    }
+    else {
+        success = state->backend->texture_resources_acquire(state->backend, data, name, type, width, height, channel_count, mip_level, array_size, flags);
+    }
 
     if (success) {
         u32 texture_count = darray_length(state->textures);
@@ -330,7 +378,7 @@ b8 renderer_texture_resources_acquire(struct renderer_system_state* state, textu
                 lookup->uniqueid = new_handle.unique_id.uniqueid;
                 lookup->data = data;
 
-                return  state->backend->texture_resources_acquire(state->backend, data, type, width, height, channel_count, mip_level, array_size, flags);
+                return success;
             }
         }
 
@@ -360,6 +408,18 @@ void renderer_texture_resources_release(struct renderer_system_state* state, k_h
         lookup->data = 0;
         lookup->uniqueid = INVALID_ID_U64;
     }
+}
+
+struct texture_internal_data* renderer_texture_resources_get(struct renderer_system_state* state, k_handle renderer_texture_handle) {
+    if (state && !k_handle_is_invalid(renderer_texture_handle)) {
+        texture_lookup* lookup = &state->textures[renderer_texture_handle.handle_index];
+        if (lookup->uniqueid != renderer_texture_handle.unique_id.uniqueid) {
+            KWARN("Stale handle passed while trying to get renderer texture resources. Nothing will be returned");
+            return 0;
+        }
+        return lookup->data;
+    }
+    return 0;
 }
 
 b8 renderer_texture_write_data(struct renderer_system_state* state, k_handle renderer_texture_handle, u32 offset, u32 size, const u8* pixels) {
@@ -547,14 +607,48 @@ void renderer_geometry_draw(geometry_render_data* data) {
     }
 }
 
-b8 renderer_renderpass_begin(renderpass* pass, render_target* target) {
+b8 renderer_renderpass_begin(renderpass* pass, k_handle framebuffer_handle) {
     renderer_system_state* state_ptr = engine_systems_get()->renderer_system;
-    return state_ptr->backend->renderpass_begin(state_ptr->backend,pass, target);
+    return state_ptr->backend->renderpass_begin(state_ptr->backend, pass, framebuffer_handle);
 }
 
 b8 renderer_renderpass_end(renderpass* pass) {
     renderer_system_state* state_ptr = engine_systems_get()->renderer_system;
-    return state_ptr->backend->renderpass_end(state_ptr->backend,pass);
+    return state_ptr->backend->renderpass_end(state_ptr->backend, pass);
+}
+
+void renderer_clear_colour_set(struct renderer_system_state* state, vec4 colour) {
+    if (state) {
+        state->backend->clear_colour_set(state->backend, colour);
+    }
+}
+
+
+void renderer_clear_depth_set(struct renderer_system_state* state, f32 depth) {
+    if (state) {
+        state->backend->clear_depth_set(state->backend, depth);
+    }
+}
+
+b8 renderer_clear_colour_texture(struct renderer_system_state* state, k_handle renderer_texture_handle) {
+    if (state && !k_handle_is_invalid(renderer_texture_handle)) {
+        struct texture_internal_data* data = state->textures[renderer_texture_handle.handle_index].data;
+        state->backend->clear_colour_texture(state->backend, data);
+        return true;
+    }
+    KERROR("renderer_clear_colour_texture requires a valid handle to a texture. Nothing was done.");
+    return false;
+}
+
+b8 renderer_clear_depth_stencil(struct renderer_system_state* state, k_handle renderer_texture_handle) {
+    if (state && !k_handle_is_invalid(renderer_texture_handle)) {
+        struct texture_internal_data* data = state->textures[renderer_texture_handle.handle_index].data;
+        state->backend->clear_depth_stencil(state->backend, data);
+        return true;
+    }
+
+    KERROR("renderer_clear_depth_stencil requires a valid handle to a texture. Nothing was done.");
+    return false;
 }
 
 b8 renderer_shader_create(shader* s, const shader_config* config, renderpass* pass) {
@@ -637,7 +731,7 @@ b8 renderer_shader_create(shader* s, const shader_config* config, renderpass* pa
         // Release the resource as it isn't needed anymore at this point.
         resource_system_unload(&text_resource);
     }
-    return state_ptr->backend->shader_create(state_ptr->backend,s, config, pass);
+    return state_ptr->backend->shader_create(state_ptr->backend, s, config, pass);
 }
 
 void renderer_shader_destroy(shader* s) {
@@ -648,14 +742,14 @@ void renderer_shader_destroy(shader* s) {
             platform_unwatch_file(s->module_watch_ids[i]);
         }
         renderer_system_state* state_ptr = engine_systems_get()->renderer_system;
-        state_ptr->backend->shader_destroy(state_ptr->backend,s);
+        state_ptr->backend->shader_destroy(state_ptr->backend, s);
     }
 #endif
 }
 
 b8 renderer_shader_initialize(shader* s) {
     renderer_system_state* state_ptr = engine_systems_get()->renderer_system;
-    return state_ptr->backend->shader_initialize(state_ptr->backend,s);
+    return state_ptr->backend->shader_initialize(state_ptr->backend, s);
 }
 
 b8 renderer_shader_reload(struct shader* s) {
@@ -712,18 +806,18 @@ b8 renderer_shader_reload(struct shader* s) {
         return false;
     }
 
-    return state_ptr->backend->shader_reload(state_ptr->backend,s);
+    return state_ptr->backend->shader_reload(state_ptr->backend, s);
 }
 
 b8 renderer_shader_use(shader* s) {
     renderer_system_state* state_ptr = engine_systems_get()->renderer_system;
-    return state_ptr->backend->shader_use(state_ptr->backend,s);
+    return state_ptr->backend->shader_use(state_ptr->backend, s);
 }
 
 b8 renderer_shader_set_wireframe(struct shader* s, b8 wireframe_enabled) {
     // Enusre that this shader has the ability to go wireframe before changing.
     renderer_system_state* state_ptr = engine_systems_get()->renderer_system;
-    if (!state_ptr->backend->shader_supports_wireframe(state_ptr->backend,s)) {
+    if (!state_ptr->backend->shader_supports_wireframe(state_ptr->backend, s)) {
         // Not supported, don't enable, Bleat about it.
         KWARN("Shader does not support wireframe mode: '%s'.", s->name);
         return false;
@@ -734,78 +828,123 @@ b8 renderer_shader_set_wireframe(struct shader* s, b8 wireframe_enabled) {
 
 b8 renderer_shader_bind_globals(shader* s) {
     renderer_system_state* state_ptr = engine_systems_get()->renderer_system;
-    return state_ptr->backend->shader_bind_globals(state_ptr->backend,s);
+    return state_ptr->backend->shader_bind_globals(state_ptr->backend, s);
 }
 
 b8 renderer_shader_bind_instance(shader* s, u32 instance_id) {
     renderer_system_state* state_ptr = engine_systems_get()->renderer_system;
-    return state_ptr->backend->shader_bind_instance(state_ptr->backend,s, instance_id);
+    return state_ptr->backend->shader_bind_instance(state_ptr->backend, s, instance_id);
 }
 
 b8 renderer_shader_bind_local(shader* s) {
     renderer_system_state* state_ptr = engine_systems_get()->renderer_system;
-    return state_ptr->backend->shader_bind_local(state_ptr->backend,s);
+    return state_ptr->backend->shader_bind_local(state_ptr->backend, s);
 }
 
 b8 renderer_shader_uniform_set(shader* s, shader_uniform* uniform, u32 array_index, const void* value) {
     renderer_system_state* state_ptr = engine_systems_get()->renderer_system;
-    return state_ptr->backend->shader_uniform_set(state_ptr->backend,s, uniform, array_index, value);
+    return state_ptr->backend->shader_uniform_set(state_ptr->backend, s, uniform, array_index, value);
 }
 
 b8 renderer_shader_apply_local(shader* s, frame_data* p_frame_data) {
     renderer_system_state* state_ptr = engine_systems_get()->renderer_system;
-    return state_ptr->backend->shader_apply_local(state_ptr->backend,s, p_frame_data);
+    return state_ptr->backend->shader_apply_local(state_ptr->backend, s, p_frame_data);
 }
 
 b8 renderer_shader_apply_globals(shader* s, b8 needs_update, frame_data* p_frame_data) {
     renderer_system_state* state_ptr = engine_systems_get()->renderer_system;
-    return state_ptr->backend->shader_apply_globals(state_ptr->backend,s, needs_update, p_frame_data);
+    return state_ptr->backend->shader_apply_globals(state_ptr->backend, s, needs_update, p_frame_data);
 }
 
 b8 renderer_shader_apply_instance(shader* s, b8 needs_update, frame_data* p_frame_data) {
     renderer_system_state* state_ptr = engine_systems_get()->renderer_system;
-    return state_ptr->backend->shader_apply_instance(state_ptr->backend,s, needs_update, p_frame_data);
+    return state_ptr->backend->shader_apply_instance(state_ptr->backend, s, needs_update, p_frame_data);
 }
 
 b8 renderer_shader_instance_resources_acquire(shader* s, const shader_instance_resource_config* config, u32* out_instance_id) {
     renderer_system_state* state_ptr = engine_systems_get()->renderer_system;
-    return state_ptr->backend->shader_instance_resources_acquire(state_ptr->backend,s, config, out_instance_id);
+    return state_ptr->backend->shader_instance_resources_acquire(state_ptr->backend, s, config, out_instance_id);
 }
 
 b8 renderer_shader_instance_resources_release(shader* s, u32 instance_id) {
     renderer_system_state* state_ptr = engine_systems_get()->renderer_system;
-    return state_ptr->backend->shader_instance_resources_release(state_ptr->backend,s, instance_id);
+    return state_ptr->backend->shader_instance_resources_release(state_ptr->backend, s, instance_id);
 }
 
 b8 renderer_texture_map_resources_acquire(texture_map* map) {
     renderer_system_state* state_ptr = engine_systems_get()->renderer_system;
-    return state_ptr->backend->texture_map_resources_acquire(state_ptr->backend,map);
+    return state_ptr->backend->texture_map_resources_acquire(state_ptr->backend, map);
 }
 
 void renderer_texture_map_resources_release(texture_map* map) {
     renderer_system_state* state_ptr = engine_systems_get()->renderer_system;
-    state_ptr->backend->texture_map_resources_release(state_ptr->backend,map);
+    state_ptr->backend->texture_map_resources_release(state_ptr->backend, map);
 }
 
-void renderer_render_target_create(u8 attachment_count, render_target_attachment* attachments, renderpass* pass, u32 width, u32 height, u16 layer_index, render_target* out_target) {
-    renderer_system_state* state_ptr = engine_systems_get()->renderer_system;
-    state_ptr->backend->render_target_create(state_ptr->backend,attachment_count, attachments, pass, width, height, layer_index, out_target);
+b8 renderer_framebuffer_create(struct renderer_system_state* state, const struct framebuffer_config* config, k_handle* out_framebuffer_handle) {
+    // TODO: rework backend
+
+    if (!state) {
+        return false;
+    }
+
+    if (!state->framebuffers) {
+        state->framebuffers = darray_create(framebuffer_lookup);
+    }
+
+    struct framebuffer_internal_data* data = kallocate(state->backend->framebuffer_internal_data_size, MEMORY_TAG_RENDERER);
+    b8 success = state->backend->framebuffer_create(state->backend, config, data);
+    // Only insert into the lookup table on success.
+    if (success) {
+        u32 framebuffer_count = darray_length(state->framebuffers);
+        for (u32 i = 0;i < framebuffer_count;++i) {
+            framebuffer_lookup* lookup = &state->framebuffers[i];
+            if (lookup->uniqueid == INVALID_ID_U64) {
+                // Found a free "slot", use it.
+                *out_framebuffer_handle = k_handle_create(i);
+                lookup->uniqueid = out_framebuffer_handle->unique_id.uniqueid;
+                lookup->data = data;
+                return success;
+            }
+        }
+
+        // No free "slots", add one.
+        framebuffer_lookup new_lookup = { 0 };
+        *out_framebuffer_handle = k_handle_create(framebuffer_count);
+        new_lookup.uniqueid = out_framebuffer_handle->unique_id.uniqueid;
+        new_lookup.data = data;
+        darray_push(state->framebuffers, new_lookup);
+    }
+    else {
+        KERROR("Failed to create framebuffer. See logs for details.");
+        kfree(data, state->backend->framebuffer_internal_data_size, MEMORY_TAG_RENDERER);
+    }
+    return success;
 }
 
-void renderer_render_target_destroy(render_target* target, b8 free_internal_memory) {
-    renderer_system_state* state_ptr = engine_systems_get()->renderer_system;
-    state_ptr->backend->render_target_destroy(state_ptr->backend,target, free_internal_memory);
+void renderer_framebuffer_destroy(struct renderer_system_state* state, k_handle* framebuffer_handle) {
+    if (state && !k_handle_is_invalid(*framebuffer_handle)) {
+        framebuffer_lookup* lookup = &state->framebuffers[framebuffer_handle->handle_index];
+        state->backend->framebuffer_destroy(state->backend, lookup->data);
 
-    if (free_internal_memory) {
-        kzero_memory(target, sizeof(render_target));
+        kfree(lookup->data, state->backend->framebuffer_internal_data_size, MEMORY_TAG_RENDERER);
+        lookup->data = 0;
+        lookup->uniqueid = INVALID_ID_U64;
+
+        //Also invalidate the handle.
+        k_handle_invalidate(framebuffer_handle);
     }
 }
 
+// TODO: go away
 texture* renderer_window_attachment_get(renderer_system_state* state, const kwindow* window) {
+    // FIXME: What is the backend doing here?
     return state->backend->window_attachment_get(state->backend, window);
 }
 
+// TODO: go away
 texture* renderer_depth_attachment_get(renderer_system_state* state, const kwindow* window) {
+    // FIXME: What is the backend doing here?
     return state->backend->depth_attachment_get(state->backend, window);
 }
 
@@ -816,13 +955,11 @@ b8 renderer_renderpass_create(const renderpass_config* config, renderpass* out_r
         return false;
     }
 
-    if (config->target.attachment_count == 0) {
+    if (config->attachment_count == 0) {
         KERROR("Cannot have a renderpass target with an attachment count of 0, ya dingus.");
         return false;
     }
 
-    out_renderpass->clear_flags = config->clear_flags;
-    out_renderpass->clear_colour = config->clear_colour;
     out_renderpass->name = string_duplicate(config->name);
 
     return state_ptr->backend->renderpass_create(state_ptr->backend, config, out_renderpass);
@@ -870,9 +1007,7 @@ b8 renderer_renderbuffer_create(const char* name, renderbuffer_type type, u64 to
         out_buffer->name = string_duplicate(name);
     }
     else {
-        char temp_name[256] = { 0 };
-        string_format(temp_name, "renderbuffer_%s", "unnamed");
-        out_buffer->name = string_duplicate(temp_name);
+        out_buffer->name = string_format("renderbuffer_%s", "unnamed");
     }
 
     out_buffer->track_type = track_type;

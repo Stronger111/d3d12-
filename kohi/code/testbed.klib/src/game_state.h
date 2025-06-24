@@ -86,8 +86,8 @@ typedef struct testbed_game_state {
 
     viewport world_viewport2;
 
-    rendergraph_pass editor_pass;
-    rendergraph_pass ui_pass;
+    rendergraph_node editor_pass;
+    rendergraph_node ui_pass;
 
     forward_rendergraph forward_graph;
     editor_rendergraph editor_graph;

@@ -137,7 +137,7 @@ b8 sui_textbox_control_create(const char* name, font_type type, const char* font
     out_control->name = string_duplicate(name);
 
     char buffer[512] = {0};
-    string_format(buffer, "%s_textbox_internal_label", name);
+    string_format_unsafe(buffer, "%s_textbox_internal_label", name);
     if (!sui_label_control_create(buffer, type, font_name, font_size, text, &typed_data->content_label)) {
         KERROR("Failed to create internal label control for textbox.Texbox creation failed.");
         return false;
@@ -145,7 +145,7 @@ b8 sui_textbox_control_create(const char* name, font_type type, const char* font
 
     // Use a panel as the cursor.  高亮和鼠标都是图片渲染
     kzero_memory(buffer, sizeof(char) * 512);
-    string_format(buffer, "%s_textbox_cursor_panel", name);
+    string_format_unsafe(buffer, "%s_textbox_cursor_panel", name);
     if (!sui_panel_control_create(buffer, (vec2){1.0f, font_size - 4.0f}, (vec4){1.0f, 1.0f, 1.0f, 1.0f}, &typed_data->cursor)) {
         KERROR("Failed to create internal cursor control for textbox. Texbox creation failed.");
         return false;
@@ -153,7 +153,7 @@ b8 sui_textbox_control_create(const char* name, font_type type, const char* font
 
     // Highlight box.
     kzero_memory(buffer, sizeof(char) * 512);
-    string_format(buffer, "%s_textbox_highlight_box", name);
+    string_format_unsafe(buffer, "%s_textbox_highlight_box", name);
     if (!sui_panel_control_create(buffer, (vec2){1.0f, font_size}, (vec4){0.0f, 0.5f, 0.9f, 0.5f}, &typed_data->highlight_box)) {
         KERROR("Failed to create internal highlight box control for textbox. Texbox creation failed.");
         return false;

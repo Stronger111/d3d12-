@@ -324,7 +324,7 @@ KAPI b8 console_command_execute(const char* command) {
 
     // 对于参考退出控制台写那个行
     char temp[512] = { 0 };
-    string_format(temp, "-->%s", command);
+    string_format_unsafe(temp, "-->%s", command);
     console_write(LOG_LEVEL_INFO, temp);
 
     // 是的,字符串是很慢的,但是是一个控制台,并不需要非常的快。

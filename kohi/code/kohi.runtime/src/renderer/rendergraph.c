@@ -10,7 +10,7 @@
 #include "renderer/renderer_types.h"
 #include "strings/kstring.h"
 
-static b8 regenerate_render_targets(rendergraph* graph, rendergraph_pass* pass, u16 width, u16 height);
+static b8 regenerate_render_targets(rendergraph* graph, rendergraph_node* pass, u16 width, u16 height);
 
 KAPI b8 rendergraph_create(const char* name, rendergraph* out_graph) {
     if (!out_graph) {
@@ -18,7 +18,7 @@ KAPI b8 rendergraph_create(const char* name, rendergraph* out_graph) {
     }
 
     out_graph->name = string_duplicate(name);
-    out_graph->passes = darray_create(rendergraph_pass*);
+    out_graph->passes = darray_create(rendergraph_node*);
     out_graph->global_sources = darray_create(rendergraph_source);
 
     return true;
@@ -38,18 +38,18 @@ void rendergraph_destroy(rendergraph* graph) {
             // Destroy render passes.
             u32 pass_count = darray_length(graph->passes);
             for (u32 i = 0; i < pass_count; ++i) {
-                rendergraph_pass* pass = graph->passes[i];
+                rendergraph_node* pass = graph->passes[i];
 
                 // Destroy render target.
-                if (pass->owned_render_targets) {
-                    u32 render_target_count = darray_length(pass->owned_render_targets);
-                    for (u32 p = 0; p < render_target_count; ++p) {
-                        render_target* target = &pass->owned_render_targets[p];
+                // if (pass->owned_render_targets) {
+                //     u32 render_target_count = darray_length(pass->owned_render_targets);
+                //     for (u32 p = 0; p < render_target_count; ++p) {
+                //         render_target* target = &pass->owned_render_targets[p];
 
-                        // Destroy the target if it exists.
-                        renderer_render_target_destroy(target, true);
-                    }
-                }
+                //         // Destroy the target if it exists.
+                //         renderer_framebuffer_destroy(target, true);
+                //     }
+                // }
                 // Destroy the pass itself.
                 pass->destroy(pass);
             }
@@ -66,22 +66,22 @@ void rendergraph_destroy(rendergraph* graph) {
     }
 }
 
-b8 rendergraph_global_source_add(rendergraph* graph, const char* name, rendergraph_source_type type, rendergraph_source_origin origin) {
-    if (!graph) {
-        return false;
-    }
+// b8 rendergraph_global_source_add(rendergraph* graph, const char* name, rendergraph_source_type type, rendergraph_source_origin origin) {
+//     if (!graph) {
+//         return false;
+//     }
 
-    rendergraph_source source = { 0 };
-    source.name = string_duplicate(name);
-    source.type = type;
-    source.origin = origin;
-    darray_push(graph->global_sources, source);
+//     rendergraph_source source = { 0 };
+//     source.name = string_duplicate(name);
+//     source.type = type;
+//     source.origin = origin;
+//     darray_push(graph->global_sources, source);
 
-    return true;
-}
+//     return true;
+// }
 
 // pass functions
-b8 rendergraph_pass_create(rendergraph* graph, const char* name, b8 (*create_pfn)(struct rendergraph_pass* self, void* config), void* config, rendergraph_pass* out_pass) {
+b8 rendergraph_pass_create(rendergraph* graph, const char* name, b8 (*create_pfn)(struct rendergraph_node* self, void* config), void* config, rendergraph_node* out_pass) {
     if (!graph || !out_pass) {
         return false;
     }
@@ -109,162 +109,162 @@ b8 rendergraph_pass_create(rendergraph* graph, const char* name, b8 (*create_pfn
     return true;
 }
 
-// 添加Pass资源
-b8 rendergraph_pass_source_add(rendergraph* graph, const char* pass_name, const char* source_name, rendergraph_source_type type,
-    rendergraph_source_origin origin) {
-    if (!graph) {
-        return false;
-    }
+// // 添加Pass资源
+// b8 rendergraph_pass_source_add(rendergraph* graph, const char* pass_name, const char* source_name, rendergraph_source_type type,
+//     rendergraph_source_origin origin) {
+//     if (!graph) {
+//         return false;
+//     }
 
-    // Find the pass.
-    rendergraph_pass* pass = 0;
-    u32 pass_count = darray_length(graph->passes);
-    for (u32 i = 0; i < pass_count; ++i) {
-        if (strings_equal(graph->passes[i]->name, pass_name)) {
-            pass = graph->passes[i];
-            break;
-        }
-    }
+//     // Find the pass.
+//     rendergraph_node* pass = 0;
+//     u32 pass_count = darray_length(graph->passes);
+//     for (u32 i = 0; i < pass_count; ++i) {
+//         if (strings_equal(graph->passes[i]->name, pass_name)) {
+//             pass = graph->passes[i];
+//             break;
+//         }
+//     }
 
-    if (!pass) {
-        KERROR("Unable to find a rendergraph pass named '%s'", pass_name);
-        return false;
-    }
+//     if (!pass) {
+//         KERROR("Unable to find a rendergraph pass named '%s'", pass_name);
+//         return false;
+//     }
 
-    // Verify that the pass doesn't already have a source of the same name.
-    u32 source_count = darray_length(pass->sources);
-    for (u32 i = 0; i < source_count; ++i) {
-        if (strings_equal(pass->sources[i].name, source_name)) {
-            KERROR("The pass '%s' already has a source named '%s'. Source not added.", pass_name, source_name);
-            return false;
-        }
-    }
+//     // Verify that the pass doesn't already have a source of the same name.
+//     u32 source_count = darray_length(pass->sources);
+//     for (u32 i = 0; i < source_count; ++i) {
+//         if (strings_equal(pass->sources[i].name, source_name)) {
+//             KERROR("The pass '%s' already has a source named '%s'. Source not added.", pass_name, source_name);
+//             return false;
+//         }
+//     }
 
-    rendergraph_source source = { 0 };
-    source.name = string_duplicate(source_name);
-    source.type = type;
-    source.origin = origin;
-    darray_push(pass->sources, source);
+//     rendergraph_source source = { 0 };
+//     source.name = string_duplicate(source_name);
+//     source.type = type;
+//     source.origin = origin;
+//     darray_push(pass->sources, source);
 
-    return true;
-}
+//     return true;
+// }
 
-b8 rendergraph_pass_sink_add(rendergraph* graph, const char* pass_name, const char* sink_name) {
-    if (!graph) {
-        return false;
-    }
+// b8 rendergraph_pass_sink_add(rendergraph* graph, const char* pass_name, const char* sink_name) {
+//     if (!graph) {
+//         return false;
+//     }
 
-    // Find the pass.
-    rendergraph_pass* pass = 0;
-    u32 pass_count = darray_length(graph->passes);
-    for (u32 i = 0; i < pass_count; ++i) {
-        if (strings_equal(graph->passes[i]->name, pass_name)) {
-            pass = graph->passes[i];
-            break;
-        }
-    }
+//     // Find the pass.
+//     rendergraph_node* pass = 0;
+//     u32 pass_count = darray_length(graph->passes);
+//     for (u32 i = 0; i < pass_count; ++i) {
+//         if (strings_equal(graph->passes[i]->name, pass_name)) {
+//             pass = graph->passes[i];
+//             break;
+//         }
+//     }
 
-    if (!pass) {
-        KERROR("Unable to find a rendergraph pass named '%s'.", pass_name);
-        return false;
-    }
+//     if (!pass) {
+//         KERROR("Unable to find a rendergraph pass named '%s'.", pass_name);
+//         return false;
+//     }
 
-    // Verify that the pass doesn't already have a sink of the same name.
-    u32 sink_count = darray_length(pass->sinks);
-    for (u32 i = 0; i < sink_count; ++i) {
-        if (strings_equal(pass->sinks[i].name, sink_name)) {
-            KERROR("The pass '%s' already has a sink named '%s'. Sink not added.", pass_name, sink_name);
-            return false;
-        }
-    }
+//     // Verify that the pass doesn't already have a sink of the same name.
+//     u32 sink_count = darray_length(pass->sinks);
+//     for (u32 i = 0; i < sink_count; ++i) {
+//         if (strings_equal(pass->sinks[i].name, sink_name)) {
+//             KERROR("The pass '%s' already has a sink named '%s'. Sink not added.", pass_name, sink_name);
+//             return false;
+//         }
+//     }
 
-    rendergraph_sink sink = { 0 };
-    sink.name = string_duplicate(sink_name);
-    darray_push(pass->sinks, sink);
+//     rendergraph_sink sink = { 0 };
+//     sink.name = string_duplicate(sink_name);
+//     darray_push(pass->sinks, sink);
 
-    return true;
-}
+//     return true;
+// }
 
-b8 rendergraph_pass_set_sink_linkage(rendergraph* graph, const char* pass_name, const char* sink_name, const char* source_pass_name,
-    const char* source_name) {
-    if (!graph) {
-        return false;
-    }
+// b8 rendergraph_pass_set_sink_linkage(rendergraph* graph, const char* pass_name, const char* sink_name, const char* source_pass_name,
+//     const char* source_name) {
+//     if (!graph) {
+//         return false;
+//     }
 
-    // Find the target pass.
-    rendergraph_pass* pass = 0;
-    u32 pass_count = darray_length(graph->passes);
-    for (u32 i = 0; i < pass_count; ++i) {
-        if (strings_equal(graph->passes[i]->name, pass_name)) {
-            pass = graph->passes[i];
-            break;
-        }
-    }
+//     // Find the target pass.
+//     rendergraph_node* pass = 0;
+//     u32 pass_count = darray_length(graph->passes);
+//     for (u32 i = 0; i < pass_count; ++i) {
+//         if (strings_equal(graph->passes[i]->name, pass_name)) {
+//             pass = graph->passes[i];
+//             break;
+//         }
+//     }
 
-    if (!pass) {
-        KERROR("Unable to find a rendergraph target pass named '%s'.", pass_name);
-        return false;
-    }
+//     if (!pass) {
+//         KERROR("Unable to find a rendergraph target pass named '%s'.", pass_name);
+//         return false;
+//     }
 
-    //  Find the target sink.
-    rendergraph_sink* sink = 0;
-    u32 sink_count = darray_length(pass->sinks);
-    for (u32 i = 0; i < sink_count; ++i) {
-        if (strings_equal(pass->sinks[i].name, sink_name)) {
-            sink = &pass->sinks[i];
-            break;
-        }
-    }
+//     //  Find the target sink.
+//     rendergraph_sink* sink = 0;
+//     u32 sink_count = darray_length(pass->sinks);
+//     for (u32 i = 0; i < sink_count; ++i) {
+//         if (strings_equal(pass->sinks[i].name, sink_name)) {
+//             sink = &pass->sinks[i];
+//             break;
+//         }
+//     }
 
-    if (!sink) {
-        KERROR("Unable to find sink named '%s' on rendergraph target pass named '%s'.", sink_name, pass_name);
-        return false;
-    }
+//     if (!sink) {
+//         KERROR("Unable to find sink named '%s' on rendergraph target pass named '%s'.", sink_name, pass_name);
+//         return false;
+//     }
 
-    rendergraph_source* source = 0;
-    if (!source_pass_name) {
-        // Global source.
-        u32 source_count = darray_length(graph->global_sources);
-        for (u32 i = 0; i < source_count; ++i) {
-            if (strings_equal(graph->global_sources[i].name, source_name)) {
-                source = &graph->global_sources[i];
-                break;
-            }
-        }
-    }
-    else {
-        // Pass source.
-        rendergraph_pass* source_pass = 0;
-        u32 pass_count = darray_length(graph->passes);
-        for (u32 i = 0; i < pass_count; ++i) {
-            if (strings_equal(graph->passes[i]->name, source_pass_name)) {
-                source_pass = graph->passes[i];
-                break;
-            }
-        }
-        if (!source_pass) {
-            KERROR("Unable to find source pass named '%s'", source_pass_name);
-            return false;
-        }
+//     rendergraph_source* source = 0;
+//     if (!source_pass_name) {
+//         // Global source.
+//         u32 source_count = darray_length(graph->global_sources);
+//         for (u32 i = 0; i < source_count; ++i) {
+//             if (strings_equal(graph->global_sources[i].name, source_name)) {
+//                 source = &graph->global_sources[i];
+//                 break;
+//             }
+//         }
+//     }
+//     else {
+//         // Pass source.
+//         rendergraph_node* source_pass = 0;
+//         u32 pass_count = darray_length(graph->passes);
+//         for (u32 i = 0; i < pass_count; ++i) {
+//             if (strings_equal(graph->passes[i]->name, source_pass_name)) {
+//                 source_pass = graph->passes[i];
+//                 break;
+//             }
+//         }
+//         if (!source_pass) {
+//             KERROR("Unable to find source pass named '%s'", source_pass_name);
+//             return false;
+//         }
 
-        u32 source_count = darray_length(source_pass->sources);
-        for (u32 i = 0; i < source_count; ++i) {
-            if (strings_equal(source_pass->sources[i].name, source_name)) {
-                source = &source_pass->sources[i];
-                break;
-            }
-        }
-    }
+//         u32 source_count = darray_length(source_pass->sources);
+//         for (u32 i = 0; i < source_count; ++i) {
+//             if (strings_equal(source_pass->sources[i].name, source_name)) {
+//                 source = &source_pass->sources[i];
+//                 break;
+//             }
+//         }
+//     }
 
-    if (!source) {
-        KERROR("Unable to find source named '%s'", source_name);
-        return false;
-    }
+//     if (!source) {
+//         KERROR("Unable to find source named '%s'", source_name);
+//         return false;
+//     }
 
-    // Everything needed to perform the link is present,so do the thing.
-    sink->bound_source = source;
-    return true;
-}
+//     // Everything needed to perform the link is present,so do the thing.
+//     sink->bound_source = source;
+//     return true;
+// }
 
 b8 rendergraph_finalize(rendergraph* graph) {
     if (!graph) {
@@ -294,7 +294,7 @@ b8 rendergraph_finalize(rendergraph* graph) {
     }*/
 
     // Verify that something is linked up to the global colour source. 必须有pass使用全局ColorBuffer
-    rendergraph_pass* backbuffer_first_user = 0;
+    rendergraph_node* backbuffer_first_user = 0;
     u32 pass_count = darray_length(graph->passes);
     for (u32 i = 0; i < pass_count; ++i) {
         u32 sink_count = darray_length(graph->passes[i]->sinks);
@@ -319,7 +319,7 @@ b8 rendergraph_finalize(rendergraph* graph) {
     // The figure out what is the last render target source output and
     // link that to the global sink backbuffer_global_sink
     for (u32 i = 0; i < pass_count; ++i) {
-        rendergraph_pass* pass = graph->passes[i];
+        rendergraph_node* pass = graph->passes[i];
 
         // Look for a  "backbuffer" source for this pass,if there is one.
         u32 source_count = darray_length(pass->sources);
@@ -331,7 +331,7 @@ b8 rendergraph_finalize(rendergraph* graph) {
                     // Search all other pass' sinks to see if any have this source
                     // as a bound source.
                     for (u32 k = 0; k < pass_count; ++k) {
-                        rendergraph_pass* ref_check_pass = graph->passes[k];
+                        rendergraph_node* ref_check_pass = graph->passes[k];
                         u32 sink_count = darray_length(ref_check_pass->sinks);
                         b8 found = false;
                         for (u32 s = 0; s < sink_count; ++s) {
@@ -355,7 +355,7 @@ b8 rendergraph_finalize(rendergraph* graph) {
                     // Search all other pass' sinks to see if any have this source
                     // as a bound source.
                     for (u32 k = 0; k < pass_count; ++k) {
-                        rendergraph_pass* ref_check_pass = graph->passes[k];
+                        rendergraph_node* ref_check_pass = graph->passes[k];
                         u32 sink_count = darray_length(ref_check_pass->sinks);
                         b8 found = false;
                         for (u32 s = 0; s < sink_count; ++s) {
@@ -420,7 +420,7 @@ b8 rendergraph_load_resources(rendergraph* graph) {
     }
     u32 pass_count = darray_length(graph->passes);
     for (u32 i = 0; i < pass_count; ++i) {
-        rendergraph_pass* pass = graph->passes[i];
+        rendergraph_node* pass = graph->passes[i];
 
         // Before loading resources, ensure any self-sourced have textures loaded.
         u32 source_count = darray_length(pass->sources);
@@ -478,7 +478,7 @@ b8 rendergraph_on_resize(rendergraph* graph, u16 width, u16 height) {
     return true;
 }
 
-static b8 regenerate_render_targets(rendergraph* graph, rendergraph_pass* pass, u16 width, u16 height) {
+static b8 regenerate_render_targets(rendergraph* graph, rendergraph_node* pass, u16 width, u16 height) {
     if (!graph || !pass) {
         return false;
     }
@@ -492,16 +492,16 @@ static b8 regenerate_render_targets(rendergraph* graph, rendergraph_pass* pass, 
         render_target* target = &pass->pass.targets[i];
 
         // Destroy the old target if it exists.
-        renderer_render_target_destroy(target, false);
+        renderer_framebuffer_destroy(target, false);
 
         // Retrieve texture pointers for all attachments and frames.
         for (u32 a = 0; a < target->attachment_count; ++a) {
             render_target_attachment* attachment = &target->attachments[a];
             if (attachment->source == RENDER_TARGET_ATTACHMENT_SOURCE_DEFAULT) {
-                if (attachment->type == RENDER_TARGET_ATTACHMENT_TYPE_COLOUR) {
+                if (attachment->type == RENDERER_ATTACHMENT_TYPE_FLAG_COLOUR_BIT) {
                     attachment->texture = renderer_window_attachment_get(i);
                 }
-                else if (attachment->type & RENDER_TARGET_ATTACHMENT_TYPE_DEPTH || attachment->type & RENDER_TARGET_ATTACHMENT_TYPE_STENCIL) {
+                else if (attachment->type & RENDERER_ATTACHMENT_TYPE_FLAG_DEPTH_BIT || attachment->type & RENDERER_ATTACHMENT_TYPE_FLAG_STENCIL_BIT) {
                     attachment->texture = renderer_depth_attachment_get(i);
                 }
                 else {
@@ -531,7 +531,7 @@ static b8 regenerate_render_targets(rendergraph* graph, rendergraph_pass* pass, 
         b8 use_custom_size = target->attachments[0].source == RENDER_TARGET_ATTACHMENT_SOURCE_SELF;
 
         // Create the underlying render target.
-        renderer_render_target_create(target->attachment_count,
+        renderer_framebuffer_create(target->attachment_count,
             target->attachments,
             &pass->pass,
             use_custom_size ? target->attachments[0].texture->width : width,

@@ -35,7 +35,7 @@ b8 forward_rendergraph_create(const forward_rendergraph_config* config, forward_
     }
 
     // Skybox pass
-    RG_CHECK(rendergraph_pass_create(&out_graph->internal_graph, "skybox", skybox_pass_create, 0, &out_graph->skybox_pass));
+    RG_CHECK(rendergraph_pass_create(&out_graph->internal_graph, "skybox", skybox_rendergraph_node_create, 0, &out_graph->skybox_pass));
     RG_CHECK(rendergraph_pass_sink_add(&out_graph->internal_graph, "skybox", "colourbuffer"));
     RG_CHECK(rendergraph_pass_source_add(&out_graph->internal_graph, "skybox", "colourbuffer", RENDERGRAPH_SOURCE_TYPE_RENDER_TARGET_COLOUR,
                                          RENDERGRAPH_SOURCE_ORIGIN_OTHER));
@@ -43,9 +43,9 @@ b8 forward_rendergraph_create(const forward_rendergraph_config* config, forward_
 
     // Shadowmap pass
     const char* shadowmap_pass_name = "shadowmap_pass";
-    shadow_map_pass_config shadow_pass_config = {0};
+    shadow_rendergraph_node_config shadow_pass_config = {0};
     shadow_pass_config.resolution = 2048;
-    RG_CHECK(rendergraph_pass_create(&out_graph->internal_graph, shadowmap_pass_name, shadow_map_pass_create, &shadow_pass_config, &out_graph->shadowmap_pass));
+    RG_CHECK(rendergraph_pass_create(&out_graph->internal_graph, shadowmap_pass_name, shadow_rendergraph_node_create, &shadow_pass_config, &out_graph->shadowmap_pass));
     RG_CHECK(rendergraph_pass_source_add(&out_graph->internal_graph, shadowmap_pass_name, "depthbuffer", RENDERGRAPH_SOURCE_TYPE_RENDER_TARGET_DEPTH_STENCIL, RENDERGRAPH_SOURCE_ORIGIN_SELF));
     // Scene pass
     RG_CHECK(rendergraph_pass_create(&out_graph->internal_graph, "scene", scene_pass_create, 0, &out_graph->scene_pass));
@@ -59,14 +59,14 @@ b8 forward_rendergraph_create(const forward_rendergraph_config* config, forward_
     RG_CHECK(rendergraph_pass_set_sink_linkage(&out_graph->internal_graph, "scene", "shadowmap", "shadowmap_pass", "depthbuffer"));
 
     // "refresh" pfns
-    out_graph->skybox_pass.initialize = skybox_pass_initialize;
-    out_graph->skybox_pass.execute = skybox_pass_execute;
-    out_graph->skybox_pass.destroy = skybox_pass_destroy;
+    out_graph->skybox_pass.initialize = skybox_rendergraph_node_initialize;
+    out_graph->skybox_pass.execute = skybox_rendergraph_node_execute;
+    out_graph->skybox_pass.destroy = skybox_rendergraph_node_destroy;
 
-    out_graph->shadowmap_pass.initialize = shadow_map_pass_initialize;
-    out_graph->shadowmap_pass.execute = shadow_map_pass_execute;
-    out_graph->shadowmap_pass.destroy = shadow_map_pass_destroy;
-    out_graph->shadowmap_pass.load_resources = shadow_map_pass_load_resources;
+    out_graph->shadowmap_pass.initialize = shadow_rendergraph_node_initialize;
+    out_graph->shadowmap_pass.execute = shadow_rendergraph_node_execute;
+    out_graph->shadowmap_pass.destroy = shadow_rendergraph_node_destroy;
+    out_graph->shadowmap_pass.load_resources = shadow_rendergraph_node_load_resources;
     // state->shadowmap_pass.source_populate = shadow_map_pass_source_populate;
 
     out_graph->scene_pass.initialize = scene_pass_initialize;
@@ -163,7 +163,7 @@ b8 forward_rendergraph_frame_prepare(forward_rendergraph* graph, struct frame_da
         // Shadowmap pass -only runs if there is a directional light.
         if (dir_light) {
             f32 last_split_dist = 0.0f;
-            rendergraph_pass* pass = &graph->shadowmap_pass;
+            rendergraph_node* pass = &graph->shadowmap_pass;
             // Mark this pass as executable.
             pass->pass_data.do_execute = true;
             // Obtain the light direction.

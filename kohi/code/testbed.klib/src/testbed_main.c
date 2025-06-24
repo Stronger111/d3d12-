@@ -885,7 +885,7 @@ b8 application_update(application* game_inst, struct frame_data* p_frame_data) {
 
         char* vsync_text = renderer_flag_enabled_get(RENDERER_CONFIG_FLAG_VSYNC_ENABLED_BIT) ? "YES" : "NO";
         char text_buffer[2048];
-        string_format(
+        string_format_unsafe(
             text_buffer,
             "\
 FPS: %5.1f(%4.1fms)        Pos=[%7.3f %7.3f %7.3f] Rot=[%7.3f, %7.3f, %7.3f]\n\

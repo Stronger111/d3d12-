@@ -11,7 +11,7 @@ struct editor_gizmo;
 typedef struct standard_ui_rendergraph {
     rendergraph internal_graph;
 
-    rendergraph_pass ui_pass;
+    rendergraph_node ui_pass;
 
 } standard_ui_rendergraph;
 

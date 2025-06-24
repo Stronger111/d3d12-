@@ -11,9 +11,9 @@ typedef struct forward_rendergraph{
 
      u16 shadowmap_resolution;
 
-     rendergraph_pass skybox_pass;
-     rendergraph_pass shadowmap_pass;
-     rendergraph_pass scene_pass;
+     rendergraph_node skybox_pass;
+     rendergraph_node shadowmap_pass;
+     rendergraph_node scene_pass;
 
 }forward_rendergraph;
 

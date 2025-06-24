@@ -598,10 +598,10 @@ b8 render_view_pick_on_render(const render_view* self, const render_view_packet*
 b8 render_view_pick_attachment_target_regenerate(struct render_view* self, u32 pass_index, struct render_target_attachment* attachment) {
     render_view_pick_internal_data* data = self->internal_data;
 
-    if (attachment->type == RENDER_TARGET_ATTACHMENT_TYPE_COLOUR) {
+    if (attachment->type == RENDERER_ATTACHMENT_TYPE_FLAG_COLOUR_BIT) {
         attachment->texture = &data->colour_target_attachment_texture;
     }
-    else if (attachment->type & RENDER_TARGET_ATTACHMENT_TYPE_DEPTH || attachment->type & RENDER_TARGET_ATTACHMENT_TYPE_STENCIL) {
+    else if (attachment->type & RENDERER_ATTACHMENT_TYPE_FLAG_DEPTH_BIT || attachment->type & RENDERER_ATTACHMENT_TYPE_FLAG_STENCIL_BIT) {
         attachment->texture = &data->depth_target_attachment_texture;
     }
     else {
@@ -638,7 +638,7 @@ b8 render_view_pick_attachment_target_regenerate(struct render_view* self, u32 p
     attachment->texture->generation = INVALID_ID;
     attachment->texture->flags |= has_transparency ? TEXTURE_FLAG_HAS_TRANSPARENCY : 0;
     attachment->texture->flags |= TEXTURE_FLAG_IS_WRITEABLE;
-    if (attachment->type == RENDER_TARGET_ATTACHMENT_TYPE_DEPTH) {
+    if (attachment->type == RENDERER_ATTACHMENT_TYPE_FLAG_DEPTH_BIT) {
         attachment->texture->flags |= TEXTURE_FLAG_DEPTH;
     }
     attachment->texture->internal_data = 0;
