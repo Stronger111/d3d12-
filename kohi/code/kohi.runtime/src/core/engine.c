@@ -21,6 +21,7 @@
 #include "platform/platform.h"
 #include "plugins/plugin_types.h"
 #include "renderer/renderer_frontend.h"
+#include "renderer/rendergraph.h"
 #include "strings/kstring.h"
 #include "systems/plugin_system.h"
 #include "time/kclock.h"
@@ -467,6 +468,12 @@ b8 engine_create(application* game_inst) {
             KERROR("Failed to initialize camera system.");
             return false;
         }
+    }
+
+    //Rendergraph system
+    {
+        //TODO:DXS
+        //rendergraph_s
     }
 
     // NOTE: Boot sequence =======================================================================================================

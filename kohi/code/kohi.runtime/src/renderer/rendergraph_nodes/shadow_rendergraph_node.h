@@ -1,5 +1,5 @@
-#ifndef _SHADOW_RENDERGRAPH_PASS_H_
-#define _SHADOW_RENDERGRAPH_PASS_H_
+#ifndef _SHADOW_RENDERGRAPH_NODE_H_
+#define _SHADOW_RENDERGRAPH_NODE_H_
 
 #include "defines.h"
 #include "math/math_types.h"
@@ -8,26 +8,16 @@
 struct rendergraph_node;
 struct rendergraph_source;
 struct frame_data;
+struct directional_light;
 
-#define MAX_CASCADE_COUNT 4
+#define MAX_SHADOW_CASCADE_COUNT 4
 
-typedef struct shadow_map_cascade_data {
+typedef struct shadow_cascade_data {
     mat4 projection;
     mat4 view;
     f32 split_depth;
     i32 cascade_index;
-} shadow_map_cascade_data;
-
-typedef struct shadow_map_pass_extended_data {
-    struct directional_light* light;
-    // Per -cascade data.
-    shadow_map_cascade_data cascades[MAX_CASCADE_COUNT];
-
-    u32 terrain_geometry_count;
-    struct geometry_render_data* terrain_geometries;
-    u32 geometry_count;
-    struct geometry_render_data* geometries;
-} shadow_map_pass_extended_data;
+} shadow_cascade_data;
 
 typedef struct shadow_rendergraph_node_config {
     u16 resolution;
@@ -39,6 +29,9 @@ KAPI b8 shadow_rendergraph_node_load_resources(struct rendergraph_node* self);
 KAPI b8 shadow_rendergraph_node_execute(struct rendergraph_node* self, struct frame_data* p_frame_data);
 KAPI void shadow_rendergraph_node_destroy(struct rendergraph_node* self);
 
-// KAPI b8 shadow_map_pass_source_populate(struct rendergraph_node* self, struct rendergraph_source* source);
-// KAPI b8 shadow_map_pass_attachment_populate(struct rendergraph_node* self, render_target_attachment* attachment);
+KAPI b8 shadow_rendergraph_node_directional_light_set(struct rendergraph_node* self, const struct directional_light* light);
+KAPI b8 shadow_rendergraph_node_cascade_data_set(struct rendergraph_node* self, shadow_cascade_data data, u8 cascade_index);
+KAPI b8 shadow_rendergraph_node_static_geometries_set(struct rendergraph_node* self, struct frame_data* p_frame_data, u32 geometry_count, const struct geometry_render_data* geometries);
+KAPI b8 shadow_rendergraph_node_terrain_geometries_set(struct rendergraph_node* self, struct frame_data* p_frame_data, u32 geometry_count, const struct geometry_render_data* geometries);
+
 #endif

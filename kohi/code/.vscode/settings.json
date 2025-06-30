@@ -233,7 +233,8 @@
         "application_config.h": "c",
         "ios": "c",
         "freelist.h": "c",
-        "shadow_rendergraph_node.h": "c"
+        "shadow_rendergraph_node.h": "c",
+        "forward_rendergraph_node.h": "c"
     },
     // File copyright documentation tag.  Array of strings will be converted to one line per element.  Can template {year}.
     "doxdocgen.file.copyrightTag": [

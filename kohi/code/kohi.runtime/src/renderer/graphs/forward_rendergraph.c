@@ -48,7 +48,7 @@ b8 forward_rendergraph_create(const forward_rendergraph_config* config, forward_
     RG_CHECK(rendergraph_pass_create(&out_graph->internal_graph, shadowmap_pass_name, shadow_rendergraph_node_create, &shadow_pass_config, &out_graph->shadowmap_pass));
     RG_CHECK(rendergraph_pass_source_add(&out_graph->internal_graph, shadowmap_pass_name, "depthbuffer", RENDERGRAPH_SOURCE_TYPE_RENDER_TARGET_DEPTH_STENCIL, RENDERGRAPH_SOURCE_ORIGIN_SELF));
     // Scene pass
-    RG_CHECK(rendergraph_pass_create(&out_graph->internal_graph, "scene", scene_pass_create, 0, &out_graph->scene_pass));
+    RG_CHECK(rendergraph_pass_create(&out_graph->internal_graph, "scene", forward_rendergraph_node_create, 0, &out_graph->scene_pass));
     RG_CHECK(rendergraph_pass_sink_add(&out_graph->internal_graph, "scene", "colourbuffer"));
     RG_CHECK(rendergraph_pass_sink_add(&out_graph->internal_graph, "scene", "depthbuffer"));
     RG_CHECK(rendergraph_pass_sink_add(&out_graph->internal_graph, "scene", "shadowmap"));
@@ -69,10 +69,10 @@ b8 forward_rendergraph_create(const forward_rendergraph_config* config, forward_
     out_graph->shadowmap_pass.load_resources = shadow_rendergraph_node_load_resources;
     // state->shadowmap_pass.source_populate = shadow_map_pass_source_populate;
 
-    out_graph->scene_pass.initialize = scene_pass_initialize;
-    out_graph->scene_pass.execute = scene_pass_execute;
-    out_graph->scene_pass.destroy = scene_pass_destroy;
-    out_graph->scene_pass.load_resources = scene_pass_load_resources;
+    out_graph->scene_pass.initialize = forward_rendergraph_node_initialize;
+    out_graph->scene_pass.execute = forward_rendergraph_node_execute;
+    out_graph->scene_pass.destroy = forward_rendergraph_node_destroy;
+    out_graph->scene_pass.load_resources = forward_rendergraph_node_load_resources;
 
     if (!rendergraph_finalize(&out_graph->internal_graph)) {
         KERROR("Failed to finalize rendergraph. See log for details.");
@@ -131,8 +131,8 @@ b8 forward_rendergraph_frame_prepare(forward_rendergraph* graph, struct frame_da
 
         // Calculate splits based on view camera frustum.
         vec4 splits;
-        for (u32 c = 0; c < MAX_CASCADE_COUNT; c++) {
-            f32 p = (c + 1) / (f32)MAX_CASCADE_COUNT;
+        for (u32 c = 0; c < MAX_SHADOW_CASCADE_COUNT; c++) {
+            f32 p = (c + 1) / (f32)MAX_SHADOW_CASCADE_COUNT;
             f32 log = min_z * kpow(ratio, p);
             f32 uniform = min_z + range * p;
             f32 d = cascade_split_multiplier * (log - uniform) + uniform;
@@ -141,10 +141,10 @@ b8 forward_rendergraph_frame_prepare(forward_rendergraph* graph, struct frame_da
 
         // Default values to use in the event there is no directional light.
         // These are required because the scene pass needs them.
-        mat4 shadow_camera_lookats[MAX_CASCADE_COUNT];
-        mat4 shadow_camera_projections[MAX_CASCADE_COUNT];
-        vec3 shadow_camera_positions[MAX_CASCADE_COUNT];
-        for (u32 i = 0; i < MAX_CASCADE_COUNT; ++i) {
+        mat4 shadow_camera_lookats[MAX_SHADOW_CASCADE_COUNT];
+        mat4 shadow_camera_projections[MAX_SHADOW_CASCADE_COUNT];
+        vec3 shadow_camera_positions[MAX_SHADOW_CASCADE_COUNT];
+        for (u32 i = 0; i < MAX_SHADOW_CASCADE_COUNT; ++i) {
             shadow_camera_lookats[i] = mat4_identity();
             shadow_camera_projections[i] = mat4_identity();
             shadow_camera_positions[i] = vec3_zero();
@@ -186,8 +186,8 @@ b8 forward_rendergraph_frame_prepare(forward_rendergraph* graph, struct frame_da
             // Bug fix 阴影投射摄像机用 阴影的近裁切面。
             mat4 cam_view_proj = mat4_transposed(mat4_mul(camera_view_get(current_camera), shadow_dist_projection));
 
-            for (u32 c = 0; c < MAX_CASCADE_COUNT; c++) {
-                shadow_map_cascade_data* cascade = &ext_data->cascades[c];
+            for (u32 c = 0; c < MAX_SHADOW_CASCADE_COUNT; c++) {
+                shadow_cascade_data* cascade = &ext_data->cascades[c];
                 cascade->cascade_index = c;
                 // NOTE: Each pass for cascades will need to do the following process.
                 // The only real difference will be that the near/far clip will be adjusted for each.
@@ -212,7 +212,7 @@ b8 forward_rendergraph_frame_prepare(forward_rendergraph* graph, struct frame_da
                     center = vec3_add(center, vec3_from_vec4(corners[i]));
                 }
                 center = vec3_div_scalar(center, 8.0);  // size
-                if (c == MAX_CASCADE_COUNT - 1) {
+                if (c == MAX_SHADOW_CASCADE_COUNT - 1) {
                     culling_center = center;
                 }
 
@@ -222,7 +222,7 @@ b8 forward_rendergraph_frame_prepare(forward_rendergraph* graph, struct frame_da
                     f32 distance = vec3_distance(vec3_from_vec4(corners[i]), center);
                     radius = KMAX(radius, distance);
                 }
-                if (c == MAX_CASCADE_COUNT - 1) {
+                if (c == MAX_SHADOW_CASCADE_COUNT - 1) {
                     culling_radius = radius;
                 }
 
@@ -319,7 +319,7 @@ b8 forward_rendergraph_frame_prepare(forward_rendergraph* graph, struct frame_da
             scene_pass_extended_data* ext_data = graph->scene_pass.pass_data.ext_data;
 
             // Pass over shadow map "camera" view and projection matrices(one per cascade). 传给场景Pass Shadow灯光空间矩阵
-            for (u32 c = 0; c < MAX_CASCADE_COUNT; c++) {
+            for (u32 c = 0; c < MAX_SHADOW_CASCADE_COUNT; c++) {
                 ext_data->directional_light_views[c] = shadow_camera_lookats[c];
                 ext_data->directional_light_projections[c] = shadow_camera_projections[c];
 
