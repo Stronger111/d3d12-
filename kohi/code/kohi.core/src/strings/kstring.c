@@ -176,7 +176,7 @@ KAPI b8 strings_nequali(const char* str0, const char* str1, u64 length) {
 #endif
 }
 
-char* string_format_unsafe(const char* format, ...) {
+char* string_format(const char* format, ...) {
     if (!format) {
         return 0;
     }
