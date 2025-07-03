@@ -23,7 +23,7 @@
     "C_Cpp.vcFormat.indent.namespaceContents": true,
     "editor.cursorStyle": "block",
     "editor.formatOnSave": false,
-    "window.zoomLevel": 1,
+    "window.zoomLevel": 2,
     "editor.tabCompletion": "on",
     "todohighlight.isEnable": true,
     "todohighlight.keywords": [
@@ -236,7 +236,10 @@
         "shadow_rendergraph_node.h": "c",
         "forward_rendergraph_node.h": "c",
         "clear_colour_rendergraph_node.h": "c",
-        "clear_depth_rendergraph_node.h": "c"
+        "clear_depth_rendergraph_node.h": "c",
+        "vulkan_image.h": "c",
+        "vulkan_device.h": "c",
+        "vulkan_swapchain.h": "c"
     },
     // File copyright documentation tag.  Array of strings will be converted to one line per element.  Can template {year}.
     "doxdocgen.file.copyrightTag": [

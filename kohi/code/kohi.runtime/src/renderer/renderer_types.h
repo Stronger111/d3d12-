@@ -337,8 +337,6 @@ typedef struct kwindow_renderer_state {
     // This is technically the per-frame depth image, which should be wrapped into a single texture.
     texture depthbuffer;
 
-    /** @brief A handle pointing to the framebuffer resource(s) owned by this window. */
-    k_handle framebuffer_handle;
     /** @brief The internal state of the window containing renderer backend data. */
     struct kwindow_renderer_backend_state* backend_state;
 }kwindow_renderer_state;
@@ -356,8 +354,6 @@ typedef struct renderer_backend_interface {
 
     // The size needed by the renderer backend to hold texture data.
     u64 texture_internal_data_size;
-    // The size needed by the renderer backend to hold framebuffer data.
-    u64 framebuffer_internal_data_size;
     /**
      * @brief The draw index for the current frame. Typically aligns with the
      * number of queue submissions per frame.
@@ -445,7 +441,7 @@ typedef struct renderer_backend_interface {
     b8 (*frame_present)(struct renderer_backend_interface* backend, struct kwindow* window, struct frame_data* p_frame_data);
 
     /**
-     * @brief Sets the renderer viewport to the given rectangle. Must be done within a renderpass.
+     * @brief Sets the renderer viewport to the given rectangle. 
      *
      * @param backend A pointer to the renderer backend interface.
      * @param rect The viewport rectangle to be set.
@@ -461,7 +457,7 @@ typedef struct renderer_backend_interface {
     void (*viewport_reset)(struct renderer_backend_interface* backend);
 
     /**
-     * @brief Sets the renderer scissor to the given rectangle. Must be done within a renderpass.
+     * @brief Sets the renderer scissor to the given rectangle.
      *
      * @param backend A pointer to the renderer backend interface.
      * @param rect The scissor rectangle to be set.
@@ -470,7 +466,6 @@ typedef struct renderer_backend_interface {
 
     /**
      * @brief Resets the scissor to the default, which matches the application window.
-     * Must be done within a renderpass.
      *
      * @param backend A pointer to the renderer backend interface.
      */
@@ -534,25 +529,6 @@ typedef struct renderer_backend_interface {
      * @param write_mask The new value to use as the stencil write mask.
      */
     void (*set_stencil_write_mask)(struct renderer_backend_interface* backend, u32 write_mask);
-
-    /**
-     * @brief Begins a renderpass with the given id.
-     *
-     * @param backend A pointer to the renderer backend interface.
-     * @param pass A pointer to the renderpass to begin.
-     * @param framebuffer_handle A handle pointing to the framebuffer to be used for the renderpass.
-     * @return True on success; otherwise false.
-     */
-    b8 (*renderpass_begin)(struct renderer_backend_interface* backend, renderpass* pass, k_handle framebuffer_handle);
-
-    /**
-     * @brief Ends a renderpass with the given id.
-     *
-     * @param backend A pointer to the renderer backend interface.
-     * @param pass A pointer to the renderpass to end.
-     * @return True on success; otherwise false.
-     */
-    b8 (*renderpass_end)(struct renderer_backend_interface* backend, renderpass* pass);
 
     void (*clear_colour_set)(struct renderer_backend_interface* backend, vec4 clear_colour);
     void (*clear_depth_set)(struct renderer_backend_interface* backend, f32 depth);
@@ -624,10 +600,9 @@ typedef struct renderer_backend_interface {
      * @param backend A pointer to the renderer backend interface.
      * @param s A pointer to the shader.
      * @param config A constant pointer to the shader config.
-     * @param pass A pointer to the renderpass to be associated with the shader.
      * @return b8 True on success; otherwise false.
      */
-    b8(*shader_create)(struct renderer_backend_interface* backend, struct shader* s, const shader_config* config, renderpass* pass);
+    b8(*shader_create)(struct renderer_backend_interface* backend, struct shader* s, const shader_config* config);
     /**
      * @brief Destroys the given shader and releases any resources held by it.
      *
@@ -773,41 +748,6 @@ typedef struct renderer_backend_interface {
      * @param map A pointer to the texture map to release resources from.
      */
     void (*texture_map_resources_release)(struct renderer_backend_interface* backend, struct texture_map* map);
-
-    /**
-   * @brief Creates a new render target using the provided data.
-   *
-   * @param backend A pointer to the renderer backend interface.
-   * @param config A constant pointer to the framebuffer configuration.
-   * @param internal_data A pointer to the internal framebuffer data.
-   * @returns True on success; otherwise false.
-   */
-    b8 (*framebuffer_create)(struct renderer_backend_interface* backend, const struct framebuffer_config* config, struct framebuffer_internal_data* internal_data);
-
-    /**
-    * @brief Destroys the provided render target.
-    *
-    * @param backend A pointer to the renderer backend interface.
-    * @param internal_data A pointer to the framebuffer internal data.
-    */
-    void (*framebuffer_destroy)(struct renderer_backend_interface* backend, struct framebuffer_internal_data* internal_data);
-
-    /**
-     * @brief Creates a new renderpass.
-     *
-     * @param backend A pointer to the renderer backend interface.
-     * @param config A constant pointer to the configuration to be used when creating the renderpass.
-     * @param out_renderpass A pointer to the generic renderpass.
-     */
-    b8 (*renderpass_create)(struct renderer_backend_interface* backend, const renderpass_config* config, renderpass* out_renderpass);
-
-    /**
-     * @brief Destroys the given renderpass.
-     *
-     * @param backend A pointer to the renderer backend interface.
-     * @param pass A pointer to the renderpass to be destroyed.
-     */
-    void (*renderpass_destroy)(struct renderer_backend_interface* backend, renderpass* pass);
 
     /**
     * @brief Attempts to get the window render target at the given index.
