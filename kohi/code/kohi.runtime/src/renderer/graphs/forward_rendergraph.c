@@ -1,4 +1,4 @@
-#include "forward_rendergraph.h"
+/*#include "forward_rendergraph.h"
 
 #include "containers/darray.h"
 #include "core/frame_data.h"
@@ -419,7 +419,7 @@ b8 forward_rendergraph_frame_prepare(forward_rendergraph* graph, struct frame_da
                 rd.unique_id = INVALID_ID_U16;
                 darray_push(ext_data->debug_geometries, rd);
                 ext_data->debug_geometry_count++;
-            } */
+            } 
         }
         // scene loaded.
     } else {
@@ -438,4 +438,4 @@ b8 forward_rendergraph_execute(forward_rendergraph* graph, struct frame_data* p_
 
 b8 forward_rendergraph_on_resize(forward_rendergraph* graph, u32 width, u32 height) {
     return rendergraph_on_resize(&graph->internal_graph, width, height);
-}
+}*/

@@ -14,7 +14,7 @@ typedef struct clear_colour_rendergraph_node_config {
 
 typedef struct clear_colour_rendergraph_node_internal_data {
     struct renderer_system_state* renderer;
-    k_handle buffer_handle;
+    struct texture* buffer_texture;
 }clear_colour_rendergraph_node_internal_data;
 
 static b8 deserialize_config(const char* source_str, clear_colour_rendergraph_node_config* out_config);
@@ -26,8 +26,8 @@ b8 clear_colour_rendergraph_node_create(rendergraph* graph, rendergraph_node* se
     }
 
     //This node does require the config string.
-    clear_colour_rendergraph_node_config type_config = { 0 };
-    if (!deserialize_config(config->config_str, &type_config)) {
+    clear_colour_rendergraph_node_config typed_config = { 0 };
+    if (!deserialize_config(config->config_str, &typed_config)) {
         KERROR("Failed to deserialize configuration for clear_colour_rendergraph_node. Node creation failed.");
         return false;
     }
@@ -45,10 +45,10 @@ b8 clear_colour_rendergraph_node_create(rendergraph* graph, rendergraph_node* se
     //Setup the colourbuffer sinks.
     rendergraph_sink* colourbuffer_sink = &self->sinks[0];
     colourbuffer_sink->name = string_duplicate("colourbuffer");
-    colourbuffer_sink->type = RENDERGRAPH_RESOURCE_TYPE_FRAMEBUFFER;
+    colourbuffer_sink->type = RENDERGRAPH_RESOURCE_TYPE_TEXTURE;
     colourbuffer_sink->bound_source = 0;
     //Save off the configured source name for later lookup and binding.
-    colourbuffer_sink->configured_source_name = string_duplicate(type_config.source_name);
+    colourbuffer_sink->configured_source_name = string_duplicate(typed_config.source_name);
 
     //Has one source, for the colourbuffer.
     self->source_count = 1;
@@ -57,8 +57,8 @@ b8 clear_colour_rendergraph_node_create(rendergraph* graph, rendergraph_node* se
     //Setup the colourbuffer source.
     rendergraph_source* colourbuffer_source = &self->sources[0];
     colourbuffer_source->name = string_duplicate("colourbuffer");
-    colourbuffer_source->type = RENDERGRAPH_RESOURCE_TYPE_FRAMEBUFFER;
-    colourbuffer_source->value.framebuffer_handle = graph->global_colourbuffer;
+    colourbuffer_source->type = RENDERGRAPH_RESOURCE_TYPE_TEXTURE;
+    colourbuffer_source->value.t = graph->global_colourbuffer;
     colourbuffer_source->is_bound = false;
 
     //function pointers.
@@ -67,6 +67,7 @@ b8 clear_colour_rendergraph_node_create(rendergraph* graph, rendergraph_node* se
     self->load_resources = clear_colour_rendergraph_node_load_resources;
     self->execute = clear_colour_rendergraph_node_execute;
 
+    destroy_config(&typed_config);
     return true;
 }
 
@@ -81,7 +82,7 @@ b8 clear_colour_rendergraph_node_load_resources(struct rendergraph_node* self) {
     }
 
     clear_colour_rendergraph_node_internal_data* internal_data = self->internal_data;
-    internal_data->buffer_handle = self->sinks[0].bound_source->value.framebuffer_handle;
+    internal_data->buffer_texture = self->sinks[0].bound_source->value.t;
 
     return true;
 }
@@ -93,7 +94,7 @@ b8 clear_colour_rendergraph_node_execute(struct rendergraph_node* self, struct f
 
     clear_colour_rendergraph_node_internal_data* internal_data = self->internal_data;
 
-    return renderer_clear_colour(internal_data->renderer, internal_data->buffer_handle);
+    return renderer_clear_colour(internal_data->renderer, internal_data->buffer_texture->renderer_texture_handle);
 }
 
 void clear_colour_rendergraph_node_destroy(struct rendergraph_node* self) {

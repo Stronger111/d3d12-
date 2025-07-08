@@ -4,7 +4,6 @@
 #include "core/engine.h"
 #include "core/frame_data.h"
 #include "defines.h"
-#include "identifiers/khandle.h"
 #include "logger.h"
 #include "memory/kmemory.h"
 #include "parsers/kson_parser.h"
@@ -66,7 +65,7 @@ static rg_dep_node* dep_node_create(u32 index);
 static void dep_node_connection_add(rg_dep_graph* dgraph, u32 from_index, u32 to_index);
 
 static b8 rg_dep_graph_topological_sort(rendergraph* graph);
-b8 rendergraph_create(const char* config_str, k_handle global_colourbuffer, k_handle global_depthbuffer, rendergraph* out_graph) {
+b8 rendergraph_create(const char* config_str, struct texture* global_colourbuffer, struct texture* global_depthbuffer, rendergraph* out_graph) {
     if (!out_graph) {
         return false;
     }
@@ -76,8 +75,8 @@ b8 rendergraph_create(const char* config_str, k_handle global_colourbuffer, k_ha
         return false;
     }
 
-    if (k_handle_is_invalid(global_colourbuffer) || k_handle_is_invalid(global_depthbuffer)) {
-        KERROR("rendergraph_create requires valid handles to global colour and depthbuffers.");
+    if (!global_colourbuffer || !global_depthbuffer) {
+        KERROR("rendergraph_create requires valid pointers to global colour and depthbuffers.");
         return false;
     }
 
@@ -366,7 +365,6 @@ rendergraph_resource_type string_to_resource_type(const char* str) {
     const char* type_lookup[RENDERGRAPH_RESOURCE_TYPE_MAX] = {
         "undefined",
         "texture",
-        "framebuffer",
         "number" };
 
     for (u32 i = 0;i < RENDERGRAPH_RESOURCE_TYPE_MAX;++i) {
@@ -699,7 +697,7 @@ static b8 rg_dep_graph_topological_sort_recurse(rendergraph* graph, rg_dep_node*
 }
 
 static b8 rg_dep_graph_topological_sort(rendergraph* graph) {
-    rg_dep_node** stack = (rg_dep_node*)kallocate(sizeof(rg_dep_node*) * graph->node_count, MEMORY_TAG_ARRAY);
+    rg_dep_node** stack = (rg_dep_node**)kallocate(sizeof(rg_dep_node*) * graph->node_count, MEMORY_TAG_ARRAY);
     i32 stack_index = 0;
 
     for (u32 i = 0;i < graph->node_count;++i) {

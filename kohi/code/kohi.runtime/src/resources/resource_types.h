@@ -111,7 +111,7 @@ typedef enum texture_flag {
     /** @brief Indicates the texture is a depth texture. */
     TEXTURE_FLAG_DEPTH = 0x08,
     /** @brief Indicates that this texture should account for renderer buffering (i.e. double/triple buffering) */
-    TEXTURE_FLAG_RENDERER_BUFFERING=0x10,
+    TEXTURE_FLAG_RENDERER_BUFFERING = 0x10,
 } texture_flag;
 
 /** @brief Holds bit flags for textures.. */
@@ -153,6 +153,8 @@ typedef struct texture {
     u32 mip_levels;
     /** @brief The the handle to renderer-specific texture data. */
     k_handle renderer_texture_handle;
+    /** @brief A counter to keep track of texture updates. */
+    u8 generation;
 } texture;
 
 /** @brief Represents supported the texture filtering modes. */
@@ -177,7 +179,7 @@ typedef struct texture_map {
      * resources when a texture's generation changes (as this could
      * be required if, say, a texture's mip levels change).
      * */
-    u32 generation;
+    u8 generation;
     /**
      * @brief Cached mip map levels. Should match assigned
      * texture. Must always be at least 1.
@@ -541,11 +543,6 @@ typedef struct material {
     // f32 shininess;
 
     u32 shader_id;
-
-    /** @brief Synced to the renderer's current frame number when the material has
-     * been applied that frame. */
-    u64 render_frame_number;
-    u8 render_draw_index;
 } material;
 
 typedef enum scene_node_attachment_type {

@@ -1,9 +1,9 @@
 #include "skybox.h"
 
-#include "memory/kmemory.h"
-#include "strings/kstring.h"
+#include "core/engine.h"
 #include "logger.h"
 #include "renderer/renderer_frontend.h"
+#include "strings/kstring.h"
 #include "systems/geometry_system.h"
 #include "systems/shader_system.h"
 #include "systems/texture_system.h"
@@ -58,18 +58,18 @@ b8 skybox_load(skybox* sb) {
 
     shader* skybox_shader = shader_system_get("Shader.Builtin.Skybox");  // TODO: allow configurable shader.
     texture_map* maps[1] = {&sb->cubemap};
-    shader* s = skybox_shader;
-    u16 atlas_location = s->uniforms[s->instance_sampler_indices[0]].index;
+    // shader* s = skybox_shader;
+    // u16 atlas_location = s->uniforms[s->instance_sampler_indices[0]].index;
     shader_instance_resource_config instance_resource_config = {0};
     // Map count for this type is knowm.
     shader_instance_uniform_texture_config colour_texture = {0};
-    colour_texture.uniform_location = atlas_location;
+    //colour_texture.uniform_location = atlas_location;
     colour_texture.texture_map_count = 1;
     colour_texture.texture_maps = maps;
 
     instance_resource_config.uniform_config_count = 1;
     instance_resource_config.uniform_configs = &colour_texture;
-    if (!renderer_shader_instance_resources_acquire(skybox_shader, &instance_resource_config, &sb->instance_id)) {
+    if (!renderer_shader_instance_resources_acquire(engine_systems_get()->renderer_system,skybox_shader, &instance_resource_config, &sb->instance_id)) {
         KFATAL("Unable to acquire shader resources for skybox texture.");
         return false;
     }
@@ -85,7 +85,7 @@ b8 skybox_unload(skybox* sb) {
     sb->state=SKYBOX_STATE_UNDEFINED;
 
     shader* skybox_shader = shader_system_get("Shader.Builtin.Skybox");  // TODO: allow configurable shader.
-    renderer_shader_instance_resources_release(skybox_shader, sb->instance_id);
+    renderer_shader_instance_resources_release(engine_systems_get()->renderer_system,skybox_shader, sb->instance_id);
     sb->instance_id = INVALID_ID;
     renderer_texture_map_resources_release(&sb->cubemap);
 

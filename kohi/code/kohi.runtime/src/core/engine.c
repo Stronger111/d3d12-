@@ -676,7 +676,7 @@ b8 engine_run(application* game_inst) {
             }
 
             // Present the frame.
-            if (!renderer_frame_present(engine_state->systems.renderer_system,w,&engine_state->p_frame_data)) {
+            if (!renderer_frame_present(engine_state->systems.renderer_system, w, &engine_state->p_frame_data)) {
                 KERROR("The call to renderer_present failed. This is likely unrecoverable. Shutting down.");
                 engine_state->is_running = false;
                 break;
@@ -754,8 +754,8 @@ void engine_on_event_system_initialized(void) {
     event_register(EVENT_CODE_APPLICATION_QUIT, 0, engine_on_event);
 }
 
-const struct frame_data* engine_frame_data_get(struct application* game_inst) {
-    return &((engine_state_t*)game_inst->engine_state)->p_frame_data;
+const struct frame_data* engine_frame_data_get(void) {
+    return &engine_state->p_frame_data;
 }
 
 const engine_system_states* engine_systems_get(void) {

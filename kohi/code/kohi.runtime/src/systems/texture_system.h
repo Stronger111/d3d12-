@@ -86,7 +86,7 @@ KAPI texture* texture_system_acquire_writeable(const char* name, u32 width, u32 
  * @param height The texture height in pixels.
  * @param channel_count The number of channels in the texture (typically 4 for RGBA)
  * @param has_transparency Indicates if the texture will have transparency.
- * @param type The texture type.    
+ * @param type The texture type.
  * @param array_size The number of "layers" in the texture.
  * @return A pointer to the generated texture.
  */
@@ -103,7 +103,7 @@ KAPI texture* texture_system_acquire_writeable_arrayed(const char* name, u32 wid
  * @param auto_release Indicates if the texture will have its resources automatically released when the last reference is released.
  * @return A pointer to the generated texture.
  */
-texture* texture_system_acquire_textures_as_arrayed(const char* name,u32 layer_count,const char** layer_texture_names,b8 auto_release);
+texture* texture_system_acquire_textures_as_arrayed(const char* name, u32 layer_count, const char** layer_texture_names, b8 auto_release);
 
 /**
  * @brief Releases a texture with the given name. Ignores non-existant textures.
@@ -131,7 +131,7 @@ KAPI void texture_system_release(const char* name);
  * @param register_texture Indicates if the texture should be registered with the system.
  * @param out_texture An optional pointer to hold the wrapped texture. If null, a new pointer is allocated and returned instead.
  */
-KAPI void texture_system_wrap_internal(const char* name, u32 width, u32 height, u8 channel_count, b8 has_transparency, b8 is_writeable, b8 register_texture,k_handle renderer_texture_handle,texture* out_texture);
+KAPI void texture_system_wrap_internal(const char* name, u32 width, u32 height, u8 channel_count, b8 has_transparency, b8 is_writeable, b8 register_texture, k_handle renderer_texture_handle, texture* out_texture);
 
 /**
  * @brief Resizes the given texture. May only be done on writeable textures.
@@ -206,3 +206,15 @@ KAPI texture* texture_system_get_default_cube_texture(void);
  * done for default textures.
  */
 KAPI texture* texture_system_get_default_terrain_texture(void);
+
+/**
+ * @brief Gets a pointer to either the internal data of the supplied texture if loaded,
+ * or one to the internal of a default texture of the appropriate type. If a default texture
+ * is used, out_generation will be set to INVALID_ID. If an invalid texture is passed, 0/null
+ * will be returned.
+ *
+ * @param t A pointer to the texture whose internal data will be fetched.
+ * @param out_generation A pointer to hold the generation of the texture.
+ * @returns A pointer to texture internal data if successful, otherwise 0/null.
+ */
+KAPI struct texture_internal_data* texture_system_get_internal_or_default(texture* t,u8* out_generation);

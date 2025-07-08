@@ -1,9 +1,9 @@
 {
     "debug.focusWindowOnBreak": false,
     "workbench.colorTheme": "Gruvbox Dark (Hard)",
-    "xmlTools.enforcePrettySelfClosingTagOnFormat": true,
+    //"xmlTools.enforcePrettySelfClosingTagOnFormat": true,
     "editor.minimap.enabled": false,
-    "terminal.integrated.shell.windows": "c:/Program Files/PowerShell/7/pwsh.exe",
+    //"terminal.integrated.shell.windows": "c:/Program Files/PowerShell/7/pwsh.exe",
     "terminal.integrated.fontWeight": "1",
     "editor.fontSize": 16,
     "editor.fontWeight": "1",

@@ -46,9 +46,9 @@ b8 plugin_create(renderer_backend_interface* out_plugin) {
     out_plugin->shader_reload=vulkan_renderer_shader_reload;
     out_plugin->shader_use = vulkan_renderer_shader_use;
     out_plugin->shader_supports_wireframe= vulkan_renderer_shader_supports_wireframe;
-    out_plugin->shader_bind_globals = vulkan_renderer_shader_bind_globals;
-    out_plugin->shader_bind_instance = vulkan_renderer_shader_bind_instance;
-    out_plugin->shader_bind_local = vulkan_renderer_shader_bind_local;
+    out_plugin->shader_bind_globals = vulkan_renderer_shader_apply_globals;
+    out_plugin->shader_bind_instance = vulkan_renderer_shader_apply_instance;
+    out_plugin->shader_bind_local = vulkan_renderer_shader_apply_local;
 
     out_plugin->shader_apply_globals = vulkan_renderer_shader_apply_globals;
     out_plugin->shader_apply_instance = vulkan_renderer_shader_apply_instance;
@@ -59,15 +59,6 @@ b8 plugin_create(renderer_backend_interface* out_plugin) {
     out_plugin->texture_map_resources_acquire = vulkan_renderer_texture_map_resources_acquire;
     out_plugin->texture_map_resources_release = vulkan_renderer_texture_map_resources_release;
 
-    out_plugin->framebuffer_create = vulkan_renderer_framebuffer_create;
-    out_plugin->framebuffer_destroy = vulkan_renderer_framebuffer_destroy;
-
-    out_plugin->renderpass_create = vulkan_renderpass_create;
-    out_plugin->renderpass_destroy = vulkan_renderpass_destroy;
-    out_plugin->window_attachment_get = vulkan_renderer_window_attachment_get;
-    out_plugin->depth_attachment_get = vulkan_renderer_depth_attachment_get;
-    out_plugin->window_attachment_index_get = vulkan_renderer_window_attachment_index_get;
-    out_plugin->window_attachment_count_get = vulkan_renderer_window_attachment_count_get;
     out_plugin->is_multithreaded = vulkan_renderer_is_multithreaded;
     out_plugin->flag_enabled_get = vulkan_renderer_flag_enabled_get;
     out_plugin->flag_enabled_set = vulkan_renderer_flag_enabled_set;

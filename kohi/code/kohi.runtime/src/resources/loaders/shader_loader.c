@@ -1,15 +1,16 @@
 #include "shader_loader.h"
 
 #include "containers/darray.h"
-#include "memory/kmemory.h"
-#include "strings/kstring.h"
-#include "logger.h"
 #include "loader_utils.h"
+#include "logger.h"
 #include "math/kmath.h"
+#include "memory/kmemory.h"
 #include "platform/filesystem.h"
 #include "resources/resource_types.h"
+#include "strings/kstring.h"
 #include "systems/resource_system.h"
 #include "systems/shader_system.h"
+
 static b8 shader_loader_load(struct resource_loader* self, const char* name, void* params, resource* out_resource) {
     if (!self || !name || !out_resource) {
         return false;
@@ -40,6 +41,9 @@ static b8 shader_loader_load(struct resource_loader* self, const char* name, voi
     resource_data->stage_count = 0;
     // NOTE: This directly influences how much resources are available.
     resource_data->max_instances = 1;
+
+    // NOTE: By default, all shaders write to the colour buffer unless otherwise specified.
+    resource_data->flags = SHADER_FLAG_COLOUR_WRITE;
 
     resource_data->name = 0;
 
@@ -84,16 +88,20 @@ static b8 shader_loader_load(struct resource_loader* self, const char* name, voi
         // Process the variable.
         if (strings_equali(trimmed_var_name, "version")) {
             // TODO: version
-        } else if (strings_equali(trimmed_var_name, "name")) {
+        }
+        else if (strings_equali(trimmed_var_name, "name")) {
             resource_data->name = string_duplicate(trimmed_value);
-        } else if (strings_equali(trimmed_var_name, "renderpass")) {
+        }
+        else if (strings_equali(trimmed_var_name, "renderpass")) {
             // resource_data->renderpass_name = string_duplicate(trimmed_value);
             // Ignore this now
-        } else if (strings_equali(trimmed_var_name, "max_instances")) {
+        }
+        else if (strings_equali(trimmed_var_name, "max_instances")) {
             if (!string_to_u32(trimmed_value, &resource_data->max_instances)) {
                 KERROR("Invalid value for max_instances. Cannot be parsed to u32.Defaulting to &u", resource_data->max_instances);
             }
-        } else if (strings_equali(trimmed_var_name, "stages")) {
+        }
+        else if (strings_equali(trimmed_var_name, "stages")) {
             // Parse the stages
             char** stage_names = darray_create(char*);
             u32 count = string_split(trimmed_value, ',', &stage_names, true, true);
@@ -101,7 +109,8 @@ static b8 shader_loader_load(struct resource_loader* self, const char* name, voi
             if (resource_data->stage_count == 0) {
                 resource_data->stage_count = count;
                 resource_data->stage_configs = kallocate(sizeof(shader_stage_config) * count, MEMORY_TAG_ARRAY);
-            } else if (resource_data->stage_count != count) {
+            }
+            else if (resource_data->stage_count != count) {
                 KERROR("shader_loader_load: Invalid file layout. Count mismatch between stage names and stage filenames.");
                 return false;
             }
@@ -111,18 +120,23 @@ static b8 shader_loader_load(struct resource_loader* self, const char* name, voi
                 // Parse the stage name and determine the actual configured stage.
                 if (strings_equali(stage_names[sn_idx], "frag") || strings_equali(stage_names[sn_idx], "fragment")) {
                     resource_data->stage_configs[sn_idx].stage = SHADER_STAGE_FRAGMENT;
-                } else if (strings_equali(stage_names[sn_idx], "vert") || strings_equali(stage_names[sn_idx], "vertex")) {
+                }
+                else if (strings_equali(stage_names[sn_idx], "vert") || strings_equali(stage_names[sn_idx], "vertex")) {
                     resource_data->stage_configs[sn_idx].stage = SHADER_STAGE_VERTEX;
-                } else if (strings_equali(stage_names[sn_idx], "geom") || strings_equali(stage_names[sn_idx], "geometry")) {
+                }
+                else if (strings_equali(stage_names[sn_idx], "geom") || strings_equali(stage_names[sn_idx], "geometry")) {
                     resource_data->stage_configs[sn_idx].stage = SHADER_STAGE_GEOMETRY;
-                } else if (strings_equali(stage_names[sn_idx], "comp") || strings_equali(stage_names[sn_idx], "compute")) {
+                }
+                else if (strings_equali(stage_names[sn_idx], "comp") || strings_equali(stage_names[sn_idx], "compute")) {
                     resource_data->stage_configs[sn_idx].stage = SHADER_STAGE_COMPUTE;
-                } else {
+                }
+                else {
                     KERROR("shader_loader_load: Invalid file layout. Unrecognized stage '%s'", stage_names[sn_idx]);
                 }
             }
             string_cleanup_split_array(stage_names);
-        } else if (strings_equali(trimmed_var_name, "stagefiles")) {
+        }
+        else if (strings_equali(trimmed_var_name, "stagefiles")) {
             // Parse the stage file names
             char** stage_filenames = darray_create(char*);
             u32 count = string_split(trimmed_value, ',', &stage_filenames, true, true);
@@ -130,7 +144,8 @@ static b8 shader_loader_load(struct resource_loader* self, const char* name, voi
             if (resource_data->stage_count == 0) {
                 resource_data->stage_count = count;
                 resource_data->stage_configs = kallocate(sizeof(shader_stage_config) * count, MEMORY_TAG_ARRAY);
-            } else if (resource_data->stage_count != count) {
+            }
+            else if (resource_data->stage_count != count) {
                 KERROR("shader_loader_load: Invalid file layout. Count mismatch between stage names and stage filenames.");
                 return false;
             }
@@ -139,16 +154,20 @@ static b8 shader_loader_load(struct resource_loader* self, const char* name, voi
                 resource_data->stage_configs[sn_idx].filename = string_duplicate(stage_filenames[sn_idx]);
             }
             string_cleanup_split_array(stage_filenames);
-        } else if (strings_equali(trimmed_var_name, "cull_mode")) {
+        }
+        else if (strings_equali(trimmed_var_name, "cull_mode")) {
             if (strings_equali(trimmed_value, "front")) {
                 resource_data->cull_mode = FACE_CULL_MODE_FRONT;
-            } else if (strings_equali(trimmed_value, "front_and_back")) {
+            }
+            else if (strings_equali(trimmed_value, "front_and_back")) {
                 resource_data->cull_mode = FACE_CULL_MODE_FRONT_AND_BACK;
-            } else if (strings_equali(trimmed_value, "none")) {
+            }
+            else if (strings_equali(trimmed_value, "none")) {
                 resource_data->cull_mode = FACE_CULL_MODE_NONE;
             }
             // Any other value will use the default of BACK
-        } else if (strings_equali(trimmed_var_name, "topology")) {
+        }
+        else if (strings_equali(trimmed_var_name, "topology")) {
             char** topologies = darray_create(char*);
             u32 count = string_split(trimmed_value, ',', &topologies, true, true);
             // If there are no entries, default to triangle list, as this is the most common.
@@ -159,87 +178,116 @@ static b8 shader_loader_load(struct resource_loader* self, const char* name, voi
                     if (strings_equali(topologies[i], "triangle_list")) {
                         // NOTE: this is default, so we can skip this for now.
                         resource_data->topology_types |= PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE_LIST;
-                    } else if (strings_equali(topologies[i], "triangle_strip")) {
+                    }
+                    else if (strings_equali(topologies[i], "triangle_strip")) {
                         resource_data->topology_types |= PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE_STRIP;
-                    } else if (strings_equali(topologies[i], "triangle_fan")) {
+                    }
+                    else if (strings_equali(topologies[i], "triangle_fan")) {
                         resource_data->topology_types |= PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE_FAN;
-                    } else if (strings_equali(topologies[i], "line_list")) {
+                    }
+                    else if (strings_equali(topologies[i], "line_list")) {
                         resource_data->topology_types |= PRIMITIVE_TOPOLOGY_TYPE_LINE_LIST;
-                    } else if (strings_equali(topologies[i], "line_strip")) {
+                    }
+                    else if (strings_equali(topologies[i], "line_strip")) {
                         resource_data->topology_types |= PRIMITIVE_TOPOLOGY_TYPE_LINE_STRIP;
-                    } else if (strings_equali(topologies[i], "point_list")) {
+                    }
+                    else if (strings_equali(topologies[i], "point_list")) {
                         resource_data->topology_types |= PRIMITIVE_TOPOLOGY_TYPE_POINT_LIST;
-                    } else {
+                    }
+                    else {
                         KERROR("Unrecognized topology type '%s'. Skipping.", topologies[i]);
                     }
                 }
             }
             string_cleanup_split_array(topologies);
             darray_destroy(topologies);
-        } else if (strings_equali(trimmed_var_name, "depth_test")) {
+        }
+        else if (strings_equali(trimmed_var_name, "depth_test")) {
             b8 depth_test;
             string_to_bool(trimmed_value, &depth_test);
             if (depth_test) {
                 resource_data->flags |= SHADER_FLAG_DEPTH_TEST;
             }
-        } else if (strings_equali(trimmed_var_name, "depth_write")) {
+        }
+        else if (strings_equali(trimmed_var_name, "depth_write")) {
             b8 depth_write;
             string_to_bool(trimmed_value, &depth_write);
             if (depth_write) {
                 resource_data->flags |= SHADER_FLAG_DEPTH_WRITE;
             }
-        } else if (strings_equali(trimmed_var_name, "stencil_test")) {
+        }
+        else if (strings_equali(trimmed_var_name, "stencil_test")) {
             b8 stencil_test;
             string_to_bool(trimmed_value, &stencil_test);
             if (stencil_test) {
                 resource_data->flags |= SHADER_FLAG_STENCIL_TEST;
             }
-        } else if (strings_equali(trimmed_var_name, "supports_wireframe")) {
+        }
+        else if (strings_equali(trimmed_var_name, "colour_write")) {
+            b8 colour_write;
+            string_to_bool(trimmed_value, &colour_write);
+            if (!colour_write) {
+                resource_data->flags &= ~SHADER_FLAG_COLOUR_WRITE;
+            }
+        }
+        else if (strings_equali(trimmed_var_name, "supports_wireframe")) {
             b8 wireframe;
             string_to_bool(trimmed_value, &wireframe);
             if (wireframe) {
                 resource_data->flags |= SHADER_FLAG_WIREFRAME;
             }
-        } else if (strings_equali(trimmed_var_name, "attribute")) {
+        }
+        else if (strings_equali(trimmed_var_name, "attribute")) {
             // Parse attribute.
             char** fields = darray_create(char*);
             u32 field_count = string_split(trimmed_value, ',', &fields, true, true);
             if (field_count != 2) {
                 KERROR("shader_loader_load: Invalid file layout. Attribute fields must be 'type,name'. Skipping.");
-            } else {
+            }
+            else {
                 shader_attribute_config attribute;
                 // Parse field type
                 if (strings_equali(fields[0], "f32")) {
                     attribute.type = SHADER_ATTRIB_TYPE_FLOAT32;
                     attribute.size = 4;
-                } else if (strings_equali(fields[0], "vec2")) {
+                }
+                else if (strings_equali(fields[0], "vec2")) {
                     attribute.type = SHADER_ATTRIB_TYPE_FLOAT32_2;
                     attribute.size = 8;
-                } else if (strings_equali(fields[0], "vec3")) {
+                }
+                else if (strings_equali(fields[0], "vec3")) {
                     attribute.type = SHADER_ATTRIB_TYPE_FLOAT32_3;
                     attribute.size = 12;
-                } else if (strings_equali(fields[0], "vec4")) {
+                }
+                else if (strings_equali(fields[0], "vec4")) {
                     attribute.type = SHADER_ATTRIB_TYPE_FLOAT32_4;
                     attribute.size = 16;
-                } else if (strings_equali(fields[0], "u8")) {
+                }
+                else if (strings_equali(fields[0], "u8")) {
                     attribute.type = SHADER_ATTRIB_TYPE_UINT8;
                     attribute.size = 1;
-                } else if (strings_equali(fields[0], "u16")) {
+                }
+                else if (strings_equali(fields[0], "u16")) {
                     attribute.type = SHADER_ATTRIB_TYPE_UINT16;
                     attribute.size = 2;
-                } else if (strings_equali(fields[0], "u32")) {
+                }
+                else if (strings_equali(fields[0], "u32")) {
                     attribute.type = SHADER_ATTRIB_TYPE_UINT32;
                     attribute.size = 4;
-                } else if (strings_equali(fields[0], "i8")) {
+                }
+                else if (strings_equali(fields[0], "i8")) {
                     attribute.type = SHADER_ATTRIB_TYPE_INT8;
                     attribute.size = 1;
-                } else if (strings_equali(fields[0], "i16")) {
+                }
+                else if (strings_equali(fields[0], "i16")) {
                     attribute.type = SHADER_ATTRIB_TYPE_INT16;
                     attribute.size = 2;
-                } else if (strings_equali(fields[0], "i32")) {
+                }
+                else if (strings_equali(fields[0], "i32")) {
                     attribute.type = SHADER_ATTRIB_TYPE_INT32;
                     attribute.size = 4;
-                } else {
+                }
+                else {
                     KERROR("shader_loader_load: Invalid file layout. Attribute type must be f32, vec2, vec3, vec4, i8, i16, i32, u8, u16, or u32.");
                     KWARN("Defaulting to f32.");
                     attribute.type = SHADER_ATTRIB_TYPE_FLOAT32;
@@ -257,13 +305,15 @@ static b8 shader_loader_load(struct resource_loader* self, const char* name, voi
 
             string_cleanup_split_array(fields);
             darray_destroy(fields);
-        } else if (strings_equali(trimmed_var_name, "uniform")) {
+        }
+        else if (strings_equali(trimmed_var_name, "uniform")) {
             // Parse uniform.
             char** fields = darray_create(char*);
             u32 field_count = string_split(trimmed_value, ',', &fields, true, true);
             if (field_count != 3) {
                 KERROR("shader_loader_load: Invalid file layout. Uniform fields must be 'type,scope,name'. Skipping.");
-            } else {
+            }
+            else {
                 shader_uniform_config uniform;
                 // Check if it's an array type.
                 u32 array_length = 0;  // An array length of 1 is just a single.
@@ -275,7 +325,8 @@ static b8 shader_loader_load(struct resource_loader* self, const char* name, voi
                 char base_type[100];
                 if (is_array) {
                     string_mid(base_type, fields[0], 0, string_index_of(fields[0], '['));
-                } else {
+                }
+                else {
                     string_copy(base_type, fields[0]);
                 }
 
@@ -286,72 +337,91 @@ static b8 shader_loader_load(struct resource_loader* self, const char* name, voi
                 if (strings_equali(base_type, "f32")) {
                     uniform.type = SHADER_UNIFORM_TYPE_FLOAT32;
                     uniform.size = 4;
-                } else if (strings_equali(base_type, "vec2")) {
+                }
+                else if (strings_equali(base_type, "vec2")) {
                     uniform.type = SHADER_UNIFORM_TYPE_FLOAT32_2;
                     uniform.size = 8;
-                } else if (strings_equali(base_type, "vec3")) {
+                }
+                else if (strings_equali(base_type, "vec3")) {
                     uniform.type = SHADER_UNIFORM_TYPE_FLOAT32_3;
                     uniform.size = 12;
-                } else if (strings_equali(base_type, "vec4")) {
+                }
+                else if (strings_equali(base_type, "vec4")) {
                     uniform.type = SHADER_UNIFORM_TYPE_FLOAT32_4;
                     uniform.size = 16;
-                } else if (strings_equali(base_type, "u8")) {
+                }
+                else if (strings_equali(base_type, "u8")) {
                     uniform.type = SHADER_UNIFORM_TYPE_UINT8;
                     uniform.size = 1;
-                } else if (strings_equali(base_type, "u16")) {
+                }
+                else if (strings_equali(base_type, "u16")) {
                     uniform.type = SHADER_UNIFORM_TYPE_UINT16;
                     uniform.size = 2;
-                } else if (strings_equali(base_type, "u32")) {
+                }
+                else if (strings_equali(base_type, "u32")) {
                     uniform.type = SHADER_UNIFORM_TYPE_UINT32;
                     uniform.size = 4;
-                } else if (strings_equali(base_type, "i8")) {
+                }
+                else if (strings_equali(base_type, "i8")) {
                     uniform.type = SHADER_UNIFORM_TYPE_INT8;
                     uniform.size = 1;
-                } else if (strings_equali(base_type, "i16")) {
+                }
+                else if (strings_equali(base_type, "i16")) {
                     uniform.type = SHADER_UNIFORM_TYPE_INT16;
                     uniform.size = 2;
-                } else if (strings_equali(base_type, "i32")) {
+                }
+                else if (strings_equali(base_type, "i32")) {
                     uniform.type = SHADER_UNIFORM_TYPE_INT32;
                     uniform.size = 4;
-                } else if (strings_equali(base_type, "mat4")) {
+                }
+                else if (strings_equali(base_type, "mat4")) {
                     uniform.type = SHADER_UNIFORM_TYPE_MATRIX_4;
                     uniform.size = 64;
-                } else if (string_starts_with(base_type, "samp")) {
+                }
+                else if (string_starts_with(base_type, "samp")) {
                     // Sampler uniforms are handled entirely different from other uniforms,but
                     // share a lot of logic among each other.
 
                     // No shorthand for new sampler types.
                     if (strings_equali(base_type, "sampler1d")) {
                         uniform.type = SHADER_UNIFORM_TYPE_SAMPLER_1D;
-                    } else if (strings_equali(base_type, "sampler2d") || strings_equali(base_type, "samp") || strings_equali(base_type, "sampler")) {
+                    }
+                    else if (strings_equali(base_type, "sampler2d") || strings_equali(base_type, "samp") || strings_equali(base_type, "sampler")) {
                         // NOTE: Auto-converting samp/sampler to sampler2D for backward compatability.
                         uniform.type = SHADER_UNIFORM_TYPE_SAMPLER_2D;
-                    } else if (strings_equali(base_type, "sampler3d")) {
+                    }
+                    else if (strings_equali(base_type, "sampler3d")) {
                         uniform.type = SHADER_UNIFORM_TYPE_SAMPLER_3D;
-                    } else if (strings_equali(base_type, "samplercube")) {
+                    }
+                    else if (strings_equali(base_type, "samplercube")) {
                         uniform.type = SHADER_UNIFORM_TYPE_SAMPLER_CUBE;
-                    } else if (strings_equali(base_type, "sampler1darray")) {
+                    }
+                    else if (strings_equali(base_type, "sampler1darray")) {
                         // NOTE: array textures are different from _an array __of__ textures_
                         uniform.type = SHADER_UNIFORM_TYPE_SAMPLER_1D_ARRAY;
-                    } else if (strings_equali(base_type, "sampler2darray")) {
+                    }
+                    else if (strings_equali(base_type, "sampler2darray")) {
                         // NOTE: array textures are different from _an array __of__ textures_
                         uniform.type = SHADER_UNIFORM_TYPE_SAMPLER_2D_ARRAY;
-                    } else if (strings_equali(base_type, "samplercubedarray")) {
+                    }
+                    else if (strings_equali(base_type, "samplercubedarray")) {
                         // NOTE: array textures are different from _an array __of__ textures_
                         uniform.type = SHADER_UNIFORM_TYPE_SAMPLER_CUBE_ARRAY;
-                    } else {
+                    }
+                    else {
                         // List out the entire unparsed field to make the error more useful.
                         KERROR("Error in shader file. Unsupported sampler type '%s' found. %s:%u", fields[0], full_file_path, line_number);
                         return false;
                     }
-                } else if (strings_nequali(fields[0], "struct", 6)) {
+                }
+                else if (strings_nequali(fields[0], "struct", 6)) {
                     u32 len = string_length(fields[0]);
                     if (len <= 6) {
                         KERROR("shader_loader_load: Invalid struct uniform, size is missing. Shader load aborted.");
                         return false;
                     }
                     // u32 diff = len - 6;
-                    char struct_size_str[32] = {0};
+                    char struct_size_str[32] = { 0 };
                     string_mid(struct_size_str, fields[0], 6, -1);  //-1获取至末尾
                     u32 struct_size = 0;
                     if (!string_to_u32(struct_size_str, &struct_size)) {
@@ -363,7 +433,8 @@ static b8 shader_loader_load(struct resource_loader* self, const char* name, voi
                     // uniform=struct28,1,dir_light
                     // uniform=struct40,1,p_light_0
                     // uniform=struct40,1,p_light_1
-                } else {
+                }
+                else {
                     KERROR("shader_loader_load: Invalid file layout. Uniform type must be f32, vec2, vec3, vec4, i8, i16, i32, u8, u16, u32 or mat4.");
                     KWARN("Defaulting to f32.");
                     uniform.type = SHADER_UNIFORM_TYPE_FLOAT32;
@@ -373,11 +444,14 @@ static b8 shader_loader_load(struct resource_loader* self, const char* name, voi
                 // Parse the scope
                 if (strings_equal(fields[1], "0")) {
                     uniform.scope = SHADER_SCOPE_GLOBAL;
-                } else if (strings_equal(fields[1], "1")) {
+                }
+                else if (strings_equal(fields[1], "1")) {
                     uniform.scope = SHADER_SCOPE_INSTANCE;
-                } else if (strings_equal(fields[1], "2")) {
+                }
+                else if (strings_equal(fields[1], "2")) {
                     uniform.scope = SHADER_SCOPE_LOCAL;
-                } else {
+                }
+                else {
                     KERROR("shader_loader_load: Invalid file layout: Uniform scope must be 0 for global, 1 for instance or 2 for local.");
                     KWARN("Defaulting to global.");
                     uniform.scope = SHADER_SCOPE_GLOBAL;
