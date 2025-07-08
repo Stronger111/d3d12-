@@ -2,7 +2,7 @@
 
 #include <defines.h>
 
-struct platform_state;
+struct kwindow;;
 struct vulkan_context;
 
 b8 vulkan_platform_create_vulkan_surface(struct vulkan_context* context,struct kwindow* window);

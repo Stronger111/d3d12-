@@ -130,118 +130,122 @@ static b8 create(renderer_backend_interface* backend, kwindow* window, renderer_
     swapchain_create_info.clipped = VK_TRUE;
     swapchain_create_info.oldSwapchain = 0;
 
-    VK_CHECK(vkCreateSwapchainKHR(context->device.logical_device, &swapchain_create_info, context->allocator, &swapchain->handle));
+
+    //Verify the swapchain creation.
+    VkResult result = vkCreateSwapchainKHR(context->device.logical_device, &swapchain_create_info, context->allocator, &swapchain->handle);
+    if (!vulkan_result_is_success(result)) {
+        const char* result_str = vulkan_result_string(result, true);
+        KFATAL("Failed to create Vulkan swapchain with the error: '%s'.", result_str);
+        return false;
+    }
 
     // Start with a zero frame index.
-    context->current_frame = 0;
+    window_backend->current_frame = 0;
 
-    // Images
+    //  Get image count from swapchain.
     swapchain->image_count = 0;
-    VK_CHECK(vkGetSwapchainImagesKHR(context->device.logical_device, swapchain->handle, &swapchain->image_count, 0));
-    if (!swapchain->render_textures) {
-        swapchain->render_textures = (texture*)kallocate(sizeof(texture) * swapchain->image_count, MEMORY_TAG_RENDERER);  // 指针只有8个字节
-        // If creating the array, then the internal texture objects aren't created yet either.
-        for (u32 i = 0; i < swapchain->image_count; ++i) {
-            void* internal_data = kallocate(sizeof(vulkan_image), MEMORY_TAG_TEXTURE);
-
-            char tex_name[38] = "__internal_vulkan_swapchain_image_0__";
-            tex_name[34] = '0' + (char)i;
-
-            texture_system_wrap_internal(
-                tex_name,
-                swapchain_extent.width,
-                swapchain_extent.height,
-                4,
-                false,
-                true,
-                false,
-                internal_data,
-                &swapchain->render_textures[i]);
-            if (!swapchain->render_textures[i].internal_data) {
-                KFATAL("Failed to generate new swapchain image texture!");
-                return;
-            }
-        }
-    }
-    else {
-        for (u32 i = 0; i < swapchain->image_count; ++i) {
-            // Just update the dimensions.
-            texture_system_resize(&swapchain->render_textures[i], swapchain_extent.width, swapchain_extent.height, false);
-        }
+    result = vkGetSwapchainImagesKHR(context->device.logical_device, swapchain->handle, &swapchain->image_count, 0);
+    if (!vulkan_result_is_success(result)) {
+        const char* result_str = vulkan_result_string(result, true);
+        KFATAL("Failed to obtain image count from Vulkan swapchain with the error: '%s'.", result_str);
+        return false;
     }
 
     VkImage swapchain_images[32];
-    VK_CHECK(vkGetSwapchainImagesKHR(context->device.logical_device, swapchain->handle, &swapchain->image_count, swapchain_images));
-    for (u32 i = 0; i < swapchain->image_count; ++i) {
-        // Update the internal image for each
-        vulkan_image* image = (vulkan_image*)swapchain->render_textures[i].internal_data;
-        image->handle = swapchain_images[i];
-        image->width = swapchain_extent.width;
-        image->height = swapchain_extent.height;
+    result = vkGetSwapchainImagesKHR(context->device.logical_device, swapchain->handle, &swapchain->image_count, swapchain_images);
+    if (!vulkan_result_is_success(result)) {
+        const char* result_str = vulkan_result_string(result, true);
+        KFATAL("Failed to obtain images from Vulkan swapchain with the error: '%s'.", result_str);
+        return false;
     }
 
-    // Views
-    for (u32 i = 0; i < swapchain->image_count; ++i) {
-        vulkan_image* image = (vulkan_image*)swapchain->render_textures[i].internal_data;
-
-        VkImageViewCreateInfo view_info = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
-        view_info.image = image->handle;
-        view_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
-        view_info.format = swapchain->image_format.format;
-        view_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        view_info.subresourceRange.baseMipLevel = 0;
-        view_info.subresourceRange.levelCount = 1;
-        view_info.subresourceRange.baseArrayLayer = 0;
-        view_info.subresourceRange.layerCount = 1;
-
-        VK_CHECK(vkCreateImageView(context->device.logical_device, &view_info, context->allocator, &image->view));
-    }
-
-    // Depth resources
-    if (!vulkan_device_detect_depth_format(&context->device)) {
-        context->device.depth_format = VK_FORMAT_UNDEFINED;
-        KFATAL("Failed to find a supported format!");
-    }
-
-    // Allocate 深度RT
-    if (!swapchain->depth_textures) {
-        swapchain->depth_textures = (texture*)kallocate(sizeof(texture) * swapchain->image_count, MEMORY_TAG_RENDERER);
-    }
-
-    // Create depth/stencil images and its view
-    for (u32 i = 0; i < context->swapchain.image_count; ++i) {
-        char formatted_name[TEXTURE_NAME_MAX_LENGTH] = { 0 };
-        string_format_unsafe(formatted_name, "__kohi_default_depth_stencil_texture_%u", i);
-
-        vulkan_image* image = kallocate(sizeof(vulkan_image), MEMORY_TAG_TEXTURE);
-        vulkan_image_create(
-            context,
+    //Swapchain images are stored in the backend of the window.colorbuffer.
+    if (k_handle_is_invalid(window_internal->colourbuffer.renderer_texture_handle)) {
+        // If invalid, then a new one needs to be created. This does not reach out to the
+        // texture system to create this, but handles it internally instead. This is because
+        // the process for this varies greatly between backends.
+        if (!renderer_texture_resources_acquire(
+            backend->frontend_state,
+            "__window_colourbuffer_texture__",
             TEXTURE_TYPE_2D,
             swapchain_extent.width,
             swapchain_extent.height,
+            4,
             1,
-            context->device.depth_format,
-            VK_IMAGE_TILING_OPTIMAL,
-            VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-            true,
-            VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT,
-            formatted_name,
             1,
-            image);
+            // NOTE: This should be a wrapped texture, so the frontend does not try to
+            // acquire the resources we already have here.
+            TEXTURE_FLAG_IS_WRAPPED | TEXTURE_FLAG_IS_WRITEABLE | TEXTURE_FLAG_RENDERER_BUFFERING,
+            &window_internal->colourbuffer.renderer_texture_handle
+        )) {
 
-        // Wrap it in a texture.
-        texture_system_wrap_internal(
-            formatted_name,
-            swapchain_extent.width,
-            swapchain_extent.height,
-            context->device.depth_channel_count,
-            false,
-            true,
-            false,
-            image,
-            &context->swapchain.depth_textures[i]);
+            KFATAL("Failed to acquire internal texture resources for window.colourbuffer");
+            return false;
+        }
     }
+
+    // Get the texture_internal_data based on the existing or newly-created handle above.
+   // Use that to setup the internal images/views for the colourbuffer texture.
+    texture_internal_data* texture_data = renderer_texture_resources_get(backend->frontend_state, window_internal->colourbuffer.renderer_texture_handle);
+    if (!texture_data) {
+        KFATAL("Unable to get internal data for colourbuffer image. Swapchain creation failed.");
+        return false;
+    }
+    // Name is meaningless here, but might be useful for debugging.
+    if (!window_internal->colourbuffer.name) {
+        window_internal->colourbuffer.name = string_duplicate("__window_colourbuffer_texture__");
+    }
+
+    texture_data->image_count = swapchain->image_count;
+    // Create the array if it doesn't exist.
+    if (!texture_data->images) {
+        // Also have to setup the internal data.
+        texture_data->images = kallocate(sizeof(vulkan_image) * texture_data->image_count, MEMORY_TAG_TEXTURE);
+        // Set initial parameters for each.
+        for (u32 i = 0; i < texture_data->image_count; ++i) {
+            vulkan_image* image = &texture_data->images[i];
+            // Construct a unique name for each image.
+            char tex_name[38] = "__internal_vulkan_swapchain_image_0__";
+            tex_name[34] = '0' + (char)i;
+            image->name = string_duplicate(tex_name);
+
+            // Set initial parameters for each.
+            image->memory_flags = 0; // Doesn't really apply anyway/not needed.
+            image->mip_levels = 1;
+            image->format = swapchain->image_format.format;
+            image->layer_count = 1;
+            image->layer_views = 0;
+        }
+    }
+
+    // Update the parameters and setup a view for each image.
+    for (u32 i = 0; i < texture_data->image_count; ++i) {
+        vulkan_image* image = &texture_data->images[i];
+        // Update the internal handle and dimensions.
+        image->handle = swapchain_images[i];
+        image->width = swapchain_extent.width;
+        image->height = swapchain_extent.height;
+        image->format = swapchain->image_format.format; // Technically possible that the format changes...
+        // Setup a debug name for the image.
+        VK_SET_DEBUG_OBJECT_NAME(context, VK_OBJECT_TYPE_IMAGE, image->handle, image->name);
+
+        // Create the view for this image.
+        VkImageViewCreateInfo view_create_info = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
+        view_create_info.image = image->handle;
+        view_create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        view_create_info.format = swapchain->image_format.format;
+        image->view_subresource_range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        image->view_subresource_range.baseMipLevel = 0;
+        image->view_subresource_range.levelCount = 1;
+        image->view_subresource_range.baseArrayLayer = 0;
+        image->view_subresource_range.layerCount = 1;
+        view_create_info.subresourceRange = image->view_subresource_range;
+
+        VK_CHECK(vkCreateImageView(context->device.logical_device, &view_create_info, context->allocator, &image->view));
+    }
+
+    //Make sure to set the owning window.
+    swapchain->owning_window = window;
 
     KINFO("Swapchain created successfully.");
     return true;
@@ -252,12 +256,9 @@ static void destroy(renderer_backend_interface* backend, vulkan_swapchain* swapc
 
     kwindow* window = swapchain->owning_window;
     kwindow_renderer_state* window_internal = window->renderer_state;
-    kwindow_renderer_backend_state* window_backend = window_internal->backend_state;
+    //kwindow_renderer_backend_state* window_backend = window_internal->backend_state;
 
-    for (u32 i = 0; i < context->swapchain.image_count; ++i) {
-        vulkan_image_destroy(context, (vulkan_image*)swapchain->depth_textures[i].internal_data);
-        swapchain->depth_textures[i].internal_data = 0;
-    }
+    texture_internal_data* texture_data = renderer_texture_resources_get(backend->frontend_state, window_internal->colourbuffer.renderer_texture_handle);
 
     vkDeviceWaitIdle(context->device.logical_device);
 

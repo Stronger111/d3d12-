@@ -5,23 +5,25 @@
  * @version 1.0
  * @date 2022-01-11
  *
- * @copyright Kohi Game Engine is Copyright (c) Travis Vroman 2021-2022
+ * @copyright Kohi Game Engine is Copyright (c) Travis Vroman 2021-2024
  *
  */
+
 
 #pragma once
 
-#include <renderer/renderer_types.h>
+#include <plugins/plugin_types.h>
 /**
- * @brief Creates a new renderer plugin of the given type.
+ * @brief Creates a new runtime plugin of the renderer type.
  *
- * @param out_renderer_backend A pointer to hold the newly-created renderer plugin.
+ * @param out_plugin A pointer to hold the newly-created renderer plugin.
  * @return True if successful; otherwise false.
  */
-KAPI b8 plugin_create(renderer_backend_interface* out_plugin);
+KAPI b8 plugin_create(kruntime_plugin* out_plugin);
+
 /**
- * @brief Destroys the given renderer backend.
+ * @brief Destroys the given plugin.
  *
- * @param renderer_backend A pointer to the plugin to be destroyed.
+ * @param plugin A pointer to the runtime plugin to be destroyed.
  */
-KAPI void plugin_destroy(renderer_backend_interface* plugin);
+KAPI void plugin_destroy(kruntime_plugin* plugin);

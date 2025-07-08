@@ -568,17 +568,17 @@ typedef struct renderer_backend_interface {
     */
     b8 (*texture_write_data)(struct renderer_backend_interface* backend, struct texture_internal_data* data, u32 offset, u32 size, const u8* pixels, b8 include_in_frame_workload);
 
-    /**
+     /**
      * @brief Reads the given data from the provided texture.
      *
      * @param backend A pointer to the renderer backend interface.
      * @param t A pointer to the texture internal data to be read from.
      * @param offset The offset in bytes from the beginning of the data to be read.
      * @param size The number of bytes to be read.
-     * @param out_memory A pointer to a block of memory to write the read data to.
+     * @param out_pixels A pointer to a block of memory to write the read data to.
      * @returns True on success; otherwise false.
      */
-    b8 (*texture_read_data)(struct renderer_backend_interface* backend, struct texture_internal_data* data, u32 offset, u32 size, void** out_memory);
+    b8 (*texture_read_data)(struct renderer_backend_interface* backend, struct texture_internal_data* data, u32 offset, u32 size, u8** out_pixels);
 
     /**
      * @brief Reads a pixel from the provided texture at the given x/y coordinate.
