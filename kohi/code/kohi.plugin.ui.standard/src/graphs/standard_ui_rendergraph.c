@@ -1,5 +1,5 @@
+/*
 #include "standard_ui_rendergraph.h"
-
 #include "containers/darray.h"
 #include "logger.h"
 #include "core/systems_manager.h"
@@ -26,7 +26,7 @@ b8 standard_ui_rendergraph_create(const standard_ui_rendergraph_config* config, 
     }
 
     // UI pass
-    RG_CHECK(rendergraph_pass_create(&out_graph->internal_graph, "ui", ui_pass_create, 0, &out_graph->ui_pass));
+    RG_CHECK(rendergraph_pass_create(&out_graph->internal_graph, "ui", ui_rendergraph_node_create, 0, &out_graph->ui_pass));
     RG_CHECK(rendergraph_pass_sink_add(&out_graph->internal_graph, "ui", "colourbuffer"));
     RG_CHECK(rendergraph_pass_sink_add(&out_graph->internal_graph, "ui", "depthbuffer"));
     RG_CHECK(rendergraph_pass_source_add(&out_graph->internal_graph, "ui", "colourbuffer", RENDERGRAPH_SOURCE_TYPE_RENDER_TARGET_COLOUR, RENDERGRAPH_SOURCE_ORIGIN_OTHER));
@@ -34,9 +34,9 @@ b8 standard_ui_rendergraph_create(const standard_ui_rendergraph_config* config, 
     RG_CHECK(rendergraph_pass_set_sink_linkage(&out_graph->internal_graph, "ui", "colourbuffer", 0, "colourbuffer"));
     RG_CHECK(rendergraph_pass_set_sink_linkage(&out_graph->internal_graph, "ui", "depthbuffer", 0, "depthbuffer"));
 
-    out_graph->ui_pass.initialize = ui_pass_initialize;
-    out_graph->ui_pass.execute = ui_pass_execute;
-    out_graph->ui_pass.destroy = ui_pass_destroy;
+    out_graph->ui_pass.initialize = ui_rendergraph_node_initialize;
+    out_graph->ui_pass.execute = ui_rendergraph_node_execute;
+    out_graph->ui_pass.destroy = ui_rendergraph_node_destroy;
 
     if (!rendergraph_finalize(&out_graph->internal_graph)) {
         KERROR("Failed to finalize rendergraph. See log for details.");
@@ -86,3 +86,4 @@ b8 standard_ui_rendergraph_execute(standard_ui_rendergraph* graph, struct frame_
 b8 standard_ui_rendergraph_on_resize(standard_ui_rendergraph* graph, u32 width, u32 height) {
     return rendergraph_on_resize(&graph->internal_graph, width, height);
 }
+*/

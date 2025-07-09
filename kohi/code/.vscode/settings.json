@@ -239,7 +239,8 @@
         "clear_depth_rendergraph_node.h": "c",
         "vulkan_image.h": "c",
         "vulkan_device.h": "c",
-        "vulkan_swapchain.h": "c"
+        "vulkan_swapchain.h": "c",
+        "nine_slice.h": "c"
     },
     // File copyright documentation tag.  Array of strings will be converted to one line per element.  Can template {year}.
     "doxdocgen.file.copyrightTag": [
