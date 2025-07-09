@@ -240,7 +240,9 @@
         "vulkan_image.h": "c",
         "vulkan_device.h": "c",
         "vulkan_swapchain.h": "c",
-        "nine_slice.h": "c"
+        "nine_slice.h": "c",
+        "render_view_pick.h": "c",
+        "render_view_wireframe.h": "c"
     },
     // File copyright documentation tag.  Array of strings will be converted to one line per element.  Can template {year}.
     "doxdocgen.file.copyrightTag": [

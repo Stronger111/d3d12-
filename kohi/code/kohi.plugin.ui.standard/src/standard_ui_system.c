@@ -222,7 +222,7 @@ KAPI b8 standard_ui_system_initialize(u64* memory_requirement, standard_ui_state
     KTRACE("Initialized standard UI system.");
 
     // FIXME: Need to register external system - not sure if this should be done here or when/where the plugin is initialized.
-    /* engine_external_system_register(memory_requirement); */
+    engine_external_system_register(memory_requirement);
     state->renderer = engine_systems_get()->renderer_system;
 
     return true;
@@ -239,14 +239,14 @@ void standard_ui_system_shutdown(standard_ui_state* state) {
 
         for (u32 i = 0; i < state->inactive_control_count; i++) {
             sui_control* c = state->inactive_controls[i];
-            c->unload(state,c);
-            c->destroy(state,c);
+            c->unload(state, c);
+            c->destroy(state, c);
         }
 
         for (u32 i = 0; i < state->active_control_count; i++) {
             sui_control* c = state->active_controls[i];
-            c->unload(state,c);
-            c->destroy(state,c);
+            c->unload(state, c);
+            c->destroy(state, c);
         }
 
         if (state->ui_atlas.texture) {
@@ -265,7 +265,7 @@ b8 standard_ui_system_update(standard_ui_state* state, struct frame_data* p_fram
     // 更新正在激活的组件
     for (u32 i = 0; i < state->active_control_count; i++) {
         sui_control* c = state->active_controls[i];
-        c->update(state,c, p_frame_data);
+        c->update(state, c, p_frame_data);
     }
 
     return true;
@@ -279,7 +279,7 @@ void standard_ui_system_render_prepare_frame(standard_ui_state* state, const str
     for (u32 i = 0; i < state->active_control_count; ++i) {
         sui_control* c = state->active_controls[i];
         if (c->render_prepare) {
-            c->render_prepare(state,c, p_frame_data);
+            c->render_prepare(state, c, p_frame_data);
         }
     }
 }
@@ -298,7 +298,7 @@ b8 standard_ui_system_render(standard_ui_state* state, sui_control* root, struct
 
     if (root->render) {
         // render函数指针
-        if (!root->render(state,root, p_frame_data, render_data)) {
+        if (!root->render(state, root, p_frame_data, render_data)) {
             KERROR("Root element failed to render. See logs for more details");
             return false;
         }
@@ -325,7 +325,7 @@ b8 standard_ui_system_update_active(standard_ui_state* state, sui_control* contr
     if (!state) {
         return false;
     }
-  
+
     u32* src_limit = control->is_active ? &state->inactive_control_count : &state->active_control_count;
     u32* dst_limt = control->is_active ? &state->active_control_count : &state->inactive_control_count;
     sui_control** src_array = control->is_active ? state->inactive_controls : state->active_controls;
@@ -418,7 +418,7 @@ void standard_ui_system_focus_control(standard_ui_state* state, sui_control* con
     state->focused_id = control ? control->id.uniqueid : INVALID_ID_U64;
 }
 
-b8 sui_base_control_create(standard_ui_state* state,const char* name, struct sui_control* out_control) {
+b8 sui_base_control_create(standard_ui_state* state, const char* name, struct sui_control* out_control) {
     if (!out_control) {
         return false;
     }
@@ -440,7 +440,7 @@ b8 sui_base_control_create(standard_ui_state* state,const char* name, struct sui
     return true;
 }
 
-void sui_base_control_destroy(standard_ui_state* state,struct sui_control* self) {
+void sui_base_control_destroy(standard_ui_state* state, struct sui_control* self) {
     if (self) {
         // TODO:recurse children/unparent?
         if (self->internal_data && self->internal_data_size) {
@@ -453,25 +453,25 @@ void sui_base_control_destroy(standard_ui_state* state,struct sui_control* self)
     }
 }
 
-b8 sui_base_control_load(standard_ui_state* state,struct sui_control* self) {
+b8 sui_base_control_load(standard_ui_state* state, struct sui_control* self) {
     if (!self) {
         return false;
     }
     return true;
 }
 
-void sui_base_control_unload(standard_ui_state* state,struct sui_control* self) {
+void sui_base_control_unload(standard_ui_state* state, struct sui_control* self) {
     if (!self) {
         //
     }
 }
 
-static void sui_recalculate_world_xform(standard_ui_state* state,struct sui_control* self) {
+static void sui_recalculate_world_xform(standard_ui_state* state, struct sui_control* self) {
     xform_calculate_local(self->xform);
     mat4 local = xform_local_get(self->xform);
 
     if (self->parent) {
-        sui_recalculate_world_xform(state,self->parent);
+        sui_recalculate_world_xform(state, self->parent);
         mat4 parent_world = xform_world_get(self->parent->xform);
         mat4 self_world = mat4_mul(local, parent_world);
         xform_world_set(self->xform, self_world);
@@ -481,15 +481,15 @@ static void sui_recalculate_world_xform(standard_ui_state* state,struct sui_cont
     }
 }
 
-b8 sui_base_control_update(standard_ui_state* state,struct sui_control* self, struct frame_data* p_frame_data) {
+b8 sui_base_control_update(standard_ui_state* state, struct sui_control* self, struct frame_data* p_frame_data) {
     if (!self) {
         return false;
     }
-    sui_recalculate_world_xform(state,self);
+    sui_recalculate_world_xform(state, self);
     return true;
 }
 
-b8 sui_base_control_render(standard_ui_state* state,struct sui_control* self, struct frame_data* p_frame_data, standard_ui_render_data* render_data) {
+b8 sui_base_control_render(standard_ui_state* state, struct sui_control* self, struct frame_data* p_frame_data, standard_ui_render_data* render_data) {
     if (!self) {
         return false;
     }
@@ -497,10 +497,10 @@ b8 sui_base_control_render(standard_ui_state* state,struct sui_control* self, st
     return true;
 }
 
-void sui_control_position_set(standard_ui_state* state,struct sui_control* self, vec3 position) {
+void sui_control_position_set(standard_ui_state* state, struct sui_control* self, vec3 position) {
     xform_position_set(self->xform, position);
 }
 
-vec3 sui_control_position_get(standard_ui_state* state,struct sui_control* self) {
+vec3 sui_control_position_get(standard_ui_state* state, struct sui_control* self) {
     return xform_position_get(self->xform);
 }

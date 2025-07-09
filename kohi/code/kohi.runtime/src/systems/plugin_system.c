@@ -215,6 +215,15 @@ b8 plugin_system_load_plugin(struct plugin_system_state* state, const char* name
         return false;
     }
 
+    // Invoke the initialization of the plugin.
+    // NOTE: May need to move this if it proves to be happening too early.
+    if (new_plugin.kplugin_initialize) {
+        if (!new_plugin.kplugin_initialize(&new_plugin)) {
+            KERROR("Failed to initialize new plugin during creation.");
+            return false;
+        }
+    }
+
     // Register the plugin.
     darray_push(state->plugins, new_plugin);
 

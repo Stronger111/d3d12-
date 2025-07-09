@@ -1,5 +1,5 @@
+/*
 #include "render_view_pick.h"
-
 #include "containers/darray.h"
 #include "event.h"
 #include "frame_data.h"
@@ -64,7 +64,7 @@ static b8 render_view_on_event(u16 code, void* sender, void* listener_inst, even
 
     switch (code) {
     case EVENT_CODE_DEFAULT_RENDERTARGET_REFRESH_REQUIRED:
-        /* render_view_system_render_targets_regenerate(self); */
+        /* render_view_system_render_targets_regenerate(self); 
         // This needs to be consumed by other views, so consider it _not_ handled.
         return false;
     }
@@ -326,7 +326,7 @@ b8 render_view_pick_on_packet_build(const render_view* self, struct frame_data* 
          if (packet_data->texts[i]->id.uniqueid > highest_instance_id) {
              highest_instance_id = packet_data->texts[i]->id.uniqueid;
          }
-     }*/
+     }
 
     i32 required_instance_count = highest_instance_id + 1;
     // TODO: this needs to take into account the highest id, not the count, because they can and do skip ids.
@@ -560,7 +560,7 @@ b8 render_view_pick_on_render(const render_view* self, const render_view_packet*
            }
 
            ui_text_draw(text);
-       }  */
+       }  
 
         if (!renderer_renderpass_end(pass)) {
             KERROR("render_view_ui_on_render pass index %u failed to end.", p);
@@ -646,4 +646,4 @@ b8 render_view_pick_attachment_target_regenerate(struct render_view* self, u32 p
     renderer_texture_create_writeable(attachment->texture);
 
     return true;
-}
+}*/

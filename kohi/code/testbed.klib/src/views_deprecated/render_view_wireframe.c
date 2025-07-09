@@ -1,5 +1,5 @@
+/*
 #include "render_view_wireframe.h"
-
 #include <containers/darray.h>
 #include <event.h>
 #include <frame_data.h>
@@ -51,7 +51,7 @@ static b8 render_view_on_event(u16 code, void* sender, void* listener_inst, even
 
     switch (code) {
     case EVENT_CODE_DEFAULT_RENDERTARGET_REFRESH_REQUIRED:
-        /* render_view_system_render_targets_regenerate(self); */
+        /* render_view_system_render_targets_regenerate(self);
         // This needs to be consumed by other views,so consider this as _not_ handled.
         return false;
     }
@@ -305,4 +305,4 @@ b8 render_view_wireframe_on_render(const struct render_view* self, const struct 
         }
     }
     return true;
-}
+}*/

@@ -1,3 +1,4 @@
+/*
 #ifndef _TESTBED_RENDER_VIEW_WIREFRAME_H_
 #define _TESTBED_RENDER_VIEW_WIREFRAME_H_
 
@@ -26,4 +27,4 @@ b8 render_view_wireframe_on_packet_build(const struct render_view* self, struct 
 void render_view_wireframe_on_packet_destroy(const struct render_view* self, struct render_view_packet* packet);
 b8 render_view_wireframe_on_render(const struct render_view* self, const struct render_view_packet* packet, struct frame_data* p_frame_data);
 
-#endif
+#endif*/

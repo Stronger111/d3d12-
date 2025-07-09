@@ -1,5 +1,5 @@
+/*
 #include "editor_rendergraph.h"
-
 #include "containers/darray.h"
 #include "logger.h"
 #include "editor/editor_gizmo.h"
@@ -148,3 +148,4 @@ void editor_rendergraph_refresh_pfns(editor_rendergraph* graph) {
     graph->editor_pass.execute = editor_pass_execute;
     graph->editor_pass.destroy = editor_pass_destroy;
 }
+*/
