@@ -50,6 +50,7 @@ typedef struct testbed_game_state {
     f64 last_update_elapsed;
 
     // TODO: temp
+    rendergraph forward_graph;
     scene main_scene;
     b8 main_scene_unload_triggered;
 

@@ -26,6 +26,7 @@
 #include <systems/camera_system.h>
 #include <time/kclock.h>
 
+#include "application/application_config.h"
 #include "game_state.h"
 
 // Standard UI.
@@ -64,6 +65,7 @@
 #include "game_keybinds.h"
 // TODO: end temp
 
+#include "platform/platform.h"
 #include "plugins/plugin_types.h"
 #include "systems/plugin_system.h"
 #include "systems/timeline_system.h"
@@ -464,8 +466,46 @@ b8 application_initialize(struct application* game_inst) {
     // Register resource loader
     resource_system_loader_register(audio_resource_loader_create());
 
-    // LEFTOFF: Pick out rendergraph(s) config from app config, create/init them
+    // Pick out rendergraph(s) config from app config, create/init them
     // from here, save off to state.
+    application_config* config = &game_inst->app_config;
+    u32 rendergraph_count = darray_length(config->rendergraphs);
+    if (rendergraph_count < 1) {
+        KERROR("At least one rendergraph is required in order to run this application.");
+        return false;
+    }
+
+    b8 rendergraph_found = false;
+    for (u32 i = 0;i < rendergraph_count;++i) {
+        application_rendergraph_config* rg_config = &config->rendergraphs[i];
+        if (strings_equali("forward_graph", rg_config->name)) {
+
+            //Get colourbuffer and depthbuffer from the currently active window.
+            kwindow* current_window = engine_active_window_get();
+            texture* global_colourbuffer = &current_window->renderer_state->colourbuffer;
+            texture* global_depthbuffer = &current_window->renderer_state->depthbuffer;
+
+            //create the rendergraph.
+            if (!rendergraph_create(rg_config->configuration_str, global_colourbuffer, global_depthbuffer, &state->forward_graph)) {
+                KERROR("Failed to create forward_graph. See logs for details.");
+                return false;
+            }
+            rendergraph_found = true;
+            break;
+        }
+    }
+
+    if (!rendergraph_found) {
+        KERROR("No rendergraph config named 'forward_graph' was found, but is required for this application.");
+        return false;
+    }
+
+    // TODO: Internalize this step?
+    // Might need to happen after the rg acquires its resources.
+    if (!rendergraph_finalize(&state->forward_graph)) {
+        KERROR("Failed to finalize rendergraph. See logs for details");
+        return false;
+    }
 
     // Invalid handle = no selection.
     state->selection.xform_handle = k_handle_invalid();
@@ -516,7 +556,7 @@ b8 application_initialize(struct application* game_inst) {
 
     // FIXME: set in debug3d rg node. Might want a way to reference just the geometry,
     // and not have to maintain a pointer in this way.
-    editor_rendergraph_gizmo_set(&state->editor_graph, &state->gizmo);
+    //editor_rendergraph_gizmo_set(&state->editor_graph, &state->gizmo);
 
     // World meshes
     // Invalidate all meshes.
@@ -693,46 +733,10 @@ b8 application_initialize(struct application* game_inst) {
     }
     audio_system_channel_play(7, state->test_music, true);
 
-    // HACK: Begin frustum visualizations for the camera and the shadow "camera".
-    // Note that things in this block are not needed otherwise.
-    // {
-    //     // A box visualize the center point of the perspective projection matrix.
-    //     debug_box3d centerbox;
-    //     debug_box3d_create((vec3){1.0f, 1.0f, 1.0f}, 0, &centerbox);
-    //     debug_box3d_colour_set(&centerbox, (vec4){0.0f, 0.0f, 1.0f, 1.0f});
-    //     debug_box3d_initialize(&centerbox);
-    //     debug_box3d_load(&centerbox);
-    //     darray_push(state->test_boxes, centerbox);
-    //     u32 box_count = darray_length(state->test_boxes);
-    //     state->proj_box_index = box_count - 1;
-
-    //     // Create debug lines for the perspective and shadow cameras.
-    //     // 12 lines each - 4 for the near clip, 4 for the far clip ,4 connectors.
-    //     // Perspective lines first, then shadow.
-    //     for (u32 j = 0; j < 2; ++j) {
-    //         for (u32 i = 0; i < 12; i++) {
-    //             vec4 colour = (vec4){0.0f, 1.0f, 0.0f, 1.0f};
-    //             if (i > 3 && i < 8) {
-    //                 colour.r = 1.0f;
-    //                 colour.g = 0.0f;
-    //                 colour.b = 0.0f;
-    //             } else if (i > 7) {
-    //                 colour.r = 1.0f;
-    //                 colour.g = 1.0f;
-    //                 colour.b = 0.0f;
-    //             }
-
-    //             debug_line3d line;
-    //             debug_line3d_create(vec3_zero(), vec3_one(), 0, &line);
-    //             debug_line3d_colour_set(&line, colour);
-    //             debug_line3d_initialize(&line);
-    //             debug_line3d_load(&line);
-    //             darray_push(state->test_lines, line);
-    //             state->cam_proj_line_indices[(12 * j) + i] = darray_length(state->test_lines) - 1;
-    //         }
-    //     }
-    // }
-    // HACK: End frustum visualizations.
+    if (!rendergraph_load_resources(&state->forward_graph)) {
+        KERROR("Failed to load resources for rendergraph. See logs for details.");
+        return false;
+    }
 
     state->running = true;
 
@@ -906,22 +910,26 @@ b8 application_render_frame(struct application* game_inst, struct frame_data* p_
 
     kclock_start(&state->render_clock);
 
-    // TODO: Anything to do here?
+    //Execute the rendergraph.
+    if (!rendergraph_execute_frame(&state->forward_graph, p_frame_data)) {
+        KERROR("Rendergraph failed to execute frame, see logs for details.");
+        return false;
+    }
 
     kclock_update(&state->render_clock);
 
     return true;
 }
 
-void application_on_resize(struct application* game_inst, u32 width, u32 height) {
+void application_on_window_resize(struct application* game_inst, const struct kwindow* window) {
     if (!game_inst->state) {
         return;
     }
     testbed_game_state* state = (testbed_game_state*)game_inst->state;
 
-    state->width = width;
-    state->height = height;
-    if (!width || !height) {
+    state->width = window->width;
+    state->height = window->height;
+    if (!window->width || !window->height) {
         return;
     }
 

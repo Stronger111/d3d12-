@@ -1,7 +1,7 @@
 #include <containers/darray.h>
-#include <kstring.h>
-#include <logger.h>
 #include <defines.h>
+#include <logger.h>
+#include <strings/kstring.h>
 
 // For executing shell commands
 #include <stdlib.h>
