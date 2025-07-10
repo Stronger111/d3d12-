@@ -41,8 +41,8 @@
 
 // TODO: Editor temp
 #include "editor/editor_gizmo.h"
-#include <resources/kohidebug/debug_box3d.h>
-#include <resources/kohidebug/debug_line3d.h>
+#include <resources/Kohidebug/debug_box3d.h>
+#include <resources/Kohidebug/debug_line3d.h>
 
 // TODO: temp
 #include <identifiers/identifier.h>
@@ -436,7 +436,7 @@ b8 application_boot(struct application* game_inst) {
     state->running = false;
 
     //Get the standard ui plugin
-    state->sui_plugin = plugin_system_get(engine_systems_get()->platform_system, "kohi.plugin.ui.standard");
+    state->sui_plugin = plugin_system_get(engine_systems_get()->plugin_system, "kohi.plugin.ui.standard");
     state->sui_plugin_state = state->sui_plugin->plugin_state;
     state->sui_state = state->sui_plugin_state->state;
     // debug_console 保存到游戏状态中

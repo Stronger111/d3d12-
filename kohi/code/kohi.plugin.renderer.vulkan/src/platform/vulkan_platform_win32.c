@@ -40,12 +40,16 @@ b8 vulkan_platform_create_vulkan_surface(vulkan_context* context,struct kwindow*
     create_info.hinstance = handle->h_instance;
     create_info.hwnd = handle->hwnd;
 
-    VkResult result = vkCreateWin32SurfaceKHR(context->instance, &create_info, context->allocator, &context->surface);
+    VkResult result = vkCreateWin32SurfaceKHR(context->instance, &create_info, context->allocator, &window->renderer_state->backend_state->surface);
     if (result != VK_SUCCESS) {
         KFATAL("Vulkan surface creation failed.");
         return false;
     }
 
     return true;
+}
+
+b8 vulkan_platform_presentation_support(vulkan_context* context, VkPhysicalDevice physical_device, u32 queue_family_index) {
+    return (b8)vkGetPhysicalDeviceWin32PresentationSupportKHR(physical_device, queue_family_index);
 }
 #endif

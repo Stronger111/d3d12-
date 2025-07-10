@@ -141,12 +141,12 @@ char* string_duplicate(const char* str) {
     return copy;
 }
 
-void string_free(char* str) {
+void string_free(const char* str) {
     if (str) {
         // NOTE: Using kfree instead of aligned version because this might be
         // called without the memory system being initialized (i.e.unit tests)
         u64 length = string_length(str);
-        kfree(str, length + 1, MEMORY_TAG_STRING);
+        kfree((char*)str, length + 1, MEMORY_TAG_STRING);
     }
     else {
         // TODO: report null ptr?

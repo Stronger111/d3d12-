@@ -120,7 +120,7 @@ void vulkan_image_create(vulkan_context* context,
 
         VK_CHECK(vkCreateImageView(context->device.logical_device, &out_image->view_create_info, context->allocator, &out_image->view));
 #if _DEBUG
-        char formatted_name[TEXTURE_NAME_MAX_LENGTH] = string_format("%s_view_idx_%u", out_image->name, 0);
+        char* formatted_name = string_format("%s_view_idx_%u", out_image->name, 0);
         VK_SET_DEBUG_OBJECT_NAME(context, VK_OBJECT_TYPE_IMAGE_VIEW, out_image->view, formatted_name);
         string_free(formatted_name);
 #endif
@@ -206,7 +206,7 @@ void vulkan_image_destroy(vulkan_context* context, vulkan_image* image) {
 
 void vulkan_image_recreate(vulkan_context* context, vulkan_image* image) {
     //Release the old image/views first, then create new.
-    vkDestroyImageView(context->device.logical_device, image->view, &context->allocator);
+    vkDestroyImageView(context->device.logical_device, image->view, context->allocator);
     vkFreeMemory(context->device.logical_device, image->memory, context->allocator);
     b8 is_device_memory = (image->memory_flags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) == VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
     kfree_report(image->memory_requirements.size, is_device_memory ? MEMORY_TAG_GPU_LOCAL : MEMORY_TAG_VULKAN);

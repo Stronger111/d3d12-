@@ -386,6 +386,11 @@ b8 shader_system_uniform_set_by_location_arrayed(u32 shader_id, u16 location, u3
     return renderer_shader_uniform_set(state_ptr->renderer, s, uniform, array_index, value);
 }
 
+b8 shader_system_bind_instance(u32 shader_id, u32 instance_id) {
+    state_ptr->shaders[shader_id].bound_instance_id = instance_id;
+    return true;
+}
+
 b8 shader_system_apply_global(u32 shader_id) {
     shader* s = &state_ptr->shaders[shader_id];
     return renderer_shader_apply_globals(state_ptr->renderer, s);

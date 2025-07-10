@@ -662,6 +662,12 @@ void renderer_clear_depth_set(struct renderer_system_state* state, f32 depth) {
     }
 }
 
+void renderer_clear_stencil_set(struct renderer_system_state* state, u32 stencil) {
+    if(state){
+        state->backend->clear_stencil_set(state->backend, stencil);
+    }
+}
+
 b8 renderer_clear_colour(struct renderer_system_state* state, k_handle texture_handle) {
     if (state && !k_handle_is_invalid(texture_handle)) {
         struct texture_internal_data* data = state->textures[texture_handle.handle_index].data;

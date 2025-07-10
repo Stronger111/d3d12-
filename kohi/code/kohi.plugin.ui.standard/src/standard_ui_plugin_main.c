@@ -14,6 +14,8 @@ b8 kplugin_create(struct kruntime_plugin* out_plugin) {
 
     out_plugin->plugin_state_size = sizeof(standard_ui_plugin_state);
     out_plugin->plugin_state = kallocate(out_plugin->plugin_state_size, MEMORY_TAG_PLUGIN);
+
+    return true;
 }
 
 b8 kplugin_initialize(struct kruntime_plugin* plugin) {
@@ -37,7 +39,7 @@ b8 kplugin_initialize(struct kruntime_plugin* plugin) {
     return true;
 }
 
-b8 kplugin_destroy(struct kruntime_plugin* plugin) {
+void kplugin_destroy(struct kruntime_plugin* plugin) {
     if (plugin) {
         standard_ui_plugin_state* plugin_state = plugin->plugin_state;
         standard_ui_system_shutdown(plugin_state->state);

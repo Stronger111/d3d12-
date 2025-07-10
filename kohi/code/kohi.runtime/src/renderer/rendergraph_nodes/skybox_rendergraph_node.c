@@ -47,6 +47,7 @@ b8 skybox_rendergraph_node_create(struct rendergraph* graph, struct rendergraph_
     //Setup internal data.
     self->internal_data = kallocate(sizeof(skybox_rendergraph_node_internal_data), MEMORY_TAG_RENDERER);
     skybox_rendergraph_node_internal_data* internal_data = self->internal_data;
+    internal_data->renderer = engine_systems_get()->renderer_system;
 
     self->name = string_duplicate(config->name);
 

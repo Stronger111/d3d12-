@@ -6,7 +6,7 @@
 
 struct rendergraph;
 struct rendergraph_node;
-struct rendergraph_config;
+struct rendergraph_node_config;
 struct frame_data;
 struct texture;
 
@@ -14,7 +14,7 @@ struct directional_light;
 struct geometry_render_data;
 struct viewport;
 
-KAPI b8 forward_rendergraph_node_create(struct rendergraph* graph,struct rendergraph_node* self, struct rendergraph_config* config);
+KAPI b8 forward_rendergraph_node_create(struct rendergraph* graph,struct rendergraph_node* self, struct rendergraph_node_config* config);
 KAPI b8 forward_rendergraph_node_initialize(struct rendergraph_node* self);
 KAPI b8 forward_rendergraph_node_load_resources(struct rendergraph_node* self);
 KAPI b8 forward_rendergraph_node_execute(struct rendergraph_node* self, struct frame_data* p_frame_data);

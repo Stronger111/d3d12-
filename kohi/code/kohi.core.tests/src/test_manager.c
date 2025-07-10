@@ -1,10 +1,10 @@
 #include "test_manager.h"
 
 #include <containers/darray.h>
-#include <core/logger.h>
-#include <core/kstring.h>
-#include <core/kclock.h>
-#include <core/kmemory.h>
+#include <logger.h>
+#include <strings/kstring.h>
+#include <time/kclock.h>
+#include <memory/kmemory.h>
 
 typedef struct test_entry {
     PFN_test func;

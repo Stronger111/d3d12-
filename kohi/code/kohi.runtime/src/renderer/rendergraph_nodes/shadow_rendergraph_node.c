@@ -1,6 +1,7 @@
 #include "shadow_rendergraph_node.h"
 
 #include "containers/darray.h"
+#include "core/engine.h"
 #include "defines.h"
 #include "identifiers/khandle.h"
 #include "logger.h"

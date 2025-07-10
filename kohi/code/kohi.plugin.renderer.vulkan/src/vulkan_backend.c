@@ -389,7 +389,7 @@ b8 vulkan_renderer_on_window_created(renderer_backend_interface* backend, struct
     KDEBUG("Vulkan surface created for window '%s'.", window->name);
 
     //Create swapchain. This also handles colourbuffer creation.
-    if (!vulkan_swapchain_create(context, window, context->flags, &window_backend->swapchain)) {
+    if (!vulkan_swapchain_create(backend, window, context->flags, &window_backend->swapchain)) {
         KERROR("Failed to create Vulkan swapchain during creation of window '%s'. See logs for details.", window->name);
         return false;
     }
@@ -450,7 +450,7 @@ b8 vulkan_renderer_on_window_created(renderer_backend_interface* backend, struct
         vulkan_image* image = &texture_data->images[i];
 
         // Construct a unique name for each image.
-        char formatted_name[TEXTURE_NAME_MAX_LENGTH] = string_format("__kohi_default_depth_stencil_texture_%u", i);
+        char* formatted_name = string_format("__kohi_default_depth_stencil_texture_%u", i);
 
         // Create the actual backing image.
         vulkan_image_create(
@@ -542,7 +542,7 @@ void vulkan_renderer_on_window_destroyed(renderer_backend_interface* backend, st
         for (u32 i = 0;i < window_backend->swapchain.image_count;++i) {
             //Command buffers
             if (window_backend->graphics_command_buffers[i].handle) {
-                vulkan_command_buffer_free(&context, context->device.graphics_command_pool, &window_backend->graphics_command_buffers[i]);
+                vulkan_command_buffer_free(context, context->device.graphics_command_pool, &window_backend->graphics_command_buffers[i]);
                 window_backend->graphics_command_buffers[i].handle = 0;
             }
         }
@@ -739,6 +739,8 @@ b8 vulkan_renderer_frame_command_list_end(renderer_backend_interface* backend, s
 
     //Just end the command buffer.
     vulkan_command_buffer_end(command_buffer);
+
+    return true;
 }
 
 b8 vulkan_renderer_frame_submit(struct renderer_backend_interface* backend, struct frame_data* p_frame_data) {
@@ -1298,6 +1300,8 @@ b8 vulkan_renderer_texture_resources_acquire(renderer_backend_interface* backend
 
     //Since data has not been uploaded yet, the generation should be INVALID_ID.
     texture_data->generation = INVALID_ID;
+
+    return true;
 }
 
 void vulkan_renderer_texture_resources_release(renderer_backend_interface* backend, texture_internal_data* texture_data) {

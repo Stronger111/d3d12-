@@ -1,12 +1,10 @@
-#include "test_manager.h"
-
+#include <logger.h>
 #include "memory/linear_allocator_tests.h"
 #include "containers/hashtable_tests.h"
 #include "containers/freelist_tests.h"
 #include "memory/dynamic_allocator_tests.h"
 #include "parsers/kson_parser_tests.h"
-
-#include <core/logger.h>
+#include "test_manager.h"
 
 
 int main(void) {

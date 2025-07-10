@@ -57,6 +57,6 @@ typedef struct kruntime_plugin {
     /** @brief The size of the plugin's internal state. */
     u64 plugin_state_size;
     /** @brief The block of memory holding the plugin's internal state. */
-    struct kruntime_plugin_state* plugin_state;
+    void* plugin_state;
 } kruntime_plugin;
 #endif

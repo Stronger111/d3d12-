@@ -394,7 +394,7 @@ typedef struct renderer_backend_interface {
   * @param backend A pointer to the renderer backend interface.
   * @param window A pointer to the window being resized.
   */
-    b8 (*window_destroy)(struct renderer_backend_interface* backend, struct kwindow* window);
+    void (*window_destroy)(struct renderer_backend_interface* backend, struct kwindow* window);
     /**
    * @brief Handles window resizes.
    *

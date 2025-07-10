@@ -12,18 +12,19 @@
 #include "vulkan_types.h"
 #include "vulkan_utils.h"
 
+
 static b8 create(renderer_backend_interface* backend, kwindow* window, renderer_config_flags flags, vulkan_swapchain* swapchain);
 static void destroy(renderer_backend_interface* backend, vulkan_swapchain* swapchain);
 
-void vulkan_swapchain_create(renderer_backend_interface* backend, kwindow* window, renderer_config_flags flags, vulkan_swapchain* out_swapchain) {
+b8 vulkan_swapchain_create(struct renderer_backend_interface* backend, kwindow* window, renderer_config_flags flags, vulkan_swapchain* out_swapchain) {
     // Simple create a new one
-    create(backend, window, flags, out_swapchain);
+    return  create(backend, window, flags, out_swapchain);
 }
 
-void vulkan_swapchain_recreate(struct renderer_backend_interface* backend, struct kwindow* window, vulkan_swapchain* swapchain) {
+b8 vulkan_swapchain_recreate(struct renderer_backend_interface* backend, struct kwindow* window, vulkan_swapchain* swapchain) {
     // Destroy the old and create a new one
     destroy(backend, swapchain);
-    create(backend, window, swapchain->flags, swapchain);
+   return create(backend, window, swapchain->flags, swapchain);
 }
 
 void vulkan_swapchain_destroy(struct renderer_backend_interface* backend, vulkan_swapchain* swapchain) {

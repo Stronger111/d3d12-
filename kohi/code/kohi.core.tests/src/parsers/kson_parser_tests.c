@@ -1,14 +1,14 @@
 #include "kson_parser_tests.h"
 
 #include <containers/darray.h>
-#include <core/kstring.h>
 #include <defines.h>
 #include <parsers/kson_parser.h>
 #include <platform/filesystem.h>
+#include <strings/kstring.h>
 
 #include "../expect.h"
 #include "../test_manager.h"
-#include "core/logger.h"
+#include "logger.h"
 
 u8 kson_parser_should_create_and_destroy(void) {
     kson_parser parser;

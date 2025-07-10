@@ -16,7 +16,7 @@
 
 // TODO: temp
 #include <core/keymap.h>
-#include <resources/kohidebug/debug_box3d.h>
+#include <resources/Kohidebug/debug_box3d.h>
 #include <resources/skybox.h>
 #include <standard_ui_system.h>
 #include <systems/light_system.h>

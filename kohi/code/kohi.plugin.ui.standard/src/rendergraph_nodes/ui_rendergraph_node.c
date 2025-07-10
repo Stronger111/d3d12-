@@ -224,7 +224,6 @@ b8 ui_rendergraph_node_execute(struct rendergraph_node* self, struct frame_data*
         shader_system_apply_instance(internal_data->shader_id);
 
         // Apply local
-        shader_system_bind_local();
         shader_system_uniform_set_by_location(internal_data->shader_id, internal_data->sui_locations.model, &renderable->render_data.model);
         shader_system_apply_local(internal_data->shader_id);
 

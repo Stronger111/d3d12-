@@ -447,7 +447,7 @@ static b8 create_and_upload_texture(texture* t, const char* name, texture_type t
     t->array_size = array_size;
 
     //Acquire backing renderer resources.
-    if (!renderer_texture_resources_acquire(state_ptr->renderer, t->type, t->width, t->height, t->channel_count, t->flags, t->mip_levels, t->array_size, &t->renderer_texture_handle)) {
+    if (!renderer_texture_resources_acquire(state_ptr->renderer,t->name,t->type, t->width, t->height, t->channel_count, t->flags, t->mip_levels, t->array_size, &t->renderer_texture_handle)) {
         KERROR("Failed to acquire renderer resources for default texture '%s'. See logs for details.", name);
         return false;
     }
@@ -698,7 +698,7 @@ static void texture_load_job_success(void* params) {
     // Acquire internal texture resources. Can't be jobified until the renderer is multithreaded.
     texture* t = &texture_params->temp_texture;
     if (!renderer_texture_resources_acquire(
-        state_ptr->renderer, t->type, t->width, t->height, t->channel_count, t->mip_levels, t->array_size, t->flags, &t->renderer_texture_handle)) {
+        state_ptr->renderer,t->name, t->type, t->width, t->height, t->channel_count, t->mip_levels, t->array_size, t->flags, &t->renderer_texture_handle)) {
         KERROR("Error acquiring renderer backing resources for texture '%s'.", t->name);
         return;
     }
@@ -785,7 +785,7 @@ static void texture_load_layered_job_success(void* result) {
     // Acquire internal texture resources. Can't be jobified until the renderer is multithreaded.
     texture* t = &typed_result->temp_texture;
     if (!renderer_texture_resources_acquire(
-        state_ptr->renderer, t->type, t->width, t->height, t->channel_count, t->mip_levels, t->array_size, t->flags, &t->renderer_texture_handle)) {
+        state_ptr->renderer,t->name, t->type, t->width, t->height, t->channel_count, t->mip_levels, t->array_size, t->flags, &t->renderer_texture_handle)) {
         KERROR("Error acquiring renderer backing resources for texture '%s'.", t->name);
         return;
     }
@@ -1077,7 +1077,7 @@ static b8 create_texture(texture* t, texture_type type, u32 width, u32 height, u
             t->mip_levels = 1;
         }
         // Acquire backing renderer resources.
-        if (!renderer_texture_resources_acquire(state_ptr->renderer, t->type, t->width, t->height, t->channel_count, t->mip_levels, t->array_size, t->flags, &t->renderer_texture_handle)) {
+        if (!renderer_texture_resources_acquire(state_ptr->renderer,t->name, t->type, t->width, t->height, t->channel_count, t->mip_levels, t->array_size, t->flags, &t->renderer_texture_handle)) {
             KERROR("Failed to acquire renderer resources for default texture '%s'. See logs for details.", t->name);
             return false;
         }

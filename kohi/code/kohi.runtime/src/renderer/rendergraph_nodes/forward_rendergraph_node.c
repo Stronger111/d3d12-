@@ -144,7 +144,7 @@ typedef struct forward_rendergraph_node_internal_data {
     mat4 directional_light_spaces[MAX_SHADOW_CASCADE_COUNT];
 } forward_rendergraph_node_internal_data;
 
-b8 forward_rendergraph_node_create(struct rendergraph* graph, struct rendergraph_node* self, rendergraph_node_config* config) {
+b8 forward_rendergraph_node_create(struct rendergraph* graph, struct rendergraph_node* self,struct rendergraph_node_config* config) {
     if (!self) {
         KERROR("forward_rendergraph_node_create requires a valid pointer to a pass");
         return false;
@@ -537,7 +537,7 @@ b8 forward_rendergraph_node_execute(struct rendergraph_node* self, struct frame_
             // Apply the locals
             {
                 UNIFORM_APPLY_OR_FAIL(shader_system_uniform_set_by_location(internal_data->terrain_shader_id, internal_data->terrain_locations.model, &internal_data->terrain_geometries[i].model));
-                material_system_apply_local(m, &internal_data->terrain_geometries[i].model, p_frame_data);
+                shader_system_apply_local(internal_data->terrain_shader_id);
             }
 
             // Draw it.
@@ -577,7 +577,7 @@ b8 forward_rendergraph_node_execute(struct rendergraph_node* self, struct frame_
                 // Global Shader Options
                  // Global shader options.
                 b8 use_pcf = renderer_pcf_enabled(internal_data->renderer);
-                UNIFORM_APPLY_OR_FAIL(shader_system_uniform_set_by_location(internal_data->pbr_shader_id, internal_data->pbr_locations.use_pcf, use_pcf));
+                UNIFORM_APPLY_OR_FAIL(shader_system_uniform_set_by_location(internal_data->pbr_shader_id, internal_data->pbr_locations.use_pcf, &use_pcf));
 
                 // HACK:Read this is from somewhere (or have global setter?)
                 f32 bias = 0.00005f;

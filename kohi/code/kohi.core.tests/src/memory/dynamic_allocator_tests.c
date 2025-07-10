@@ -5,7 +5,7 @@
 
 #include <defines.h>
 
-#include <core/kmemory.h>
+#include <memory/kmemory.h>
 #include <memory/dynamic_allocator.h>
 
 u8 dynamic_allocator_should_create_and_destroy(void) {

@@ -390,7 +390,7 @@ b8 forward_rendergraph_frame_prepare(forward_rendergraph* graph, struct frame_da
             darray_length_set(ext_data->debug_geometries, ext_data->debug_geometry_count);
 
             // TODO: Move this to the scene.
-            /* // HACK: Inject raycast debug geometries into scene pass data.
+            // HACK: Inject raycast debug geometries into scene pass data.
              *
             u32 line_count = darray_length(state->test_lines);
             for (u32 i = 0; i < line_count; ++i) {

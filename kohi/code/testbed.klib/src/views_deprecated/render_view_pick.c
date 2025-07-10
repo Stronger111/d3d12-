@@ -64,7 +64,7 @@ static b8 render_view_on_event(u16 code, void* sender, void* listener_inst, even
 
     switch (code) {
     case EVENT_CODE_DEFAULT_RENDERTARGET_REFRESH_REQUIRED:
-        /* render_view_system_render_targets_regenerate(self); 
+        render_view_system_render_targets_regenerate(self); 
         // This needs to be consumed by other views, so consider it _not_ handled.
         return false;
     }
@@ -322,7 +322,7 @@ b8 render_view_pick_on_packet_build(const render_view* self, struct frame_data* 
     }
 
     // Count texts as well.
-    /* for (u32 i = 0; i < packet_data->text_count; ++i) {
+    for (u32 i = 0; i < packet_data->text_count; ++i) {
          if (packet_data->texts[i]->id.uniqueid > highest_instance_id) {
              highest_instance_id = packet_data->texts[i]->id.uniqueid;
          }
@@ -536,7 +536,7 @@ b8 render_view_pick_on_render(const render_view* self, const render_view_packet*
         }
 
         // Draw bitmap text
-        /* for (u32 i = 0; i < packet_data->text_count; ++i) {
+         for (u32 i = 0; i < packet_data->text_count; ++i) {
            ui_text* text = packet_data->texts[i];
            current_instance_id = text->id.uniqueid;
            shader_system_bind_instance(current_instance_id);

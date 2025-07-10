@@ -13,6 +13,7 @@
 b8 plugin_create(kruntime_plugin* out_plugin) {
     out_plugin->plugin_state_size = sizeof(renderer_backend_interface);
     out_plugin->plugin_state = kallocate(out_plugin->plugin_state_size, MEMORY_TAG_RENDERER);
+    
     renderer_backend_interface* backend = out_plugin->plugin_state;
 
     backend->initialize = vulkan_renderer_backend_initialize;

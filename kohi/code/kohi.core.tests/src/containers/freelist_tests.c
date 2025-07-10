@@ -4,7 +4,7 @@
 
 #include <defines.h>
 #include <containers/freelist.h>
-#include <core/kmemory.h>
+#include <memory/kmemory.h>
 u8 freelist_should_create_and_destroy(void) {
     // NOTE: creating a small size list, which will trigger a warning.
     KDEBUG("The following warning message is intentional.");

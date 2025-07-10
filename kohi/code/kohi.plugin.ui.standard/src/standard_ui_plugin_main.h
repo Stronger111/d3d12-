@@ -14,7 +14,7 @@ typedef struct standard_ui_plugin_state{
 
 KAPI b8 kplugin_create(struct kruntime_plugin* out_plugin);
 KAPI b8 kplugin_initialize(struct kruntime_plugin* plugin);
-KAPI b8 kplugin_destroy(struct kruntime_plugin* plugin);
+KAPI void kplugin_destroy(struct kruntime_plugin* plugin);
 
 KAPI b8 kplugin_update(struct kruntime_plugin* plugin, struct frame_data* p_frame_data);
 KAPI b8 kplugin_frame_prepare(struct kruntime_plugin* plugin, struct frame_data* p_frame_data);
