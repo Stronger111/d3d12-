@@ -193,12 +193,23 @@ char* string_format_v(const char* format, void* va_listp) {
         return 0;
     }
 
-    i32 length = vsnprintf(0, 0, format, va_listp);
+    // Create a copy of the va_listp since vsnprintf can invalidate the elements of the list
+    // while finding the required buffer length.
+    va_list list_copy;
+#ifdef _MSC_VER
+    list_copy = va_listp;
+#else
+    va_copy(list_copy, va_listp);
+#endif
+
+    i32 length = vsnprintf(0, 0, format, list_copy);
+    va_end(list_copy);
     char* buffer = kallocate(length + 1, MEMORY_TAG_STRING);
     if (!buffer) {
         return 0;
     }
     vsnprintf(buffer, length + 1, format, va_listp);
+    buffer[length] = 0;
     return buffer;
 }
 
@@ -218,7 +229,7 @@ i32 string_format_unsafe(char* dest, const char* format, ...) {
 i32 string_format_v_unsafe(char* dest, const char* format, void* va_listp) {
     if (dest) {
         // Big, but can fit on the stack.
-        char buffer[32000] = {0};
+        char buffer[32000] = { 0 };
         i32 written = vsnprintf(buffer, 32000, format, va_listp);
         buffer[written] = 0;
         kcopy_memory(dest, buffer, written + 1);
