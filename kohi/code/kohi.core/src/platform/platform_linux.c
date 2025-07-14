@@ -3,7 +3,7 @@
 // Linux platform layer.
 #if KPLATFORM_LINUX
 // #include <X11/extensions/Xrender.h>
-  #include <xcb/xproto.h>
+// #include <xcb/xproto.h>
 
 #    ifndef XRANDR_ROTATION_LEFT
 #        define XRANDR_ROTATION_LEFT (1 << 1)
@@ -22,6 +22,7 @@
 #    include <X11/keysym.h>
 #    include <sys/time.h>
 #    include <xcb/xcb.h>
+#    include <xcb/xproto.h>
 
 #    include "containers/darray.h"
 #    include "debug/kassert.h"
