@@ -30,7 +30,6 @@ typedef struct win32_file_watch {
 } win32_file_watch;
 
 typedef struct kwindow_platform_state {
-    //const char* title;
     // 窗口句柄
     HWND hwnd;
 } kwindow_platform_state;
@@ -893,8 +892,8 @@ LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARA
         // Get the updated size
         RECT r;
         GetClientRect(hwnd, &r);
-        // u32 width = r.right - r.left;
-        // u32 height = r.bottom - r.top;
+        u32 width = r.right - r.left;
+        u32 height = r.bottom - r.top;
 
         {
             HMONITOR monitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
@@ -913,7 +912,20 @@ LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARA
             KERROR("Recieved a window resize event for a non-registered window!");
             return 0;
         }
-        state_ptr->window_resized_callback(w);
+
+        //Check if different. If so, trigger a resize event.
+        if (width != w->width || height != w->height) {
+           // Flag as resizing and store the change, but wait to regenerate.
+           w->resizing = true;  
+           //Also reset the frame count since the last resize operation.
+           w->frames_since_resize = 0;
+           //Update dimensions.
+           w->width = width; 
+           w->height = height;
+           
+           //Only trigger the callback if there was an actual change.
+           state_ptr->window_resized_callback(w);
+        }
     } break;
     case WM_KEYDOWN:
     case WM_SYSKEYDOWN:

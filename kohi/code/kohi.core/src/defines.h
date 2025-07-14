@@ -57,6 +57,7 @@ typedef int b32;
 typedef _Bool b8;
 
 #define UINT64_MAX_T 0xffffffffffffffffull
+#define UINT32_MAX_T       0xffffffffull
 
 /** @brief A range, typically of memory */
 typedef struct range {

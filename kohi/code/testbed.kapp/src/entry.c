@@ -6,7 +6,7 @@
 #include <strings/kstring.h>
 
 // typedef b8(*PFN_renderer_plugin_create)(renderer_backend_interface* out_plugin);
-// typedef b8(*PFN_audio_plugin_create)(audio_plugin* out_plugin);
+// typedef b8(*PFN_audio_plugin_create)(audio_backend_interface* out_plugin);
 typedef u64(*PFN_application_state_size)(void);
 
 b8 load_game_lib(application* app) {
@@ -133,6 +133,7 @@ b8 create_application(application* out_application) {
 
     if (!load_game_lib(out_application)) {
         KERROR("Initial game lib load failed!");
+        return false;
     }
 
     out_application->engine_state = 0;
@@ -164,7 +165,7 @@ b8 create_application(application* out_application) {
 
   // Create the renderer plugin.
   PFN_audio_plugin_create audio_plugin_create = out_application->audio_library.functions[0].pfn;
-  if (!audio_plugin_create(&out_application->audio_plugin)) {
+  if (!audio_plugin_create(&out_application->audio_backend_interface)) {
       return false;
   } */
     return true;

@@ -428,12 +428,13 @@ struct texture_internal_data* texture_system_get_internal_or_default(texture* t,
         }
         // Since using a default texture, set the outward generation to invalid id
         *out_generation = INVALID_ID_U8;
-    }else{
+    }
+    else {
         //Set the actual texture generation.
-        *out_generation=t->generation;
+        *out_generation = t->generation;
     }
 
-    return renderer_texture_internal_get(state_ptr->renderer,t->renderer_texture_handle);
+    return renderer_texture_internal_get(state_ptr->renderer, t->renderer_texture_handle);
 }
 
 static b8 create_and_upload_texture(texture* t, const char* name, texture_type type, u32 width, u32 height, u8 channel_count, u8 mip_levels, u16 array_size, texture_flag_bits flags, u32 offset, u8* pixels) {
@@ -447,7 +448,7 @@ static b8 create_and_upload_texture(texture* t, const char* name, texture_type t
     t->array_size = array_size;
 
     //Acquire backing renderer resources.
-    if (!renderer_texture_resources_acquire(state_ptr->renderer,t->name,t->type, t->width, t->height, t->channel_count, t->flags, t->mip_levels, t->array_size, &t->renderer_texture_handle)) {
+    if (!renderer_texture_resources_acquire(state_ptr->renderer, t->name, t->type, t->width, t->height, t->channel_count, t->flags, t->mip_levels, t->array_size, &t->renderer_texture_handle)) {
         KERROR("Failed to acquire renderer resources for default texture '%s'. See logs for details.", name);
         return false;
     }
@@ -503,7 +504,7 @@ static b8 create_default_cube_texture(texture* t, const char* name) {
     }
 
     // Copy the image side data (same on all sides) to the relevant portion of the pixel array.
-    u64 image_size = t->width * t->height * t->channel_count * t->array_size;
+    u64 image_size = tex_dimension * tex_dimension * channels * 6;
     u8* pixels = kallocate(sizeof(u8) * image_size, MEMORY_TAG_ARRAY);
     for (u8 i = 0; i < 6; ++i) {
         // Copy to the relevant portion of the array.
@@ -698,7 +699,7 @@ static void texture_load_job_success(void* params) {
     // Acquire internal texture resources. Can't be jobified until the renderer is multithreaded.
     texture* t = &texture_params->temp_texture;
     if (!renderer_texture_resources_acquire(
-        state_ptr->renderer,t->name, t->type, t->width, t->height, t->channel_count, t->mip_levels, t->array_size, t->flags, &t->renderer_texture_handle)) {
+        state_ptr->renderer, t->name, t->type, t->width, t->height, t->channel_count, t->mip_levels, t->array_size, t->flags, &t->renderer_texture_handle)) {
         KERROR("Error acquiring renderer backing resources for texture '%s'.", t->name);
         return;
     }
@@ -785,7 +786,7 @@ static void texture_load_layered_job_success(void* result) {
     // Acquire internal texture resources. Can't be jobified until the renderer is multithreaded.
     texture* t = &typed_result->temp_texture;
     if (!renderer_texture_resources_acquire(
-        state_ptr->renderer,t->name, t->type, t->width, t->height, t->channel_count, t->mip_levels, t->array_size, t->flags, &t->renderer_texture_handle)) {
+        state_ptr->renderer, t->name, t->type, t->width, t->height, t->channel_count, t->mip_levels, t->array_size, t->flags, &t->renderer_texture_handle)) {
         KERROR("Error acquiring renderer backing resources for texture '%s'.", t->name);
         return;
     }
@@ -1077,7 +1078,7 @@ static b8 create_texture(texture* t, texture_type type, u32 width, u32 height, u
             t->mip_levels = 1;
         }
         // Acquire backing renderer resources.
-        if (!renderer_texture_resources_acquire(state_ptr->renderer,t->name, t->type, t->width, t->height, t->channel_count, t->mip_levels, t->array_size, t->flags, &t->renderer_texture_handle)) {
+        if (!renderer_texture_resources_acquire(state_ptr->renderer, t->name, t->type, t->width, t->height, t->channel_count, t->mip_levels, t->array_size, t->flags, &t->renderer_texture_handle)) {
             KERROR("Failed to acquire renderer resources for default texture '%s'. See logs for details.", t->name);
             return false;
         }
