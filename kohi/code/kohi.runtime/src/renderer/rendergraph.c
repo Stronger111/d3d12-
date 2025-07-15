@@ -8,11 +8,15 @@
 #include "memory/kmemory.h"
 #include "parsers/kson_parser.h"
 #include "renderer/renderer_frontend.h"
-#include "renderer/rendergraph_nodes/clear_colour_rendergraph_node.h"
-#include "renderer/rendergraph_nodes/clear_depth_rendergraph_node.h"
 #include "strings/kstring.h"
 
 // Known node types
+#include "renderer/rendergraph_nodes/clear_colour_rendergraph_node.h"
+#include "renderer/rendergraph_nodes/clear_depth_rendergraph_node.h"
+#include "renderer/rendergraph_nodes/debug_rendergraph_node.h"
+#include "renderer/rendergraph_nodes/forward_rendergraph_node.h"
+#include "renderer/rendergraph_nodes/shadow_rendergraph_node.h"
+#include "renderer/rendergraph_nodes/skybox_rendergraph_node.h"
 #include "rendergraph_nodes/frame_begin_rendergraph_node.h"
 #include "rendergraph_nodes/frame_end_rendergraph_node.h"
 
@@ -70,7 +74,7 @@ b8 rendergraph_create(const char* config_str, struct texture* global_colourbuffe
         return false;
     }
 
-    if (!config_str || string_length(config_str)) {
+    if (!config_str || !string_length(config_str)) {
         KERROR("rendergraph_create requires a valid configuration string (KSON).");
         return false;
     }
@@ -308,6 +312,25 @@ b8 rendergraph_finalize(rendergraph* graph) {
     return true;
 }
 
+b8 rendergraph_initialize(rendergraph* graph) {
+    if (!graph) {
+        return false;
+    }
+
+    for (u32 i = 0; i < graph->node_count; ++i) {
+        rendergraph_node* node = &graph->nodes[i];
+
+        if (node->initialize) {
+            if (!node->initialize(node)) {
+                KERROR("Failed to initialize node '%s'.", node->name);
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
+
 b8 rendergraph_load_resources(rendergraph* graph) {
     if (!graph) {
         return false;
@@ -404,6 +427,26 @@ b8 rendergraph_system_initialize(u64* memory_requirement, struct rendergraph_sys
     }
     if (!clear_depth_rendergraph_node_register_factory()) {
         KERROR("Failed to register known rendergraph factory type 'clear_depth'.");
+        return false;
+    }
+
+    if (!skybox_rendergraph_node_register_factory()) {
+        KERROR("Failed to register known rendergraph factory type 'skybox'.");
+        return false;
+    }
+
+    if (!forward_rendergraph_node_register_factory()) {
+        KERROR("Failed to register known rendergraph factory type 'forward'.");
+        return false;
+    }
+
+    if (!shadow_rendergraph_node_register_factory()) {
+        KERROR("Failed to register known rendergraph factory type 'shadow'.");
+        return false;
+    }
+
+    if (!debug_rendergraph_node_register_factory()) {
+        KERROR("Failed to register known rendergraph factory type 'shadow'.");
         return false;
     }
     return true;

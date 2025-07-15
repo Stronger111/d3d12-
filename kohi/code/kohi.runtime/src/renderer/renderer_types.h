@@ -15,6 +15,17 @@ struct material;
 struct kwindow_renderer_backend_state;
 struct texture_internal_data;
 
+typedef struct renderbuffer_data {
+    /** @brief The element count. */
+    u32 element_count;
+    /** @brief The size of each element. */
+    u32 element_size;
+    /** @brief The element data. */
+    void* elements;
+    /** @brief The offset from the beginning of the buffer. */
+    u64 buffer_offset;
+}renderbuffer_data;
+
 typedef struct geometry_render_data {
     mat4 model;  // 模型矩阵
     // TODO: keep material id/handle instead
@@ -568,16 +579,16 @@ typedef struct renderer_backend_interface {
     */
     b8 (*texture_write_data)(struct renderer_backend_interface* backend, struct texture_internal_data* data, u32 offset, u32 size, const u8* pixels, b8 include_in_frame_workload);
 
-     /**
-     * @brief Reads the given data from the provided texture.
-     *
-     * @param backend A pointer to the renderer backend interface.
-     * @param t A pointer to the texture internal data to be read from.
-     * @param offset The offset in bytes from the beginning of the data to be read.
-     * @param size The number of bytes to be read.
-     * @param out_pixels A pointer to a block of memory to write the read data to.
-     * @returns True on success; otherwise false.
-     */
+    /**
+    * @brief Reads the given data from the provided texture.
+    *
+    * @param backend A pointer to the renderer backend interface.
+    * @param t A pointer to the texture internal data to be read from.
+    * @param offset The offset in bytes from the beginning of the data to be read.
+    * @param size The number of bytes to be read.
+    * @param out_pixels A pointer to a block of memory to write the read data to.
+    * @returns True on success; otherwise false.
+    */
     b8 (*texture_read_data)(struct renderer_backend_interface* backend, struct texture_internal_data* data, u32 offset, u32 size, u8** out_pixels);
 
     /**

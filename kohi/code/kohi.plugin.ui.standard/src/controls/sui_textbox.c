@@ -190,7 +190,7 @@ b8 sui_textbox_control_size_set(standard_ui_state* state,struct sui_control* sel
     self->bounds.height = height;
     self->bounds.width = width;
 
-    update_nine_slice(&typed_data->nslice, 0);
+    nine_slice_update(&typed_data->nslice, 0);
 
     return true;
 }
@@ -220,7 +220,7 @@ b8 sui_textbox_control_load(standard_ui_state* state,struct sui_control* self) {
     vec2i atlas_max = (vec2i){ 193, 43 };
     vec2i corner_px_size = (vec2i){ 3, 3 };
     vec2i corner_size = (vec2i){ 10, 10 };
-    if (!generate_nine_slice(self->name, typed_data->size, atlas_size, atlas_min, atlas_max, corner_px_size, corner_size, &typed_data->nslice)) {
+    if (!nine_slice_create(self->name, typed_data->size, atlas_size, atlas_min, atlas_max, corner_px_size, corner_size, &typed_data->nslice)) {
         KERROR("Failed to generate nine slice.");
         return false;
     }
@@ -473,7 +473,7 @@ void sui_textbox_on_mouse_down(standard_ui_state* state,struct sui_control* self
         typed_data->nslice.atlas_px_min.y = 21;
         typed_data->nslice.atlas_px_max.x = 158;
         typed_data->nslice.atlas_px_max.y = 28;
-        update_nine_slice(&typed_data->nslice, 0); */
+        nine_slice_update(&typed_data->nslice, 0); */
     }
 }
 
@@ -492,7 +492,7 @@ void sui_textbox_on_mouse_up(standard_ui_state* state,struct sui_control* self, 
             typed_data->nslice.atlas_px_max.x = 158;
             typed_data->nslice.atlas_px_max.y = 37;
         }
-        update_nine_slice(&typed_data->nslice, 0); */
+        nine_slice_update(&typed_data->nslice, 0); */
     }
 }
 

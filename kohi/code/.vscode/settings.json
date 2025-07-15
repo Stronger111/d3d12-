@@ -246,7 +246,9 @@
         "render_view_wireframe.h": "c",
         "test_manager.h": "c",
         "dynamic_allocator_tests.h": "c",
-        "freelist_tests.h": "c"
+        "freelist_tests.h": "c",
+        "ui_rendergraph_node.h": "c",
+        "geometry.h": "c"
     },
     // File copyright documentation tag.  Array of strings will be converted to one line per element.  Can template {year}.
     "doxdocgen.file.copyrightTag": [

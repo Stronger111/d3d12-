@@ -20,7 +20,7 @@ b8 frame_begin_rendergraph_node_create(rendergraph* graph, rendergraph_node* sel
     self->source_count = 2;
     self->sources = kallocate(sizeof(rendergraph_source) * self->source_count, MEMORY_TAG_ARRAY);
 
-    // Setup the depthbuffer source.
+    // Setup the colourbuffer source.
     rendergraph_source* colourbuffer_source = &self->sources[0];
     colourbuffer_source->name = string_duplicate("colourbuffer");
     colourbuffer_source->type = RENDERGRAPH_RESOURCE_TYPE_TEXTURE;
