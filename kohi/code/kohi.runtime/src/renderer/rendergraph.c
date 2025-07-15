@@ -284,7 +284,7 @@ b8 rendergraph_finalize(rendergraph* graph) {
     //Ensure all nodes are resolved.
     for (u32 i = 0;i < graph->node_count;++i) {
         rendergraph_node* node = &graph->nodes[i];
-        if (rendergraph_node_resolve(graph, node)) {
+        if (!rendergraph_node_resolve(graph, node)) {
             KERROR("Unable to resolve references for node '%s'. See logs for details.", node->name);
             return false;
         }
