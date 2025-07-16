@@ -15,6 +15,16 @@ texture_name=Crusted_snow2_Base_Color
 [/map]
 
 [map]
+name=normal
+filter_min=linear
+filter_mag=linear
+repeat_v=repeat
+repeat_u=repeat
+repeat_w=repeat
+texture_name=Crusted_snow2_Normal
+[/map]
+
+[map]
 name=combined
 filter_min=linear
 filter_mag=linear
@@ -22,17 +32,6 @@ repeat_u=repeat
 repeat_v=repeat
 repeat_w=repeat
 texture_name=Crusted_snow2_combined
-[/map]
-
-
-[map]
-name=normal
-filter_min=linear
-filter_mag=linear
-repeat_u=repeat
-repeat_v=repeat
-repeat_w=repeat
-texture_name=Crusted_snow2_Normal
 [/map]
 
 [prop]

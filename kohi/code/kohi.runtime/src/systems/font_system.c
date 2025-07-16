@@ -446,7 +446,7 @@ font_data* font_system_acquire(const char* font_name, u16 font_size, font_type t
     return 0;
 }
 
-b8 font_system_release(struct ui_text* text) {
+b8 font_system_release(const char* font_name) {
     // TODO: Lookup font by name in appropriate hashtable.
     return true;
 }

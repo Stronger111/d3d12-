@@ -7,6 +7,7 @@
 #include "logger.h"
 #include "math/math_types.h"
 #include "memory/kmemory.h"
+#include "parsers/kson_parser.h"
 #include "renderer/renderer_frontend.h"
 #include "renderer/renderer_types.h"
 #include "renderer/rendergraph.h"
@@ -16,6 +17,7 @@
 #include "systems/resource_system.h"
 #include "systems/shader_system.h"
 #include "systems/texture_system.h"
+#include <vulkan/vulkan_core.h>
 
 typedef struct shadow_shader_locations {
     u16 projections_location;
@@ -84,6 +86,11 @@ typedef struct shadow_rendergraph_node_internal_data {
 
 } shadow_rendergraph_node_internal_data;
 
+
+static b8 deserialize_config(const char* source_str, shadow_rendergraph_node_config* out_config);
+/* static void destroy_config(shadow_rendergraph_node_config* config); */
+
+
 b8 shadow_rendergraph_node_create(struct rendergraph* graph, struct rendergraph_node* self, const struct rendergraph_node_config* config) {
     if (!self || !config) {
         KERROR("shadow_rendergraph_node_create requires both a pointer to self and a valid config.");
@@ -93,7 +100,10 @@ b8 shadow_rendergraph_node_create(struct rendergraph* graph, struct rendergraph_
     self->internal_data = kallocate(sizeof(shadow_rendergraph_node_internal_data), MEMORY_TAG_RENDERER);
     shadow_rendergraph_node_internal_data* internal_data = self->internal_data;
     internal_data->renderer = engine_systems_get()->renderer_system;
-    internal_data->config = *((shadow_rendergraph_node_config*)config);
+    if (!deserialize_config(config->config_str, &internal_data->config)) {
+        KERROR("Failed to deserialize configuration for shadow_rendergraph_node. Node creation failed.");
+        return false;
+    }
 
     // Has one source, for the shadowmap.
     self->source_count = 1;
@@ -273,7 +283,8 @@ b8 shadow_rendergraph_node_load_resources(rendergraph_node* self) {
     }
 
     self->sources[0].value.t = &internal_data->depth_texture;
-
+    // Texture never gets uploaded to as most others do, so manually set this.
+    t->generation = 0;
     return true;
 }
 
@@ -281,6 +292,9 @@ b8 shadow_rendergraph_node_execute(rendergraph_node* self, frame_data* p_frame_d
     if (!self) {
         return false;
     }
+    // FIXME: Need to transition the format from (whatever) to VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+   // then perform the render,
+    // then transition to VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL.
 
     shadow_rendergraph_node_internal_data* internal_data = self->internal_data;
 
@@ -477,6 +491,11 @@ void shadow_rendergraph_node_destroy(rendergraph_node* self) {
 
             renderer_texture_resources_release(internal_data->renderer, internal_data->depth_texture.renderer_texture_handle);
 
+            if (internal_data->depth_texture.name) {
+                string_free(internal_data->depth_texture.name);
+                internal_data->depth_texture.name = 0;
+            }
+
             renderer_texture_map_resources_release(&internal_data->default_colour_map);
             renderer_texture_map_resources_release(&internal_data->default_terrain_colour_map);
             renderer_shader_instance_resources_release(internal_data->renderer, internal_data->s, internal_data->default_instance_id);
@@ -546,4 +565,35 @@ b8 shadow_rendergraph_node_terrain_geometries_set(struct rendergraph_node* self,
     kcopy_memory(internal_data->terrain_geometries, geometries, sizeof(geometry_render_data) * geometry_count);
 
     return true;
+}
+
+b8 shadow_rendergraph_node_register_factory(void) {
+    rendergraph_node_factory factory = { 0 };
+    factory.type = "shadow";
+    factory.create = shadow_rendergraph_node_create;
+    return rendergraph_system_node_factory_register(engine_systems_get()->rendergraph_system, &factory);
+}
+
+static b8 deserialize_config(const char* source_str, shadow_rendergraph_node_config* out_config) {
+    if (!source_str || !string_length(source_str) || !out_config) {
+        return false;
+    }
+
+    kson_tree tree = { 0 };
+    if (!kson_tree_from_string(source_str, &tree)) {
+        KERROR("Failed to parse config for shadow_rendergraph_node.");
+        return false;
+    }
+
+    i64 resolution;
+    b8 result = kson_object_property_value_get_int(&tree.root, "resolution", &resolution);
+    if (!result) {
+        // Use a default resolution if not defined.
+        resolution = 1024;
+    }
+    out_config->resolution = (u16)resolution;
+
+    kson_tree_cleanup(&tree);
+
+    return result;
 }

@@ -266,6 +266,7 @@ b8 forward_rendergraph_node_initialize(struct rendergraph_node* self) {
     // Load PBR shader.
     // Save off a pointer to the PBR shader as well as its uniform locations.
     internal_data->pbr_shader = shader_system_get("Shader.PBRMaterial");
+    internal_data->pbr_shader_id = internal_data->pbr_shader->id;
     internal_data->pbr_locations.projection = shader_system_uniform_location(internal_data->pbr_shader_id, "projection");
     internal_data->pbr_locations.view = shader_system_uniform_location(internal_data->pbr_shader_id, "view");
     internal_data->pbr_locations.light_space_0 = shader_system_uniform_location(internal_data->pbr_shader_id, "light_space_0");
@@ -289,6 +290,7 @@ b8 forward_rendergraph_node_initialize(struct rendergraph_node* self) {
     // Load terrain shader.
     // Save off a pointer to the terrain shader as well as its uniform locations.
     internal_data->terrain_shader = shader_system_get("Shader.Builtin.Terrain");
+    internal_data->terrain_shader_id = internal_data->terrain_shader->id;
     internal_data->terrain_locations.projection = shader_system_uniform_location(internal_data->terrain_shader_id, "projection");
     internal_data->terrain_locations.view = shader_system_uniform_location(internal_data->terrain_shader_id, "view");
     internal_data->terrain_locations.light_space_0 = shader_system_uniform_location(internal_data->terrain_shader_id, "light_space_0");
@@ -314,6 +316,7 @@ b8 forward_rendergraph_node_initialize(struct rendergraph_node* self) {
     //
     // Save off a pointer to the colour shader.
     internal_data->colour_shader = shader_system_get("Shader.Builtin.ColourShader3D");
+    internal_data->colour_shader_id = internal_data->colour_shader->id;
     internal_data->debug_locations.projection = shader_system_uniform_location(internal_data->colour_shader_id, "projection");
     internal_data->debug_locations.view = shader_system_uniform_location(internal_data->colour_shader_id, "view");
     internal_data->debug_locations.model = shader_system_uniform_location(internal_data->colour_shader_id, "model");
@@ -349,7 +352,6 @@ b8 forward_rendergraph_node_load_resources(struct rendergraph_node* self) {
     texture_map* sm = &internal_data->shadow_map;
     sm->repeat_u = sm->repeat_v = sm->repeat_w = TEXTURE_REPEAT_CLAMP_TO_EDGE;
     sm->filter_magnify = sm->filter_minify = TEXTURE_FILTER_MODE_LINEAR;
-    // TODO: Might think about moving this elsewhere and handling in a more generic way.
     sm->texture = internal_data->shadowmap_source->value.t;
     sm->generation = INVALID_ID_U8;
 
@@ -410,9 +412,9 @@ b8 forward_rendergraph_node_execute(struct rendergraph_node* self, struct frame_
 
             // Directional light- global for this shader.
             directional_light_data default_dir_light_data = { 0 };
-            const directional_light_data* dir_light_data = &internal_data->dir_light->data;
-            if (!dir_light_data) {
-                dir_light_data = &default_dir_light_data;
+            const directional_light_data* dir_light_data = &default_dir_light_data;
+            if (internal_data->dir_light) {
+                dir_light_data = &internal_data->dir_light->data;
             }
             UNIFORM_APPLY_OR_FAIL(shader_system_uniform_set_by_location(internal_data->terrain_shader_id, internal_data->terrain_locations.dir_light, dir_light_data));
 
@@ -560,6 +562,8 @@ b8 forward_rendergraph_node_execute(struct rendergraph_node* self, struct frame_
 
                 // Only rebind/update the material if it's a new material. Duplicates can reuse the already-bound material.
                 if (m->internal_id != current_material_id) {
+                    
+                    shader_system_bind_instance(internal_data->pbr_shader_id,m->internal_id);
 
                     // Properties
                     UNIFORM_APPLY_OR_FAIL(shader_system_uniform_set_by_location(internal_data->pbr_shader_id, internal_data->pbr_locations.properties, m->properties));
@@ -752,10 +756,10 @@ b8 forward_rendergraph_node_irradiance_texture_set(struct rendergraph_node* self
     return false;
 }
 
-b8  forward_rendergraph_node_viewport_set(struct rendergraph_node* self, struct viewport* v) {
+b8  forward_rendergraph_node_viewport_set(struct rendergraph_node* self, viewport v) {
     if (self && self->internal_data) {
         forward_rendergraph_node_internal_data* internal_data = self->internal_data;
-        internal_data->vp = *v;
+        internal_data->vp = v;
         return true;
     }
     return false;
@@ -772,7 +776,7 @@ b8  forward_rendergraph_node_view_projection_set(struct rendergraph_node* self, 
 }
 
 b8 forward_rendergraph_node_register_factory(void) {
-    rendergraph_node_factory factory = {0};
+    rendergraph_node_factory factory = { 0 };
     factory.type = "forward";
     factory.create = forward_rendergraph_node_create;
     return rendergraph_system_node_factory_register(engine_systems_get()->rendergraph_system, &factory);

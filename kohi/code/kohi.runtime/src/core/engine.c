@@ -303,22 +303,27 @@ b8 engine_create(application* game_inst) {
         return false;
     }
 
+    engine_state->windows = darray_reserve(kwindow, window_count);
     for (u32 i = 0;i < window_count;++i) {
         kwindow_config* window_config = &game_inst->app_config.windows[i];
         kwindow new_window = { 0 };
-        if (!platform_window_create(window_config, &new_window, true)) {
+
+        //Add to tracked window list.
+        darray_push(engine_state->windows, new_window);
+
+        kwindow* window = &engine_state->windows[(darray_length(engine_state->windows) - 1)];
+        if (!platform_window_create(window_config, window, true)) {
             KERROR("Failed to create window '%s'.", window_config->name);
             return false;
         }
 
         //Tell the renderer about the window.
-        if (!renderer_on_window_created(engine_state->systems.renderer_system, &new_window)) {
+        if (!renderer_on_window_created(engine_state->systems.renderer_system, window)) {
             KERROR("The renderer failed to create resources for the window '%s'.", window_config->name);
             return false;
         }
 
-        //Add to tracked window list.
-        darray_push(engine_state->windows, new_window);
+
     }
 
     // Job system
@@ -614,6 +619,7 @@ b8 engine_run(application* game_inst) {
 
             // TODO: Update systems here that need them.
             //
+            job_system_update(engine_state->systems.job_system, &engine_state->p_frame_data);
             // Update timelines. Note that this is not done by the systems manager
             // because we don't want or have timeline data in the frame_data struct any longer.
             timeline_system_update(engine_state->systems.timeline_system, delta);

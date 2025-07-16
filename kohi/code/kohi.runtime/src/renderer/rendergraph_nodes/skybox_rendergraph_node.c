@@ -28,7 +28,7 @@ typedef struct skybox_rendergraph_node_internal_data {
 
     skybox* sb;
 
-    struct viewport* vp;
+    viewport vp;
     mat4 view;
     mat4 projection;
 } skybox_rendergraph_node_internal_data;
@@ -123,6 +123,8 @@ b8 skybox_rendergraph_node_load_resources(struct rendergraph_node* self) {
     skybox_rendergraph_node_internal_data* internal_data = self->internal_data;
     if (self->sinks[0].bound_source) {
         internal_data->colourbuffer_texture = self->sinks[0].bound_source->value.t;
+        self->sources[0].value.t = internal_data->colourbuffer_texture;
+        self->sources[0].is_bound = true;
         return true;
     }
     return false;
@@ -136,11 +138,11 @@ b8 skybox_rendergraph_node_execute(struct rendergraph_node* self, struct frame_d
     skybox_rendergraph_node_internal_data* internal_data = self->internal_data;
 
     // Bind the viewport
-    renderer_active_viewport_set(internal_data->vp);
+    renderer_active_viewport_set(&internal_data->vp);
 
     renderer_begin_rendering(internal_data->renderer, p_frame_data, 1, &internal_data->colourbuffer_texture->renderer_texture_handle, k_handle_invalid());
 
-    if (internal_data->sb) {
+    if (internal_data->sb && internal_data->sb->g->generation != INVALID_ID_U16) {
         shader_system_use_by_id(internal_data->shader_id);
 
         // Get the view matrix, but zero out the position so the skybox stays put on screen.
@@ -204,7 +206,7 @@ void skybox_rendergraph_node_set_skybox(struct rendergraph_node* self, struct sk
     }
 }
 
-void skybox_rendergraph_node_set_viewport_and_matrices(struct rendergraph_node* self, struct viewport* vp, mat4 view, mat4 projection) {
+void skybox_rendergraph_node_set_viewport_and_matrices(struct rendergraph_node* self, viewport vp, mat4 view, mat4 projection) {
     if (self) {
         if (self->internal_data) {
             skybox_rendergraph_node_internal_data* internal_data = self->internal_data;

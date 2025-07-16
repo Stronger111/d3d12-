@@ -35,5 +35,5 @@ KAPI b8 shadow_rendergraph_node_cascade_data_set(struct rendergraph_node* self, 
 KAPI b8 shadow_rendergraph_node_static_geometries_set(struct rendergraph_node* self, struct frame_data* p_frame_data, u32 geometry_count, const struct geometry_render_data* geometries);
 KAPI b8 shadow_rendergraph_node_terrain_geometries_set(struct rendergraph_node* self, struct frame_data* p_frame_data, u32 geometry_count, const struct geometry_render_data* geometries);
 
-b8 shadow_rendergraph_node_register_factory(void);
+KAPI b8 shadow_rendergraph_node_register_factory(void);
 #endif

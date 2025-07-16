@@ -192,6 +192,13 @@ KAPI void renderer_set_stencil_reference(u32 reference);
 KAPI void renderer_set_depth_test_enabled(b8 enabled);
 
 /**
+ * @brief Set depth write enabled/disabled.
+ *
+ * @param enabled Indicates if depth write should be enabled/disabled for subsequent draws.
+ */
+KAPI void renderer_set_depth_write_enabled(b8 enabled);
+
+/**
  * @brief Set stencil operation.
  *
  * @param fail_op Specifys the action performed on samples that fail the stencil test.
@@ -424,6 +431,14 @@ KAPI b8 renderer_clear_colour(struct renderer_system_state* state, k_handle text
  * @returns True if successful; otherwise false.
  */
 KAPI b8 renderer_clear_depth_stencil(struct renderer_system_state* state, k_handle texture_handle);
+
+/**
+ * @brief Performs operations required on the supplied colour texture before presentation.
+ *
+ * @param state A pointer to the renderer system state.
+ * @param texture_handle A handle to the texture to prepare for presentation.
+ */
+KAPI void renderer_colour_texture_prepare_for_present(struct renderer_system_state* state, k_handle texture_handle);
 
 /**
  * @brief Creates internal shader resources using the provided parameters.

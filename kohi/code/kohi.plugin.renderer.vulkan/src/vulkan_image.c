@@ -91,7 +91,14 @@ void vulkan_image_create(vulkan_context* context,
     VkMemoryAllocateInfo memory_allocate_info = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
     memory_allocate_info.allocationSize = out_image->memory_requirements.size;
     memory_allocate_info.memoryTypeIndex = memory_type;
-    VK_CHECK(vkAllocateMemory(context->device.logical_device, &memory_allocate_info, context->allocator, &out_image->memory));
+
+    VkResult allocate_result = vkAllocateMemory(context->device.logical_device, &memory_allocate_info, context->allocator, &out_image->memory);
+    if (!vulkan_result_is_success(allocate_result)) {
+        const char* err_str = vulkan_result_string(allocate_result, true);
+        KERROR("Failed to allocate memory for image with the following error: '%s'", err_str);
+        return;
+    }
+
     if (out_image->name) {
         VK_SET_DEBUG_OBJECT_NAME(context, VK_OBJECT_TYPE_DEVICE_MEMORY, out_image->memory, out_image->name);
     }
@@ -544,7 +551,7 @@ void vulkan_image_copy_region_to_buffer(
     u32 width,
     u32 height,
     vulkan_command_buffer* command_buffer) {
-    VkBufferImageCopy region = {0};
+    VkBufferImageCopy region = { 0 };
     region.bufferOffset = 0;
     region.bufferRowLength = 0;
     region.bufferImageHeight = 0;

@@ -49,7 +49,9 @@ b8 frame_begin_rendergraph_node_initialize(struct rendergraph_node* self) {
 }
 
 b8 frame_begin_rendergraph_node_execute(struct rendergraph_node* self, struct frame_data* p_frame_data) {
-    // Nothing to execute here, this is a no-op.
+    // TODO: This is probably where an image layout transformation should occur,
+   // instead of doing it at the renderpass level and having that worry about it.
+
     return true;
 }
 
@@ -75,7 +77,7 @@ void frame_begin_rendergraph_node_destroy(struct rendergraph_node* self) {
 }
 
 b8 frame_begin_rendergraph_node_register_factory(void) {
-    rendergraph_node_factory factory = {0};
+    rendergraph_node_factory factory = { 0 };
     factory.type = "frame_begin";
     factory.create = frame_begin_rendergraph_node_create;
     return rendergraph_system_node_factory_register(engine_systems_get()->rendergraph_system, &factory);

@@ -84,6 +84,9 @@ b8 rendergraph_create(const char* config_str, struct texture* global_colourbuffe
         return false;
     }
 
+    out_graph->global_colourbuffer = global_colourbuffer;
+    out_graph->global_depthbuffer = global_depthbuffer;
+
     //Process config.
     rendergraph_config config = { 0 };
     if (!rendergraph_config_deserialize(config_str, &config)) {
@@ -760,7 +763,7 @@ static b8 rg_dep_graph_topological_sort(rendergraph* graph) {
     //Always force the begin node to be first and the end node to be last.
     graph->execution_list[0] = graph->begin_node->index;
     graph->execution_list[graph->node_count - 1] = graph->end_node->index;
-    u32 current_index = 1;
+    u32 current_index = graph->node_count-2; //Work backwards 1;
     while (stack_index) {
         rg_dep_node* node = stack[--stack_index];
         if (node->index == graph->begin_node->index || node->index == graph->end_node->index) {
@@ -768,7 +771,7 @@ static b8 rg_dep_graph_topological_sort(rendergraph* graph) {
             continue;
         }
         graph->execution_list[current_index] = node->index;
-        current_index++;
+        current_index--;
     }
     //Get rid of the stack.
     kfree(stack, sizeof(rg_dep_node*) * graph->node_count, MEMORY_TAG_ARRAY);

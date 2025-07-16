@@ -502,6 +502,14 @@ typedef struct renderer_backend_interface {
     void (*set_depth_test_enabled)(struct renderer_backend_interface* backend, b8 enabled);
 
     /**
+ * @brief Set depth write enabled/disabled.
+ *
+ * @param backend A pointer to the renderer backend interface.
+ * @param enabled Indicates if depth write should be enabled/disabled for subsequent draws.
+ */
+    void (*set_depth_write_enabled)(struct renderer_backend_interface* backend, b8 enabled);
+
+    /**
      * @brief Set the stencil reference for testing.
      *
      * @param backend A pointer to the renderer backend interface.
@@ -544,7 +552,7 @@ typedef struct renderer_backend_interface {
     void (*clear_stencil_set)(struct renderer_backend_interface* backend, u32 stencil);
     void (*clear_colour)(struct renderer_backend_interface* backend, struct texture_internal_data* tex_internal);
     void (*clear_depth_stencil)(struct renderer_backend_interface* backend, struct texture_internal_data* tex_internal);
-
+    void (*colour_texture_prepare_for_present)(struct renderer_backend_interface* backend, struct texture_internal_data* tex_internal);
 
     b8 (*texture_resources_acquire)(struct renderer_backend_interface* backend, struct texture_internal_data* data, const char* name, texture_type type, u32 width, u32 height, u8 channel_count, u8 mip_levels, u16 array_size, texture_flag_bits flags);
 

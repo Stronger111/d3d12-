@@ -25,8 +25,8 @@ b8 vulkan_renderer_frame_command_list_end(renderer_backend_interface* backend, s
 b8 vulkan_renderer_frame_submit(struct renderer_backend_interface* backend, struct frame_data* p_frame_data);
 b8 vulkan_renderer_frame_present(renderer_backend_interface* backend, struct kwindow* window, struct frame_data* p_frame_data);
 
-b8 vulkan_renderer_begin(renderer_backend_interface* plugin, struct frame_data* p_frame_data);
-b8 vulkan_renderer_end(renderer_backend_interface* plugin, struct frame_data* p_frame_data);
+// b8 vulkan_renderer_begin(renderer_backend_interface* plugin, struct frame_data* p_frame_data);
+// b8 vulkan_renderer_end(renderer_backend_interface* plugin, struct frame_data* p_frame_data);
 
 void vulkan_renderer_viewport_set(renderer_backend_interface* backend, vec4 rect);
 void vulkan_renderer_viewport_reset(renderer_backend_interface* backend);
@@ -36,6 +36,7 @@ void vulkan_renderer_scissor_reset(renderer_backend_interface* backend);
 void vulkan_renderer_winding_set(struct renderer_backend_interface* backend, renderer_winding winding);
 void vulkan_renderer_set_stencil_test_enabled(struct renderer_backend_interface* backend, b8 enabled);
 void vulkan_renderer_set_depth_test_enabled(struct renderer_backend_interface* backend, b8 enabled);
+void vulkan_renderer_set_depth_write_enabled(struct renderer_backend_interface* backend, b8 enabled);
 void vulkan_renderer_set_stencil_reference(struct renderer_backend_interface* backend, u32 reference);
 void vulkan_renderer_set_stencil_op(struct renderer_backend_interface* backend, renderer_stencil_op fail_op, renderer_stencil_op pass_op, renderer_stencil_op depth_fail_op, renderer_compare_op compare_op);
 
@@ -50,6 +51,7 @@ void vulkan_renderer_clear_depth_set(renderer_backend_interface* backend,f32 dep
 void vulkan_renderer_clear_stencil_set(renderer_backend_interface* backend, u32 stencil);
 void vulkan_renderer_clear_colour_texture(renderer_backend_interface* backend,struct texture_internal_data* tex_internal);
 void vulkan_renderer_clear_depth_stencil(renderer_backend_interface* backend,struct texture_internal_data* tex_internal);
+void vulkan_renderer_colour_texture_prepare_for_present(renderer_backend_interface* backend,struct texture_internal_data* tex_internal);
 
 b8 vulkan_renderer_texture_resources_acquire(renderer_backend_interface* backend, struct texture_internal_data* texture_data, const char* name, texture_type type, u32 width, u32 height, u8 channel_count, u8 mip_levels, u16 array_size, texture_flag_bits flags);
 void vulkan_renderer_texture_resources_release(renderer_backend_interface* backend, struct texture_internal_data* texture_data);

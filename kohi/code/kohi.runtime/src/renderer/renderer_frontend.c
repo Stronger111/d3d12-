@@ -331,6 +331,12 @@ void renderer_set_depth_test_enabled(b8 enabled) {
     state_ptr->backend->set_depth_test_enabled(state_ptr->backend, enabled);
 }
 
+void renderer_set_depth_write_enabled(b8 enabled) {
+    renderer_system_state* state_ptr = engine_systems_get()->renderer_system;
+    state_ptr->backend->set_depth_write_enabled(state_ptr->backend, enabled);
+}
+
+
 void renderer_set_stencil_op(renderer_stencil_op fail_op, renderer_stencil_op pass_op, renderer_stencil_op depth_fail_op, renderer_compare_op compare_op) {
     renderer_system_state* state_ptr = engine_systems_get()->renderer_system;
     state_ptr->backend->set_stencil_op(state_ptr->backend, fail_op, pass_op, depth_fail_op, compare_op);
@@ -690,6 +696,16 @@ b8 renderer_clear_depth_stencil(struct renderer_system_state* state, k_handle te
 
     KERROR("renderer_clear_depth_stencil requires a valid handle to a texture. Nothing was done.");
     return false;
+}
+
+void renderer_colour_texture_prepare_for_present(struct renderer_system_state* state, k_handle texture_handle) {
+    if (state && !k_handle_is_invalid(texture_handle)) {
+        struct texture_internal_data* data = state->textures[texture_handle.handle_index].data;
+        state->backend->colour_texture_prepare_for_present(state->backend, data);
+        return;
+    }
+
+    KERROR("renderer_colour_texture_prepare_for_present requires a valid handle to a texture. Nothing was done.");
 }
 
 b8 renderer_shader_create(struct renderer_system_state* state, shader* s, const shader_config* config) {

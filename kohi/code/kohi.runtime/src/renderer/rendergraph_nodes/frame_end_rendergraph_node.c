@@ -6,6 +6,8 @@
 #include "logger.h"
 #include "memory/kmemory.h"
 #include "parsers/kson_parser.h"
+#include "renderer/renderer_frontend.h"
+#include "renderer/renderer_types.h"
 #include "strings/kstring.h"
 
 typedef struct frame_end_rendergraph_node_config {
@@ -21,7 +23,7 @@ b8 frame_end_rendergraph_node_create(struct rendergraph* graph, struct rendergra
     }
 
     // This node does require the config string to extract the source name from.
-    frame_end_rendergraph_node_config typed_config = {0};
+    frame_end_rendergraph_node_config typed_config = { 0 };
     if (!deserialize_config(config->config_str, &typed_config)) {
         KERROR("Failed to deserialize configuration for frame_end_rendergraph_node. Node creation failed.");
         return false;
@@ -65,6 +67,8 @@ b8 frame_end_rendergraph_node_initialize(struct rendergraph_node* self) {
 b8 frame_end_rendergraph_node_execute(struct rendergraph_node* self, struct frame_data* p_frame_data) {
     // TODO: This is probably where an image layout transformation should occur,
     // instead of doing it at the renderpass level and having that worry about it.
+    struct renderer_system_state* renderer = engine_systems_get()->renderer_system;
+    renderer_colour_texture_prepare_for_present(renderer, self->sinks[0].bound_source->value.t->renderer_texture_handle);
     return true;
 }
 
@@ -90,7 +94,7 @@ void frame_end_rendergraph_node_destroy(struct rendergraph_node* self) {
 }
 
 b8 frame_end_rendergraph_node_register_factory(void) {
-    rendergraph_node_factory factory = {0};
+    rendergraph_node_factory factory = { 0 };
     factory.type = "frame_end";
     factory.create = frame_end_rendergraph_node_create;
     return rendergraph_system_node_factory_register(engine_systems_get()->rendergraph_system, &factory);
@@ -101,7 +105,7 @@ static b8 deserialize_config(const char* source_str, frame_end_rendergraph_node_
         return false;
     }
 
-    kson_tree tree = {0};
+    kson_tree tree = { 0 };
     if (!kson_tree_from_string(source_str, &tree)) {
         KERROR("Failed to parse config for frame_end_rendergraph_node.");
         return false;

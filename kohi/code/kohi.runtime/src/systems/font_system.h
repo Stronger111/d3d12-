@@ -18,7 +18,7 @@ typedef struct bitmap_font_config {
     const char* name;
     u16 size;
     /** @brief The name of the resource containing the font data. */
-    char* resource_name;
+    const char* resource_name;
 } bitmap_font_config;
 
 typedef struct font_system_config {
@@ -26,7 +26,7 @@ typedef struct font_system_config {
     system_font_config default_system_font;
     /** @brief The default bitmap font config. */
     bitmap_font_config default_bitmap_font;
-    b8 auto_release;
+b8 auto_release;
 } font_system_config;
 
 b8 font_system_deserialize_config(const char* config_str, font_system_config* out_config);
@@ -61,10 +61,10 @@ KAPI font_data* font_system_acquire(const char* font_name, u16 font_size, font_t
 /**
  * @brief Releases references to the font held by the provided ui_text.
  *
- * @param text A pointer to the text object to release the font from.
+ * @param font_name The name of the font to acquire. Must be an already loaded font.
  * @return True on success; otherwise false.
  */
-KAPI b8 font_system_release(struct ui_text* text);
+KAPI b8 font_system_release(const char* font_name);
 //校验图集
 KAPI b8 font_system_verify_atlas(font_data* font, const char* text);
 
