@@ -41,11 +41,12 @@ b8 kplugin_create(kruntime_plugin* out_plugin) {
     backend->clear_colour = vulkan_renderer_clear_colour_texture;
     backend->clear_depth_stencil = vulkan_renderer_clear_depth_stencil;
     backend->colour_texture_prepare_for_present = vulkan_renderer_colour_texture_prepare_for_present;
+    backend->texture_prepare_for_sampling = vulkan_renderer_texture_prepare_for_sampling;
 
     backend->winding_set = vulkan_renderer_winding_set;
     backend->set_stencil_test_enabled = vulkan_renderer_set_stencil_test_enabled;
     backend->set_depth_test_enabled = vulkan_renderer_set_depth_test_enabled;
-    backend->set_depth_write_enabled= vulkan_renderer_set_depth_write_enabled;
+    backend->set_depth_write_enabled = vulkan_renderer_set_depth_write_enabled;
     backend->set_stencil_reference = vulkan_renderer_set_stencil_reference;
     backend->set_stencil_op = vulkan_renderer_set_stencil_op;
 
