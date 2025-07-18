@@ -307,6 +307,7 @@ b8 engine_create(application* game_inst) {
     for (u32 i = 0;i < window_count;++i) {
         kwindow_config* window_config = &game_inst->app_config.windows[i];
         kwindow new_window = { 0 };
+        new_window.name = string_duplicate(window_config->name);
 
         //Add to tracked window list.
         darray_push(engine_state->windows, new_window);
@@ -527,8 +528,12 @@ b8 engine_create(application* game_inst) {
 
     //Rendergraph system
     {
-        //TODO:DXS
-        //rendergraph_s
+        rendergraph_system_initialize(&systems->rendergraph_system_memory_requirement, 0);
+        systems->rendergraph_system = kallocate(systems->rendergraph_system_memory_requirement, MEMORY_TAG_ENGINE);
+        if (!rendergraph_system_initialize(&systems->rendergraph_system_memory_requirement, systems->rendergraph_system)) {
+            KERROR("Failed to initialize rendergraph system.");
+            return false;
+        }
     }
 
     // NOTE: Boot sequence =======================================================================================================

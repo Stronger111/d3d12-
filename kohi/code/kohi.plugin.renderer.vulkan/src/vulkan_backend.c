@@ -1058,7 +1058,7 @@ void vulkan_renderer_begin_rendering(struct renderer_backend_interface* backend,
     }
 
     if (context->device.support_flags & VULKAN_DEVICE_SUPPORT_FLAG_NATIVE_DYNAMIC_STATE_BIT) {
-        vkCmdBeginRendering(command_buffer->handle, &render_info);
+       //vkCmdBeginRendering(command_buffer->handle, &render_info);
     }
     else {
         context->vkCmdBeginRenderingKHR(command_buffer->handle, &render_info);
@@ -1070,7 +1070,7 @@ void vulkan_renderer_end_rendering(struct renderer_backend_interface* backend, s
     vulkan_command_buffer* command_buffer = get_current_command_buffer(context);
 
     if (context->device.support_flags & VULKAN_DEVICE_SUPPORT_FLAG_NATIVE_DYNAMIC_STATE_BIT) {
-        vkCmdEndRendering(command_buffer->handle);
+        //vkCmdEndRendering(command_buffer->handle);
     }
     else {
         context->vkCmdEndRenderingKHR(command_buffer->handle);
@@ -1436,12 +1436,12 @@ b8 vulkan_renderer_texture_resources_acquire(renderer_backend_interface* backend
     VkImageAspectFlagBits aspect;
     VkFormat image_format;
     if (flags & TEXTURE_FLAG_DEPTH) {
-        usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;  // 深度需要采样
+        usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;  // 深度需要采样
         aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
         image_format = context->device.depth_format;
     }
     else {
-        usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+        usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
         aspect = VK_IMAGE_ASPECT_COLOR_BIT;
         image_format = channel_count_to_format(channel_count, VK_FORMAT_R8G8B8A8_UNORM);
     }

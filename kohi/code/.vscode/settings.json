@@ -248,7 +248,27 @@
         "dynamic_allocator_tests.h": "c",
         "freelist_tests.h": "c",
         "ui_rendergraph_node.h": "c",
-        "geometry.h": "c"
+        "geometry.h": "c",
+        "bit": "c",
+        "cctype": "c",
+        "charconv": "c",
+        "clocale": "c",
+        "cmath": "c",
+        "concepts": "c",
+        "cstddef": "c",
+        "cstdint": "c",
+        "cstdio": "c",
+        "cstdlib": "c",
+        "cstring": "c",
+        "ctime": "c",
+        "cwchar": "c",
+        "exception": "c",
+        "string": "c",
+        "new": "c",
+        "stdexcept": "c",
+        "streambuf": "c",
+        "xfacet": "c",
+        "xlocinfo": "c"
     },
     // File copyright documentation tag.  Array of strings will be converted to one line per element.  Can template {year}.
     "doxdocgen.file.copyrightTag": [

@@ -11,7 +11,7 @@ typedef u64(*PFN_application_state_size)(void);
 
 b8 load_game_lib(application* app) {
     // Dynamically load game library
-    if (!platform_dynamic_library_load("testbed_lib_loaded", &app->game_library)) {
+    if (!platform_dynamic_library_load("testbed.klib_loaded", &app->game_library)) {
         return false;
     }
 
@@ -181,7 +181,7 @@ b8 initialize_application(application* app) {
     // FIXME: safe version of string format
     char path[260];
     kzero_memory(path, sizeof(char) * 260);
-    string_format_unsafe(path, "%s%s%s", prefix, "testbed_lib", extension);
+    string_format_unsafe(path, "%s%s%s", prefix, "testbed.klib", extension);
 
     if (!platform_watch_file(path, &app->game_library.watch_id)) {
         KERROR("Failed to watch the testbed library!");

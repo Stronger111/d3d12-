@@ -72,6 +72,8 @@ Renderer:
 - Debug root->children,10 打印数组的10个元素. ,6 可以打印数组元素
 - 模版测试-裁剪输入框外部的内容 模版需要clear
 - 可视化Debug 以及特殊情况 来验证计算的正确性
+- //FIXME: Duke bug fix  state_ptr->handle.hwnd 没有赋值 导致 VK_ERROR_SURFACE_LOST_KHR vkGetPhysicalDeviceSurfaceCapabilitiesKHR 方法报错
+    //修复 https://stackoverflow.com/questions/66912703/vulkan-vkgetphysicaldevicesurfacecapabilitieskhr-returning-vk-error-surface-los
 
 # 工具
   * Rendoc Pro 

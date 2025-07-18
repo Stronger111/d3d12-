@@ -340,7 +340,18 @@ b8 forward_rendergraph_node_load_resources(struct rendergraph_node* self) {
     //Resolve framebuffer handle via bound source.
     if (self->sinks[0].bound_source) {
         internal_data->colourbuffer_texture = self->sinks[0].bound_source->value.t;
-        return true;
+        self->sources[0].value.t = internal_data->colourbuffer_texture;
+        self->sources[0].is_bound = true;
+    }
+
+    if (self->sinks[1].bound_source) {
+        internal_data->depthbuffer_texture = self->sinks[1].bound_source->value.t;
+        self->sources[1].value.t = internal_data->depthbuffer_texture;
+        self->sources[1].is_bound = true;
+    }
+
+    if (self->sinks[2].bound_source) {
+        internal_data->shadowmap_source = self->sinks[2].bound_source;
     }
 
     if (!internal_data->shadowmap_source) {
@@ -374,7 +385,7 @@ b8 forward_rendergraph_node_execute(struct rendergraph_node* self, struct frame_
     renderer_active_viewport_set(&internal_data->vp);
 
     //Begin rendering
-    renderer_begin_rendering(internal_data->renderer, p_frame_data, 1, &internal_data->colourbuffer_texture->renderer_texture_handle, internal_data->depthbuffer_texture->renderer_texture_handle,0);
+    renderer_begin_rendering(internal_data->renderer, p_frame_data, 1, &internal_data->colourbuffer_texture->renderer_texture_handle, internal_data->depthbuffer_texture->renderer_texture_handle, 0);
 
     //Calculate light-space matrices for each shadow cascade
     for (u8 i = 0; i < MAX_SHADOW_CASCADE_COUNT; ++i) {
@@ -562,8 +573,8 @@ b8 forward_rendergraph_node_execute(struct rendergraph_node* self, struct frame_
 
                 // Only rebind/update the material if it's a new material. Duplicates can reuse the already-bound material.
                 if (m->internal_id != current_material_id) {
-                    
-                    shader_system_bind_instance(internal_data->pbr_shader_id,m->internal_id);
+
+                    shader_system_bind_instance(internal_data->pbr_shader_id, m->internal_id);
 
                     // Properties
                     UNIFORM_APPLY_OR_FAIL(shader_system_uniform_set_by_location(internal_data->pbr_shader_id, internal_data->pbr_locations.properties, m->properties));

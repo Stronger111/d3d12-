@@ -464,7 +464,7 @@ void rendergraph_system_shutdown(struct rendergraph_system_state* state) {
     }
 }
 
-b8 rendergraph_system_node_factory_register(struct rendergraph_system_state* state, const rendergraph_node_factory* new_factory); b8 rendergraph_system_node_factory_register(struct rendergraph_system_state* state, const rendergraph_node_factory* new_factory) {
+b8 rendergraph_system_node_factory_register(struct rendergraph_system_state* state, const rendergraph_node_factory* new_factory) {
     if (!state || !new_factory) {
         KERROR("rendergraph_system_node_factory_register requires valid pointers to state and a new_factory.");
         return false;
@@ -726,7 +726,7 @@ static b8 rg_dep_graph_topological_sort_recurse(rendergraph* graph, rg_dep_node*
         node->visited = 1; //Now it is visited.
         //Recurse nodes adjacent to this one.
         rg_node_connection* conn = node->outputs;
-        while (conn) {
+        while (conn != 0) {
             if (!rg_dep_graph_topological_sort_recurse(graph, conn->dest, stack, stack_index)) {
                 KERROR("Connection cause circular dependency:'%s->%s'", graph->nodes[node->index].name, graph->nodes[conn->dest->index].name);
                 return false;
@@ -737,7 +737,7 @@ static b8 rg_dep_graph_topological_sort_recurse(rendergraph* graph, rg_dep_node*
         //Mark the node as fully processed.
         node->visited = 2;
         //Push node to stack.
-        stack[*stack_index++] = node;
+        stack[(*stack_index)++] = node;
     }
     return true;
 }
@@ -763,7 +763,7 @@ static b8 rg_dep_graph_topological_sort(rendergraph* graph) {
     //Always force the begin node to be first and the end node to be last.
     graph->execution_list[0] = graph->begin_node->index;
     graph->execution_list[graph->node_count - 1] = graph->end_node->index;
-    u32 current_index = graph->node_count-2; //Work backwards 1;
+    u32 current_index = graph->node_count - 2; //Work backwards 1;
     while (stack_index) {
         rg_dep_node* node = stack[--stack_index];
         if (node->index == graph->begin_node->index || node->index == graph->end_node->index) {

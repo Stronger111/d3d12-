@@ -258,7 +258,9 @@ b8 shadow_rendergraph_node_execute(rendergraph_node* self, frame_data* p_frame_d
 
     //One renderpass per cascade -directional light.
     for (u32 p = 0; p < MAX_SHADOW_CASCADE_COUNT; p++) {
-        //shadow_cascade_data* cascade = &ext_data->cascades[p];
+        const char* label_text = string_format("shadow_rendergraph_cascade_%u", p);
+        renderer_begin_debug_label(label_text, (vec3) { 1.0 - (p * 0.2f), 0.0f, 0.0f });
+        string_free(label_text);
 
         renderer_begin_rendering(internal_data->renderer, p_frame_data, 0, 0, internal_data->depth_texture.renderer_texture_handle, p);
 

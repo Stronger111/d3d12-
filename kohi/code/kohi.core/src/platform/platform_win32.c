@@ -21,6 +21,7 @@
 
 typedef struct win32_handle_info {
     HINSTANCE h_instance;
+    HWND hwnd;
 } win32_handle_info;
 
 typedef struct win32_file_watch {
@@ -61,6 +62,9 @@ static LARGE_INTEGER start_time;
 
 static void platform_update_watches(void);
 LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARAM l_param);
+static LPCWSTR cstr_to_wcstr(const char* str);
+static void wcstr_free(LPCWSTR wstr);
+static const char* wcstr_to_cstr(LPCWSTR wstr);
 
 void clock_setup(void) {
     LARGE_INTEGER frequency;
@@ -178,18 +182,52 @@ b8 platform_window_create(const kwindow_config* config, struct kwindow* window, 
 
     window->width = client_width;
     window->height = client_height;
-    //TODO:DXS
-    window->platform_state = kallocate(sizeof(kwindow_platform_state), MEMORY_TAG_UNKNOWN);
+    window->device_pixel_radio = 1.0f;
 
-    window->platform_state->hwnd = CreateWindowExA(window_ex_style, "kohi_window_class",
-        window->title, window_style, window_x, window_y, window_width, window_height,
+    window->platform_state = kallocate(sizeof(kwindow_platform_state), MEMORY_TAG_UNKNOWN);
+    // Convert to wide character string first.
+    // LPCWSTR wtitle = cstr_to_wcstr(window->title);
+    // FIXME: For some reason using the above causes renderdoc to fail to open the window,
+    // but using the below does not...
+    WCHAR wtitle[256];
+    MultiByteToWideChar(CP_UTF8, 0, window->title, -1, wtitle, 256);
+
+    window->platform_state->hwnd = CreateWindowExW(window_ex_style, L"kohi_window_class",
+        wtitle, window_style, window_x, window_y, window_width, window_height,
         0, 0, state_ptr->handle.h_instance, 0);
 
     if (window->platform_state->hwnd == 0) {
-        MessageBoxA(0, "window creation failed!", "Error!", MB_ICONEXCLAMATION | MB_OK);
-        KFATAL("window creation failed!");
-        return FALSE;
+        DWORD last_error = GetLastError();
+        LPWSTR wmessage_buf = 0;
+        // Ask Win32 to give us the string version of that message ID.
+        // The parameters we pass in, tell Win32 to create the buffer that holds the message for us
+        // (because we don't yet know how long the message string will be).
+        u64 size = FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+            NULL, last_error, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPWSTR)&wmessage_buf, 0, NULL);
+        if (size) {
+            const char* err_message = wcstr_to_cstr(wmessage_buf);
+            const char* message = string_format("Window creation failed with error: '%s'.", err_message);
+            LocalFree(wmessage_buf); // Free the Win32's string's buffer.
+
+            const WCHAR* wmessage = cstr_to_wcstr(message);
+            MessageBoxW(NULL, wmessage, L"Error!", MB_ICONEXCLAMATION | MB_OK);
+            KFATAL(message);
+            string_free(message);
+            wcstr_free(wmessage);
+        }
+        else {
+            MessageBoxW(NULL, L"Window creation failed!", L"Error!", MB_ICONEXCLAMATION | MB_OK);
+            KFATAL("Window creation failed!");
+        }
+        return false;
     }
+    // Register the window internally.
+    darray_push(state_ptr->windows, window);
+
+    if(show_immediately){
+         platform_window_show(window);
+    }
+
     return true;
 }
 
@@ -202,7 +240,7 @@ void platform_window_destroy(struct kwindow* window) {
                 DestroyWindow(window->platform_state->hwnd);
                 window->platform_state->hwnd = 0;
                 state_ptr->windows[i] = 0;
-                break;
+                return;
             }
         }
         KERROR("Destroying a window that was somehow not registered with the platform layer.");
@@ -915,16 +953,16 @@ LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARA
 
         //Check if different. If so, trigger a resize event.
         if (width != w->width || height != w->height) {
-           // Flag as resizing and store the change, but wait to regenerate.
-           w->resizing = true;  
-           //Also reset the frame count since the last resize operation.
-           w->frames_since_resize = 0;
-           //Update dimensions.
-           w->width = width; 
-           w->height = height;
-           
-           //Only trigger the callback if there was an actual change.
-           state_ptr->window_resized_callback(w);
+            // Flag as resizing and store the change, but wait to regenerate.
+            w->resizing = true;
+            //Also reset the frame count since the last resize operation.
+            w->frames_since_resize = 0;
+            //Update dimensions.
+            w->width = width;
+            w->height = height;
+
+            //Only trigger the callback if there was an actual change.
+            state_ptr->window_resized_callback(w);
         }
     } break;
     case WM_KEYDOWN:
@@ -1013,5 +1051,55 @@ LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARA
     } break;
     }
     return DefWindowProc(hwnd, msg, w_param, l_param);
+}
+
+
+static LPCWSTR cstr_to_wcstr(const char* str) {
+    if (!str) {
+        return 0;
+    }
+
+    i32 len = MultiByteToWideChar(CP_UTF8, 0, str, -1, 0, 0);
+    if (len == 0) {
+        return 0;
+    }
+    wchar_t* wstr = kallocate(sizeof(wchar_t) * (len), MEMORY_TAG_STRING);
+    if (!wstr) {
+        return 0;
+    }
+    if (MultiByteToWideChar(CP_UTF8, 0, str, -1, wstr, len) == 0) {
+        kfree((wchar_t*)wstr, sizeof(wchar_t) * (len), MEMORY_TAG_STRING);
+        return 0;
+    }
+    return wstr;
+}
+
+static void wcstr_free(LPCWSTR wstr) 
+{
+    if (wstr) {
+        u32 len = lstrlenW(wstr);
+        kfree((WCHAR*)wstr, sizeof(WCHAR) * len, MEMORY_TAG_STRING);
+    }
+}
+
+static const char* wcstr_to_cstr(LPCWSTR wstr) {
+    if (!wstr) {
+        return 0;
+    }
+
+    i32 length = WideCharToMultiByte(CP_UTF8, 0, wstr, -1, NULL, 0, NULL, NULL);
+    if (length == 0) {
+        return 0;
+    }
+    char* str = kallocate(sizeof(WCHAR) * length, MEMORY_TAG_STRING);
+    if (!str) {
+        return 0;
+    }
+    if (WideCharToMultiByte(CP_UTF8, 0, wstr, -1, str, length, NULL, NULL) == 0) {
+        kfree((char*)str, sizeof(char) * (length + 1), MEMORY_TAG_STRING);
+        return 0;
+    }
+
+    return str;
 }
 #endif  // KPLATFORM_WINDOW

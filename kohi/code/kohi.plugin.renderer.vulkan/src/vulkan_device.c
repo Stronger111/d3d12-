@@ -29,7 +29,7 @@ typedef struct vulkan_physical_device_queue_family_info {
 } vulkan_physical_device_queue_family_info;
 
 static b8 select_physical_device(vulkan_context* context);
-static b8 physical_device_meets_requirements(vulkan_context* context,VkPhysicalDevice device,
+static b8 physical_device_meets_requirements(vulkan_context* context, VkPhysicalDevice device,
     const VkPhysicalDeviceProperties* properties, const VkPhysicalDeviceFeatures* features,
     const vulkan_physical_device_requirements* requirements, vulkan_physical_device_queue_family_info* out_queue_info,
     vulkan_swapchain_support_info* out_swapchain_support);
@@ -299,7 +299,13 @@ void vulkan_device_destroy(vulkan_context* context) {
 
 void vulkan_device_query_swapchain_support(VkPhysicalDevice physical_device, VkSurfaceKHR surface, vulkan_swapchain_support_info* out_support_info) {
     // Surface capabilities
-    VK_CHECK(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physical_device, surface, &out_support_info->capabilities));
+    //VK_CHECK(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physical_device, surface, &out_support_info->capabilities));
+    VkResult result = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physical_device, surface, &out_support_info->capabilities);
+    if (!vulkan_result_is_success(result)) {
+        const char* err_str = vulkan_result_string(result, true);
+        KERROR("vkGetPhysicalDeviceSurfaceCapabilitiesKHR following error: '%s'", err_str);
+        return;
+    }
 
     // Surface formats
     VK_CHECK(vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface, &out_support_info->format_count, 0));
@@ -419,8 +425,8 @@ static b8 select_physical_device(vulkan_context* context) {
         }
 
         vulkan_physical_device_queue_family_info queue_info = {};
-      
-        b8 result = physical_device_meets_requirements(context,physical_devices[i], &properties, &features, &requirements, &queue_info, &context->device.swapchain_support);
+
+        b8 result = physical_device_meets_requirements(context, physical_devices[i], &properties, &features, &requirements, &queue_info, &context->device.swapchain_support);
 
         if (result) {
             KINFO("Selected device: '%s'.", properties.deviceName);
@@ -481,7 +487,7 @@ static b8 select_physical_device(vulkan_context* context) {
             context->device.supports_device_local_host_visible = supports_device_supports_host_visible;
 
             // The device may or may not support dynamic stat, so save that here
-            if (context->device.api_major > 1 && context->device.api_minor > 2) {
+            if (context->device.api_major >= 1 && context->device.api_minor > 2) {
                 context->device.support_flags |= VULKAN_DEVICE_SUPPORT_FLAG_NATIVE_DYNAMIC_STATE_BIT;
             }
 
@@ -509,7 +515,7 @@ static b8 select_physical_device(vulkan_context* context) {
     return true;
 }
 
-static b8 physical_device_meets_requirements(vulkan_context* context,VkPhysicalDevice device,
+static b8 physical_device_meets_requirements(vulkan_context* context, VkPhysicalDevice device,
     const VkPhysicalDeviceProperties* properties, const VkPhysicalDeviceFeatures* features,
     const vulkan_physical_device_requirements* requirements,
     vulkan_physical_device_queue_family_info* out_queue_info,
