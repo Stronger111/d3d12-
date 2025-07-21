@@ -56,7 +56,7 @@ systems = [
                {
                    name = "kohi.plugin.renderer.vulkan"
                    config = {
-                       
+
                    }
                }
                {
@@ -105,50 +105,9 @@ rendergraphs = [
                         name = "colourbuffer"
                         source_name = "clear_colour.colourbuffer"
                     }
-                ]
-            }
-            {
-                name = "shadow"
-                type = "shadow"
-                config = {
-                    resolution = 2048
-                }
-            }
-            {
-                name = "forward"
-                type = "forward"
-                sinks = [
-                    {
-                        name = "colourbuffer"
-                        source_name = "skybox.colourbuffer"
-                    }
                     {
                         name = "depthbuffer"
                         source_name = "clear_ds.depthbuffer"
-                    }
-                    {
-                        name = "shadow"
-                        source_name = "shadow.shadowmap"
-                    }
-                ]
-            }
-            {
-                name = "debug"
-                type = "debug3d"
-                sinks = [
-                    {
-                        name = "colourbuffer"
-                        source_name = "forward.colourbuffer"
-                    }
-                ]
-            }
-            {
-                name = "sui"
-                type = "standard_ui"
-                sinks = [
-                    {
-                        name = "colourbuffer"
-                        source_name = "debug.colourbuffer"
                     }
                 ]
             }
@@ -157,7 +116,7 @@ rendergraphs = [
                 type = "frame_end"
                 comment = "This node is required."
                 config = {
-                    colourbuffer_source = "sui.colourbuffer"
+                    colourbuffer_source = "skybox.colourbuffer"
                 }
             }
         ]

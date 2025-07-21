@@ -113,7 +113,7 @@ b8 vulkan_renderer_backend_initialize(renderer_backend_interface* backend, const
 
     // Setup Vulkan instance
     VkApplicationInfo app_info = { VK_STRUCTURE_TYPE_APPLICATION_INFO };
-    app_info.apiVersion = VK_MAKE_API_VERSION(0, context->api_major, context->api_minor, context->api_patch);
+    app_info.apiVersion =VK_API_VERSION_1_3; //VK_MAKE_API_VERSION(0, context->api_major, context->api_minor, context->api_patch);
     app_info.pApplicationName = config->application_name;
     app_info.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
     app_info.pEngineName = "Kohi Engine";
@@ -707,6 +707,7 @@ b8 vulkan_renderer_frame_command_list_begin(renderer_backend_interface* backend,
     vulkan_command_buffer* command_buffer = get_current_command_buffer(context);
 
     vulkan_command_buffer_reset(command_buffer);
+    
     vulkan_command_buffer_begin(command_buffer, false, false, false);
 
     // Dynamic state
@@ -1058,7 +1059,7 @@ void vulkan_renderer_begin_rendering(struct renderer_backend_interface* backend,
     }
 
     if (context->device.support_flags & VULKAN_DEVICE_SUPPORT_FLAG_NATIVE_DYNAMIC_STATE_BIT) {
-       //vkCmdBeginRendering(command_buffer->handle, &render_info);
+       vkCmdBeginRendering(command_buffer->handle,&render_info);
     }
     else {
         context->vkCmdBeginRenderingKHR(command_buffer->handle, &render_info);
@@ -1070,7 +1071,7 @@ void vulkan_renderer_end_rendering(struct renderer_backend_interface* backend, s
     vulkan_command_buffer* command_buffer = get_current_command_buffer(context);
 
     if (context->device.support_flags & VULKAN_DEVICE_SUPPORT_FLAG_NATIVE_DYNAMIC_STATE_BIT) {
-        //vkCmdEndRendering(command_buffer->handle);
+        vkCmdEndRendering(command_buffer->handle);
     }
     else {
         context->vkCmdEndRenderingKHR(command_buffer->handle);
@@ -3941,6 +3942,16 @@ static b8 vulkan_graphics_pipeline_create(vulkan_context* context, const vulkan_
     pipeline_create_info.subpass = 0;
     pipeline_create_info.basePipelineHandle = VK_NULL_HANDLE;
     pipeline_create_info.basePipelineIndex = -1;
+
+    //dynamic rendering
+    VkPipelineRenderingCreateInfo pipeline_rendering_create_info={VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO};
+    pipeline_rendering_create_info.pNext=VK_NULL_HANDLE;
+    pipeline_rendering_create_info.colorAttachmentCount=config->colour_attachment_count;
+    pipeline_rendering_create_info.pColorAttachmentFormats=config->colour_attachment_formats;
+    pipeline_rendering_create_info.depthAttachmentFormat=config->depth_attachment_format;
+    pipeline_rendering_create_info.stencilAttachmentFormat=config->stencil_attachment_format;
+
+    pipeline_create_info.pNext=&pipeline_rendering_create_info;
 
     VkResult result = vkCreateGraphicsPipelines(context->device.logical_device, VK_NULL_HANDLE, 1, &pipeline_create_info, context->allocator, &out_pipeline->handle);
 

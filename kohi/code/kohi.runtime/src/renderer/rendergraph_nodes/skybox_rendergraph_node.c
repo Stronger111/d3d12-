@@ -55,11 +55,12 @@ b8 skybox_rendergraph_node_create(struct rendergraph* graph, struct rendergraph_
     self->sinks = kallocate(sizeof(rendergraph_sink) * self->sink_count, MEMORY_TAG_ARRAY);
 
     rendergraph_node_sink_config* sink_config = { 0 };
+    //rendergraph_node_sink_config* depthbuffer_sink_config = 0;
     for (u32 i = 0;i < config->sink_count;++i) {
         rendergraph_node_sink_config* sink = &config->sinks[i];
         if (strings_equali("colourbuffer", sink->name)) {
             sink_config = sink;
-            break;
+            continue;
         }
     }
 
@@ -76,6 +77,7 @@ b8 skybox_rendergraph_node_create(struct rendergraph* graph, struct rendergraph_
         KERROR("Skybox rendergraph node requires configuration for sink called 'colourbuffer'.");
         return false;
     }
+
     // Has one source, for the colourbuffer.
     self->source_count = 1;
     self->sources = kallocate(sizeof(rendergraph_source) * self->source_count, MEMORY_TAG_ARRAY);
@@ -127,6 +129,7 @@ b8 skybox_rendergraph_node_load_resources(struct rendergraph_node* self) {
         self->sources[0].is_bound = true;
         return true;
     }
+
     return false;
 }
 
@@ -140,7 +143,7 @@ b8 skybox_rendergraph_node_execute(struct rendergraph_node* self, struct frame_d
     // Bind the viewport
     renderer_active_viewport_set(&internal_data->vp);
 
-    renderer_begin_rendering(internal_data->renderer, p_frame_data, 1, &internal_data->colourbuffer_texture->renderer_texture_handle, k_handle_invalid(),0);
+    renderer_begin_rendering(internal_data->renderer, p_frame_data, 1, &internal_data->colourbuffer_texture->renderer_texture_handle, k_handle_invalid(), 0);
 
     if (internal_data->sb && internal_data->sb->g->generation != INVALID_ID_U16) {
         shader_system_use_by_id(internal_data->shader_id);

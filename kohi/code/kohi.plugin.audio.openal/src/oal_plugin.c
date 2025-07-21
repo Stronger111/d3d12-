@@ -158,7 +158,8 @@ static b8 oal_plugin_stream_update(audio_backend_interface* plugin, audio_file* 
     ALint source_state;
     alGetSourcei(source->id, AL_SOURCE_STATE, &source_state);
     if (source_state != AL_PLAYING) {
-        KTRACE("Stream update,play needed for source id: %u", source->id);
+        //DXS:暂时注释
+        //KTRACE("Stream update,play needed for source id: %u", source->id);
         alSourcePlay(source->id);
     }
 

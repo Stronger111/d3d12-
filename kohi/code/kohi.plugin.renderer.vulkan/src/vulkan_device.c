@@ -404,8 +404,16 @@ static b8 select_physical_device(vulkan_context* context) {
         // Check for smooth line rasterisation support via extension.
         VkPhysicalDeviceLineRasterizationFeaturesEXT smooth_line_next = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_LINE_RASTERIZATION_FEATURES_EXT };
         dynamic_state_next.pNext = &smooth_line_next;
+        
+        //Test测试
+        VkPhysicalDeviceDynamicRenderingFeaturesKHR dynamic_Rendering_next = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR };
+        smooth_line_next.pNext = &dynamic_Rendering_next;
         // Perform the query
         vkGetPhysicalDeviceFeatures2(physical_devices[i], &features2);
+
+        if(dynamic_Rendering_next.dynamicRendering){
+            KINFO("Device supports dynamic rendering.");
+        }
 
         VkPhysicalDeviceMemoryProperties memory;
         vkGetPhysicalDeviceMemoryProperties(physical_devices[i], &memory);

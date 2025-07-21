@@ -189,36 +189,6 @@ void rendergraph_destroy(rendergraph* graph) {
     }
 }
 
-// b8 rendergraph_node_source_get(rendergraph* graph, const char* node_source_name, rendergraph_node** out_node, rendergraph_source** out_source) {
-//     if (!node_source_name || !string_length(node_source_name) || !out_node || !out_source) {
-//         return false;
-//     }
-
-//     char** node_source_parts = darray_create(char*);
-//     u32 parts_count = string_split(graph->global_colourbuffer_sink_source_name, '.', &node_source_parts, true, false);
-//     if (parts_count != 2) {
-//         KERROR("node source name must contain node name and source name. Format: <node_name>.<source_name>");
-//         return false;
-//     }
-
-//     //Find the node
-//     for (u32 i = 0;i < graph->node_count;++i) {
-//         rendergraph_node* node = &graph->nodes[i];
-//         if (strings_equali(node->name, node_source_parts[0])) {
-//             //Found the node,Now find the source.
-//             for (u32 s = 0;s < node->source_count;++s) {
-//                 rendergraph_source* source = &node->sources[s];
-//                 if (strings_equali(source->name, node_source_parts[1])) {
-//                     *out_node = node;
-//                     *out_source = source;
-//                     return true;
-//                 }
-//             }
-//         }
-//     }
-//     return false;
-// }
-
 //Resolves sink/source linkage for the given node.
 b8 rendergraph_node_resolve(rendergraph* graph, rendergraph_node* node) {
     if (!graph || !node) {
@@ -438,20 +408,20 @@ b8 rendergraph_system_initialize(u64* memory_requirement, struct rendergraph_sys
         return false;
     }
 
-    if (!forward_rendergraph_node_register_factory()) {
-        KERROR("Failed to register known rendergraph factory type 'forward'.");
-        return false;
-    }
+    // if (!forward_rendergraph_node_register_factory()) {
+    //     KERROR("Failed to register known rendergraph factory type 'forward'.");
+    //     return false;
+    // }
 
-    if (!shadow_rendergraph_node_register_factory()) {
-        KERROR("Failed to register known rendergraph factory type 'shadow'.");
-        return false;
-    }
+    // if (!shadow_rendergraph_node_register_factory()) {
+    //     KERROR("Failed to register known rendergraph factory type 'shadow'.");
+    //     return false;
+    // }
 
-    if (!debug_rendergraph_node_register_factory()) {
-        KERROR("Failed to register known rendergraph factory type 'shadow'.");
-        return false;
-    }
+    // if (!debug_rendergraph_node_register_factory()) {
+    //     KERROR("Failed to register known rendergraph factory type 'debug'.");
+    //     return false;
+    // }
     return true;
 }
 
