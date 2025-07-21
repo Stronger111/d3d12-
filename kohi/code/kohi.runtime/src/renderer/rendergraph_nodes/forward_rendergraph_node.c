@@ -522,7 +522,7 @@ b8 forward_rendergraph_node_execute(struct rendergraph_node* self, struct frame_
         u32 geometry_count = internal_data->geometry_count;
         if (geometry_count > 0) {
             // Update globals for material and PBR materials.
-            if (!shader_system_use_by_id(internal_data->pbr_shader->id)) {
+            if (!shader_system_use_by_id(internal_data->pbr_shader_id)) {
                 KERROR("Failed to use PBR shader. Render frame failed.");
                 return false;
             }
@@ -546,9 +546,9 @@ b8 forward_rendergraph_node_execute(struct rendergraph_node* self, struct frame_
                 for (u32 i = 0; i < MAX_SHADOW_CASCADE_COUNT; ++i) {
                     UNIFORM_APPLY_OR_FAIL(shader_system_uniform_set_by_location(internal_data->pbr_shader_id, internal_data->pbr_locations.light_space_0 + i, &internal_data->directional_light_spaces[i]));
                 }
-                // Global Shader Options
-                 // Global shader options.
-                b8 use_pcf = renderer_pcf_enabled(internal_data->renderer);
+
+                // Global shader options.
+                i32 use_pcf = (i32)renderer_pcf_enabled(internal_data->renderer);
                 UNIFORM_APPLY_OR_FAIL(shader_system_uniform_set_by_location(internal_data->pbr_shader_id, internal_data->pbr_locations.use_pcf, &use_pcf));
 
                 // HACK:Read this is from somewhere (or have global setter?)
@@ -615,6 +615,8 @@ b8 forward_rendergraph_node_execute(struct rendergraph_node* self, struct frame_
                     }
 
                     UNIFORM_APPLY_OR_FAIL(shader_system_uniform_set_by_location(internal_data->pbr_shader_id, internal_data->pbr_locations.num_p_lights, &p_light_count));
+                    //BUGFIXED: Shader配置文件 bingcount4 Draw 没有应用
+                    UNIFORM_APPLY_OR_FAIL(shader_system_apply_instance(internal_data->pbr_shader_id));
 
                     current_material_id = m->id;
                 }

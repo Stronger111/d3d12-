@@ -318,11 +318,11 @@ typedef struct vulkan_descriptor_set_config {
  */
 typedef struct vulkan_descriptor_state {
     /** @brief The descriptor generation, per swapchain image. */
-    u8 generations[3];
+    u8* generations;
     /** @brief The identifier, per swapchain image. Typically used for texture ids. */
-    u32 ids[3];
+    u32* ids;
     /** @brief The frame number this descriptor was last updated on, per swapchain image. */
-    u64 frame_numbers[3];
+    u64* frame_numbers;
 } vulkan_descriptor_state;
 
 typedef struct vulkan_uniform_sampler_state {
@@ -346,9 +346,9 @@ typedef struct vulkan_shader_instance_state {
     u32 id;
     /** @brief The offset in bytes in the instance uniform buffer. */
     u64 offset;
+
     /** @brief The descriptor sets for this instance, one per frame. */
-    // TODO:handle frame counts other than 3.
-    VkDescriptorSet descriptor_sets[3];
+    VkDescriptorSet* descriptor_sets;
 
     // UBO descriptor
     vulkan_descriptor_state ubo_descriptor_state;
@@ -364,7 +364,7 @@ typedef struct vulkan_shader_instance_state {
  */
 typedef struct vulkan_shader {
     /** @brief The block of memory mapped to the uniform buffer. */
-    void* mapped_uniform_buffer_block;
+    void** mapped_uniform_buffer_blocks;
     /** @brief The block of memory used for push constants,128B */
     void* local_push_constant_block;
     /** @brief The shader identifier. */
@@ -401,11 +401,12 @@ typedef struct vulkan_shader {
 
     /** @brief The descriptor pool used for this shader. */
     VkDescriptorPool descriptor_pool;
+
     /** @brief Descriptor set layouts, max of 2. Index 0=global, 1=instance. */
     VkDescriptorSetLayout descriptor_set_layouts[2];
-    /** @brief Global descriptor sets, one per frame. */
-    // TODO: handle frame counts other than 1
-    VkDescriptorSet global_descriptor_sets[3];
+
+     /** @brief Global descriptor sets, one per swapchain image. */
+    VkDescriptorSet* global_descriptor_sets;
 
     // UBO descriptor
     vulkan_descriptor_state global_ubo_descriptor_state;
@@ -413,8 +414,9 @@ typedef struct vulkan_shader {
     // A mapping of sampler uniforms to descriptors and texture maps.
     vulkan_uniform_sampler_state* global_sampler_uniforms;
 
-    /** @brief The uniform buffer used by this shader. */
-    renderbuffer uniform_buffer;
+     /** @brief The uniform buffers used by this shader, one per swapchain image. */
+    renderbuffer* uniform_buffers;
+    u32 uniform_buffer_count;
 
     /** @brief An array of pointers to pipelines associated with this shader. */
     vulkan_pipeline** pipelines;
@@ -427,7 +429,7 @@ typedef struct vulkan_shader {
     VkPrimitiveTopology current_topology;
 
     vulkan_shader_instance_state* instance_states;
-} vulkan_shader;
+}vulkan_shader;
 
 // Forward declare shader compiler.
 struct shaderc_comppiler;
