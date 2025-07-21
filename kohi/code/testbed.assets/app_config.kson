@@ -7,7 +7,7 @@ windows = [
     resolution="1280 720"
     position="100 100"
     name="main_window"
-    title="Testbed Main Window"
+    title="Testbed Main Window (コーヒー)"
    }
 ]
 systems = [
@@ -56,7 +56,7 @@ systems = [
                {
                    name = "kohi.plugin.renderer.vulkan"
                    config = {
-
+                       
                    }
                }
                {
@@ -105,9 +105,68 @@ rendergraphs = [
                         name = "colourbuffer"
                         source_name = "clear_colour.colourbuffer"
                     }
+                ]
+            }
+            {
+                name = "shadow"
+                type = "shadow"
+                config = {
+                    resolution = 2048
+                }
+            }
+            {
+                name = "forward"
+                type = "forward"
+                sinks = [
+                    {
+                        name = "colourbuffer"
+                        source_name = "skybox.colourbuffer"
+                    }
                     {
                         name = "depthbuffer"
                         source_name = "clear_ds.depthbuffer"
+                    }
+                    {
+                        name = "shadow"
+                        source_name = "shadow.shadowmap"
+                    }
+                ]
+            }
+            {
+                name = "debug"
+                type = "debug3d"
+                sinks = [
+                    {
+                        name = "colourbuffer"
+                        source_name = "forward.colourbuffer"
+                    }
+                    {
+                        name = "depthbuffer"
+                        source_name = "forward.depthbuffer"
+                    }
+                ]
+            }
+            {
+                name = "editor_gizmo"
+                type = "editor_gizmo"
+                sinks = [
+                    {
+                        name = "colourbuffer"
+                        source_name = "debug.colourbuffer"
+                    }
+                ]
+            }
+            {
+                name = "sui"
+                type = "standard_ui"
+                sinks = [
+                    {
+                        name = "colourbuffer"
+                        source_name = "editor_gizmo.colourbuffer"
+                    }
+                    {
+                        name = "depthbuffer"
+                        source_name = "debug.depthbuffer"
                     }
                 ]
             }
@@ -116,7 +175,7 @@ rendergraphs = [
                 type = "frame_end"
                 comment = "This node is required."
                 config = {
-                    colourbuffer_source = "skybox.colourbuffer"
+                    colourbuffer_source = "sui.colourbuffer"
                 }
             }
         ]

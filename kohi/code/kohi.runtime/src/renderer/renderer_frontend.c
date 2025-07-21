@@ -400,6 +400,7 @@ b8 renderer_texture_resources_acquire(struct renderer_system_state* state, const
 
     struct texture_internal_data* data = kallocate(state->backend->texture_internal_data_size, MEMORY_TAG_RENDERER);
     b8 success;
+    //表明纹理已经被包装 例如交换链
     if (flags & TEXTURE_FLAG_IS_WRAPPED) {
         // If the texure is considered "wrapped" (i.e. internal resources are created somwhere else,
         // such as swapchain images), then don't reach out to the backend to create resources. Just

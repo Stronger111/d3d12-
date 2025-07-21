@@ -74,7 +74,7 @@ Renderer:
 - 可视化Debug 以及特殊情况 来验证计算的正确性
 - Duke bug fix  state_ptr->handle.hwnd 没有赋值 导致 VK_ERROR_SURFACE_LOST_KHR vkGetPhysicalDeviceSurfaceCapabilitiesKHR 方法报错
   //修复 https://stackoverflow.com/questions/66912703/vulkan-vkgetphysicaldevicesurfacecapabilitieskhr-returning-vk-error-surface-los
-  //vkCmdBeginRendering 报错地址0XFFFFFFFFFFFFFFFFFFFFFF 原因创建Pipeline 管线没有创建VkPipelineRenderingCreateInfo导致没有填充完整信息报错.              
+  //vkCmdBeginRendering 报错地址0XFFFFFFFFFFFFFFFFFFFFFF 原因创建Pipeline 管线没有创建VkPipelineRenderingCreateInfo导致没有填充完整信息报错.    VkPipelineRenderingCreateInfoKHR 是VkPipelineRenderingCreateInfo扩展版本 支持vulkan1.2版本 
 
 # 工具
   * Rendoc Pro 

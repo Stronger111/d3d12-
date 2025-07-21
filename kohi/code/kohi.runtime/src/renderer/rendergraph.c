@@ -408,20 +408,20 @@ b8 rendergraph_system_initialize(u64* memory_requirement, struct rendergraph_sys
         return false;
     }
 
-    // if (!forward_rendergraph_node_register_factory()) {
-    //     KERROR("Failed to register known rendergraph factory type 'forward'.");
-    //     return false;
-    // }
+    if (!forward_rendergraph_node_register_factory()) {
+        KERROR("Failed to register known rendergraph factory type 'forward'.");
+        return false;
+    }
 
-    // if (!shadow_rendergraph_node_register_factory()) {
-    //     KERROR("Failed to register known rendergraph factory type 'shadow'.");
-    //     return false;
-    // }
+    if (!shadow_rendergraph_node_register_factory()) {
+        KERROR("Failed to register known rendergraph factory type 'shadow'.");
+        return false;
+    }
 
-    // if (!debug_rendergraph_node_register_factory()) {
-    //     KERROR("Failed to register known rendergraph factory type 'debug'.");
-    //     return false;
-    // }
+    if (!debug_rendergraph_node_register_factory()) {
+        KERROR("Failed to register known rendergraph factory type 'debug'.");
+        return false;
+    }
     return true;
 }
 
