@@ -218,7 +218,7 @@ void vulkan_image_destroy(vulkan_context* context, vulkan_image* image) {
 
 void vulkan_image_recreate(vulkan_context* context, vulkan_image* image) {
     //Release the old image/views first, then create new.
-    vkDestroyImageView(context->device.logical_device, image->view, context->allocator);
+    vkDestroyImage(context->device.logical_device, image->handle, context->allocator);
     vkFreeMemory(context->device.logical_device, image->memory, context->allocator);
     b8 is_device_memory = (image->memory_flags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) == VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
     kfree_report(image->memory_requirements.size, is_device_memory ? MEMORY_TAG_GPU_LOCAL : MEMORY_TAG_VULKAN);

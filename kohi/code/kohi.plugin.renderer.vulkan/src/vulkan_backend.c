@@ -569,10 +569,14 @@ void vulkan_renderer_on_window_destroyed(renderer_backend_interface* backend, st
                     vulkan_image_destroy(context, &texture_data->images[i]);
                 }
                 //Free the internal data
-                kfree(texture_data->images, sizeof(vulkan_image) * texture_data->image_count, MEMORY_TAG_TEXTURE);
+                // kfree(texture_data->images, sizeof(vulkan_image) * texture_data->image_count, MEMORY_TAG_TEXTURE);
             }
+
+            //Releasing the resources for the default depthbuffer should destroy backing resources too.
+            renderer_texture_resources_release(backend->frontend_state,&window->renderer_state->depthbuffer.renderer_texture_handle);
         }
     }
+
     // Swapchain
     KDEBUG("Destroying Vulkan swapchain for window '%s'...", window->name);
     vulkan_swapchain_destroy(backend, &window_backend->swapchain);
@@ -1400,8 +1404,6 @@ static b8 recreate_swapchain(renderer_backend_interface* backend, kwindow* windo
         KERROR("Failed to recreate swapchain. See logs for details.");
         return false;
     }
-
-
 
     // Free old command buffers.
     if (window_backend->graphics_command_buffers) {

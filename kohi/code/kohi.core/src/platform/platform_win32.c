@@ -33,6 +33,7 @@ typedef struct win32_file_watch {
 typedef struct kwindow_platform_state {
     // 窗口句柄
     HWND hwnd;
+    f32 device_pixel_ratio;
 } kwindow_platform_state;
 
 typedef struct platform_state {
@@ -41,7 +42,6 @@ typedef struct platform_state {
     CONSOLE_SCREEN_BUFFER_INFO err_output_csbi;
     // darray
     win32_file_watch* watches;
-    f32 device_pixel_ratio;
 
     // darray of pointers to created windows (owned by the application)
     kwindow** windows;
@@ -103,7 +103,6 @@ b8 platform_system_startup(u64* memory_requirement, platform_state* state, platf
     SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
     // NOTE:Older versions of windows might have to use this.
     //  SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE);
-    state_ptr->device_pixel_ratio = 1.0f;
 
     // setup and register window class,This can be done at platform init and be reused.
     HICON icon = LoadIcon(state_ptr->handle.h_instance, IDI_APPLICATION);
@@ -224,8 +223,8 @@ b8 platform_window_create(const kwindow_config* config, struct kwindow* window, 
     // Register the window internally.
     darray_push(state_ptr->windows, window);
 
-    if(show_immediately){
-         platform_window_show(window);
+    if (show_immediately) {
+        platform_window_show(window);
     }
 
     return true;
@@ -396,8 +395,8 @@ void platform_get_handle_info(u64* out_size, void* memory) {
     kcopy_memory(memory, &state_ptr->handle, *out_size);
 }
 
-f32 platform_device_pixel_ratio(void) {
-    return state_ptr->device_pixel_ratio;
+f32 platform_device_pixel_ratio(const struct kwindow* window) {
+    return window->platform_state->device_pixel_ratio;
 }
 
 // NOTE: Begin threads
@@ -921,10 +920,11 @@ LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARA
     case WM_DPICHANGED:
         // x- and y-axis DPI are always the same, so just grab one.
         i32 x_dpi = GET_X_LPARAM(w_param);
+        kwindow* w = window_from_handle(hwnd);
 
         // Store off the device pixel ratio.
-        state_ptr->device_pixel_ratio = (f32)x_dpi / USER_DEFAULT_SCREEN_DPI;
-        KINFO("Display device pixel ratio is: %.2f", state_ptr->device_pixel_ratio);
+        w->platform_state->device_pixel_ratio = (f32)x_dpi / USER_DEFAULT_SCREEN_DPI;
+        KINFO("Display device pixel ratio is: %.2f", w->platform_state->device_pixel_ratio);
         return 0;
     case WM_SIZE: {
         // Get the updated size
@@ -1074,8 +1074,7 @@ static LPCWSTR cstr_to_wcstr(const char* str) {
     return wstr;
 }
 
-static void wcstr_free(LPCWSTR wstr) 
-{
+static void wcstr_free(LPCWSTR wstr) {
     if (wstr) {
         u32 len = lstrlenW(wstr);
         kfree((WCHAR*)wstr, sizeof(WCHAR) * len, MEMORY_TAG_STRING);

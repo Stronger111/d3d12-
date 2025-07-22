@@ -324,7 +324,8 @@ b8 engine_create(application* game_inst) {
             return false;
         }
 
-
+        // Manually call to make sure window is of the right size/viewports and such are the right size.
+        renderer_on_window_resized(engine_state->systems.renderer_system, window);
     }
 
     // Job system
@@ -623,8 +624,9 @@ b8 engine_run(application* game_inst) {
             engine_state->p_frame_data.allocator.free_all();
 
             // TODO: Update systems here that need them.
-            //
             job_system_update(engine_state->systems.job_system, &engine_state->p_frame_data);
+            plugin_system_update_plugins(engine_state->systems.plugin_system, &engine_state->p_frame_data);
+
             // Update timelines. Note that this is not done by the systems manager
             // because we don't want or have timeline data in the frame_data struct any longer.
             timeline_system_update(engine_state->systems.timeline_system, delta);
@@ -689,7 +691,10 @@ b8 engine_run(application* game_inst) {
 
             // Begin "prepare_frame" render event grouping.
             renderer_begin_debug_label("prepare_frame", (vec3) { 1.0f, 1.0f, 0.0f });
+
             // TODO: frame prepare for systems that need it.
+             // NOTE: Frame preparation for plugins
+            plugin_system_frame_prepare_plugins(engine_state->systems.plugin_system, &engine_state->p_frame_data);
 
             // Have the application generate the render packet.
             b8 prepare_result = engine_state->game_inst->prepare_frame(engine_state->game_inst, &engine_state->p_frame_data);

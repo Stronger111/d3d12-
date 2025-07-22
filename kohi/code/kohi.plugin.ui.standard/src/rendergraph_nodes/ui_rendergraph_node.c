@@ -153,7 +153,7 @@ b8 ui_rendergraph_node_execute(struct rendergraph_node* self, struct frame_data*
     renderer_set_depth_test_enabled(false);
     renderer_set_depth_write_enabled(false);
 
-    renderer_begin_rendering(internal_data->renderer, p_frame_data, 1, &internal_data->colourbuffer_texture->renderer_texture_handle, k_handle_invalid(),0);
+    renderer_begin_rendering(internal_data->renderer, p_frame_data, 1, &internal_data->colourbuffer_texture->renderer_texture_handle, k_handle_invalid(), 0);
 
     // sui_shader StandardUI Shader 刚才是s s是没有贴图的。
     if (!shader_system_use_by_id(internal_data->sui_shader->id)) {
@@ -172,6 +172,7 @@ b8 ui_rendergraph_node_execute(struct rendergraph_node* self, struct frame_data*
 
         // Render clipping mask geometry if it exists
         if (renderable->clip_mask_render_data) {
+            renderer_begin_debug_label("clip_mask", (vec3) { 0, 1, 0 });
             // Enable writing,disable test.
             renderer_set_stencil_test_enabled(true);
             renderer_set_depth_test_enabled(false);
@@ -183,6 +184,9 @@ b8 ui_rendergraph_node_execute(struct rendergraph_node* self, struct frame_data*
                 RENDERER_STENCIL_OP_REPLACE,
                 RENDERER_STENCIL_OP_REPLACE,
                 RENDERER_COMPARE_OP_ALWAYS);
+            
+            renderer_clear_depth_set(internal_data->renderer,1.0);
+            renderer_clear_stencil_set(internal_data->renderer,0.0f);
 
             shader_system_uniform_set_by_location(internal_data->shader_id, internal_data->sui_locations.model, &renderable->clip_mask_render_data->model);
             shader_system_apply_local(internal_data->shader_id);

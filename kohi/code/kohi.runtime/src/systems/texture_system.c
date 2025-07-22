@@ -465,7 +465,7 @@ static b8 create_and_upload_texture(texture* t, const char* name, texture_type t
     t->name = string_duplicate(name);
 
     //Acquire backing renderer resources.
-    if (!renderer_texture_resources_acquire(state_ptr->renderer, t->name, t->type, t->width, t->height, t->channel_count, t->mip_levels, t->array_size,t->flags,&t->renderer_texture_handle)) {
+    if (!renderer_texture_resources_acquire(state_ptr->renderer, t->name, t->type, t->width, t->height, t->channel_count, t->mip_levels, t->array_size, t->flags, &t->renderer_texture_handle)) {
         KERROR("Failed to acquire renderer resources for default texture '%s'. See logs for details.", name);
         string_free(t->name);
         invalidate_texture(t);
@@ -1121,6 +1121,7 @@ static b8 create_texture(texture* t, texture_type type, u32 width, u32 height, u
             KERROR("Failed to acquire renderer resources for default texture '%s'. See logs for details.", t->name);
             return false;
         }
+        t->generation = 0;
 
         result = true;
         // KTRACE("Load skipped for texture '%s'. This is expected behaviour.");

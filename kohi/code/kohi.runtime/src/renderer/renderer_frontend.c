@@ -229,9 +229,6 @@ b8 renderer_on_window_created(struct renderer_system_state* state, struct kwindo
 
 void renderer_on_window_destroyed(struct renderer_system_state* state, struct kwindow* window) {
     if (window) {
-        //Releasing the resource for the default depthbuffer should destroy backing resoureces too.
-        renderer_texture_resources_release(state, &window->renderer_state->depthbuffer.renderer_texture_handle);
-
         //destroy on backend first.
         state->backend->window_destroy(state->backend, window);
     }
