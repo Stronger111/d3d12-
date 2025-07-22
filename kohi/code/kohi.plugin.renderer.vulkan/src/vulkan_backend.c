@@ -635,6 +635,8 @@ b8 vulkan_renderer_frame_prepare_window_surface(renderer_backend_interface* back
             KERROR("vulkan_renderer_backend_begin_frame vkDeviceWaitIdle(1) failed:'%s'", vulkan_result_string(result, true));
             return false;
         }
+        KINFO("Recreating swapchain, booting.");
+        return false;
     }
 
     // Check if the framebuffer has been resized, if so ,a new swapchain must be created.
@@ -650,18 +652,39 @@ b8 vulkan_renderer_frame_prepare_window_surface(renderer_backend_interface* back
             context->render_flag_changed = false;
         }
 
-        // If the swapchain recreation failed (because, for example,the window was minimized)
-        // boot out before unsetting the flag
-        if (!recreate_swapchain(backend, window)) {
-            return false;
+        //If the swapchain recreation failed (because,for example, the window was)
+        //minimized), boot out before unsetting the flag.
+        if (window_backend->skip_frames == 0) {
+            if (!recreate_swapchain(backend, window)) {
+                return false;
+            }
+        }
+
+        window_backend->skip_frames++;
+
+        //Resize depth buffer image.
+        if (window_backend->skip_frames == window_backend->swapchain.max_frames_in_flight) {
+            if (!k_handle_is_invalid(window->renderer_state->depthbuffer.renderer_texture_handle)) {
+                /* vkQueueWaitIdle(context->device.graphics_queue); */
+                if (!renderer_texture_resize(backend->frontend_state, window->renderer_state->depthbuffer.renderer_texture_handle, window->width, window->height)) {
+                    KERROR("Failed to resize depth buffer for window '%s'. See logs for details.", window->name);
+                }
+            }
+            // Sync the framebuffer size generation.
+            window_backend->framebuffer_previous_size_generation = window_backend->framebuffer_size_generation;
+
+            window_backend->skip_frames = 0;
         }
 
         KINFO("Resized,booting.");
         return false;
     }
 
-    // Wait for the execution of the current frame to complete. the fence being free will allow this one to move on
-    VkResult result = vkWaitForFences(device->logical_device, 1, &window_backend->in_flight_fences[window_backend->current_frame], true, UINT64_MAX_T);
+    // Wait for the execution of the current frame to complete. the fence being 
+    //free will allow this one to move on
+    VkResult result = vkWaitForFences(
+        device->logical_device, 1,
+        &window_backend->in_flight_fences[window_backend->current_frame], true, UINT64_MAX_T);
     if (!vulkan_result_is_success(result)) {
         KFATAL("In-flight fence wait failure! error: %s", vulkan_result_string(result, true));
         return false;
@@ -1378,8 +1401,7 @@ static b8 recreate_swapchain(renderer_backend_interface* backend, kwindow* windo
         return false;
     }
 
-    // Sync the framebuffer size generation.
-    window_backend->framebuffer_previous_size_generation = window_backend->framebuffer_size_generation;
+
 
     // Free old command buffers.
     if (window_backend->graphics_command_buffers) {
@@ -3610,7 +3632,7 @@ void vulkan_alloc_free(void* user_data, void* memory) {
     else {
         KERROR("vulkan_alloc_free failed to get alignment lookup for block %p.", memory);
     }
-    }
+}
 
 /**
  * @brief Implementation of PFN_vkReallocationFunction.
@@ -3672,7 +3694,7 @@ void* vulkan_alloc_reallocation(void* user_data, void* original, size_t size, si
     }
 
     return result;
-    }
+}
 
 /**
  * @brief Implementation of PFN_vkInternalAllocationNotification.
