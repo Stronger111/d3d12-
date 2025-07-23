@@ -216,7 +216,6 @@ b8 game_on_debug_event(u16 code, void* sender, void* listener_inst, event_contex
             KDEBUG("Unloading scene...");
 
             scene_unload(&state->main_scene, false);
-
             clear_debug_objects(game_inst);
             KDEBUG("Done.");
         }

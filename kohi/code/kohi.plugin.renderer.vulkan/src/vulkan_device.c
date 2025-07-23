@@ -261,7 +261,10 @@ void vulkan_device_destroy(vulkan_context* context) {
     context->device.transfer_queue = 0;
 
     KINFO("Destroying command pools...");
-    vkDestroyCommandPool(context->device.logical_device, context->device.graphics_command_pool, context->allocator);
+    vkDestroyCommandPool(
+        context->device.logical_device, 
+        context->device.graphics_command_pool, 
+        context->allocator);
 
     // Destroy logical device
     KINFO("Destroying logical device");
@@ -290,7 +293,9 @@ void vulkan_device_destroy(vulkan_context* context) {
         context->device.swapchain_support.present_mode_count = 0;
     }
 
-    kzero_memory(&context->device.swapchain_support.capabilities, sizeof(context->device.swapchain_support.capabilities));
+    kzero_memory(
+        &context->device.swapchain_support.capabilities, 
+        sizeof(context->device.swapchain_support.capabilities));
 
     context->device.graphics_queue_index = -1;
     context->device.present_queue_index = -1;

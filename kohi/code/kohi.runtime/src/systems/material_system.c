@@ -688,7 +688,7 @@ static b8 load_material(material_config* config, material* m) {
             map_config.repeat_u = map_config.repeat_v = map_config.repeat_w = TEXTURE_REPEAT_CLAMP_TO_BORDER;
             map_config.name = "shadow_map";
             map_config.texture_name = "";
-            if (!assign_map(&m->maps[SAMP_IRRADIANCE_MAP], &map_config, m->name, texture_system_get_default_diffuse_texture())) {
+            if (!assign_map(&m->maps[SAMP_SHADOW_MAP], &map_config, m->name, texture_system_get_default_diffuse_texture())) {
                 return false;
             }
         }

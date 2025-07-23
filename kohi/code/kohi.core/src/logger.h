@@ -117,7 +117,7 @@ KAPI void log_output(log_level level, const char* message, ...);
  * @param message The message to be logged.
  * @param ... Any formatted data that should be included in the log entry.
  */
-#define KDEBUG(message, ...) log_output(LOG_LEVEL_DEBUG, message, ##__VA_ARGS__);
+#define  KDEBUG(message, ...) log_output(LOG_LEVEL_DEBUG, message, ##__VA_ARGS__);
 #else
 /**
  * @brief Logs a debug-level message. Should be used for debugging purposes.

@@ -220,7 +220,7 @@ KAPI b8 standard_ui_system_initialize(u64* memory_requirement, standard_ui_state
     state->focused_id = INVALID_ID_U64;
 
     KTRACE("Initialized standard UI system.");
-    
+
     state->renderer = engine_systems_get()->renderer_system;
 
     return true;
@@ -234,19 +234,25 @@ void standard_ui_system_shutdown(standard_ui_state* state) {
         event_unregister(EVENT_CODE_MOUSE_MOVED, state, standard_ui_system_move);
         event_unregister(EVENT_CODE_BUTTON_PRESSED, state, standard_ui_system_mouse_down);
         event_unregister(EVENT_CODE_BUTTON_RELEASED, state, standard_ui_system_mouse_up);
-
+        
+        // Unload and destroy inactive controls.
         for (u32 i = 0; i < state->inactive_control_count; i++) {
             sui_control* c = state->inactive_controls[i];
             c->unload(state, c);
             c->destroy(state, c);
         }
-
+        
+        // Unload and destroy active controls.
         for (u32 i = 0; i < state->active_control_count; i++) {
             sui_control* c = state->active_controls[i];
             c->unload(state, c);
             c->destroy(state, c);
         }
 
+        // Release texture map for UI atlas.
+        renderer_texture_map_resources_release(&state->ui_atlas);
+
+        //Release texture for UI data.
         if (state->ui_atlas.texture) {
             texture_system_release(state->ui_atlas.texture->name);
             state->ui_atlas.texture = 0;

@@ -311,12 +311,15 @@ void vulkan_renderer_backend_shutdown(renderer_backend_interface* backend) {
     if (backend->internal_context) {
         kfree(backend->internal_context, backend->internal_context_size, MEMORY_TAG_RENDERER);
         backend->internal_context_size = 0;
+        backend->internal_context = 0;
     }
 
 #if defined(_DEBUG)
     KDEBUG("Destroying Vulkan debugger...");
     if (context->debug_messenger) {
-        PFN_vkDestroyDebugUtilsMessengerEXT func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(context->instance, "vkDestroyDebugUtilsMessengerEXT");
+        PFN_vkDestroyDebugUtilsMessengerEXT func = 
+        (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(
+            context->instance, "vkDestroyDebugUtilsMessengerEXT");
         func(context->instance, context->debug_messenger, context->allocator);
     }
 #endif
@@ -479,20 +482,8 @@ b8 vulkan_renderer_on_window_created(renderer_backend_interface* backend, struct
 
         //Setup a debug name for the image
         VK_SET_DEBUG_OBJECT_NAME(context, VK_OBJECT_TYPE_IMAGE, image->handle, image->name);
-
-        //Create the view for this image.
-        VkImageViewCreateInfo view_create_info = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
-        view_create_info.image = image->handle;
-        view_create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
-        view_create_info.format = context->device.depth_format;
-        image->view_subresource_range.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
-        image->view_subresource_range.baseMipLevel = 0;
-        image->view_subresource_range.levelCount = 1;
-        image->view_subresource_range.baseArrayLayer = 0;
-        image->view_subresource_range.layerCount = 1;
-        view_create_info.subresourceRange = image->view_subresource_range;
-        VK_CHECK(vkCreateImageView(context->device.logical_device, &view_create_info, context->allocator, &image->view));
     }
+
     KINFO("Vulkan depthbuffer created successfully.");
 
     // If there is not yet a current window, assign it now.
@@ -2754,6 +2745,9 @@ b8 vulkan_renderer_texture_map_resources_acquire(renderer_backend_interface* bac
 
 #if _DEBUG
     char* formatted_name = string_format("%s_texmap_sampler", map->texture->name);
+    if(strings_equali(formatted_name,"StandardUIAtlas_texmap_sampler") ){
+        KDEBUG("ssss");
+    }
     VK_SET_DEBUG_OBJECT_NAME(context, VK_OBJECT_TYPE_SAMPLER, context->samplers[selected_id], formatted_name);
     string_free(formatted_name);
 #endif
