@@ -553,7 +553,7 @@ b8 application_initialize(struct application* game_inst) {
     }
 
     // Setup the clear colour
-    renderer_clear_colour_set(engine_systems_get()->renderer_system,(vec4){0.0f, 0.0f, 0.2f, 1.0f});
+    renderer_clear_colour_set(engine_systems_get()->renderer_system, (vec4) { 0.0f, 0.0f, 0.2f, 1.0f });
 
     state->forward_move_speed = 5.0f * 5.0f;
     state->backward_move_speed = 2.5f * 5.0f;
@@ -962,7 +962,7 @@ b8 application_prepare_frame(struct application* app_inst, struct frame_data* p_
     }
 
     // TODO: Anything to do here?
-     // FIXME: Cache this instead of looking up every frame. // nocheckin
+    // FIXME: Cache this instead of looking up every frame. // nocheckin
     u32 node_count = state->forward_graph.node_count;
     for (u32 i = 0;i < node_count;++i) {
         rendergraph_node* node = &state->forward_graph.nodes[i];
@@ -985,15 +985,15 @@ b8 application_prepare_frame(struct application* app_inst, struct frame_data* p_
                 KERROR("The standard ui system failed to render.");
             }
             ui_rendergraph_node_set_render_data(node, render_data);
-        }else if (strings_equali(node->name, "forward")) {
+        }
+        else if (strings_equali(node->name, "forward")) {
+            // Ensure internal lists, etc. are reset.
+            forward_rendergraph_node_reset(node);
             forward_rendergraph_node_viewport_set(node, state->world_viewport);
-            forward_rendergraph_node_view_projection_set(node, state->world_camera->view_matrix, state->world_camera->position, state->world_viewport.projection);
-
-            forward_rendergraph_node_view_projection_set(
-                node,
-                camera_view_get(current_camera),
-                camera_position_get(current_camera),
-                current_viewport->projection);
+            forward_rendergraph_node_view_projection_set(node, 
+                camera_view_get(current_camera), 
+               camera_position_get(current_camera),
+                state->world_viewport.projection);
 
             // Tell our scene to generate relevant render data if it is loaded.
             if (scene->state == SCENE_STATE_LOADED) {

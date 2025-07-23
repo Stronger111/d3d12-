@@ -21,7 +21,6 @@ layout(push_constant) uniform push_constants {
     uint cascade_index;
 } local_ubo;
 
-
 void main() {
     gl_Position = (global_ubo.projections[local_ubo.cascade_index] * global_ubo.views[local_ubo.cascade_index]) *local_ubo.model* vec4(in_position, 1.0);
 }

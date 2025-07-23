@@ -244,6 +244,7 @@ b8 shadow_rendergraph_node_execute(rendergraph_node* self, frame_data* p_frame_d
     if (!self) {
         return false;
     }
+    renderer_begin_debug_label("shadow rendergraph node", (vec3) { 1.0f, 0.0f, 0.0f });
     // FIXME: Need to transition the format from (whatever) to VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
    // then perform the render,
     // then transition to VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL.
@@ -394,42 +395,47 @@ b8 shadow_rendergraph_node_execute(rendergraph_node* self, frame_data* p_frame_d
 
         // Terrain - use the special terrain shader.
         {
-            shader_system_use_by_id(internal_data->terrain_shader_id);
+            // shader_system_use_by_id(internal_data->terrain_shader_id);
 
-            if (needs_update) {
-                for (u32 i = 0; i < MAX_SHADOW_CASCADE_COUNT; ++i) {
-                    // NOTE: using the internal projection matrix,not one passed on
-                    if (!shader_system_uniform_set_by_location_arrayed(internal_data->terrain_shader_id, internal_data->terrain_locations.projections_location, i, &internal_data->cascade_data[i].projection)) {
-                        KERROR("Failed to apply terrain shadowmap projection uniform.");
-                        return false;
-                    }
+            // if (needs_update) {
+            //     for (u32 i = 0; i < MAX_SHADOW_CASCADE_COUNT; ++i) {
+            //         // NOTE: using the internal projection matrix,not one passed on
+            //         if (!shader_system_uniform_set_by_location_arrayed(internal_data->terrain_shader_id, internal_data->terrain_locations.projections_location, i, &internal_data->cascade_data[i].projection)) {
+            //             KERROR("Failed to apply terrain shadowmap projection uniform.");
+            //             return false;
+            //         }
 
-                    if (!shader_system_uniform_set_by_location_arrayed(internal_data->terrain_shader_id, internal_data->terrain_locations.views_location, i, &internal_data->cascade_data[i].view)) {
-                        KERROR("Failed to apply terrain shadowmap view uniform.");
-                        return false;
-                    }
-                }
-            }
+            //         if (!shader_system_uniform_set_by_location_arrayed(internal_data->terrain_shader_id, internal_data->terrain_locations.views_location, i, &internal_data->cascade_data[i].view)) {
+            //             KERROR("Failed to apply terrain shadowmap view uniform.");
+            //             return false;
+            //         }
+            //     }
+            // }
 
-            shader_system_apply_global(internal_data->terrain_shader_id);
+            // shader_system_apply_global(internal_data->terrain_shader_id);
 
-            for (u32 i = 0; i < internal_data->terrain_geometry_count; ++i) {
-                geometry_render_data* terrain = &internal_data->terrain_geometries[i];
+            // for (u32 i = 0; i < internal_data->terrain_geometry_count; ++i) {
+            //     geometry_render_data* terrain = &internal_data->terrain_geometries[i];
 
-                // Apply the locals
-                shader_system_uniform_set_by_location(internal_data->terrain_shader_id, internal_data->terrain_locations.model_location, &terrain->model);
-                shader_system_uniform_set_by_location(internal_data->terrain_shader_id, internal_data->terrain_locations.cascade_index_location, &p);
-                shader_system_apply_local(internal_data->terrain_shader_id);
+            //     // Apply the locals
+            //     shader_system_uniform_set_by_location(internal_data->terrain_shader_id, internal_data->terrain_locations.model_location, &terrain->model);
+            //     shader_system_uniform_set_by_location(internal_data->terrain_shader_id, internal_data->terrain_locations.cascade_index_location, &p);
+            //     shader_system_apply_local(internal_data->terrain_shader_id);
 
-                // Draw it.
-                renderer_geometry_draw(terrain);
-            }
+            //     // Draw it.
+            //     renderer_geometry_draw(terrain);
+            // }
         }
 
         renderer_end_rendering(internal_data->renderer, p_frame_data);
-        // Prepare the image to be sampled from.
-        renderer_texture_prepare_for_sampling(internal_data->renderer, internal_data->depth_texture.renderer_texture_handle, internal_data->depth_texture.flags);
+
+        renderer_end_debug_label();
     }  // End cascades pass
+
+    // Prepare the image to be sampled from.
+    renderer_texture_prepare_for_sampling(internal_data->renderer, internal_data->depth_texture.renderer_texture_handle, internal_data->depth_texture.flags);
+
+    renderer_end_debug_label();
     return true;
 }
 
