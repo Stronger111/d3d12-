@@ -698,8 +698,8 @@ b8 application_initialize(struct application* game_inst) {
 
     // TODO: end temp load/prepare stuff
     state->world_camera = camera_system_acquire("world");
-    camera_position_set(state->world_camera, (vec3) { 5.83f, 4.35f, 18.68f });
-    camera_rotation_euler_set(state->world_camera, (vec3) { -29.43f, -42.41f, 0.0f });
+    camera_position_set(state->world_camera, (vec3) {-3.94f, 4.26f, 15.79f});
+    camera_rotation_euler_set(state->world_camera, (vec3) { -11.505f, -74.994f, 0.0f });
 
     // TODO: temp test
     state->world_camera_2 = camera_system_acquire("world_2");
