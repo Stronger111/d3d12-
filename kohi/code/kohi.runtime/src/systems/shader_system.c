@@ -300,7 +300,7 @@ shader* shader_system_get(const char* shader_name) {
     if (shader_id != INVALID_ID) {
         return shader_system_get_by_id(shader_id);
     }
-    KERROR("There is not shader available called '%s', and one by that name could also not be loaded.");
+    KERROR("There is not shader available called '%s', and one by that name could also not be loaded.", shader_name);
     return 0;
 }
 
@@ -425,6 +425,19 @@ b8 shader_system_apply_instance(u32 shader_id) {
 b8 shader_system_apply_local(u32 shader_id) {
     shader* s = &state_ptr->shaders[shader_id];
     return renderer_shader_apply_local(state_ptr->renderer, s);
+}
+
+b8 shader_system_shader_instance_acquire(u32 shader_id, u32 map_count, texture_map* maps, u32* out_instance_id) {
+    //shader* selected_shader = shader_system_get_by_id(shader_id);
+
+    //Ensure that configs are setup for required texture maps.
+    // shader_instance_resource_config instance_resource_config = { 0 };
+    // u32 instance_sampler_count=selected_shader->instance_uniform_sampler_count;
+    return true;
+}
+
+b8 shader_system_shader_instance_release(u32 shader_id, u32 instance_id) {
+    return true;
 }
 
 static b8 internal_attribute_add(shader* shader, const shader_attribute_config* config) {

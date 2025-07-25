@@ -112,6 +112,7 @@ static b8 mesh_loader_load(struct resource_loader* self, const char* name,
     }
     case MESH_FILE_TYPE_KSM:
         result = load_ksm_file(&f, &resource_data);
+       
         break;
     default:
     case MESH_FILE_TYPE_NOT_FOUND:
