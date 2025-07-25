@@ -67,16 +67,46 @@ b8 water_plane_load(water_plane* plane) {
         }
 
         //Acquire instance resources for this plane.
-        // u32 shader_id = shader_system_get_id("Runtime.Shader.Water");
-        // if(!shader_system){
+        u32 shader_id = shader_system_get_id("Runtime.Shader.Water");
+        if (!shader_system_shader_instance_acquire(shader_id, 0, 0, &plane->instance_id)) {
+            KERROR("Failed to acquire instance resources for water plane.");
+            return false;
+        }
 
-        // }
+        return true;
     }
-    return true;
+    return false;
 }
 b8 water_plane_unload(water_plane* plane) {
-    return true;
+    if (plane) {
+        renderbuffer* vertex_buffer = renderer_renderbuffer_get(RENDERBUFFER_TYPE_VERTEX);
+        renderbuffer* index_buffer = renderer_renderbuffer_get(RENDERBUFFER_TYPE_INDEX);
+
+        //Free space.
+        if (!renderer_renderbuffer_free(vertex_buffer, sizeof(vec4) * 4, plane->vertex_buffer_offset)) {
+            KERROR("Failed to free space in vertex buffer.");
+            return false;
+        }
+
+        if (!renderer_renderbuffer_free(index_buffer, sizeof(u32) * 6, plane->index_buffer_offset)) {
+            KERROR("Failed to allfreeocate space in index buffer.");
+            return false;
+        }
+
+        // Release instance resources for this plane.
+        u32 shader_id = shader_system_get_id("Runtime.Shader.Water");
+        if (!shader_system_shader_instance_release(shader_id, plane->instance_id)) {
+            KERROR("Failed to release instance resources for water plane.");
+            return false;
+        }
+        
+        return true;
+    }
+    return false;
 }
 b8 water_plane_update(water_plane* plane) {
-    return true;
+    if (plane) {
+        return true;
+    }
+    return false;
 }

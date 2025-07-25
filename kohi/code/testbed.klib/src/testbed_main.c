@@ -45,6 +45,7 @@
 #include "editor/editor_gizmo_rendergraph_node.h"
 #include <resources/Kohidebug/debug_box3d.h>
 #include <resources/Kohidebug/debug_line3d.h>
+#include <resources/water_plane.h>
 
 // TODO: temp
 #include <identifiers/identifier.h>
@@ -74,6 +75,7 @@
 #include "renderer/rendergraph_nodes/shadow_rendergraph_node.h"
 #include "renderer/rendergraph_nodes/skybox_rendergraph_node.h"
 #include "rendergraph_nodes/ui_rendergraph_node.h"
+#include "renderer/rendergraph_nodes/water_plane_rendergraph_node.h"
 #include "systems/plugin_system.h"
 #include "systems/timeline_system.h"
 #include "testbed.klib_version.h"
@@ -698,7 +700,7 @@ b8 application_initialize(struct application* game_inst) {
 
     // TODO: end temp load/prepare stuff
     state->world_camera = camera_system_acquire("world");
-    camera_position_set(state->world_camera, (vec3) {-3.94f, 4.26f, 15.79f});
+    camera_position_set(state->world_camera, (vec3) { -3.94f, 4.26f, 15.79f });
     camera_rotation_euler_set(state->world_camera, (vec3) { -11.505f, -74.994f, 0.0f });
 
     // TODO: temp test
@@ -990,9 +992,9 @@ b8 application_prepare_frame(struct application* app_inst, struct frame_data* p_
             // Ensure internal lists, etc. are reset.
             forward_rendergraph_node_reset(node);
             forward_rendergraph_node_viewport_set(node, state->world_viewport);
-            forward_rendergraph_node_view_projection_set(node, 
-                camera_view_get(current_camera), 
-               camera_position_get(current_camera),
+            forward_rendergraph_node_view_projection_set(node,
+                camera_view_get(current_camera),
+                camera_position_get(current_camera),
                 state->world_viewport.projection);
 
             // Tell our scene to generate relevant render data if it is loaded.
@@ -1311,6 +1313,29 @@ b8 application_prepare_frame(struct application* app_inst, struct frame_data* p_
 
             // Only draw if loaded.
             editor_gizmo_rendergraph_node_enabled_set(node, scene->state == SCENE_STATE_LOADED);
+        }
+        else if (strings_equali(node->name, "water")) {
+            if (scene->state == SCENE_STATE_LOADED) {
+                water_plane_rendergraph_node_viewport_set(node, state->world_viewport);
+                water_plane_rendergraph_node_view_projection_set(
+                    node,
+                    camera_view_get(current_camera),
+                    camera_position_get(current_camera),
+                    current_viewport->projection);
+                // FIXME: get water planes properly instead of this hack.
+                u32 water_plane_count = 1;
+                water_plane** planes = darray_reserve_with_allocator(water_plane*, water_plane_count, &p_frame_data->allocator);
+                darray_push(planes, &scene->water_planes[0]);
+                // TODO: set geometries
+                if (!water_plane_rendergraph_node_water_planes_set(node, p_frame_data, water_plane_count, planes)) {
+                    // NOTE: Not going to abort the whole graph for this failure, but will bleat about it loudly.
+                    KERROR("Failed to set water planes for water_plane rendergraph node.");
+                }
+            }
+            else {
+                water_plane_rendergraph_node_water_planes_set(node, p_frame_data, 0, 0);
+            }
+            // water_plane_rendergraph_node_water_planes_set(node, p_frame_data, 0, 0);
         }
     }
     kclock_update(&state->prepare_clock);
