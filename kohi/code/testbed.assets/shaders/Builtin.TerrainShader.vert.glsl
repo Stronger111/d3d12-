@@ -4,7 +4,7 @@ layout(location = 0) in vec3 in_position;
 layout(location = 1) in vec3 in_normal;
 layout(location = 2) in vec2 in_texcoord;
 layout(location = 3) in vec4 in_colour;
-layout(location = 4) in vec3 in_tangent;
+layout(location = 4) in vec4 in_tangent;
 layout(location= 5) in vec4 in_mat_weights;  //Supports 4 materials
 
 const int MAX_SHADOW_CASCADES =4;
@@ -25,7 +25,7 @@ layout(set = 0, binding = 0) uniform global_uniform_object {
     mat4 light_space[MAX_SHADOW_CASCADES];
     vec4 cascade_splits;
     directional_light dir_light;
-    vec4 view_positions;
+    vec4 view_positions[2];
     int mode;
     int use_pcf;
     float bias;
@@ -75,7 +75,7 @@ void main() {
     // Copy the normal over.
    mat3 m3_model = mat3(u_push_constants.model);
    out_dto.normal = normalize(m3_model * in_normal);
-   out_dto.tangent = normalize(m3_model * in_tangent);
+   out_dto.tangent = normalize(m3_model * in_tangent.xyz);
    out_dto.cascade_splits = global_ubo.cascade_splits;
    out_dto.view_position = global_ubo.view_positions[u_push_constants.view_index];
    out_dto.mat_weights = in_mat_weights;
@@ -83,7 +83,7 @@ void main() {
    
    //Apply clipping plane
    vec4 world_position=u_push_constants.model*vec4(in_position,1.0);
-   gl_ClipDistance[0] = dot(world_position, u_push_constants.clip_plane);
+   gl_ClipDistance[0] = dot(world_position, u_push_constants.clipping_plane);
 
    //Get a light-space-transformed fragment position. 世界空间转换到灯光空间
    for(int i=0;i<MAX_SHADOW_CASCADES;++i)

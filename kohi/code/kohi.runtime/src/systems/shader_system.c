@@ -447,7 +447,13 @@ b8 shader_system_shader_instance_acquire(u32 shader_id, u32 map_count, texture_m
         uniform_config->texture_map_count = KMAX(u->array_length, 1);
         uniform_config->texture_maps = kallocate(sizeof(texture_map*) * uniform_config->texture_map_count, MEMORY_TAG_ARRAY);
         for (u32 j = 0;j < uniform_config->texture_map_count;++j) {
-            uniform_config->texture_maps[j] = &maps[j];
+            uniform_config->texture_maps[j] = &maps[i];
+
+            //Acquire resources for the map.
+            if (!renderer_texture_map_resources_acquire(uniform_config->texture_maps[j])) {
+                KERROR("Unable to acquire resources for texture map.");
+                return false;
+            }
         }
     }
 
