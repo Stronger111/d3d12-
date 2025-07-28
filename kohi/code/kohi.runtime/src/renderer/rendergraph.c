@@ -19,7 +19,6 @@
 #include "renderer/rendergraph_nodes/skybox_rendergraph_node.h"
 #include "rendergraph_nodes/frame_begin_rendergraph_node.h"
 #include "rendergraph_nodes/frame_end_rendergraph_node.h"
-#include "rendergraph_nodes/water_plane_rendergraph_node.h"
 
 /**
  * The configuration for a rendergraph.
@@ -424,10 +423,6 @@ b8 rendergraph_system_initialize(u64* memory_requirement, struct rendergraph_sys
         return false;
     }
 
-    if (!water_plane_rendergraph_node_register_factory()) {
-        KERROR("Failed to register known rendergraph factory type 'water_plane'.");
-        return false;
-    }
     return true;
 }
 
