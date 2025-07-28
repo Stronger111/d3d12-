@@ -104,3 +104,6 @@ Renderer:
 The audio plugin requires an installatiion of OpenAL.
  - Linux: use a package manager to install OpenAL, if not already installed (i.e. `sudo apt install openal` for Ubuntu or `sudo pacman -S openal` on Arch)
  - macOS: install openal-soft via homebrew: `brew install openal-soft`. Note on M1 macs this installs to `/opt/homebrew/opt/openal-soft/`, where the `include`, `lib`, and `'bin` directories can be found. The `build-all.sh` script accounts for this version of the install.
+
+ # 性能
+   sampler_info.maxAnisotropy = 16;影响性能  数值越大 性能越差

@@ -528,7 +528,7 @@ typedef struct renderer_backend_interface {
      */
     void (*set_stencil_op)(struct renderer_backend_interface* backend, renderer_stencil_op fail_op, renderer_stencil_op pass_op, renderer_stencil_op depth_fail_op, renderer_compare_op compare_op);
 
-    void (*begin_rendering)(struct renderer_backend_interface* backend, struct frame_data* p_frame_data, u32 colour_target_count, struct texture_internal_data** colour_targets, struct texture_internal_data* depth_stencil_target, u32 depth_stencil_layer);
+    void (*begin_rendering)(struct renderer_backend_interface* backend, struct frame_data* p_frame_data, rect_2d render_area, u32 colour_target_count, struct texture_internal_data** colour_targets, struct texture_internal_data* depth_stencil_target, u32 depth_stencil_layer);
     void (*end_rendering)(struct renderer_backend_interface* backend, struct frame_data* p_frame_data);
 
     /**
@@ -550,7 +550,7 @@ typedef struct renderer_backend_interface {
     void (*clear_colour_set)(struct renderer_backend_interface* backend, vec4 clear_colour);
     void (*clear_depth_set)(struct renderer_backend_interface* backend, f32 depth);
     void (*clear_stencil_set)(struct renderer_backend_interface* backend, u32 stencil);
-    void (* clear_colour)(struct renderer_backend_interface* backend, struct texture_internal_data* tex_internal);
+    void (*clear_colour)(struct renderer_backend_interface* backend, struct texture_internal_data* tex_internal);
     void (*clear_depth_stencil)(struct renderer_backend_interface* backend, struct texture_internal_data* tex_internal);
     void (*colour_texture_prepare_for_present)(struct renderer_backend_interface* backend, struct texture_internal_data* tex_internal);
     void (*texture_prepare_for_sampling)(struct renderer_backend_interface* backend, struct texture_internal_data* tex_internal, texture_flag_bits flags);

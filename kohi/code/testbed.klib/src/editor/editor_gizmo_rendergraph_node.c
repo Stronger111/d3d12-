@@ -64,7 +64,8 @@ b8 editor_gizmo_rendergraph_node_create(struct rendergraph* graph, struct render
         rendergraph_node_sink_config* sink = &config->sinks[i];
         if (strings_equali("colourbuffer", sink->name)) {
             colourbuffer_sink_config = sink;
-        } else {
+        }
+        else {
             KWARN("Editor gizmo rendergraph node contains config for unknown sink '%s', which will be ignored.", sink->name);
         }
     }
@@ -77,7 +78,8 @@ b8 editor_gizmo_rendergraph_node_create(struct rendergraph* graph, struct render
         colourbuffer_sink->bound_source = 0;
         // Save off the configured source name for later lookup and binding.
         colourbuffer_sink->configured_source_name = string_duplicate(colourbuffer_sink_config->source_name);
-    } else {
+    }
+    else {
         KERROR("Debug rendergraph node requires configuration for sink called 'colourbuffer'.");
         return false;
     }
@@ -131,7 +133,8 @@ b8 editor_gizmo_rendergraph_node_load_resources(struct rendergraph_node* self) {
         internal_data->colourbuffer_texture = self->sinks[0].bound_source->value.t;
         self->sources[0].value.t = internal_data->colourbuffer_texture;
         self->sources[0].is_bound = true;
-    } else {
+    }
+    else {
         return false;
     }
 
@@ -146,11 +149,12 @@ b8 editor_gizmo_rendergraph_node_execute(struct rendergraph_node* self, struct f
     editor_gizmo_rendergraph_node_internal_data* internal_data = self->internal_data;
     editor_gizmo* gizmo = internal_data->gizmo;
 
-    // Bind the viewport
-    renderer_active_viewport_set(&internal_data->vp);
+    renderer_begin_debug_label(self->name, (vec3) { 0.5f, 1.0f, 0.5 });
 
     if (internal_data->enabled) {
-        renderer_begin_rendering(internal_data->renderer, p_frame_data, 1, &internal_data->colourbuffer_texture->renderer_texture_handle, k_handle_invalid(), 0);
+        renderer_begin_rendering(internal_data->renderer, p_frame_data, internal_data->vp.rect, 1, &internal_data->colourbuffer_texture->renderer_texture_handle, k_handle_invalid(), 0);
+        // Bind the viewport
+        renderer_active_viewport_set(&internal_data->vp);
 
         shader_system_use_by_id(internal_data->colour_shader->id);
 
@@ -177,10 +181,10 @@ b8 editor_gizmo_rendergraph_node_execute(struct rendergraph_node* self, struct f
         // f32 fixed_size = 0.1f;                            // TODO: Make this a configurable option for gizmo size.
         f32 scale_scalar = 1.0f;            // ((2.0f * ktan(fov * 0.5f)) * dist) * fixed_size;
         gizmo->scale_scalar = scale_scalar; // Keep a copy of this for hit detection.
-        mat4 scale = mat4_scale((vec3){scale_scalar, scale_scalar, scale_scalar});
+        mat4 scale = mat4_scale((vec3) { scale_scalar, scale_scalar, scale_scalar });
         model = mat4_mul(model, scale);
 
-        geometry_render_data render_data = {0};
+        geometry_render_data render_data = { 0 };
         render_data.model = model;
         render_data.material = g->material;
         render_data.vertex_count = g->vertex_count;
@@ -198,6 +202,7 @@ b8 editor_gizmo_rendergraph_node_execute(struct rendergraph_node* self, struct f
 
         renderer_end_rendering(internal_data->renderer, p_frame_data);
     }
+    renderer_end_debug_label();
 
     return true;
 }
@@ -250,7 +255,7 @@ b8 editor_gizmo_rendergraph_node_gizmo_set(struct rendergraph_node* self, editor
 }
 
 b8 editor_gizmo_rendergraph_node_register_factory(void) {
-    rendergraph_node_factory factory = {0};
+    rendergraph_node_factory factory = { 0 };
     factory.type = "editor_gizmo";
     factory.create = editor_gizmo_rendergraph_node_create;
     return rendergraph_system_node_factory_register(engine_systems_get()->rendergraph_system, &factory);
