@@ -75,6 +75,7 @@ Renderer:
 - Duke bug fix  state_ptr->handle.hwnd 没有赋值 导致 VK_ERROR_SURFACE_LOST_KHR vkGetPhysicalDeviceSurfaceCapabilitiesKHR 方法报错
   //修复 https://stackoverflow.com/questions/66912703/vulkan-vkgetphysicaldevicesurfacecapabilitieskhr-returning-vk-error-surface-los
   //vkCmdBeginRendering 报错地址0XFFFFFFFFFFFFFFFFFFFFFF 原因创建Pipeline 管线没有创建VkPipelineRenderingCreateInfo导致没有填充完整信息报错.    VkPipelineRenderingCreateInfoKHR 是VkPipelineRenderingCreateInfo扩展版本 支持vulkan1.2版本 
+- 传入顶点in_position 错误  是Draw 传入错误的IndexBuffer错误 Index是取哪一个顶点,所以取出来的顶点也是错误的。
 
 # 工具
   * Rendoc Pro 

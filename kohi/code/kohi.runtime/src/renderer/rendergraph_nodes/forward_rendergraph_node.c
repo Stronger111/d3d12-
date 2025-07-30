@@ -438,7 +438,7 @@ b8 render_water_planes(forward_rendergraph_node_internal_data* internal_data, u3
                 KERROR("Failed to bind vertex buffer data for water plane.");
                 return false;
             }
-            if (!renderer_renderbuffer_draw(internal_data->index_buffer, plane->vertex_buffer_offset, 6, false)) {
+            if (!renderer_renderbuffer_draw(internal_data->index_buffer, plane->index_buffer_offset, 6, false)) {
                 KERROR("Failed to draw water plane using index data.");
                 return false;
             }
