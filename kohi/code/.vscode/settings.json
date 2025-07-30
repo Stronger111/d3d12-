@@ -123,7 +123,8 @@
         "debug_line3d.h": "c",
         "frame_end_rendergraph_node.h": "c",
         "algorithm": "c",
-        "xiosbase": "c"
+        "xiosbase": "c",
+        "engine.h": "c"
     },
     // File copyright documentation tag.  Array of strings will be converted to one line per element.  Can template {year}.
     "doxdocgen.file.copyrightTag": [

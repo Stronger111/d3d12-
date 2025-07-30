@@ -26,15 +26,16 @@ void water_plane_destroy(water_plane* plane) {
         //
     }
 }
+
 b8 water_plane_initialize(water_plane* plane) {
     if (plane) {
-        //Create the geometry, but don't load it yet.
-       //TODO: should probably be based on some size.
+        // Create the geometry, but don't load it yet.
+        // TODO: should probably be based on some size.
         f32 size = 100.0f;
-        plane->vertices[0] = (vec4){ -size,0,-size,1 };
-        plane->vertices[1] = (vec4){ -size,0,size,1 };
-        plane->vertices[2] = (vec4){ size,0,size,1 };
-        plane->vertices[3] = (vec4){ size,0,-size,1};
+        plane->vertices[0] = (vec4){-size, 0, -size, 1};
+        plane->vertices[1] = (vec4){-size, 0, size, 1};
+        plane->vertices[2] = (vec4){size, 0, size, 1};
+        plane->vertices[3] = (vec4){size, 0, -size, 1};
 
         plane->indices[0] = 0;
         plane->indices[1] = 1;
@@ -43,7 +44,7 @@ b8 water_plane_initialize(water_plane* plane) {
         plane->indices[4] = 3;
         plane->indices[5] = 0;
 
-        //Maps array
+        // Maps array
         plane->map_count = 2;
         plane->maps = kallocate(sizeof(texture_map) * plane->map_count, MEMORY_TAG_ARRAY);
         for (u32 i = 0; i < plane->map_count; ++i) {
@@ -57,15 +58,15 @@ b8 water_plane_initialize(water_plane* plane) {
         }
         return true;
     }
-
     return false;
 }
+
 b8 water_plane_load(water_plane* plane) {
     if (plane) {
+
         renderbuffer* vertex_buffer = renderer_renderbuffer_get(RENDERBUFFER_TYPE_VERTEX);
         renderbuffer* index_buffer = renderer_renderbuffer_get(RENDERBUFFER_TYPE_INDEX);
-
-        //Allocate space
+        // Allocate space
         if (!renderer_renderbuffer_allocate(vertex_buffer, sizeof(vec4) * 4, &plane->vertex_buffer_offset)) {
             KERROR("Failed to allocate space in vertex buffer.");
             return false;
@@ -75,7 +76,7 @@ b8 water_plane_load(water_plane* plane) {
             return false;
         }
 
-        //Load data
+        // Load data
         if (!renderer_renderbuffer_load_range(vertex_buffer, plane->vertex_buffer_offset, sizeof(vec4) * 4, plane->vertices, false)) {
             KERROR("Failed to load data into vertex buffer.");
             return false;
@@ -85,14 +86,14 @@ b8 water_plane_load(water_plane* plane) {
             return false;
         }
 
-        //Get the current window size as the dimensions of these textures will be based on this.
+        // Get the current window size as the dimensions of these textures will be based on this.
         kwindow* window = engine_active_window_get();
-        //TODO: should probably cut this in half.
+        // TODO: should probably cut this in half.
         u32 tex_width = window->width;
         u32 tex_height = window->height;
         struct renderer_system_state* renderer = engine_systems_get()->renderer_system;
 
-        //Create reflection textures.
+        // Create reflection textures.
         texture* t = &plane->reflection_colour;
         if (!generate_texture(renderer, t, "__waterplane_reflection_colour__", tex_width, tex_height, false)) {
             return false;
@@ -101,6 +102,7 @@ b8 water_plane_load(water_plane* plane) {
         if (!generate_texture(renderer, t, "__waterplane_reflection_depth__", tex_width, tex_height, true)) {
             return false;
         }
+
         // Create refraction textures.
         t = &plane->refraction_colour;
         if (!generate_texture(renderer, t, "__waterplane_refraction_colour__", tex_width, tex_height, false)) {
@@ -111,7 +113,7 @@ b8 water_plane_load(water_plane* plane) {
             return false;
         }
 
-        //Fill out texture maps.
+        // Fill out texture maps.
         plane->maps[0].texture = &plane->reflection_colour;
         plane->maps[1].texture = &plane->refraction_colour;
 
@@ -121,21 +123,21 @@ b8 water_plane_load(water_plane* plane) {
             KERROR("Failed to acquire instance resources for water plane.");
             return false;
         }
+
         return true;
     }
     return false;
 }
+
 b8 water_plane_unload(water_plane* plane) {
     if (plane) {
         renderbuffer* vertex_buffer = renderer_renderbuffer_get(RENDERBUFFER_TYPE_VERTEX);
         renderbuffer* index_buffer = renderer_renderbuffer_get(RENDERBUFFER_TYPE_INDEX);
-
-        //Free space.
+        // Free space
         if (!renderer_renderbuffer_free(vertex_buffer, sizeof(vec4) * 4, plane->vertex_buffer_offset)) {
             KERROR("Failed to free space in vertex buffer.");
             return false;
         }
-
         if (!renderer_renderbuffer_free(index_buffer, sizeof(u32) * 6, plane->index_buffer_offset)) {
             KERROR("Failed to allfreeocate space in index buffer.");
             return false;
@@ -147,13 +149,14 @@ b8 water_plane_unload(water_plane* plane) {
             KERROR("Failed to release instance resources for water plane.");
             return false;
         }
-
         return true;
     }
     return false;
 }
+
 b8 water_plane_update(water_plane* plane) {
     if (plane) {
+        //
         return true;
     }
     return false;
@@ -171,25 +174,26 @@ static b8 generate_texture(struct renderer_system_state* renderer, texture* t, c
     t->channel_count = 4;
     t->mip_levels = 1;
     t->generation = INVALID_ID_U8;
+    t->id = -1;
     t->name = string_duplicate(name);
 
     if (!renderer_texture_resources_acquire(
-        renderer,
-        t->name,
-        t->type,
-        t->width,
-        t->height,
-        t->channel_count,
-        t->mip_levels,
-        t->array_size,
-        t->flags,
-        &t->renderer_texture_handle
-    )) {
+            renderer,
+            t->name,
+            t->type,
+            t->width,
+            t->height,
+            t->channel_count,
+            t->mip_levels,
+            t->array_size,
+            t->flags,
+            &t->renderer_texture_handle)) {
         KERROR("Failed to acquire renderer resources for '%s'.", t->name);
         return false;
     }
 
-    //Count as "loaded"
+    // Count as "loaded".
     t->generation = 0;
+
     return true;
 }

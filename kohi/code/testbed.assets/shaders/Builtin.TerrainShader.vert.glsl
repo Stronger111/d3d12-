@@ -21,7 +21,7 @@ struct directional_light
 
 layout(set = 0, binding = 0) uniform global_uniform_object {
     mat4 projection;
-	mat4 views;
+	mat4 views[2];
     mat4 light_space[MAX_SHADOW_CASCADES];
     vec4 cascade_splits;
     directional_light dir_light;

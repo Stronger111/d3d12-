@@ -144,7 +144,7 @@ typedef struct forward_rendergraph_node_internal_data {
     struct geometry_render_data* terrain_geometries;
 
     u32 water_plane_count;
-    water_plane** water_planes;;
+    water_plane** water_planes;
 
     struct texture* irradiance_cube_texture;
     const struct directional_light* dir_light;
