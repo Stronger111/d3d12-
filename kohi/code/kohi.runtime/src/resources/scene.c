@@ -1003,7 +1003,8 @@ b8 scene_debug_render_data_query(scene* scene, u32* data_count, geometry_render_
     *data_count = 0;
 
     // TODO:Check if grid exists.
-    {
+    // TODO: flag for toggling grid on and off.
+    if (false) {
         if (debug_geometries) {
             geometry_render_data data = { 0 };
             data.model = mat4_identity();
@@ -1438,6 +1439,35 @@ b8 scene_terrain_render_data_query(const scene* scene, const frustum* f, vec3 ce
     }
 
     *out_count = darray_length(*out_terrain_geometries);
+
+    return true;
+}
+
+b8 scene_water_plane_query(const scene* scene, const frustum* f, vec3 center, frame_data* p_frame_data, u32* out_count, water_plane*** out_water_planes) {
+    if (!scene) {
+        return false;
+    }
+    *out_count = 0;
+
+    u32 count = 0;
+    u32 water_plane_count = darray_length(scene->water_planes);
+    for (u32 i = 0; i < water_plane_count; ++i) {
+        if (out_water_planes) {
+            // scene_attachment* attachment = &scene->mesh_attachments[i];
+            // k_handle xform_handle = scene->hierarchy.xform_handles[attachment->hierarchy_node_handle.handle_index];
+            // mat4 model = xform_world_get(xform_handle);
+
+            water_plane* wp = &scene->water_planes[i];
+            scene_attachment* attachment = &scene->water_plane_attachments[i];
+            k_handle xform_handle = scene->hierarchy.xform_handles[attachment->hierarchy_node_handle.handle_index];
+            // FIXME: World should work here, but for some reason isn't being updated...
+            wp->model = xform_local_get(xform_handle);
+            darray_push(*out_water_planes, wp);
+        }
+        count++;
+    }
+
+    *out_count = count;
 
     return true;
 }

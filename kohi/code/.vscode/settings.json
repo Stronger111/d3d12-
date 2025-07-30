@@ -124,7 +124,14 @@
         "frame_end_rendergraph_node.h": "c",
         "algorithm": "c",
         "xiosbase": "c",
-        "engine.h": "c"
+        "engine.h": "c",
+        "event.h": "c",
+        "viewport.h": "c",
+        "camera.h": "c",
+        "shadow_rendergraph_node.h": "c",
+        "forward_rendergraph_node.h": "c",
+        "debug_rendergraph_node.h": "c",
+        "debug_box3d.h": "c"
     },
     // File copyright documentation tag.  Array of strings will be converted to one line per element.  Can template {year}.
     "doxdocgen.file.copyrightTag": [

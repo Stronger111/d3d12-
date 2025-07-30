@@ -73,7 +73,6 @@
 #include "renderer/rendergraph_nodes/debug_rendergraph_node.h"
 #include "renderer/rendergraph_nodes/forward_rendergraph_node.h"
 #include "renderer/rendergraph_nodes/shadow_rendergraph_node.h"
-#include "renderer/rendergraph_nodes/skybox_rendergraph_node.h"
 #include "rendergraph_nodes/ui_rendergraph_node.h"
 #include "systems/plugin_system.h"
 #include "systems/timeline_system.h"
@@ -997,6 +996,13 @@ b8 application_prepare_frame(struct application* app_inst, struct frame_data* p_
 
             // Tell our scene to generate relevant render data if it is loaded.
             if (scene->state == SCENE_STATE_LOADED) {
+                // Only render if the scene is loaded.
+
+               // SKYBOX
+               // HACK: Just use the first one for now.
+               // TODO: Support for multiple skyboxes, possibly transition between them.
+                u32 skybox_count = darray_length(scene->skyboxes);
+                forward_rendergraph_node_set_skybox(node, skybox_count ? &scene->skyboxes[0] : 0);
                 scene_render_frame_prepare(scene, p_frame_data);
 
                 // Pass over shadow map "camera" view and projection matrices (one per cascade).
@@ -1080,7 +1086,7 @@ b8 application_prepare_frame(struct application* app_inst, struct frame_data* p_
             }
             else {
                 // Scene not loaded.
-
+                forward_rendergraph_node_set_skybox(node, 0);
                 // Do not run these passes if the scene is not loaded.
                 // graph->scene_pass.pass_data.do_execute = false;
                 // graph->shadowmap_pass.pass_data.do_execute = false;
@@ -1232,21 +1238,6 @@ b8 application_prepare_frame(struct application* app_inst, struct frame_data* p_
 
                 // Tell the node about them.
                 shadow_rendergraph_node_terrain_geometries_set(node, p_frame_data, terrain_geometry_count, terrain_geometries);
-            }
-        }
-        else if (strings_equali(node->name, "skybox")) {
-            skybox_rendergraph_node_set_viewport_and_matrices(node, state->world_viewport, state->world_camera->view_matrix, state->world_viewport.projection);
-
-            // Only render if the scene is loaded.
-            if (scene->state == SCENE_STATE_LOADED && scene->skyboxes) {
-                // HACK: Just use the first one for now.
-                // TODO: Support for multiple skyboxes, possibly transition between them.
-                u32 skybox_count = darray_length(scene->skyboxes);
-                skybox_rendergraph_node_set_skybox(node, skybox_count ? &scene->skyboxes[0] : 0);
-            }
-            else {
-                // Otherwise set to null.
-                skybox_rendergraph_node_set_skybox(node, 0);
             }
         }
         else if (strings_equali(node->name, "debug")) {

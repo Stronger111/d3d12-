@@ -2719,8 +2719,10 @@ static b8 create_sampler(vulkan_context* context, texture_map* map, VkSampler* s
     // Create a sampler for the texture
     VkSamplerCreateInfo sampler_info = { VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
 
+    b8 is_depth = map->texture && ((map->texture->flags & TEXTURE_FLAG_DEPTH) != 0);
+
     // Sync the mip levels with that of the assigned texture.
-    map->mip_levels = map->texture->mip_levels;
+    map->mip_levels = is_depth ? 1 : map->texture ? map->texture->mip_levels : 1;
 
     sampler_info.minFilter = convert_filter_type("min", map->filter_minify);
     sampler_info.magFilter = convert_filter_type("mag", map->filter_magnify);
@@ -2730,8 +2732,19 @@ static b8 create_sampler(vulkan_context* context, texture_map* map, VkSampler* s
     sampler_info.addressModeW = convert_repeat_type("W", map->repeat_w);
 
     // TODO: Configurable
-    sampler_info.anisotropyEnable = VK_TRUE;
-    sampler_info.maxAnisotropy = 16;
+    if (is_depth) {
+        // Disable anisotropy for depth texture sampling because AMD has a fit over it.
+        sampler_info.anisotropyEnable = VK_FALSE;
+        sampler_info.maxAnisotropy = 0;
+    }
+    else {
+        /* sampler_info.anisotropyEnable = VK_TRUE;
+        sampler_info.maxAnisotropy = 16; */
+        sampler_info.anisotropyEnable = VK_FALSE;
+        sampler_info.maxAnisotropy = 0;
+    }
+    // sampler_info.anisotropyEnable = VK_TRUE;
+    // sampler_info.maxAnisotropy = 16;
     sampler_info.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
     // sampler_info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
     sampler_info.unnormalizedCoordinates = VK_FALSE;
@@ -2743,7 +2756,7 @@ static b8 create_sampler(vulkan_context* context, texture_map* map, VkSampler* s
     sampler_info.minLod = 0.0f;
     // NOTE: Uncomment the following line to test the lowest mip level.
     /* sampler_info.minLod = map->texture->mip_levels > 1 ? map->texture->mip_levels : 0.0f; */
-    sampler_info.maxLod = map->texture->mip_levels;
+    sampler_info.maxLod = map->mip_levels;
 
     VkResult result = vkCreateSampler(context->device.logical_device, &sampler_info, context->allocator, sampler);
     if (!vulkan_result_is_success(VK_SUCCESS)) {
@@ -2776,9 +2789,9 @@ b8 vulkan_renderer_texture_map_resources_acquire(renderer_backend_interface* bac
     }
 
 #if _DEBUG
-    char* formatted_name = string_format("%s_texmap_sampler", map->texture->name);
-    if (strings_equali(formatted_name, "StandardUIAtlas_texmap_sampler")) {
-        KDEBUG("ssss");
+    char* formatted_name = string_format("%s_texmap_sampler",map->texture? map->texture->name:"__noname__");
+    if(map->texture&&strings_equali(formatted_name,"__waterplane_refraction_depth___texmap_sampler")){
+        KDEBUG("SSSSSSSSSSS");
     }
     VK_SET_DEBUG_OBJECT_NAME(context, VK_OBJECT_TYPE_SAMPLER, context->samplers[selected_id], formatted_name);
     string_free(formatted_name);
@@ -3660,7 +3673,7 @@ void vulkan_alloc_free(void* user_data, void* memory) {
     else {
         KERROR("vulkan_alloc_free failed to get alignment lookup for block %p.", memory);
     }
-}
+    }
 
 /**
  * @brief Implementation of PFN_vkReallocationFunction.
@@ -3722,7 +3735,7 @@ void* vulkan_alloc_reallocation(void* user_data, void* original, size_t size, si
     }
 
     return result;
-}
+    }
 
 /**
  * @brief Implementation of PFN_vkInternalAllocationNotification.
