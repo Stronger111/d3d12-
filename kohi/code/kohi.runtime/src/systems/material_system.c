@@ -487,10 +487,10 @@ void material_system_release(const char* name) {
             destroy_material(m);
 
             // Reset the reference.
-            KTRACE("Released material '%s'., Material unloaded because reference count=0 and auto_release=true.", name_copy);
+            //KTRACE("Released material '%s'., Material unloaded because reference count=0 and auto_release=true.", name_copy);
         }
         else {
-            KTRACE("Released material '%s', now has a reference count of '%i' (auto_release=%s).", name_copy, ref.reference_count, ref.auto_release ? "true" : "false");
+            //KTRACE("Released material '%s', now has a reference count of '%i' (auto_release=%s).", name_copy, ref.reference_count, ref.auto_release ? "true" : "false");
         }
 
         // Update the entry.

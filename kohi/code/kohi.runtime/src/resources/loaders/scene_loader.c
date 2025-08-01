@@ -147,12 +147,13 @@ static b8 deserialize_scene_water_plane_attachment(const kson_object* attachment
     }
 
     // TODO: water plane specific properties
-   // const char* cubemap_name_str = 0;
-   // if (!kson_object_property_value_get_string(attachment_object, "cubemap_name", &cubemap_name_str)) {
-   //     KERROR("Skybox attachment config requires a valid 'cubemap_name'. Deserialization failed.");
-   //     return false;
-   // }
-   // attachment->cubemap_name = string_duplicate(cubemap_name_str);
+    // const char* cubemap_name_str = 0;
+    // if (!kson_object_property_value_get_string(attachment_object, "cubemap_name", &cubemap_name_str)) {
+    //     KERROR("Skybox attachment config requires a valid 'cubemap_name'. Deserialization failed.");
+    //     return false;
+    // }
+    // attachment->cubemap_name = string_duplicate(cubemap_name_str);
+
     return true;
 }
 

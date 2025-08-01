@@ -5,6 +5,7 @@
 #include "resources/resource_types.h"
 
 struct texture_map;
+struct scene;
 
 typedef struct water_plane_vertex {
     vec4 position;

@@ -58,7 +58,7 @@ b8 water_plane_initialize(water_plane* plane) {
         plane->indices[5] = 0;
 
         // Maps array
-        plane->map_count = 2;
+        plane->map_count = WATER_PLANE_MAP_COUNT;
         plane->maps = kallocate(sizeof(texture_map) * plane->map_count, MEMORY_TAG_ARRAY);
         for (u32 i = 0; i < plane->map_count; ++i) {
             texture_map* map = &plane->maps[i];
@@ -211,7 +211,7 @@ b8 water_plane_unload(water_plane* plane) {
 
         // Release instance resources for this plane.
         u32 shader_id = shader_system_get_id("Runtime.Shader.Water");
-        if (!shader_system_shader_instance_release(shader_id, plane->instance_id)) {
+        if (!shader_system_shader_instance_release(shader_id, plane->instance_id,plane->map_count,plane->maps)) {
             KERROR("Failed to release instance resources for water plane.");
             return false;
         }
