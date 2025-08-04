@@ -76,7 +76,7 @@ typedef struct kwindow {
    * @brief Represents the pixel density of this window. Should only ever be
    * read from, as the platform layer is responsible for determining this.
    */
-    f32 device_pixel_radio;
+    f32 device_pixel_ratio;
     b8 resizing;
     u16 frames_since_resize;
 

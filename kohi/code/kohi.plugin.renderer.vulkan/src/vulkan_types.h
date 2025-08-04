@@ -204,6 +204,20 @@ typedef struct vulkan_command_buffer {
 
     // Command buffer state.
     vulkan_command_buffer_state state;
+
+    /** @brief Indicates if this is a primary or secondary command buffer. */
+    b8 is_primary;
+
+    /** @brief The number of secondary buffers that are children to this one. Primary buffer use only. */
+    u16 secondary_count;
+    /** @brief An array of secondary buffers that are children to this one. Primary buffer use only. */
+    struct vulkan_command_buffer* secondary_buffers;
+    /** @brief The currently selected secondary buffer index. */
+    u16 secondary_buffer_index;
+    /** @brief Indicates if the command buffer selected secondary buffer index. */
+    b8 in_render;
+    /** A pointer to the parent (primary) command buffer, if there is one. Only applies to secondary buffers. */
+    struct vulkan_command_buffer* parent;
 } vulkan_command_buffer;
 
 typedef struct vulkan_shader_stage {
@@ -405,7 +419,7 @@ typedef struct vulkan_shader {
     /** @brief Descriptor set layouts, max of 2. Index 0=global, 1=instance. */
     VkDescriptorSetLayout descriptor_set_layouts[2];
 
-     /** @brief Global descriptor sets, one per swapchain image. */
+    /** @brief Global descriptor sets, one per swapchain image. */
     VkDescriptorSet* global_descriptor_sets;
 
     // UBO descriptor
@@ -414,7 +428,7 @@ typedef struct vulkan_shader {
     // A mapping of sampler uniforms to descriptors and texture maps.
     vulkan_uniform_sampler_state* global_sampler_uniforms;
 
-     /** @brief The uniform buffers used by this shader, one per swapchain image. */
+    /** @brief The uniform buffers used by this shader, one per swapchain image. */
     renderbuffer* uniform_buffers;
     u32 uniform_buffer_count;
 

@@ -883,6 +883,12 @@ static void engine_on_window_resized(const struct kwindow* window) {
             engine_state->is_suspended = false;
         }
     }
+
+    //Fire an event for anything listening for window resizes.
+    event_context context = { 0 };
+    context.data.u16[0] = window->width;
+    context.data.u16[1] = window->height;
+    event_fire(EVENT_CODE_WINDOW_RESIZED, (kwindow*)window, context);
 }
 
 static void engine_on_process_key(keys key, b8 pressed) {

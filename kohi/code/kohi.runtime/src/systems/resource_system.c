@@ -104,6 +104,7 @@ b8 resource_system_loader_register(resource_loader loader) {
 }
 
 b8 resource_system_load(const char* name, resource_type type, void* params, resource* out_resource) {
+    KDEBUG("Load type:%d name:%s",type,name);
     if (state_ptr && type != RESOURCE_TYPE_CUSTOM) {
         // Select loader.
         u32 count = state_ptr->config.max_loader_count;

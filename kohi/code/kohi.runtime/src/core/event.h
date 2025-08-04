@@ -106,13 +106,13 @@ typedef enum system_event_code {
         ui z_delta=data.data.i8[0]
     */
     EVENT_CODE_MOUSE_WHEEL = 0x08,
-    // Resized/resolution changed from the OS
-    /*  0xFF 255
-       Context usage:
-         u16 width=data.data.u16[0];
-         u16 height=data.data.u16[1];
-    */
-    EVENT_CODE_RESIZED = 0x09,
+     /** @brief Resized/resolution of a window changed from the OS.
+     * Context usage:
+     * u16 width = data.data.u16[0];
+     * u16 height = data.data.u16[1];
+     * Sender is the window itself.
+     */
+    EVENT_CODE_WINDOW_RESIZED = 0x09,
     // Change the render mode for debugging purposes.
     /* Context usage:
      * i32 mode = context.data.i32[0];

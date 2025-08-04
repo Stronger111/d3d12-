@@ -251,9 +251,6 @@ b8 shadow_rendergraph_node_execute(rendergraph_node* self, frame_data* p_frame_d
 
     shadow_rendergraph_node_internal_data* internal_data = self->internal_data;
 
-    // Bind the internal viewport - do not use one provided in pass data.
-    renderer_active_viewport_set(&internal_data->camera_viewport);
-
     //Clear the image first.
     renderer_clear_depth_stencil(engine_systems_get()->renderer_system, internal_data->depth_texture.renderer_texture_handle);
 
@@ -263,8 +260,11 @@ b8 shadow_rendergraph_node_execute(rendergraph_node* self, frame_data* p_frame_d
         renderer_begin_debug_label(label_text, (vec3) { 1.0 - (p * 0.2f), 0.0f, 0.0f });
         string_free(label_text);
 
-        renderer_begin_rendering(internal_data->renderer, p_frame_data, 0, 0, internal_data->depth_texture.renderer_texture_handle, p);
+        rect_2d render_area = (rect_2d){ 0,0,internal_data->config.resolution,internal_data->config.resolution };
 
+        renderer_begin_rendering(internal_data->renderer, p_frame_data, render_area, 0, 0, internal_data->depth_texture.renderer_texture_handle, p);
+        // Bind the internal viewport - do not use one provided in pass data.
+        renderer_active_viewport_set(&internal_data->camera_viewport);
         // Use the standard shadowmap shader.
         shader_system_use_by_id(internal_data->s->id);
 
@@ -395,36 +395,36 @@ b8 shadow_rendergraph_node_execute(rendergraph_node* self, frame_data* p_frame_d
 
         // Terrain - use the special terrain shader.
         {
-            // shader_system_use_by_id(internal_data->terrain_shader_id);
+            shader_system_use_by_id(internal_data->terrain_shader_id);
 
-            // if (needs_update) {
-            //     for (u32 i = 0; i < MAX_SHADOW_CASCADE_COUNT; ++i) {
-            //         // NOTE: using the internal projection matrix,not one passed on
-            //         if (!shader_system_uniform_set_by_location_arrayed(internal_data->terrain_shader_id, internal_data->terrain_locations.projections_location, i, &internal_data->cascade_data[i].projection)) {
-            //             KERROR("Failed to apply terrain shadowmap projection uniform.");
-            //             return false;
-            //         }
+            if (needs_update) {
+                for (u32 i = 0; i < MAX_SHADOW_CASCADE_COUNT; ++i) {
+                    // NOTE: using the internal projection matrix,not one passed on
+                    if (!shader_system_uniform_set_by_location_arrayed(internal_data->terrain_shader_id, internal_data->terrain_locations.projections_location, i, &internal_data->cascade_data[i].projection)) {
+                        KERROR("Failed to apply terrain shadowmap projection uniform.");
+                        return false;
+                    }
 
-            //         if (!shader_system_uniform_set_by_location_arrayed(internal_data->terrain_shader_id, internal_data->terrain_locations.views_location, i, &internal_data->cascade_data[i].view)) {
-            //             KERROR("Failed to apply terrain shadowmap view uniform.");
-            //             return false;
-            //         }
-            //     }
-            // }
+                    if (!shader_system_uniform_set_by_location_arrayed(internal_data->terrain_shader_id, internal_data->terrain_locations.views_location, i, &internal_data->cascade_data[i].view)) {
+                        KERROR("Failed to apply terrain shadowmap view uniform.");
+                        return false;
+                    }
+                }
+            }
 
-            // shader_system_apply_global(internal_data->terrain_shader_id);
+            shader_system_apply_global(internal_data->terrain_shader_id);
 
-            // for (u32 i = 0; i < internal_data->terrain_geometry_count; ++i) {
-            //     geometry_render_data* terrain = &internal_data->terrain_geometries[i];
+            for (u32 i = 0; i < internal_data->terrain_geometry_count; ++i) {
+                geometry_render_data* terrain = &internal_data->terrain_geometries[i];
 
-            //     // Apply the locals
-            //     shader_system_uniform_set_by_location(internal_data->terrain_shader_id, internal_data->terrain_locations.model_location, &terrain->model);
-            //     shader_system_uniform_set_by_location(internal_data->terrain_shader_id, internal_data->terrain_locations.cascade_index_location, &p);
-            //     shader_system_apply_local(internal_data->terrain_shader_id);
+                // Apply the locals
+                shader_system_uniform_set_by_location(internal_data->terrain_shader_id, internal_data->terrain_locations.model_location, &terrain->model);
+                shader_system_uniform_set_by_location(internal_data->terrain_shader_id, internal_data->terrain_locations.cascade_index_location, &p);
+                shader_system_apply_local(internal_data->terrain_shader_id);
 
-            //     // Draw it.
-            //     renderer_geometry_draw(terrain);
-            // }
+                // Draw it.
+                renderer_geometry_draw(terrain);
+            }
         }
 
         renderer_end_rendering(internal_data->renderer, p_frame_data);

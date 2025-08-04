@@ -181,7 +181,7 @@ b8 platform_window_create(const kwindow_config* config, struct kwindow* window, 
 
     window->width = client_width;
     window->height = client_height;
-    window->device_pixel_radio = 1.0f;
+    window->device_pixel_ratio = 1.0f;
 
     window->platform_state = kallocate(sizeof(kwindow_platform_state), MEMORY_TAG_UNKNOWN);
     // Convert to wide character string first.
@@ -466,8 +466,7 @@ b8 kthread_wait_timeout(kthread* thread, u64 wait_ms) {
         DWORD exit_code = WaitForSingleObject(thread->internal_data, wait_ms);
         if (exit_code == WAIT_OBJECT_0) {
             return true;
-        }
-        else if (exit_code == WAIT_TIMEOUT) {
+        }else if (exit_code == WAIT_TIMEOUT) {
             return false;
         }
     }
@@ -551,8 +550,9 @@ b8 ksemaphore_create(ksemaphore* out_semaphore, u32 max_count, u32 start_count) 
     if (!out_semaphore) {
         return false;
     }
-
-    out_semaphore->internal_data = CreateSemaphore(0, start_count, max_count, "semaphore");
+    //"semaphore" 传入参数产生Bug  如果传入 NULL，则创建一个未命名的信号量，仅在当前进程内有效。
+    //如果传入一个字符串，则创建命名信号量，可以被多个进程共享
+    out_semaphore->internal_data = CreateSemaphore(0, start_count, max_count, 0);
     return true;
 }
 

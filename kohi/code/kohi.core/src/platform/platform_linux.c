@@ -60,6 +60,7 @@ typedef struct linux_file_watch {
 
 typedef struct kwindow_platform_state {
     xcb_window_t window;
+    f32 device_pixel_ratio;
 } kwindow_platform_state;
 
 typedef struct platform_state {
@@ -72,7 +73,6 @@ typedef struct platform_state {
     i32 screen_count;
     // darray
     linux_file_watch* watches;
-    f32 device_pixel_ratio;
 
     // darray of pointers to created windows (owned by the application);
     kwindow** windows;
@@ -100,7 +100,6 @@ b8 platform_system_startup(u64* memory_requirement, struct platform_state* state
     }
 
     state_ptr = state;
-    state_ptr->device_pixel_ratio = 1.0f;
 
     // Connect to X
     state_ptr->display = XOpenDisplay(NULL);
@@ -167,7 +166,7 @@ b8 platform_window_create(const kwindow_config* config, struct kwindow* window, 
     window->width = client_width;
     window->height = client_height;
 
-    window->platform_state = kallocate(sizeof(kwindow_platform_state), MEMORY_TAG_UNKNOWN); // nocheckin
+    window->platform_state = kallocate(sizeof(kwindow_platform_state), MEMORY_TAG_UNKNOWN);
 
     // Allocate a XID for the window to be created.
     window->platform_state->window = xcb_generate_id(state_ptr->handle.connection);
@@ -303,16 +302,35 @@ b8 platform_window_create(const kwindow_config* config, struct kwindow* window, 
         window->title = string_duplicate("Kohi Game Engine Window");
     }
 
+    xcb_intern_atom_cookie_t utf8_string_cookie = xcb_intern_atom(state_ptr->handle.connection, 0, 11, "UTF8_STRING");
+    xcb_intern_atom_reply_t* utf8_string_reply = xcb_intern_atom_reply(state_ptr->handle.connection, utf8_string_cookie, 0);
+
+    xcb_intern_atom_cookie_t net_wm_name_cookie = xcb_intern_atom(state_ptr->handle.connection, 0, 12, "_NET_WM_NAME");
+    xcb_intern_atom_reply_t* net_wm_name_reply = xcb_intern_atom_reply(state_ptr->handle.connection, net_wm_name_cookie, 0);
+
     // Change the title
     xcb_change_property(
         state_ptr->handle.connection,
         XCB_PROP_MODE_REPLACE,
         window->platform_state->window,
         XCB_ATOM_WM_NAME,
-        XCB_ATOM_STRING,
-        8, // data should be viewed 8 bits at a time
-        strlen(window->title),
+        utf8_string_reply->atom, // XCB_ATOM_STRING
+        8,                       // data should be viewed 8 bits at a time
+        string_length(window->title),
         window->title);
+
+    xcb_change_property(
+        state_ptr->handle.connection,
+        XCB_PROP_MODE_REPLACE,
+        window->platform_state->window,
+        net_wm_name_reply->atom, // XCB_ATOM_WM_NAME,
+        utf8_string_reply->atom, // XCB_ATOM_STRING
+        8,                       // data should be viewed 8 bits at a time
+        string_length(window->title),
+        window->title);
+
+    free(utf8_string_reply);
+    free(net_wm_name_reply);
 
     // Tell the server to notify when the window manager
     // attempts to destroy the window.
@@ -617,6 +635,10 @@ void platform_get_handle_info(u64* out_size, void* memory) {
     }
 
     kcopy_memory(memory, &state_ptr->handle, *out_size);
+}
+
+f32 platform_device_pixel_ratio(const struct kwindow* window) {
+    return window->platform_state->device_pixel_ratio;
 }
 
 const char* platform_dynamic_library_extension(void) {

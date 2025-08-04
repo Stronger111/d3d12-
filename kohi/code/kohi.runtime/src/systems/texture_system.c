@@ -1215,12 +1215,11 @@ static b8 process_texture_reference(const char* name, i8 reference_diff, b8 auto
                     // Reset the reference.
                     ref.handle = INVALID_ID;
                     ref.auto_release = false;
-                    KTRACE("Released texture '%s'., Texture unloaded because reference count=0 and auto_release=true.", name_copy);
+                    //KTRACE("Released texture '%s'., Texture unloaded because reference count=0 and auto_release=true.", name_copy);
                 }
                 else {
-                    KTRACE("Released texture '%s', now has a reference count of '%i' (auto_release=%s).", name_copy, ref.reference_count, ref.auto_release ? "true" : "false");
+                    //KTRACE("Released texture '%s', now has a reference count of '%i' (auto_release=%s).", name_copy, ref.reference_count, ref.auto_release ? "true" : "false");
                 }
-
             }
             else {
                 // Incrementing. Check if the handle is new or not.

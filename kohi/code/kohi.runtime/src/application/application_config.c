@@ -115,6 +115,8 @@ b8 application_config_parse_file_content(const char* file_content, application_c
             if (!new_window.position_y) {
                 new_window.position_y = 10;
             }
+
+            darray_push(out_config->windows, new_window);
         }
     }
 

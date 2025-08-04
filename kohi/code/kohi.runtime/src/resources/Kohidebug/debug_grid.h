@@ -1,3 +1,4 @@
+#pragma once
 #include "defines.h"
 #include "identifiers/identifier.h"
 #include "math/geometry.h"

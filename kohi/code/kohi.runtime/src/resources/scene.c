@@ -23,6 +23,7 @@
 #include "resources/resource_types.h"
 #include "resources/skybox.h"
 #include "resources/terrain.h"
+#include "resources/water_plane.h"
 #include "strings/kstring.h"
 #include "systems/light_system.h"
 #include "systems/resource_system.h"
@@ -86,6 +87,7 @@ b8 scene_create(scene_config* config, scene_flags flags, scene* out_scene) {
     out_scene->meshes = darray_create(mesh);
     out_scene->terrains = darray_create(terrain);
     out_scene->skyboxes = darray_create(skybox);
+    out_scene->water_planes = darray_create(water_plane);
 
     // Internal lists of attachments.
     /* out_scene->attachments = darray_create(scene_attachment); */
@@ -99,12 +101,15 @@ b8 scene_create(scene_config* config, scene_flags flags, scene* out_scene) {
     out_scene->directional_light_attachment_indices = darray_create(u32);
     out_scene->point_light_attachments = darray_create(scene_attachment);
     out_scene->point_light_attachment_indices = darray_create(u32);
+    out_scene->water_plane_attachments = darray_create(scene_attachment);
+    out_scene->water_plane_attachment_indices = darray_create(u32);
 
     b8 is_readonly = ((out_scene->flags & SCENE_FLAG_READONLY) != 0);
     if (!is_readonly) {
         out_scene->mesh_metadata = darray_create(scene_static_mesh_metadata);
         out_scene->terrain_metadata = darray_create(scene_terrain_metadata);
         out_scene->skybox_metadata = darray_create(scene_skybox_metadata);
+        out_scene->water_plane_metadata = darray_create(scene_water_plane_metadata);
     }
 
     if (!hierarchy_graph_create(&out_scene->hierarchy)) {
@@ -473,6 +478,65 @@ void scene_node_initialize(scene* s, k_handle parent_handle, scene_node_config* 
                         }
                     }
                 } break;
+                case SCENE_NODE_ATTACHMENT_TYPE_WATER_PLANE: {
+                    scene_node_attachment_water_plane* typed_attachment = attachment_config->attachment_data;
+
+                    // Create a water_plane config and use it to create the skybox.
+                    // water_plane_config sb_config = {0};
+                    // sb_config.cubemap_name = string_duplicate(typed_attachment->cubemap_name);
+                    water_plane wp;
+                    if (!water_plane_create(&wp)) {
+                        KWARN("Failed to create water plane.");
+                    }
+
+                    // Destroy the water plane config.
+                    // string_free((char*)sb_config.cubemap_name);
+                    // sb_config.cubemap_name = 0;
+
+                    // Initialize the water plane.
+                    if (!water_plane_initialize(&wp)) {
+                        KERROR("Failed to initialize water plane. See logs for details.");
+                    }
+                    else {
+                        // Find a free skybox slot and take it, or push a new one.
+                        u32 index = INVALID_ID;
+                        u32 water_plane_count = darray_length(s->water_planes);
+                        for (u32 i = 0; i < water_plane_count; ++i) {
+                            // TODO: water plane states.
+                            // if (s->water_planes[i].state == WATER_PLANE_STATE_UNDEFINED) {
+                            if (false) {
+                                // Found a slot, use it.
+                                index = i;
+                                s->water_planes[i] = wp;
+                                s->water_plane_attachments[i].resource_handle = k_handle_create(index);
+                                s->water_plane_attachments[i].hierarchy_node_handle = node_handle;
+                                s->water_plane_attachments[i].attachment_type = SCENE_NODE_ATTACHMENT_TYPE_WATER_PLANE;
+                                s->water_plane_attachment_indices[i] = index;
+                                // For "edit" mode, retain metadata.
+                                if (!is_readonly) {
+                                    s->water_plane_metadata[i].reserved = typed_attachment->reserved;
+                                }
+                                break;
+                            }
+                        }
+                        if (index == INVALID_ID) {
+                            darray_push(s->water_planes, wp);
+                            index = water_plane_count;
+                            darray_push(s->water_plane_attachment_indices, index);
+                            scene_attachment water_plane_attachment = { 0 };
+                            water_plane_attachment.resource_handle = k_handle_create(index);
+                            water_plane_attachment.hierarchy_node_handle = node_handle;
+                            water_plane_attachment.attachment_type = SCENE_NODE_ATTACHMENT_TYPE_WATER_PLANE;
+                            darray_push(s->water_plane_attachments, water_plane_attachment);
+                            // For "edit" mode, retain metadata.
+                            if (!is_readonly) {
+                                scene_water_plane_metadata new_water_plane_metadata = { 0 };
+                                new_water_plane_metadata.reserved = typed_attachment->reserved;
+                                darray_push(s->water_plane_metadata, new_water_plane_metadata);
+                            }
+                        }
+                    }
+                } break;
                 }
             }
         }
@@ -562,6 +626,16 @@ b8 scene_load(scene* scene) {
         for (u32 i = 0; i < terrain_count; ++i) {
             if (!terrain_load(&scene->terrains[i])) {
                 KERROR("Terrain failed to load.");
+            }
+        }
+    }
+
+    //Load water planes
+    if (scene->water_planes) {
+        u32 water_plane_count = darray_length(scene->water_planes);
+        for (u32 i = 0; i < water_plane_count; ++i) {
+            if (!water_plane_load(&scene->water_planes[i])) {
+                KERROR("Failed to load water plane. See logs for details.");
             }
         }
     }
@@ -772,6 +846,17 @@ void scene_render_frame_prepare(scene* scene, const struct frame_data* p_frame_d
             for (u32 i = 0; i < point_light_count; ++i) {
                 if (scene->point_lights[i].debug_data) {
                     scene_debug_data* debug = (scene_debug_data*)scene->point_lights[i].debug_data;
+
+                    //lookup the attachment to get the xform handle to set as the parent.
+                    scene_attachment* attachment = &scene->point_light_attachments[i];
+                    k_handle xform_handle = scene->hierarchy.xform_handles[attachment->hierarchy_node_handle.handle_index];
+                    // Since debug objects aren't actually added to the hierarchy or as attachments, need to manually update
+                    // the xform here, using the node's world xform as the parent.
+                    xform_calculate_local(debug->box.xform);
+                    mat4 local = xform_local_get(debug->box.xform);
+                    mat4 parent_world = xform_world_get(xform_handle);
+                    mat4 model = mat4_mul(local, parent_world);
+                    xform_world_set(debug->box.xform, model);
                     debug_box3d_render_frame_prepare(&debug->box, p_frame_data);
                 }
             }
@@ -787,6 +872,17 @@ void scene_render_frame_prepare(scene* scene, const struct frame_data* p_frame_d
                 }
                 if (m->debug_data) {
                     scene_debug_data* debug = m->debug_data;
+
+                    // Lookup the attachment to get the xform handle to set as the parent.
+                    scene_attachment* attachment = &scene->mesh_attachments[i];
+                    k_handle xform_handle = scene->hierarchy.xform_handles[attachment->hierarchy_node_handle.handle_index];
+                    // Since debug objects aren't actually added to the hierarchy or as attachments, need to manually update
+                    // the xform here, using the node's world xform as the parent.
+                    xform_calculate_local(debug->box.xform);
+                    mat4 local = xform_local_get(debug->box.xform);
+                    mat4 parent_world = xform_world_get(xform_handle);
+                    mat4 model = mat4_mul(local, parent_world);
+                    xform_world_set(debug->box.xform, model);
                     debug_box3d_render_frame_prepare(&debug->box, p_frame_data);
                 }
             }
@@ -929,7 +1025,8 @@ b8 scene_debug_render_data_query(scene* scene, u32* data_count, geometry_render_
     *data_count = 0;
 
     // TODO:Check if grid exists.
-    {
+    // TODO: flag for toggling grid on and off.
+    if (false) {
         if (debug_geometries) {
             geometry_render_data data = { 0 };
             data.model = mat4_identity();
@@ -1368,6 +1465,35 @@ b8 scene_terrain_render_data_query(const scene* scene, const frustum* f, vec3 ce
     return true;
 }
 
+b8 scene_water_plane_query(const scene* scene, const frustum* f, vec3 center, frame_data* p_frame_data, u32* out_count, water_plane*** out_water_planes) {
+    if (!scene) {
+        return false;
+    }
+    *out_count = 0;
+
+    u32 count = 0;
+    u32 water_plane_count = darray_length(scene->water_planes);
+    for (u32 i = 0; i < water_plane_count; ++i) {
+        if (out_water_planes) {
+            // scene_attachment* attachment = &scene->mesh_attachments[i];
+            // k_handle xform_handle = scene->hierarchy.xform_handles[attachment->hierarchy_node_handle.handle_index];
+            // mat4 model = xform_world_get(xform_handle);
+
+            water_plane* wp = &scene->water_planes[i];
+            scene_attachment* attachment = &scene->water_plane_attachments[i];
+            k_handle xform_handle = scene->hierarchy.xform_handles[attachment->hierarchy_node_handle.handle_index];
+            // FIXME: World should work here, but for some reason isn't being updated...
+            wp->model = xform_local_get(xform_handle);
+            darray_push(*out_water_planes, wp);
+        }
+        count++;
+    }
+
+    *out_count = count;
+
+    return true;
+}
+
 static void scene_actual_unload(scene* s) {
     u32 skybox_count = darray_length(s->skyboxes);
     for (u32 i = 0; i < skybox_count; ++i) {
@@ -1445,6 +1571,15 @@ static void scene_actual_unload(scene* s) {
         }
     }
 
+    u32 water_plane_count = darray_length(s->water_planes);
+    for (u32 i = 0; i < water_plane_count; ++i) {
+        if (!water_plane_unload(&s->water_planes[i])) {
+            KERROR("Failed to unload water plane");
+        }
+        water_plane_destroy(&s->water_planes[i]);
+        // s->water_planes[i].state = WATER_PLANE_STATE_UNDEFINED;
+    }
+
     // Destroy the hierarchy graph.
     hierarchy_graph_destroy(&s->hierarchy);
 
@@ -1470,6 +1605,10 @@ static void scene_actual_unload(scene* s) {
 
     if (s->terrains) {
         darray_destroy(s->terrains);
+    }
+
+    if (s->water_planes) {
+        darray_destroy(s->water_planes);
     }
 
     kzero_memory(s, sizeof(scene));
@@ -1598,6 +1737,24 @@ static b8 scene_serialize_node(const scene* s, const hierarchy_graph_view* view,
             kson_object_value_add_float(&attachment.value.o, "shadow_distance", s->dir_lights[m].data.shadow_distance);
             kson_object_value_add_float(&attachment.value.o, "shadow_fade_distance", s->dir_lights[m].data.shadow_fade_distance);
             kson_object_value_add_float(&attachment.value.o, "shadow_split_mult", s->dir_lights[m].data.shadow_split_mult);
+
+            // Push it into the attachments array
+            darray_push(attachments_prop.value.o.properties, attachment);
+        }
+    }
+
+    //water planes
+    u32 water_plane_count = darray_length(s->water_plane_attachments);
+    for (u32 m = 0; m < water_plane_count; ++m) {
+        if (s->water_plane_attachments[m].hierarchy_node_handle.handle_index == view_node->node_handle.handle_index) {
+            // Found one!
+
+            // Create the object array entry.
+            kson_property attachment = kson_object_property_create(0);
+
+            // Add properties to it.
+            kson_object_value_add_string(&attachment.value.o, "type", "water_plane");
+            kson_object_value_add_int(&attachment.value.o, "reserved", s->water_plane_metadata[m].reserved);
 
             // Push it into the attachments array
             darray_push(attachments_prop.value.o.properties, attachment);
