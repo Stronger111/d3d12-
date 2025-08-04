@@ -1286,7 +1286,8 @@ void vulkan_renderer_texture_prepare_for_sampling(renderer_backend_interface* ba
     // Transition the layout
     VkImageMemoryBarrier barrier = { 0 };
     barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    //图像当前布局
+    barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
     barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
     barrier.srcQueueFamilyIndex = context->device.graphics_queue_index;
     barrier.dstQueueFamilyIndex = context->device.graphics_queue_index;
@@ -1302,13 +1303,13 @@ void vulkan_renderer_texture_prepare_for_sampling(renderer_backend_interface* ba
     // Start at the first layer.
     barrier.subresourceRange.baseArrayLayer = 0;
 
-    barrier.srcAccessMask = 0;
-    barrier.dstAccessMask = is_depth ? VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT : VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
+    barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT | VK_ACCESS_TRANSFER_READ_BIT;
+    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | (is_depth ? VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT : VK_ACCESS_COLOR_ATTACHMENT_READ_BIT);
 
     vkCmdPipelineBarrier(
         command_buffer->handle,
-        VK_PIPELINE_STAGE_TRANSFER_BIT,
-        VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,  // VK_PIPELINE_STAGE_TRANSFER_BIT
+        VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,  // VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
         0,
         0, 0,
         0, 0,
@@ -2789,8 +2790,8 @@ b8 vulkan_renderer_texture_map_resources_acquire(renderer_backend_interface* bac
     }
 
 #if _DEBUG
-    char* formatted_name = string_format("%s_texmap_sampler",map->texture? map->texture->name:"__noname__");
-    if(map->texture&&strings_equali(formatted_name,"__waterplane_refraction_depth___texmap_sampler")){
+    char* formatted_name = string_format("%s_texmap_sampler", map->texture ? map->texture->name : "__noname__");
+    if (map->texture && strings_equali(formatted_name, "__waterplane_refraction_depth___texmap_sampler")) {
         KDEBUG("SSSSSSSSSSS");
     }
     VK_SET_DEBUG_OBJECT_NAME(context, VK_OBJECT_TYPE_SAMPLER, context->samplers[selected_id], formatted_name);
@@ -3673,7 +3674,7 @@ void vulkan_alloc_free(void* user_data, void* memory) {
     else {
         KERROR("vulkan_alloc_free failed to get alignment lookup for block %p.", memory);
     }
-    }
+}
 
 /**
  * @brief Implementation of PFN_vkReallocationFunction.
@@ -3735,7 +3736,7 @@ void* vulkan_alloc_reallocation(void* user_data, void* original, size_t size, si
     }
 
     return result;
-    }
+}
 
 /**
  * @brief Implementation of PFN_vkInternalAllocationNotification.
