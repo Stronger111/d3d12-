@@ -987,7 +987,7 @@ b8 forward_rendergraph_node_execute(struct rendergraph_node* self, struct frame_
 
         // Refraction, clip above plane. Don't render the water plane itself. Uses bound camera
        // TODO: clipping plane should be based on position/orientation of water plane.
-        vec4 refract_plane = (vec4){ 0, -1, 0, 0.001f };// NOTE: w is distance from origin, in this case the y-coord. Setting this to vec4_zero() effectively disables this.
+        vec4 refract_plane = (vec4){ 0, -1, 0, 0 + 1.0f };// NOTE: w is distance from origin, in this case the y-coord. Setting this to vec4_zero() effectively disables this.
         renderer_clear_colour(internal_data->renderer, plane->refraction_colour.renderer_texture_handle);
         renderer_clear_depth_stencil(internal_data->renderer, plane->refraction_depth.renderer_texture_handle);
         if (!render_scene(internal_data, &plane->refraction_colour, &plane->refraction_depth, 0, 0, false, refract_plane, internal_data->current_camera, &inverted_camera, false, p_frame_data)) {
@@ -998,7 +998,7 @@ b8 forward_rendergraph_node_execute(struct rendergraph_node* self, struct frame_
         // Reflection, clip below plane. Don't render the water plane itself.
         renderer_clear_colour(internal_data->renderer, plane->reflection_colour.renderer_texture_handle);
         renderer_clear_depth_stencil(internal_data->renderer, plane->reflection_depth.renderer_texture_handle);
-        vec4 reflect_plane = (vec4){ 0, 1, 0, 0.001f }; // NOTE: w is distance from origin, in this case the y-coord. Setting this to vec4_zero() effectively disables this.
+        vec4 reflect_plane = (vec4){ 0, 1, 0, 0 }; // NOTE: w is distance from origin, in this case the y-coord. Setting this to vec4_zero() effectively disables this.
         if (!render_scene(internal_data, &plane->reflection_colour, &plane->reflection_depth, 0, 0, false, reflect_plane, internal_data->current_camera, &inverted_camera, true, p_frame_data)) {
             KERROR("Failed to render scene.");
             return false;
