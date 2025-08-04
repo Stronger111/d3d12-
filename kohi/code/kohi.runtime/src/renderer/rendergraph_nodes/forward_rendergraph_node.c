@@ -975,7 +975,7 @@ b8 forward_rendergraph_node_execute(struct rendergraph_node* self, struct frame_
     //Invert position accross plane.
     f32 double_distance = 2.0f * (internal_data->current_camera->position.y - 0); //TODO: water plane position, distance along plane normal.
     vec3 inv_cam_pos = camera_position_get(&inverted_camera);
-    inv_cam_pos.y = -double_distance;// TODO: invert along water plane normal axis.
+    inv_cam_pos.y -= double_distance;// TODO: invert along water plane normal axis.
     camera_position_set(&inverted_camera, inv_cam_pos);
     vec3 inv_cam_rot = camera_rotation_euler_get(&inverted_camera);
     inv_cam_rot.x *= -1.0f;
@@ -1052,7 +1052,7 @@ b8 forward_rendergraph_node_render_mode_set(struct rendergraph_node* self, u32 r
     return false;
 }
 
-b8 forward_rendergraph_node_directional_light_set(struct rendergraph_node* self, struct directional_light* light) {
+b8 forward_rendergraph_node_directional_light_set(struct rendergraph_node* self, const struct directional_light* light) {
     if (self && self->internal_data) {
         forward_rendergraph_node_internal_data* internal_data = self->internal_data;
         internal_data->dir_light = light;
