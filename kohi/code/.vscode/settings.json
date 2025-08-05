@@ -132,7 +132,8 @@
         "forward_rendergraph_node.h": "c",
         "debug_rendergraph_node.h": "c",
         "debug_box3d.h": "c",
-        "resource_types.h": "c"
+        "resource_types.h": "c",
+        "kpackage.h": "c"
     },
     // File copyright documentation tag.  Array of strings will be converted to one line per element.  Can template {year}.
     "doxdocgen.file.copyrightTag": [
