@@ -143,7 +143,7 @@ b8 vulkan_device_create(vulkan_context* context) {
     }
 
     //NOTE: Request supported  device features
-    VkPhysicalDeviceFeatures2 device_features = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };
+    VkPhysicalDeviceFeatures2 device_features = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2_KHR };
     {
         //Native features
         device_features.features.samplerAnisotropy = context->device.features.samplerAnisotropy;  // Request anistrophy
@@ -187,7 +187,7 @@ b8 vulkan_device_create(vulkan_context* context) {
     VkDeviceCreateInfo device_create_info = { VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO };
     device_create_info.queueCreateInfoCount = index_count;
     device_create_info.pQueueCreateInfos = queue_create_infos;
-    device_create_info.pEnabledFeatures =0;
+    device_create_info.pEnabledFeatures = 0;
     device_create_info.enabledExtensionCount = ext_idx;
     device_create_info.ppEnabledExtensionNames = extension_names;
 
@@ -196,10 +196,13 @@ b8 vulkan_device_create(vulkan_context* context) {
     device_create_info.ppEnabledLayerNames = 0;
     device_create_info.pNext = &device_features;
 
+    KINFO("Still Creating logical device...");
     // Create the device
     VK_CHECK(vkCreateDevice(context->device.physical_device, &device_create_info, context->allocator,
         &context->device.logical_device));
 
+    KINFO("Did the thing!");
+    
     VK_SET_DEBUG_OBJECT_NAME(context, VK_OBJECT_TYPE_DEVICE, context->device.logical_device, "Vulkan Logical Device");
 
     KINFO("Logical device created.");

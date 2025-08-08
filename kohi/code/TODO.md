@@ -20,7 +20,7 @@ The items in this list are not in any particular order. This list will be update
   - [ ] Create binary blob format (.kpackage file) and read/write.
   - [ ] Point kpackage to .kpackage file for "release" builds.
   - [ ] Rename all references to "mesh" in the engine to "static_mesh" to separate it from later mesh types.
-- [ ] BUG: Fix release build hang on startup (creating logical device).
+- [x] BUG: Fix release build hang on startup (creating logical device).
 - [x] BUG: Fix macOS window resizing.
 - [ ] Combine duplicated platform code (such as device_pixel_ratio and callback assignments) to a general platform.c file.
 - [ ] Split out MAX_SHADOW_CASCADE_COUNT to a global of some sort (kvar?);
