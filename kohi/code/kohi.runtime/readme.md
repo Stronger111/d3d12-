@@ -52,13 +52,14 @@ Renderer:
   根据更新频率对描述符集进行分组  Shader和描述符池一起使用
   OpenGL 不必处理管理描述符以及手动同步内存之类的事情
 - 控制台
-
+  
   RenderGraph LoadResource 加载完Graph资源 在加载具体 Pass内部的资源
 # 引擎待完成
 # Math
   Alt+41420 根号 Alt+178 平方号  1:44:25
   
 -bug
+-debug *out_manifest->assets@20 打印20个变量
 -"Vulkan buffer creation failed for object shader  out_error_local_memory  windows ？？ TODO  重启解决问题 后面需要查一下
 - 赋值内存错误,内存空间开辟不足和内存不正确
 - 更详细的Vulkan Debug信息

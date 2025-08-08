@@ -86,10 +86,10 @@ void main() {
    gl_ClipDistance[0] = dot(world_position, u_push_constants.clipping_plane);
 
    //Get a light-space-transformed fragment position. 世界空间转换到灯光空间
-   for(int i=0;i<MAX_SHADOW_CASCADES;++i)
-   {
-       out_dto.light_space_frag_pos[i] =(bias*global_ubo.light_space[i])*vec4(out_dto.frag_position,1.0);
+   for(int i=0;i<MAX_SHADOW_CASCADES;++i) {
+       out_dto.light_space_frag_pos[i] = (bias * global_ubo.light_space[i]) * vec4(out_dto.frag_position, 1.0);
    }
+   
     out_mode=global_ubo.mode;
     use_pcf=global_ubo.use_pcf;
     out_dto.bias=global_ubo.bias;
