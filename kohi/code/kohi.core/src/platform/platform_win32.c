@@ -189,7 +189,10 @@ b8 platform_window_create(const kwindow_config* config, struct kwindow* window, 
     // FIXME: For some reason using the above causes renderdoc to fail to open the window,
     // but using the below does not...
     WCHAR wtitle[256];
-    MultiByteToWideChar(CP_UTF8, 0, window->title, -1, wtitle, 256);
+    int len= MultiByteToWideChar(CP_UTF8, 0, window->title, -1, wtitle, 256);
+    if(!len){
+
+    }
 
     window->platform_state->hwnd = CreateWindowExW(window_ex_style, L"kohi_window_class",
         wtitle, window_style, window_x, window_y, window_width, window_height,

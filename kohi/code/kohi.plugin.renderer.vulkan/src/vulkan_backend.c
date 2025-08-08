@@ -1914,12 +1914,15 @@ void vulkan_renderer_shader_destroy(renderer_backend_interface* backend, shader*
 
         //Destroy the instance states.
         for (u32 i = 0;i < internal_shader->max_instances;++i) {
-            if (internal_shader->instance_states[i].descriptor_sets) {
+            vulkan_shader_instance_state* instance = &internal_shader->instance_states[i];
+            if (instance->descriptor_sets) {
                 kfree(internal_shader->instance_states[i].descriptor_sets, sizeof(VkDescriptorSet) * image_count, MEMORY_TAG_ARRAY);
+                instance->descriptor_sets = 0;
             }
 
-            if (internal_shader->instance_states[i].sampler_uniforms) {
+            if (instance->sampler_uniforms) {
                 kfree(internal_shader->instance_states[i].sampler_uniforms, sizeof(vulkan_uniform_sampler_state) * s->instance_uniform_sampler_count, MEMORY_TAG_ARRAY);
+                instance->sampler_uniforms = 0;
             }
         }
         kfree(internal_shader->instance_states, sizeof(vulkan_shader_instance_state) * internal_shader->max_instances, MEMORY_TAG_ARRAY);

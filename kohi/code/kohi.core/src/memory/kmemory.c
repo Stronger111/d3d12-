@@ -10,6 +10,18 @@
 #include <stdio.h>
 #include <string.h>
 
+#define K_USE_CUSTOM_MEMORY_ALLOCATOR 1
+
+#if !K_USE_CUSTOM_MEMORY_ALLOCATOR
+#if _MSC_VER
+#include <malloc.h>
+#define aligned_alloc _aligned_malloc
+#define aligned_free _aligned_free
+#else
+#include <stdlib.h>
+#endif
+#endif
+
 struct memory_stats {
     u64 total_allocated;
     u64 tagged_allocations[MEMORY_TAG_MAX_TAGS];
@@ -18,39 +30,39 @@ struct memory_stats {
 };
 
 static const char* memory_tag_strings[MEMORY_TAG_MAX_TAGS] =
-    {
-        "UNKNOW     ",
-        "ARRAY      ",
-        "LINEAR_ALLC",
-        "DARRAY     ",
-        "DICT       ",
-        "RING_QUEUE ",
-        "BST        ",
-        "STRING     ",
-        "ENGINE     ",
-        "JOB        ",
-        "TEXTURE    ",
-        "MAT_INST   ",
-        "RENDERER   ",
-        "GAME       ",
-        "TRANSFORM  ",
-        "ENTITY     ",
-        "ENTITY_NODE",
-        "SCENE      ",
-        "RESOURCE   ",
-        "VULKAN     ",
-        "VULKAN_EXT ",
-        "DIRECT3D   ",
-        "OPENGL     ",
-        "GPU_LOCAL  ",
-        "BITMAP_FONT",
-        "SYSTEM_FONT",
-        "KEYMAP     ",
-        "HASHTABLE  ",
-        "UI         ",
-        "AUDIO      ",
-        "REGISTRY   ",
-        "PLUGIN   "};
+{
+    "UNKNOW     ",
+    "ARRAY      ",
+    "LINEAR_ALLC",
+    "DARRAY     ",
+    "DICT       ",
+    "RING_QUEUE ",
+    "BST        ",
+    "STRING     ",
+    "ENGINE     ",
+    "JOB        ",
+    "TEXTURE    ",
+    "MAT_INST   ",
+    "RENDERER   ",
+    "GAME       ",
+    "TRANSFORM  ",
+    "ENTITY     ",
+    "ENTITY_NODE",
+    "SCENE      ",
+    "RESOURCE   ",
+    "VULKAN     ",
+    "VULKAN_EXT ",
+    "DIRECT3D   ",
+    "OPENGL     ",
+    "GPU_LOCAL  ",
+    "BITMAP_FONT",
+    "SYSTEM_FONT",
+    "KEYMAP     ",
+    "HASHTABLE  ",
+    "UI         ",
+    "AUDIO      ",
+    "REGISTRY   ",
+    "PLUGIN   " };
 typedef struct memory_system_state {
     memory_system_configuration config;
     struct memory_stats stats;
@@ -66,6 +78,7 @@ typedef struct memory_system_state {
 static memory_system_state* state_ptr;
 
 b8 memory_system_initialize(memory_system_configuration config) {
+#if K_USE_CUSTOM_MEMORY_ALLOCATOR
     // The amount needed by the system state.
     u64 state_memory_requirement = sizeof(memory_system_state);
     // Figure out how much space the dynamic allocator needs.
@@ -87,13 +100,19 @@ b8 memory_system_initialize(memory_system_configuration config) {
     // The allocator block is in the same block of memory, but after the state.
     state_ptr->allocator_block = ((void*)block + state_memory_requirement);
     if (!dynamic_allocator_create(
-            config.total_alloc_size,
-            &state_ptr->allocator_memory_requirement,
-            state_ptr->allocator_block,
-            &state_ptr->allocator)) {
+        config.total_alloc_size,
+        &state_ptr->allocator_memory_requirement,
+        state_ptr->allocator_block,
+        &state_ptr->allocator)) {
         KFATAL("Memory system is unable to setup internal allocator. Application cannot continue.");
         return false;
     }
+#else
+    state_ptr = aligned_alloc(sizeof(memory_system_state), 16);
+    state_ptr->config = config;
+    state_ptr->alloc_count = 0;
+    state_ptr->allocatror_memory_requirement = 0;
+#endif
 
     // Create allocation mutex
     if (!kmutex_create(&state_ptr->allocation_mutex)) {
@@ -109,9 +128,13 @@ void memory_system_shutdown(void) {
     if (state_ptr) {
         // Destroy allocation mutex
         kmutex_destroy(&state_ptr->allocation_mutex);
+#if K_USE_CUSTOM_MEMORY_ALLOCATOR
         dynamic_allocator_destroy(&state_ptr->allocator);
         // Free the entire block.
         platform_free(state_ptr, state_ptr->allocator_memory_requirement + sizeof(memory_system_state));
+#else
+        aligned_free(state_ptr);
+#endif
     }
     state_ptr = 0;
 }
@@ -139,10 +162,14 @@ void* kallocate_aligned(u64 size, u16 alignment, memory_tag tag) {
         state_ptr->stats.tagged_allocations[tag] += size;
         state_ptr->stats.new_tagged_allocations[tag] += size;
         state_ptr->alloc_count++;
-
+#if K_USE_CUSTOM_MEMORY_ALLOCATOR
         block = dynamic_allocator_allocate_aligned(&state_ptr->allocator, size, alignment);
+#else
+        block = aligned_alloc(size, alignment);
+#endif
         kmutex_unlock(&state_ptr->allocation_mutex);
-    } else {
+    }
+    else {
         // If the system is not up yet, warn about it but give memory for now.
         //KTRACE("Warning: kallocate_aligned called before the memory system is initialized.");
         // TODO: Memory alignment
@@ -204,11 +231,27 @@ KAPI void kfree_aligned(void* block, u64 size, u16 alignment, memory_tag tag) {
             KFATAL("Unable to obtain mutex lock for free operation. Heap corruption is likely.");
             return;
         }
+#if K_USE_CUSTOM_MEMORY_ALLOCATOR
+        u64 osize = 0;
+        u16 oalignment = 0;
+        dynamic_allocator_get_size_alignment(block, &osize, &oalignment);
+        if (osize != size) {
+            printf("Free size mismatch! (%llu/%llu)\n", osize, size);
+        }
+        if (oalignment != alignment) {
+            printf("Free alignment mismatch! (%hu/%hu)\n", oalignment, alignment);
+        }
+#endif
         state_ptr->stats.total_allocated -= size;
         state_ptr->stats.tagged_allocations[tag] -= size;
         state_ptr->stats.new_tagged_deallocations[tag] += size;
         state_ptr->alloc_count--;
+#if K_USE_CUSTOM_MEMORY_ALLOCATOR
         b8 result = dynamic_allocator_free_aligned(&state_ptr->allocator, block);
+#else
+        aligned_free(block);
+        b8 result = true;
+#endif
         kmutex_unlock(&state_ptr->allocation_mutex);
 
         // If the free failed, it's possible this is because the allocation was made
@@ -219,7 +262,8 @@ KAPI void kfree_aligned(void* block, u64 size, u16 alignment, memory_tag tag) {
             // TODO: Memory alignment
             platform_free(block, false);
         }
-    } else {
+    }
+    else {
         // 内存对齐 为false
         // TODO: Memory alignment
         platform_free(block, false);
@@ -244,7 +288,13 @@ KAPI b8 kmemory_get_size_alignment(void* block, u64* out_size, u16* out_alignmen
         KFATAL("Error obtaining mutex lock during kmemory_get_size_alignment.");
         return false;
     }
+#if K_USE_CUSTOM_MEMORY_ALLOCATOR
     b8 result = dynamic_allocator_get_size_alignment(block, out_size, out_alignment);
+#else
+    * out_size = 0;
+    *out_alignment = 0;
+    b8 result = true;
+#endif
     kmutex_unlock(&state_ptr->allocation_mutex);
     return result;
 }
@@ -265,13 +315,16 @@ const char* get_unit_for_size(u64 size_bytes, f32* out_amount) {
     if (size_bytes >= GIBIBYTES(1)) {
         *out_amount = (f64)size_bytes / GIBIBYTES(1);
         return "GiB";
-    } else if (size_bytes >= MEBIBYTES(1)) {
+    }
+    else if (size_bytes >= MEBIBYTES(1)) {
         *out_amount = (f64)size_bytes / MEBIBYTES(1);
         return "MiB";
-    } else if (size_bytes >= KIBIBYTES(1)) {
+    }
+    else if (size_bytes >= KIBIBYTES(1)) {
         *out_amount = (f64)size_bytes / KIBIBYTES(1);
         return "KiB";
-    } else {
+    }
+    else {
         *out_amount = (f32)size_bytes;
         return "B";
     }
@@ -282,22 +335,28 @@ KAPI char* get_memory_usage_str(void) {
     char buffer[8000] = "System memory use (tagged):\n";
     u64 offset = strlen(buffer);
     for (u32 i = 0; i < MEMORY_TAG_MAX_TAGS; ++i) {
-        f32 amounts[3] = {1.0f, 1.0f, 1.0f};
-        const char* units[3] = {get_unit_for_size(state_ptr->stats.tagged_allocations[i], &amounts[0]),
+        f32 amounts[3] = { 1.0f, 1.0f, 1.0f };
+        const char* units[3] = { get_unit_for_size(state_ptr->stats.tagged_allocations[i], &amounts[0]),
                                 get_unit_for_size(state_ptr->stats.new_tagged_allocations[i], &amounts[1]),
-                                get_unit_for_size(state_ptr->stats.new_tagged_deallocations[i], &amounts[2])};
+                                get_unit_for_size(state_ptr->stats.new_tagged_deallocations[i], &amounts[2]) };
         i32 length = snprintf(buffer + offset, 8000, "  %s: %-7.2f %-3s [+ %-7.2f %-3s | - %-7.2f%-3s]\n",
-                              memory_tag_strings[i],
-                              amounts[0], units[0], amounts[1], units[1], amounts[2], units[2]);
+            memory_tag_strings[i],
+            amounts[0], units[0], amounts[1], units[1], amounts[2], units[2]);
         offset += length;
     }
     kzero_memory(&state_ptr->stats.new_tagged_allocations, sizeof(state_ptr->stats.new_tagged_allocations));
     kzero_memory(&state_ptr->stats.new_tagged_deallocations, sizeof(state_ptr->stats.new_tagged_deallocations));
     {
         // Compute total usage.
+#if K_USE_CUSTOM_MEMORY_ALLOCATOR
         u64 total_space = dynamic_allocator_total_space(&state_ptr->allocator);
         u64 free_space = dynamic_allocator_free_space(&state_ptr->allocator);
         u64 used_space = total_space - free_space;
+#else
+        u64 total_space = 0;
+        // u64 free_space = 0;
+        u64 used_space = 0;
+#endif
 
         f32 used_amount = 1.0f;
         const char* used_unit = get_unit_for_size(used_space, &used_amount);

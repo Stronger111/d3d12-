@@ -408,7 +408,7 @@ material* material_system_acquire_terrain_material(const char* material_name, u3
         ibl_cube_texture->texture_maps[0] = &m->maps[SAMP_TERRAIN_IRRADIANCE_MAP];
 
         // Acquire the resource
-        b8 result = renderer_shader_instance_resources_acquire(state_ptr->renderer,selected_shader, &instance_resource_config, &m->internal_id);
+        b8 result = renderer_shader_instance_resources_acquire(state_ptr->renderer, selected_shader, &instance_resource_config, &m->internal_id);
         if (!result) {
             KERROR("Failed to acquire renderer resources for terrain  material '%s'.", m->name);
         }
@@ -952,7 +952,7 @@ static b8 create_default_pbr_material(material_system_state* state) {
 
     shader* s = shader_system_get_by_id(state_ptr->pbr_shader_id);
 
-    if (!renderer_shader_instance_resources_acquire(state_ptr->renderer,s, &instance_resource_config, &state->default_pbr_material.internal_id)) {
+    if (!renderer_shader_instance_resources_acquire(state_ptr->renderer, s, &instance_resource_config, &state->default_pbr_material.internal_id)) {
         KFATAL("Failed to acquire renderer resources for default pbr material. Application cannot continue.");
         return false;
     }
@@ -960,7 +960,7 @@ static b8 create_default_pbr_material(material_system_state* state) {
     // Clean up the uniform configs.
     for (u32 i = 0; i < instance_resource_config.uniform_config_count; ++i) {
         shader_instance_uniform_texture_config* ucfg = &instance_resource_config.uniform_configs[i];
-        kfree(ucfg->texture_maps, sizeof(texture_map) * ucfg->texture_map_count, MEMORY_TAG_ARRAY);
+        kfree(ucfg->texture_maps, sizeof(ucfg->texture_maps[0]) * ucfg->texture_map_count, MEMORY_TAG_ARRAY);
         ucfg->texture_maps = 0;
     }
     kfree(instance_resource_config.uniform_configs, sizeof(shader_instance_uniform_texture_config) * instance_resource_config.uniform_config_count, MEMORY_TAG_ARRAY);
@@ -1035,7 +1035,7 @@ static b8 create_default_terrain_material(material_system_state* state) {
 
     // Acquire the resources
     shader* s = shader_system_get_by_id(state_ptr->terrain_shader_id);
-    b8 result = renderer_shader_instance_resources_acquire(state_ptr->renderer,s, &instance_resource_config, &state->default_terrain_material.internal_id);
+    b8 result = renderer_shader_instance_resources_acquire(state_ptr->renderer, s, &instance_resource_config, &state->default_terrain_material.internal_id);
     if (!result) {
         KERROR("Failed to acquire renderer resources for default terrain material '%s'.");
     }
@@ -1043,7 +1043,7 @@ static b8 create_default_terrain_material(material_system_state* state) {
     // Clean up the uniform configs.
     for (u32 i = 0; i < instance_resource_config.uniform_config_count; ++i) {
         shader_instance_uniform_texture_config* ucfg = &instance_resource_config.uniform_configs[i];
-        kfree(ucfg->texture_maps, sizeof(shader_instance_uniform_texture_config) * ucfg->texture_map_count, MEMORY_TAG_ARRAY);
+        kfree(ucfg->texture_maps, sizeof(ucfg->texture_maps[0]) * ucfg->texture_map_count, MEMORY_TAG_ARRAY);
         ucfg->texture_maps = 0;
     }
     kfree(instance_resource_config.uniform_configs, sizeof(shader_instance_uniform_texture_config) * instance_resource_config.uniform_config_count, MEMORY_TAG_ARRAY);
