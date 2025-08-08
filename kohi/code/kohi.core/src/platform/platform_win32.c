@@ -12,12 +12,15 @@
 #include "threads/kmutex.h"
 #include "threads/ksemaphore.h"
 #include "threads/kthread.h"
+#include "time/kclock.h"
 #include <input_types.h>
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
-#include <windowsx.h>  //param input extraction
 #include <stdlib.h>
+#include <timeapi.h>
+#include <windowsx.h>  //param input extraction
+
 
 typedef struct win32_handle_info {
     HINSTANCE h_instance;
@@ -58,6 +61,7 @@ typedef struct platform_state {
 static platform_state* state_ptr;
 // clock
 static f64 clock_frequency;
+static UINT min_period;
 static LARGE_INTEGER start_time;
 
 static void platform_update_watches(void);
@@ -71,6 +75,10 @@ void clock_setup(void) {
     QueryPerformanceFrequency(&frequency);
     clock_frequency = 1.0 / (f64)frequency.QuadPart;
     QueryPerformanceCounter(&start_time);
+
+    TIMECAPS tc;
+    timeGetDevCaps(&tc, sizeof(tc));
+    min_period = tc.wPeriodMin;
 }
 
 b8 platform_system_startup(u64* memory_requirement, platform_state* state, platform_system_config* config) {
@@ -189,8 +197,8 @@ b8 platform_window_create(const kwindow_config* config, struct kwindow* window, 
     // FIXME: For some reason using the above causes renderdoc to fail to open the window,
     // but using the below does not...
     WCHAR wtitle[256];
-    int len= MultiByteToWideChar(CP_UTF8, 0, window->title, -1, wtitle, 256);
-    if(!len){
+    int len = MultiByteToWideChar(CP_UTF8, 0, window->title, -1, wtitle, 256);
+    if (!len) {
 
     }
 
@@ -380,7 +388,23 @@ f64 platform_get_absolute_time(void) {
 }
 
 void platform_sleep(u64 ms) {
-    Sleep(ms);
+    kclock clock;
+    kclock_start(&clock);
+    timeBeginPeriod(min_period);
+    Sleep(ms - min_period);
+    timeEndPeriod(min_period);
+
+    kclock_update(&clock);
+    f64 observed = clock.elapsed * 1000.0;
+    f64 ms_remaining = (f64)ms - observed;
+
+    //spin lock
+    kclock_start(&clock);
+    while (clock.elapsed * 1000.0 < ms_remaining) {
+        _mm_pause();
+        kclock_update(&clock);
+    }
+
 }
 
 i32 platform_get_processor_count(void) {
@@ -469,7 +493,8 @@ b8 kthread_wait_timeout(kthread* thread, u64 wait_ms) {
         DWORD exit_code = WaitForSingleObject(thread->internal_data, wait_ms);
         if (exit_code == WAIT_OBJECT_0) {
             return true;
-        }else if (exit_code == WAIT_TIMEOUT) {
+        }
+        else if (exit_code == WAIT_TIMEOUT) {
             return false;
         }
     }
