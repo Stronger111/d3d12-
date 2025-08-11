@@ -135,7 +135,11 @@
         "resource_types.h": "c",
         "kpackage.h": "c",
         "mmsyscom.h": "c",
-        "timeapi.h": "c"
+        "timeapi.h": "c",
+        "ctime": "cpp",
+        "memory": "cpp",
+        "identifier.h": "c",
+        "complex.h": "c"
     },
     // File copyright documentation tag.  Array of strings will be converted to one line per element.  Can template {year}.
     "doxdocgen.file.copyrightTag": [
