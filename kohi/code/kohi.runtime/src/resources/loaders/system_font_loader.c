@@ -1,13 +1,14 @@
 #include "system_font_loader.h"
 
-#include "logger.h"
-#include "memory/kmemory.h"
-#include "strings/kstring.h"
-#include "resources/resource_types.h"
-#include "systems/resource_system.h"
-#include "math/kmath.h"
-#include "loader_utils.h"
 #include "containers/darray.h"
+#include "loader_utils.h"
+#include "logger.h"
+#include "math/kmath.h"
+#include "memory/kmemory.h"
+#include "resources/font_types.h"
+#include "resources/resource_types.h"
+#include "strings/kstring.h"
+#include "systems/resource_system.h"
 
 #include "platform/filesystem.h"
 

@@ -2,20 +2,14 @@
 
 #include "assets/kasset_types.h"
 #include "containers/darray.h"
+#include "kdebug/kassert.h"
 #include "logger.h"
+#include "memory/kmemory.h"
+#include "platform/filesystem.h"
 #include "platform/kpackage.h"
 #include "strings/kstring.h"
 
-// Types of assets to be treated as text.
-#define TEXT_ASSET_TYPE_COUNT 3
-static kasset_type asset_types[TEXT_ASSET_TYPE_COUNT] = {
-   KASSET_TYPE_MATERIAL,
-   KASSET_TYPE_SCENE,
-   KASSET_TYPE_HEIGHTMAP_TERRAIN };
-
-static b8 treat_type_as_text(kasset_type type);
 static b8 process_manifest_refs(vfs_state* state, const asset_manifest* manifest);
-
 
 b8 vfs_initialize(u64* memory_requirement, vfs_state* state, const vfs_config* config) {
     if (!memory_requirement) {
@@ -75,55 +69,121 @@ void vfs_shutdown(vfs_state* state) {
     }
 }
 
-void vfs_request_asset(vfs_state* state, const kasset_name* name, kasset_type type, PFN_on_asset_loaded_callback callback) {
-    if (state && name && callback) {
-        KDEBUG("Loading asset '%s' of type '%s' from package '%s'...", name->asset_name, name->asset_type, name->package_name);
+void vfs_request_asset(vfs_state* state, struct kasset_metadata* meta, b8 is_binary, b8 get_source, u32 context_size, const void* context, PFN_on_asset_loaded_callback callback) {
 
-        u32 package_count = darray_length(state->packages);
-        for (u32 i = 0;i < package_count;++i) {
-            kpackage* package = &state->packages[i];
-            if (strings_equali(package->name, name->package_name)) {
-                //Determine if the asset type is text.
+    if (!state || !meta || !callback) {
+        KERROR("vfs_request_asset requires state, meta and callback to be provided.");
+    }
 
-                vfs_asset_data data = { 0 };
-                if (treat_type_as_text(type)) {
-                    data.text = kpackage_asset_text_get(package, type, name->asset_name, &data.size);
-                    if (!data.text) {
-                        KERROR("Failed to text load asset. See logs for details.");
-                        data.success = false;
-                        return;
-                    }
-                }
-                else {
-                    data.bytes = kpackage_asset_bytes_get(package, type, name->asset_name, &data.size);
-                    if (!data.bytes) {
-                        KERROR("Failed to load binary asset. See logs for details.");
-                        data.success = false;
-                        data.flags |= VFS_ASSET_FLAG_BINARY_BIT;
-                        return;
-                    }
-                }
-                data.success = true;
-                callback(name->asset_name, data);
 
-                return;
-            }
-        }
-        KERROR("No package named '%s' exists. Nothing was done.", name->package_name);
+
+}
+
+void vfs_request_asset_sync(vfs_state* state, struct kasset_metadata* meta, b8 is_binary, b8 get_source, u32 context_size, const void* context, vfs_asset_data* out_data) {
+    if (!out_data) {
+        KERROR("vfs_request_asset_sync requires a valid pointer to out_data. Nothing can or will be done.");
+        return;
+    }
+
+    if (!state || !meta) {
+        KERROR("vfs_request_asset_sync requires state, name and callback to be provided.");
+        out_data->result = VFS_REQUEST_RESULT_INTERNAL_FAILURE;
+        return;
+    }
+
+    kzero_memory(out_data, sizeof(vfs_asset_data));
+
+    //Take a copy of the context if provided. This will need to be freed by the caller.
+    if (context_size) {
+        KASSERT_MSG(context, "Called vfs_request_asset with a context_size, but not a context. Check yourself before you wreck yourself.");
+        out_data->context_size = context_size;
+        out_data->context = kallocate(context_size, MEMORY_TAG_PLATFORM);
+        kcopy_memory(out_data->context, context, out_data->context_size);
     }
     else {
-        KERROR("vfs_request_asset requires state, name and callback to be provided.");
+        out_data->context_size = 0;
+        out_data->context = 0;
+    }
+
+    kasset_name* name = &meta->name;
+    KDEBUG("Loading asset '%s' of type '%s' from package '%s'...", name->asset_name, name->asset_type, name->package_name);
+
+    u32 package_count = darray_length(state->packages);
+    for (u32 i = 0;i < package_count;++i) {
+        kpackage* package = &state->packages[i];
+        // TODO: Optimization: Take a hash of the package names, then a hash of the requested package name
+        // and compare those instead.
+        if (strings_equali(package->name, name->package_name)) {
+
+            kzero_memory(out_data, sizeof(vfs_asset_data));
+            // Determine if the asset type is text.
+            kpackage_result
+            vfs_asset_data data = { 0 };
+            if (is_binary) {
+                data.bytes = kpackage_asset_bytes_get(package, name->asset_name, &data.size);
+                if (!data.bytes) {
+                    KERROR("Failed to load binary asset. See logs for details.");
+                    data.success = false;
+                    data.flags |= VFS_ASSET_FLAG_BINARY_BIT;
+                    return;
+                }
+            }
+            else {
+                data.text = kpackage_asset_text_get(package, name->asset_name, &data.size);
+                if (!data.text) {
+                    KERROR("Failed to text load asset. See logs for details.");
+                    data.success = false;
+                    return;
+                }
+            }
+
+            // Take a copy of the context if provided. This will be freed immediately after the callback is made below.
+           // This means the context should be immediately consumed by the callback before any async
+           // work is done. 
+            if (context_size) {
+                KASSERT_MSG(context, "Called vfs_request_asset with a context_size, but not a context. Check yourself before you wreck yourself.");
+                data.context_size = context_size;
+                data.context = kallocate(context_size, MEMORY_TAG_PLATFORM);
+                kcopy_memory(data.context, context, data.context_size);
+            }
+            else {
+                data.context_size = 0;
+                data.context = 0;
+            }
+            data.success = true;
+            callback(name->asset_name, data);
+
+            //Cleanup the context.
+            if (data.context_size) {
+                kfree(data.context, data.context_size, MEMORY_TAG_PLATFORM);
+                data.context = 0;
+                data.context_size = 0;
+            }
+
+            return;
+        }
     }
 }
 
-static b8 treat_type_as_text(kasset_type type) {
-    for (u32 i = 0; i < TEXT_ASSET_TYPE_COUNT; ++i) {
-        if (type == asset_types[i]) {
-            return true;
+b8 vfs_asset_write(vfs_state* state, const kasset* asset, b8 is_binary, u64 size, void* data) {
+    u32 package_count = darray_length(state->packages);
+    for (u32 i = 0;i < package_count;++i) {
+        kpackage* package = &state->packages[i];
+        // TODO: Optimization: Take a hash of the package names, then a hash of the requested package name
+        // and compare those instead.
+        if (strings_equali(package->name, asset->meta.name.package_name)) {
+            if (is_binary) {
+                return kpackage_asset_bytes_write(package, asset->meta.name.fully_qualified_name, size, data);
+            }
+            else {
+                return kpackage_asset_text_write(package, asset->meta.name.fully_qualified_name, size, data);
+            }
         }
     }
-    return false;
+
+    KERROR("vfs_asset_write:Unable to find package named '%s'.", asset->meta.name.package_name);
 }
+
 static b8 process_manifest_refs(vfs_state* state, const asset_manifest* manifest) {
     b8 success = true;
     if (manifest->references) {

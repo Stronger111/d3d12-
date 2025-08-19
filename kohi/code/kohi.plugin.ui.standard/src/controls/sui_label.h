@@ -1,7 +1,7 @@
 #pragma once
 
 #include "standard_ui_system.h"
-
+#include <resources/font_types.h>
 
 typedef struct sui_label_internal_data{
    vec2i size;

@@ -8,6 +8,7 @@
 #include "logger.h"
 #include "renderer/renderer_frontend.h"
 #include "resources/resource_types.h"
+#include "resources/font_types.h"
 #include "systems/resource_system.h"
 #include "systems/texture_system.h"
 

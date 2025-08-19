@@ -98,7 +98,7 @@ KAPI char* string_format_v(const char* format, void* va_list);
  * @returns The length of the newly-formatted string.
  */
 KDEPRECATED("This version of string format is legacy, and unsafe. Use string_format() instead.")
-KAPI i32 string_format_unsafe(char* dest,const char* format, ...);
+KAPI i32 string_format_unsafe(char* dest, const char* format, ...);
 
 /**
  * @brief Performs variadic string formatting to dest given format string and va_list.
@@ -460,12 +460,23 @@ KAPI void string_filename_from_path(char* dest, const char* path);
 KAPI void string_filename_no_extension_from_path(char* dest, const char* path);
 
 /**
+ * @brief Attempts to get the file extension from the given path. Allocates a new string which should be freed.
+ *
+ * @param path The full path to extract from.
+ * @param include_dot Indicates if the '.' should be included in the output.
+ * @returns The extension on success; otherwise 0.
+ */
+KAPI const char* string_extension_from_path(const char* path, b8 include_dot);
+
+/**
  * @brief Attempts to extract an array length from a given string. Ex: a string of sampler2D[4] will return True and set out_length to 4.
  * @param str The string to examine.
  * @param out_length A pointer to hold the length, if extracted successfully.
  * @returns True if an array length was found and parsed; otherwise false.
  */
 KAPI b8 string_parse_array_length(const char* str, u32* out_length);
+
+KAPI b8 string_line_get(const char* source_str, u16 max_line_length, u32 start_from, char** out_buffer, u32* out_line_length);
 
 // ----------------------
 // KString implementation

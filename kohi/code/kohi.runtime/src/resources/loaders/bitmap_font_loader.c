@@ -2,15 +2,16 @@
 
 #include "logger.h"
 #include "memory/kmemory.h"
-#include "strings/kstring.h"
+#include "resources/font_types.h"
 #include "resources/resource_types.h"
+#include "strings/kstring.h"
 #include "systems/resource_system.h"
 
 #include "loader_utils.h"
 
 #include "platform/filesystem.h"
 
-#include <stdio.h>  //sscanf
+#include <stdio.h> //sscanf
 
 typedef enum bitmap_font_file_type {
     BITMAP_FONT_FILE_TYPE_NOT_FOUND,

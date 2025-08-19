@@ -1,17 +1,27 @@
 #include "asset_system.h"
-#include "assets/handlers/asset_handler.h"
-#include "assets/kasset_utils.h"
-#include "defines.h"
-#include "identifiers/identifier.h"
+#include "core/engine.h"
+// Known handler types
+#include "assets/handlers/asset_handler_binary.h"
+#include "assets/handlers/asset_handler_heightmap_terrain.h"
+#include "assets/handlers/asset_handler_image.h"
+#include "assets/handlers/asset_handler_kson.h"
+#include "assets/handlers/asset_handler_material.h"
+#include "assets/handlers/asset_handler_static_mesh.h"
+#include "assets/handlers/asset_handler_text.h"
 
+#include <assets/asset_handler_types.h>
 #include <assets/kasset_types.h>
-#include <complex.h>
+#include <assets/kasset_utils.h>
 #include <containers/darray.h>
 #include <containers/hashtable.h>
 #include <kdebug/kassert.h>
+#include <defines.h>
+#include <identifiers/identifier.h>
 #include <logger.h>
 #include <memory/kmemory.h>
+#include <parsers/kson_parser.h>
 #include <strings/kstring.h>
+
 
 typedef struct asset_lookup {
     // The asset itself, owned by this lookup.
@@ -38,6 +48,27 @@ typedef struct asset_system_state {
 }asset_system_state;
 
 static void asset_system_release_internal(struct asset_system_state* state, const char* fully_qualified_name, b8 force_release);
+
+b8 asset_system_deserialize_config(const char* config_str, asset_system_config* out_config) {
+    if (!config_str || !out_config) {
+        KERROR("asset_system_deserialize_config requires a valid string and a pointer to hold the config.");
+        return false;
+    }
+
+    kson_tree tree = { 0 };
+    if (!kson_tree_from_string(config_str, &tree)) {
+        KERROR("Failed to parse asset system configuration.");
+        return false;
+    }
+
+    //max_asset_count
+    if (!kson_object_property_value_get_int(&tree.root, "max_asset_count", (i64)&out_config->max_asset_count)) {
+        KERROR("max_asset_count is a required field and was not provided.");
+        return false;
+    }
+
+    return true;
+}
 
 b8 asset_system_initialize(u64* memory_requirement, asset_system_state* state, const asset_system_config* config) {
     if (!memory_requirement) {
@@ -76,6 +107,17 @@ b8 asset_system_initialize(u64* memory_requirement, asset_system_state* state, c
             state->lookups[i].asset.id.uniqueid = INVALID_ID_U64;
         }
     }
+
+    vfs_state* vfs = engine_systems_get()->vfs_system_state;
+
+    //TODO: Setup handlers for known types.
+    asset_handler_heightmap_terrain_create(&state->handlers[KASSET_TYPE_HEIGHTMAP_TERRAIN], vfs);
+    asset_handler_image_create(&state->handlers[KASSET_TYPE_IMAGE], vfs);
+    asset_handler_static_mesh_create(&state->handlers[KASSET_TYPE_STATIC_MESH], vfs);
+    asset_handler_material_create(&state->handlers[KASSET_TYPE_MATERIAL], vfs);
+    asset_handler_text_create(&state->handlers[KASSET_TYPE_TEXT], vfs);
+    asset_handler_kson_create(&state->handlers[KASSET_TYPE_KSON], vfs);
+    asset_handler_binary_create(&state->handlers[KASSET_TYPE_BINARY], vfs);
     return true;
 }
 
@@ -136,9 +178,12 @@ void asset_system_request(struct asset_system_state* state, const char* fully_qu
                 asset_handler* handler = &state->handlers[lookup->asset.meta.asset_type];
                 if (!handler->request_asset) {
                     KERROR("No handler setup for asset type %d, fully_qualified_name='%s'", lookup->asset.meta.asset_type, fully_qualified_name);
-                    callback(ASSET_REQUEST_RESULT_TO_HANDLER, 0, listener_instance);
+                    callback(ASSET_REQUEST_RESULT_NO_HANDLER, 0, listener_instance);
                 }
-                handler->request_asset(handler, &lookup->asset, callback);
+                else {
+                    // TODO: Jobify this call.
+                    handler->request_asset(handler, &lookup->asset, listener_instance, callback);
+                }
                 return;
             }
         }
@@ -158,9 +203,26 @@ static void asset_system_release_internal(struct asset_system_state* state, cons
             asset_lookup* lookup = &state->lookups[lookup_index];
             lookup->reference_count--;
             if (force_release || (lookup->reference_count < 1 && lookup->auto_release)) {
-                // Auto release set and criteria met.
-                // TODO: call asset handler's 'unload' function.
-                //
+                // Auto release set and criteria met, so call asset handler's 'unload' function.
+                kasset* asset = &lookup->asset;
+                kasset_type type = asset->meta.asset_type;
+                asset_handler* handler = &state->handlers[type];
+                if (!handler->release_asset) {
+                    KWARN("No release setup on handler for asset type %d, fully_qualified_name='%s'", type, fully_qualified_name);
+                }
+                else {
+                    //Release the asset-specific data.
+                    //TODO: Jobify this call.
+                    handler->release_asset(handler, asset);
+                }
+
+                //Free the common asset properties
+                if (asset->meta.source_file_path) {
+                    string_free(asset->meta.source_file_path);
+                }
+
+                kzero_memory(asset, sizeof(kasset));
+
                 // Ensure the lookup is invalidated.
                 lookup->asset.id.uniqueid = INVALID_ID_U64;
                 lookup->asset.generation = INVALID_ID;
@@ -170,7 +232,7 @@ static void asset_system_release_internal(struct asset_system_state* state, cons
         }
         else {
             // Entry not found, nothing to do.
-            KWARN("asset_system_release: Attempted to release an asset which does not exist or is not already loaded. Nothing to do.");
+            KWARN("asset_system_release: Attempted to release an asset '%s',  which does not exist or is not already loaded. Nothing to do.", fully_qualified_name);
         }
     }
 }
@@ -217,5 +279,23 @@ void asset_system_on_handler_result(struct asset_system_state* state, asset_requ
             KERROR("Asset '%s' load failed: An unspecified error has occurred.", asset->meta.name.fully_qualified_name);
             break;
         }
+    }
+}
+
+b8 asset_type_is_binary(kasset_type type) {
+    switch (type) {
+        // NOTE: Specify text-type assets here (i.e. assets that should be opened as text, not binary).
+    case KASSET_TYPE_HEIGHTMAP_TERRAIN:
+    case KASSET_TYPE_MATERIAL:
+    case KASSET_TYPE_SCENE:
+    case KASSET_TYPE_KSON:
+    case KASSET_TYPE_TEXT:
+    case KASSET_TYPE_BITMAP_FONT:
+    case KASSET_TYPE_SYSTEM_FONT:
+        return false;
+
+    default:
+        // NOTE: default for assets is binary.
+        return true;
     }
 }
