@@ -469,6 +469,30 @@ b8 string_to_mat4(const char* str, mat4* out_mat) {
     return result != -1;
 }
 
+const char* mat4_to_string(mat4 m) {
+    char buffer[512];
+    kzero_memory(buffer, sizeof(char) * 512);
+    f32* d = m.data;
+    string_format_unsafe(buffer, "%f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f",
+        d[0],
+        d[1],
+        d[2],
+        d[3],
+        d[4],
+        d[5],
+        d[6],
+        d[7],
+        d[8],
+        d[9],
+        d[10],
+        d[11],
+        d[12],
+        d[13],
+        d[14],
+        d[15]);
+    return string_duplicate(buffer);
+}
+
 KAPI b8 string_to_vec4(const char* str, vec4* out_vector) {
     if (!str || !out_vector) {
         return false;
@@ -496,6 +520,13 @@ b8 string_to_vec3(const char* str, vec3* out_vector) {
     return result != -1;
 }
 
+const char* vec3_to_string(vec3 v) {
+    char buffer[75];
+    kzero_memory(buffer, sizeof(char) * 75);
+    string_format_unsafe(buffer, "%f %f %f", v.x, v.y, v.z);
+    return string_duplicate(buffer);
+}
+
 b8 string_to_vec2(const char* str, vec2* out_vector) {
     if (!str || !out_vector) {
         return false;
@@ -504,6 +535,13 @@ b8 string_to_vec2(const char* str, vec2* out_vector) {
     kzero_memory(out_vector, sizeof(vec2));
     i32 result = sscanf(str, "%f %f", &out_vector->x, &out_vector->y);
     return result != -1;
+}
+
+const char* vec2_to_string(vec2 v) {
+    char buffer[50];
+    kzero_memory(buffer, sizeof(char) * 50);
+    string_format_unsafe(buffer, "%f %f", v.x, v.y);
+    return string_duplicate(buffer);
 }
 
 b8 string_to_f32(const char* str, f32* f) {

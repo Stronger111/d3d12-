@@ -38,7 +38,7 @@ void asset_handler_heightmap_terrain_request_asset(struct asset_handler* self, s
     context.handler = self;
     context.listener_instance = listener_instance;
     context.user_callback = user_callback;
-    vfs_request_asset(vfs_state, &asset->meta.name, false, false, sizeof(asset_handler_request_context), &context, asset_handler_base_on_asset_loaded);
+    vfs_request_asset(vfs_state, &asset->meta, false, false, sizeof(asset_handler_request_context), &context, asset_handler_base_on_asset_loaded);
 }
 
 void asset_handler_heightmap_terrain_release_asset(struct asset_handler* self, struct kasset* asset) {

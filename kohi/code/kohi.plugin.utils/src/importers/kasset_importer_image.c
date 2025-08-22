@@ -41,7 +41,7 @@ b8 kasset_importer_image_import(const kasset_importer* self, u64 data_size,const
         bits_per_channel = 8;
         break;
     }
-    u8* pixels = stbi_load_from_memory(data, data_size, (i32*)&typed_asset->width, (i32*)typed_asset->height, (i32*)&typed_asset->channel_count, required_channel_count);
+    u8* pixels = stbi_load_from_memory(data, data_size, (i32*)&typed_asset->width,(i32*)&typed_asset->height, (i32*)&typed_asset->channel_count, required_channel_count);
     if (!pixels) {
         KERROR("Image importer failed to import image '%s'.", out_asset->meta.source_file_path);
         return false;

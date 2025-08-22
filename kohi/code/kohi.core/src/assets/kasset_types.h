@@ -150,7 +150,7 @@ typedef enum asset_request_result {
  * @param asset A constant pointer to the asset that is loaded.
  * @param listener_inst A pointer to the listener, usually passed along with the original request.
  */
-typedef void (*PFN_kasset_on_result)(asset_request_result result, const kasset* asset, void* listener_inst);
+typedef void (*PFN_kasset_on_result)(asset_request_result result, const struct kasset* asset, void* listener_inst);
 
 /**
  * @brief Imports an asset according to the provided params and the importer's internal logic.

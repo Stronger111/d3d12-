@@ -17,7 +17,7 @@ KAPI const char* shader_uniform_type_to_string(shader_uniform_type type);
 KAPI texture_repeat string_to_texture_repeat(const char* str);
 
 /** @brief Converts the given string into a texture filter. Case-insensitive. */
-KAPI texture_filter string_to_texture_filter(const char* str);
+KAPI texture_filter string_to_texture_filter_mode(const char* str);
 
 /** @brief Converts the given string into a shader uniform type. Case-insensitive. */
 KAPI shader_uniform_type string_to_shader_uniform_type(const char* str);

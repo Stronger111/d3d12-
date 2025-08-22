@@ -181,6 +181,16 @@ KAPI void string_remove_at(char* dest, const char* src, u32 pos, u32 length);
  * @return True if parsed successfully; otherwise false.
  */
 KAPI b8 string_to_mat4(const char* str, mat4* out_mat);
+
+/**
+ * @brief Creates a string representation of the provided matrix.
+ * NOTE: string is dynamically allocated, so the caller should free it.
+ *
+ * @param m The matrix to convert to string.
+ * @return The string representation of the matrix.
+ */
+KAPI const char* mat4_to_string(mat4 m);
+
 /**
  * @brief Attempts to parse a vector from the provided string.
  *
@@ -209,6 +219,15 @@ KAPI const char* vec4_to_string(vec4 v);
 KAPI b8 string_to_vec3(const char* str, vec3* out_vector);
 
 /**
+ * @brief Creates a string representation of the provided vector.
+ * NOTE: string is dynamically allocated, so the caller should free it.
+ *
+ * @param v The vector to convert to string.
+ * @return The string representation of the vector.
+ */
+KAPI const char* vec3_to_string(vec3 v);
+
+/**
  * @brief Attempts to parse a vector from the provided string.
  *
  * @param str The string to parse from. Should be space-delimited. (i.e. "1.0 2.0")
@@ -216,6 +235,15 @@ KAPI b8 string_to_vec3(const char* str, vec3* out_vector);
  * @return True if parsed successfully; otherwise false.
  */
 KAPI b8 string_to_vec2(const char* str, vec2* out_vector);
+
+/**
+ * @brief Creates a string representation of the provided vector.
+ * NOTE: string is dynamically allocated, so the caller should free it.
+ *
+ * @param v The vector to convert to string.
+ * @return The string representation of the vector.
+ */
+KAPI const char* vec2_to_string(vec2 v);
 
 /**
  * @brief Attempts to parse a 32-bit floating-point number from the provided string.

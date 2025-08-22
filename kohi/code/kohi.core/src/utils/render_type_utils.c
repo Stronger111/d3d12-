@@ -1,7 +1,7 @@
 #include "render_type_utils.h"
 
 #include "assets/kasset_types.h"
-#include "Kdebug/kassert.h"
+#include "kdebug/kassert.h"
 #include "strings/kstring.h"
 
 const char* texture_repeat_to_string(texture_repeat repeat) {

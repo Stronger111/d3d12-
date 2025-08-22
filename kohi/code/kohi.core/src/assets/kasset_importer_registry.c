@@ -67,6 +67,8 @@ b8 kasset_importer_registry_register(kasset_type type, const char* source_type, 
     }
 
     darray_push(state_ptr->types[type].importers, importer);
+
+    return true;
 }
 
 const kasset_importer* kasset_importer_registry_get_for_source_type(kasset_type type, const char* source_type) {

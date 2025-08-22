@@ -124,6 +124,7 @@
         "kassert.h": "c",
         "filesystem.h": "c",
         "asset_handler_image.h": "c",
-        "asset_handler_kson.h": "c"
+        "asset_handler_kson.h": "c",
+        "asset_handler_text.h": "c"
     },
 }

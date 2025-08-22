@@ -62,7 +62,7 @@ b8 asset_system_deserialize_config(const char* config_str, asset_system_config* 
     }
 
     //max_asset_count
-    if (!kson_object_property_value_get_int(&tree.root, "max_asset_count", (i64)&out_config->max_asset_count)) {
+    if (!kson_object_property_value_get_int(&tree.root, "max_asset_count", (i64*)&out_config->max_asset_count)) {
         KERROR("max_asset_count is a required field and was not provided.");
         return false;
     }
