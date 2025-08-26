@@ -125,6 +125,8 @@
         "filesystem.h": "c",
         "asset_handler_image.h": "c",
         "asset_handler_kson.h": "c",
-        "asset_handler_text.h": "c"
+        "asset_handler_text.h": "c",
+        "asset_handler_scene.h": "c",
+        "asset_handler_static_mesh.h": "c"
     },
 }

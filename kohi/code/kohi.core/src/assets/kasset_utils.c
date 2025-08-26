@@ -81,6 +81,9 @@ static const char* kasset_type_strs[KASSET_TYPE_MAX] = {
     "Music"             // KASSET_TYPE_MUSIC,
 };
 
+// Ensure changes to asset types break this if it isn't also updated.
+STATIC_ASSERT(KASSET_TYPE_MAX == (sizeof(kasset_type_strs) / sizeof(*kasset_type_strs)), "Asset type count does not match string lookup table count.");
+
 kasset_type kasset_type_from_string(const char* type_str) {
     for (u32 i = 0;i < KASSET_TYPE_MAX;++i) {
         if (strings_equali(type_str, kasset_type_strs[i])) {
@@ -104,7 +107,6 @@ void asset_handler_base_on_asset_loaded(struct vfs_state* vfs, const char* name,
     //Take a copy of the context first as it gets freed immediately upon return of this function.
     asset_handler_request_context context = *((asset_handler_request_context*)asset_data.context);
 
-    //LEFTOFF: making this generic. Needs header dec.
     //
     //Process -
     //0: Try to load binary asset first. If this succeeds then this is done.
