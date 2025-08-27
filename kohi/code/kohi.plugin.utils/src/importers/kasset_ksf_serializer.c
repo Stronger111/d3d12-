@@ -9,7 +9,7 @@
 
 const char* kasset_heightmap_terrain_serialize(const kasset* asset) {
     if (!asset) {
-        KERROR("kasset_heightmap_terrain_serialize requires an asset to serialize, ya dingus!");
+        KERROR("kasset_heightmap_serialize requires an asset to serialize, ya dingus!");
         return 0;
     }
 
@@ -17,7 +17,7 @@ const char* kasset_heightmap_terrain_serialize(const kasset* asset) {
     const char* out_str = 0;
 
     // Setup the KSON tree to serialize below.
-    kson_tree tree = { 0 };
+    kson_tree tree = {0};
     tree.root = kson_object_create();
 
     // version
@@ -76,14 +76,13 @@ cleanup_kson:
     return out_str;
 }
 
-
 b8 kasset_heightmap_terrain_deserialize(const char* file_text, kasset* out_asset) {
     if (out_asset) {
         b8 success = false;
         kasset_heightmap_terrain* typed_asset = (kasset_heightmap_terrain*)out_asset;
 
         // Deserialize the loaded asset data
-        kson_tree tree = { 0 };
+        kson_tree tree = {0};
         if (!kson_tree_from_string(file_text, &tree)) {
             KERROR("Failed to parse asset data for heightmap terrain. See logs for details.");
             goto cleanup_kson;
@@ -121,7 +120,7 @@ b8 kasset_heightmap_terrain_deserialize(const char* file_text, kasset* out_asset
         temp_tile_scale_str = 0;
 
         // Material names array.
-        kson_array material_names_obj_array = { 0 };
+        kson_array material_names_obj_array = {0};
         if (!kson_object_property_value_get_object(&tree.root, "material_names", &material_names_obj_array)) {
             KERROR("Failed to parse material_names, which is a required field.");
             goto cleanup_kson;

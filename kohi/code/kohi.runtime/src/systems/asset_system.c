@@ -7,6 +7,7 @@
 #include "assets/handlers/asset_handler_kson.h"
 #include "assets/handlers/asset_handler_material.h"
 #include "assets/handlers/asset_handler_scene.h"
+#include "assets/handlers/asset_handler_shader.h"
 #include "assets/handlers/asset_handler_static_mesh.h"
 #include "assets/handlers/asset_handler_text.h"
 
@@ -120,6 +121,7 @@ b8 asset_system_initialize(u64* memory_requirement, asset_system_state* state, c
     asset_handler_kson_create(&state->handlers[KASSET_TYPE_KSON], vfs);
     asset_handler_binary_create(&state->handlers[KASSET_TYPE_BINARY], vfs);
     asset_handler_scene_create(&state->handlers[KASSET_TYPE_SCENE], vfs);
+    asset_handler_shader_create(&state->handlers[KASSET_TYPE_SHADER], vfs);
     return true;
 }
 
