@@ -880,6 +880,42 @@ b8 string_parse_array_length(const char* str, u32* out_length) {
     return string_to_u32(num_string, out_length);
 }
 
+b8 codepoint_is_lower(i32 codepoint) {
+    return (codepoint >= 'a' && codepoint <= 'z') ||
+           (codepoint >= 0xE0 && codepoint <= 0xFF);
+}
+
+b8 codepoint_is_upper(i32 codepoint) {
+    return (codepoint <= 'Z' && codepoint >= 'A') ||
+           (codepoint >= 0xC0 && codepoint <= 0xDF);
+}
+
+b8 codepoint_is_alpha(i32 codepoint) {
+    return ((codepoint >= 'a' && codepoint <= 'z') ||
+            (codepoint >= 'A' && codepoint <= 'Z') ||
+            (codepoint >= 0xC0 && codepoint <= 0xFF));
+}
+
+b8 codepoint_is_numeric(i32 codepoint) {
+    return (codepoint <= '9' && codepoint >= '0');
+}
+
+void string_to_lower(char* str) {
+    for (u32 i = 0; str[i]; ++i) {
+        if (codepoint_is_upper(str[i])) {
+            str[i] += ('a' - 'A');
+        }
+    }
+}
+
+void string_to_upper(char* str) {
+    for (u32 i = 0; str[i]; ++i) {
+        if (codepoint_is_lower(str[i])) {
+            str[i] += ('a' - 'A');
+        }
+    }
+}
+
 b8 string_line_get(const char* source_str, u16 max_line_length, u32 start_from, char** out_buffer, u32* out_line_length) {
     if (!source_str || !max_line_length || !out_line_length || !out_buffer) {
         return false;

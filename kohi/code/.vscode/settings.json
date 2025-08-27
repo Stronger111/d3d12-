@@ -127,6 +127,15 @@
         "asset_handler_kson.h": "c",
         "asset_handler_text.h": "c",
         "asset_handler_scene.h": "c",
-        "asset_handler_static_mesh.h": "c"
+        "asset_handler_static_mesh.h": "c",
+        "istream": "cpp",
+        "xlocmes": "cpp",
+        "xlocmon": "cpp",
+        "xlocnum": "cpp",
+        "xloctime": "cpp",
+        "darray.h": "c",
+        "system_error": "c",
+        "kname.h": "c",
+        "functional": "c"
     },
 }

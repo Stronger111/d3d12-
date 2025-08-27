@@ -5,6 +5,7 @@
 #include "identifiers/identifier.h"
 #include "math/math_types.h"
 #include "parsers/kson_parser.h"
+#include "strings/kname.h"
 
 /** @brief A magic number indicating the file as a kohi binary asset file. */
 #define ASSET_MAGIC 0xcafebabe
@@ -70,30 +71,17 @@ typedef enum kasset_type {
     KASSET_TYPE_MAX
 }kasset_type;
 
-/**
- * @brief Represents the name of an asset, complete with all
- * parts of the name along with the fully-qualified name.
- */
-typedef struct kasset_name {
-    /** @brief The fully-qualified name in the format "<PackageName>.<AssetType>.<AssetName>". */
-    const char* fully_qualified_name;
-    /** @brief The package name the asset belongs to. */
-    char package_name[KPACKAGE_NAME_MAX_LENGTH];
-    /** @brief The asset type in string format. */
-    char asset_type[KASSET_TYPE_MAX_LENGTH];
-    /** @brief The asset name. */
-    char asset_name[KASSET_NAME_MAX_LENGTH];
-}kasset_name;
-
 typedef struct kasset_metadata {
     //The asset version.
     u32 version;
     // Size of the asset.
     u64 size;
-    // Asset name info.
-    kasset_name name;
-    /** @brief The path of the originally imported file used to create this asset. */
-    const char* source_file_path;
+    // Asset name stored as a kname.
+    kname name;
+    // Package name stored as a kname.
+    kname package_name;
+    /** @brief The path of the originally imported file used to create this asset, stored as a kname */
+    kname source_asset_path;
     // TODO: Listing of asset-type-specific metadata
 }kasset_metadata;
 
@@ -437,7 +425,7 @@ typedef struct kasset_scene_node {
     const char* xform_source;
 }kasset_scene_node;
 
-typedef struct kasset_scene{
+typedef struct kasset_scene {
     kasset base;
     const char* description;
     u32 node_count;
@@ -446,24 +434,24 @@ typedef struct kasset_scene{
 
 #define KASSET_TYPE_NAME_SHADER "Shader"
 
-typedef struct kasset_shader_stage{
+typedef struct kasset_shader_stage {
     shader_stage type;
     const char* source_asset_name;
     const char* package_name;
 }kasset_shader_stage;
 
-typedef struct kasset_shader_attribute{
+typedef struct kasset_shader_attribute {
     const char* name;
     shader_attribute_type type;
 }kasset_shader_attribute;
 
-typedef struct kasset_shader_uniform{
+typedef struct kasset_shader_uniform {
     const char* name;
     shader_uniform_type type;
     shader_scope scope;
 }kasset_shader_uniform;
 
-typedef struct kasset_shader{
+typedef struct kasset_shader {
     kasset base;
     u32 stage_count;
     kasset_shader_stage* stages;
@@ -482,11 +470,11 @@ typedef struct kasset_shader{
 
 #define KASSET_TYPE_NAME_SYSTEM_FONT "SystemFont"
 
-typedef struct kasset_system_font_face{
+typedef struct kasset_system_font_face {
     const char* name;
 }kasset_system_font_face;
 
-typedef struct kasset_system_font{
+typedef struct kasset_system_font {
     kasset base;
     const char* ttf_asset_name;
     u32 face_count;

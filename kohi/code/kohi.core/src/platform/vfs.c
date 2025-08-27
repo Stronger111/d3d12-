@@ -7,6 +7,7 @@
 #include "memory/kmemory.h"
 #include "platform/filesystem.h"
 #include "platform/kpackage.h"
+#include "strings/kname.h"
 #include "strings/kstring.h"
 
 static b8 process_manifest_refs(vfs_state* state, const asset_manifest* manifest);
@@ -29,7 +30,7 @@ b8 vfs_initialize(u64* memory_requirement, vfs_state* state, const vfs_config* c
     state->packages = darray_create(kpackage);
 
     // TODO: For release builds, look at binary file.
-    //FIXME:hardcord rubbish.
+    //FIXME:hardcord rubbish. Add to app config, pass to config and read in here.
     const char* file_path = "../testbed.kapp/asset_manifest.kson";
     asset_manifest manifest = { 0 };
     if (!kpackage_parse_manifest_file_content(file_path, &manifest)) {
@@ -69,19 +70,19 @@ void vfs_shutdown(vfs_state* state) {
     }
 }
 
-void vfs_request_asset(vfs_state* state, struct kasset_metadata* meta, b8 is_binary, b8 get_source, u32 context_size, const void* context, PFN_on_asset_loaded_callback callback) {
+void vfs_request_asset(vfs_state* state, kname package_name, kname asset_name, b8 is_binary, b8 get_source, u32 context_size, const void* context, PFN_on_asset_loaded_callback callback) {
 
-    if (!state || !meta || !callback) {
+    if (!state || !callback) {
         KERROR("vfs_request_asset requires state, meta and callback to be provided.");
     }
 
     //TODO: Jobify this call
     vfs_asset_data data = { 0 };
-    vfs_request_asset_sync(state, meta, is_binary, get_source, context_size, context, &data);
+    vfs_request_asset_sync(state, package_name, asset_name, is_binary, get_source, context_size, context, &data);
 
     //TODO: This should be the job result
     //Issue the callback with the data.
-    callback(state, meta->name.asset_name, data);
+    callback(state, data);
 
     //Cleanup the context.
     if (data.context && data.context_size) {
@@ -92,19 +93,22 @@ void vfs_request_asset(vfs_state* state, struct kasset_metadata* meta, b8 is_bin
 
 }
 
-void vfs_request_asset_sync(vfs_state* state, struct kasset_metadata* meta, b8 is_binary, b8 get_source, u32 context_size, const void* context, vfs_asset_data* out_data) {
+void vfs_request_asset_sync(vfs_state* state, kname package_name, kname asset_name, b8 is_binary, b8 get_source, u32 context_size, const void* context, vfs_asset_data* out_data) {
     if (!out_data) {
         KERROR("vfs_request_asset_sync requires a valid pointer to out_data. Nothing can or will be done.");
         return;
     }
 
-    if (!state || !meta) {
+    if (!state) {
         KERROR("vfs_request_asset_sync requires state, name and callback to be provided.");
         out_data->result = VFS_REQUEST_RESULT_INTERNAL_FAILURE;
         return;
     }
 
     kzero_memory(out_data, sizeof(vfs_asset_data));
+
+    out_data->asset_name = asset_name;
+    out_data->package_name = package_name;
 
     //Take a copy of the context if provided. This will need to be freed by the caller.
     if (context_size) {
@@ -118,26 +122,26 @@ void vfs_request_asset_sync(vfs_state* state, struct kasset_metadata* meta, b8 i
         out_data->context = 0;
     }
 
-    kasset_name* name = &meta->name;
-    KDEBUG("Loading asset '%s' of type '%s' from package '%s'...", name->asset_name, name->asset_type, name->package_name);
+    const char* package_name_str = kname_string_get(package_name);
+    const char* asset_name_str = kname_string_get(asset_name);
+    KDEBUG("Loading asset '%s' from package '%s'...", asset_name_str, package_name_str);
 
     u32 package_count = darray_length(state->packages);
     for (u32 i = 0;i < package_count;++i) {
         kpackage* package = &state->packages[i];
-        // TODO: Optimization: Take a hash of the package names, then a hash of the requested package name
-        // and compare those instead.
-        if (strings_equali(package->name, name->package_name)) {
+
+        if (package->name == package_name) {
 
             kzero_memory(out_data, sizeof(vfs_asset_data));
             // Determine if the asset type is text.
             kpackage_result result = KPACKAGE_RESULT_INTERNAL_FAILURE;
 
             if (is_binary) {
-                result = kpackage_asset_bytes_get(package, name->asset_name, get_source, &out_data->size, &out_data->bytes);
-                out_data->flags|=VFS_ASSET_FLAG_BINARY_BIT;
+                result = kpackage_asset_bytes_get(package, asset_name, get_source, &out_data->size, &out_data->bytes);
+                out_data->flags |= VFS_ASSET_FLAG_BINARY_BIT;
             }
             else {
-                result = kpackage_asset_text_get(package, name->asset_name, get_source, &out_data->size, &out_data->text);
+                result = kpackage_asset_text_get(package, asset_name, get_source, &out_data->size, &out_data->text);
             }
 
             // Indicate this was loaded from source, if appropriate.
@@ -160,17 +164,51 @@ void vfs_request_asset_sync(vfs_state* state, struct kasset_metadata* meta, b8 i
                     out_data->result = VFS_REQUEST_RESULT_INTERNAL_FAILURE;
                     break;
                 }
-            } else {
+            }
+            else {
                 out_data->result = VFS_REQUEST_RESULT_SUCCESS;
+                //Include a copy of the asset path.
+                if (get_source) {
+                    out_data->path = kpackage_source_string_for_asset(package, asset_name);
+                }
+                else {
+                    out_data->path = kpackage_path_for_asset(package, asset_name);
+                }
             }
 
             return;
         }
     }
 
-    KERROR("No package named '%s' exists. Nothing was done.", name->package_name);
+    KERROR("No package named '%s' exists. Nothing was done.", package_name_str);
     out_data->result = VFS_REQUEST_RESULT_PACKAGE_DOES_NOT_EXIST;
     return;
+}
+
+const char* vfs_path_for_asset(vfs_state* state, kname package_name, kname asset_name) {
+    u32 package_count = darray_length(state->packages);
+    for (u32 i = 0; i < package_count; ++i) {
+        kpackage* package = &state->packages[i];
+
+        if (package->name == package_name) {
+            return kpackage_path_for_asset(package, asset_name);
+        }
+    }
+
+    return 0;
+}
+
+const char* vfs_source_path_for_asset(vfs_state* state, kname package_name, kname asset_name) {
+    u32 package_count = darray_length(state->packages);
+    for (u32 i = 0; i < package_count; ++i) {
+        kpackage* package = &state->packages[i];
+
+        if (package->name == package_name) {
+            return kpackage_source_string_for_asset(package, asset_name);
+        }
+    }
+
+    return 0;
 }
 
 void vfs_request_direct_from_disk(vfs_state* state, const char* path, b8 is_binary, u32 context_size, const void* context, PFN_on_asset_loaded_callback callback) {
@@ -179,12 +217,12 @@ void vfs_request_direct_from_disk(vfs_state* state, const char* path, b8 is_bina
     }
 
     // TODO: Jobify this call.
-    vfs_asset_data data = {0};
+    vfs_asset_data data = { 0 };
     vfs_request_direct_from_disk_sync(state, path, is_binary, context_size, context, &data);
 
     // TODO: This should be the job result
     // Issue the callback with the data.
-    callback(state, path, data);
+    callback(state, data);
 
     // Cleanup the context.
     if (data.context && data.context_size) {
@@ -206,13 +244,20 @@ void vfs_request_direct_from_disk_sync(vfs_state* state, const char* path, b8 is
 
     kzero_memory(out_data, sizeof(vfs_asset_data));
 
+    char filename[512] = { 0 };
+    string_filename_no_extension_from_path(filename, path);
+    out_data->asset_name = kname_create(filename);
+    out_data->package_name = 0;
+    out_data->path = string_duplicate(path);
+
     // Take a copy of the context if provided. This will need to be freed by the caller.
     if (context_size) {
         KASSERT_MSG(context, "Called vfs_request_asset with a context_size, but not a context. Check yourself before you wreck yourself.");
         out_data->context_size = context_size;
         out_data->context = kallocate(context_size, MEMORY_TAG_PLATFORM);
         kcopy_memory(out_data->context, context, out_data->context_size);
-    } else {
+    }
+    else {
         out_data->context_size = 0;
         out_data->context = 0;
     }
@@ -232,7 +277,8 @@ void vfs_request_direct_from_disk_sync(vfs_state* state, const char* path, b8 is
             return;
         }
         out_data->flags |= VFS_ASSET_FLAG_BINARY_BIT;
-    } else {
+    }
+    else {
         out_data->text = filesystem_read_entire_text_file(path);
         if (!out_data->text) {
             out_data->size = 0;
@@ -251,7 +297,8 @@ void vfs_request_direct_from_disk_sync(vfs_state* state, const char* path, b8 is
         out_data->context_size = context_size;
         out_data->context = kallocate(context_size, MEMORY_TAG_PLATFORM);
         kcopy_memory(out_data->context, context, out_data->context_size);
-    } else {
+    }
+    else {
         out_data->context_size = 0;
         out_data->context = 0;
     }
@@ -259,23 +306,27 @@ void vfs_request_direct_from_disk_sync(vfs_state* state, const char* path, b8 is
     out_data->result = VFS_REQUEST_RESULT_SUCCESS;
 }
 
-b8 vfs_asset_write(vfs_state* state, const kasset* asset, b8 is_binary, u64 size,const void* data) {
+b8 vfs_asset_write(vfs_state* state, const kasset* asset, b8 is_binary, u64 size, const void* data) {
     u32 package_count = darray_length(state->packages);
+    if (asset->meta.package_name == 0) {
+        KERROR("Unable to write asset because it does not have a package name: '%s'.", kname_string_get(asset->meta.name));
+        return false;
+    }
     for (u32 i = 0;i < package_count;++i) {
         kpackage* package = &state->packages[i];
         // TODO: Optimization: Take a hash of the package names, then a hash of the requested package name
         // and compare those instead.
-        if (strings_equali(package->name, asset->meta.name.package_name)) {
+        if (package->name == asset->meta.package_name) {
             if (is_binary) {
-                return kpackage_asset_bytes_write(package, asset->meta.name.fully_qualified_name, size, data);
+                return kpackage_asset_bytes_write(package, asset->meta.name, size, data);
             }
             else {
-                return kpackage_asset_text_write(package, asset->meta.name.fully_qualified_name, size, data);
+                return kpackage_asset_text_write(package, asset->meta.name, size, data);
             }
         }
     }
 
-    KERROR("vfs_asset_write:Unable to find package named '%s'.", asset->meta.name.package_name);
+    KERROR("vfs_asset_write:Unable to find package named '%s'.", kname_string_get(asset->meta.package_name));
     return false;
 }
 
@@ -290,8 +341,8 @@ static b8 process_manifest_refs(vfs_state* state, const asset_manifest* manifest
             b8 exists = false;
             u32 package_count = darray_length(state->packages);
             for (u32 j = 0;j < package_count;++j) {
-                if (strings_equali(state->packages[j].name, ref->name)) {
-                    KTRACE("Package '%s' already loaded, skipping.", ref->name);
+                if (state->packages[j].name == ref->name) {
+                    KTRACE("Package '%s' already loaded, skipping.", kname_string_get(ref->name));
                     exists = true;
                     break;
                 }
