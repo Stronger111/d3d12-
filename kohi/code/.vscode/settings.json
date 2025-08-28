@@ -138,6 +138,7 @@
         "kname.h": "c",
         "functional": "c",
         "kasset_material_serializer.h": "c",
-        "asset_handler_binary.h": "c"
+        "asset_handler_binary.h": "c",
+        "array.h": "c"
     },
 }

@@ -4,5 +4,8 @@ obj/
 docs/
 
 *.vim
+*_version.h
 
 *compile_flags.txt
+
+*.DS_Store
