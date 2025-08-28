@@ -24,8 +24,10 @@ typedef enum obj_texture_map_channel {
 }obj_texture_map_channel;
 
 typedef struct obj_mtl_source_texture_map {
-    const char* name;
-    const char* image_asset_name;
+    //Name of the texture map.
+    kname name;
+    //Name of the image asset.
+    kname image_asset_name;
     // The texture channel to be used.
     obj_texture_map_channel channel;
     texture_filter filter_min;
@@ -36,7 +38,7 @@ typedef struct obj_mtl_source_texture_map {
 }obj_mtl_source_texture_map;
 
 typedef struct obj_mtl_source_property {
-    const char* name;
+    kname name;
     shader_uniform_type type;
     u32 size;
     union {
@@ -56,7 +58,7 @@ typedef struct obj_mtl_source_property {
 
 typedef struct obj_mtl_source_material {
     //Name of the material.
-    const char* name;
+    kname name;
     //Material type.
     kmaterial_type type;
     //Texture maps
@@ -72,7 +74,7 @@ typedef struct obj_mtl_source_asset {
     obj_mtl_source_material* materials;
 }obj_mtl_source_asset;
 
-KAPI b8 obj_mtl_serializer_serialize(const obj_mtl_source_asset* source_asset,const char** out_file_text);
+KAPI b8 obj_mtl_serializer_serialize(const obj_mtl_source_asset* source_asset, const char** out_file_text);
 
 /**
  * Attempts to deserialize the contents of Wavefront MTL file.
@@ -81,4 +83,4 @@ KAPI b8 obj_mtl_serializer_serialize(const obj_mtl_source_asset* source_asset,co
  * @param out_mtl_source_asset A pointer to hold the deserialized material data. Optional unless mtl_file_text is provided, then required.
  * @return True on success; otherwise false.
  */
-KAPI b8 obj_mtl_serializer_deserialize(const char* mtl_file_text,obj_mtl_source_asset* out_mtl_source_asset);
+KAPI b8 obj_mtl_serializer_deserialize(const char* mtl_file_text, obj_mtl_source_asset* out_mtl_source_asset);

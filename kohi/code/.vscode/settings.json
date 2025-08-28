@@ -136,6 +136,8 @@
         "darray.h": "c",
         "system_error": "c",
         "kname.h": "c",
-        "functional": "c"
+        "functional": "c",
+        "kasset_material_serializer.h": "c",
+        "asset_handler_binary.h": "c"
     },
 }
