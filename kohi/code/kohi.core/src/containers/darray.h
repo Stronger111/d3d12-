@@ -65,31 +65,31 @@ KAPI void* _darray_insert_at(void* array, u64 index, void* value_ptr);
 #define darray_create_with_allocator(type, allocator) \
     _darray_create(DARRAY_DEFAULT_CAPACITY, sizeof(type), allocator)
 
-/**
- * @brief Creates a new darray of the given type with the provided capacity.
- * Performs a dynamic memory allocation.
- * @param type The type to be used to create the darray.
- * @param capacity The number of elements the darray can initially hold (can be resized).
- * @returns A pointer to the array's memory block.
- */
+ /**
+  * @brief Creates a new darray of the given type with the provided capacity.
+  * Performs a dynamic memory allocation.
+  * @param type The type to be used to create the darray.
+  * @param capacity The number of elements the darray can initially hold (can be resized).
+  * @returns A pointer to the array's memory block.
+  */
 #define darray_reserve(type, capacity) \
     _darray_create(capacity, sizeof(type), 0)
 
-/**
- * @brief Creates a new darray of the given type with the provided capacity.
- * Performs a dynamic memory allocation.
- * @param type The type to be used to create the darray.
- * @param capacity The number of elements the darray can initially hold (can be resized).
- * @param allocator A pointer to a frame allocator.
- * @returns A pointer to the array's memory block.
- */
+  /**
+   * @brief Creates a new darray of the given type with the provided capacity.
+   * Performs a dynamic memory allocation.
+   * @param type The type to be used to create the darray.
+   * @param capacity The number of elements the darray can initially hold (can be resized).
+   * @param allocator A pointer to a frame allocator.
+   * @returns A pointer to the array's memory block.
+   */
 #define darray_reserve_with_allocator(type, capacity, allocator) \
     _darray_create(capacity, sizeof(type), allocator)
 
-/**
- * @brief Destroys the provided array, freeing any memory allocated by it.
- * @param array The array to be destroyed.
- */
+   /**
+    * @brief Destroys the provided array, freeing any memory allocated by it.
+    * @param array The array to be destroyed.
+    */
 KAPI void darray_destroy(void* array);
 
 #define darray_push(array, value)           \
@@ -123,15 +123,15 @@ KAPI void darray_pop(void* array, void* value_ptr);
         array = _darray_insert_at(array, index, &temp); \
     }
 
-/**
- * @brief Pops an entry out of the array at the given index and places it into dest.
- * Brings in all entries after the popped index in by one.
- * @param array The array to pop from.
- * @param index The index to pop from.
- * @param dest A pointer to hold the popped value.
- * @returns The array block.
- */
-KAPI void* darray_pop_at(void* array,u64 index,void* value_ptr);
+ /**
+  * @brief Pops an entry out of the array at the given index and places it into dest.
+  * Brings in all entries after the popped index in by one.
+  * @param array The array to pop from.
+  * @param index The index to pop from.
+  * @param dest A pointer to hold the popped value.
+  * @returns The array block.
+  */
+KAPI void* darray_pop_at(void* array, u64 index, void* value_ptr);
 
 /**
  * @brief Clears all entries from the array. Does not release any internally-allocated memory.
@@ -144,7 +144,7 @@ KAPI void darray_clear(void* array);
  * @param array The array whose capacity to retrieve.
  * @returns The capacity of the given array.
  */
-KAPI u64 darray_capacity(void* array); 
+KAPI u64 darray_capacity(void* array);
 
 /**
  * @brief Gets the length (number of elements) in the given array.
@@ -167,4 +167,129 @@ KAPI u64 darray_stride(void* array);
  * @param array The array to set the length of.
  * @param value The length to set the array to.
  */
-KAPI void darray_length_set(void* array,u64 value);
+KAPI void darray_length_set(void* array, u64 value);
+
+/**
+ * NEW DARRAY
+ */
+#include "kdebug/kassert.h"
+
+
+KAPI void _kdarray_init(u32 length, u32 stride, u32 capacity, struct frame_allocator_int* allocator, u32* out_length, u32* out_stride, u32* out_capacity, void** block, struct frame_allocator_int** out_allocator);
+KAPI void _kdarray_free(u32* length, u32* capacity, u32* stride, void** block, struct frame_allocator_int** out_allocator);
+KAPI void _kdarray_ensure_size(u32 required_length, u32 stride, u32* out_capacity, struct frame_allocator_int* allocator, void** block);
+
+#define DARRAY_TYPE_NAMED(type, name)                                                                                                                   \
+    typedef struct name##_darray {                                                                                                                      \
+        u32 length;                                                                                                                                     \
+        u32 stride;                                                                                                                                     \
+        u32 capacity;                                                                                                                                   \
+        type* data;                                                                                                                                     \
+        struct frame_allocator_int* allocator;                                                                                                          \
+    } name##_darray;                                                                                                                                    \
+    typedef struct name##_darray_it {                                                                                                                   \
+        name##_darray* arr;                                                                                                                             \
+        u32 pos;                                                                                                                                        \
+    } name##_darray_it;                                                                                                                                 \
+                                                                                                                                                        \
+    KINLINE name##_darray name##_darray_reserve_with_allocator(u32 capacity, struct frame_allocator_int* allocator) {                                   \
+        name##_darray arr;                                                                                                                              \
+        _kdarray_init(capacity, sizeof(type), capacity, allocator, &arr.length, &arr.stride, &arr.capacity, (void**)&arr.data, &arr.allocator);         \
+        return arr;                                                                                                                                     \
+    }                                                                                                                                                   \
+                                                                                                                                                        \
+    KINLINE name##_darray name##_darray_create_with_allocator(struct frame_allocator_int* allocator) {                                                  \
+        name##_darray arr;                                                                                                                              \
+        _kdarray_init(0, sizeof(type), DARRAY_DEFAULT_CAPACITY, allocator, &arr.length, &arr.stride, &arr.capacity, (void**)&arr.data, &arr.allocator); \
+        return arr;                                                                                                                                     \
+    }                                                                                                                                                   \
+                                                                                                                                                        \
+    KINLINE name##_darray name##_darray_reserve(u32 capacity) {                                                                                         \
+        name##_darray arr;                                                                                                                              \
+        _kdarray_init(0, sizeof(type), capacity, 0, &arr.length, &arr.stride, &arr.capacity, (void**)&arr.data, &arr.allocator);                        \
+        return arr;                                                                                                                                     \
+    }                                                                                                                                                   \
+                                                                                                                                                        \
+    KINLINE name##_darray name##_darray_create(void) {                                                                                                  \
+        name##_darray arr;                                                                                                                              \
+        _kdarray_init(0, sizeof(type), DARRAY_DEFAULT_CAPACITY, 0, &arr.length, &arr.stride, &arr.capacity, (void**)&arr.data, &arr.allocator);         \
+        return arr;                                                                                                                                     \
+    }                                                                                                                                                   \
+                                                                                                                                                        \
+    KINLINE name##_darray* name##_darray_push(name##_darray* arr, type data) {                                                                          \
+        _kdarray_ensure_size(arr->length + 1, arr->stride, &arr->capacity, arr->allocator, (void**)&arr->data);                                         \
+        arr->data[arr->length] = data;                                                                                                                  \
+        arr->length++;                                                                                                                                  \
+        return arr;                                                                                                                                     \
+    }                                                                                                                                                   \
+                                                                                                                                                        \
+    KINLINE type name##_darray_pop(name##_darray* arr) {                                                                                                \
+        type retval = arr->data[arr->length - 1];                                                                                                       \
+        arr->length--;                                                                                                                                  \
+        return retval;                                                                                                                                  \
+    }                                                                                                                                                   \
+                                                                                                                                                        \
+    KINLINE type name##_darray_pop_at(name##_darray* arr, u32 index) {                                                                                  \
+        KASSERT_MSG(index < arr->length, "Index outside bounds of darray!");                                                                            \
+        type retval = arr->data[index];                                                                                                                 \
+        for (u32 i = index; i < arr->length; ++i) {                                                                                                     \
+            arr->data[i] = arr->data[i + 1];                                                                                                            \
+        }                                                                                                                                               \
+        arr->length--;                                                                                                                                  \
+        return retval;                                                                                                                                  \
+    }                                                                                                                                                   \
+                                                                                                                                                        \
+    KINLINE name##_darray* name##_darray_insert_at(name##_darray* arr, u32 index, type data) {                                                          \
+        KASSERT_MSG(index < arr->length, "Index outside bounds of darray!");                                                                            \
+        _kdarray_ensure_size(arr->length + 1, arr->stride, &arr->capacity, arr->allocator, (void**)&arr->data);                                         \
+        arr->length++;                                                                                                                                  \
+        for (u32 i = arr->length; i > index; --i) {                                                                                                     \
+            arr->data[i] = arr->data[i - 1];                                                                                                            \
+        }                                                                                                                                               \
+        arr->data[index] = data;                                                                                                                        \
+        return arr;                                                                                                                                     \
+    }                                                                                                                                                   \
+                                                                                                                                                        \
+    KINLINE name##_darray* name##_darray_clear(name##_darray* arr) {                                                                                    \
+        arr->length = 0;                                                                                                                                \
+        return arr;                                                                                                                                     \
+    }                                                                                                                                                   \
+                                                                                                                                                        \
+    KINLINE void name##_darray_destroy(name##_darray* arr) {                                                                                            \
+        _kdarray_free(&arr->length, &arr->capacity, &arr->stride, (void**)&arr->data, &arr->allocator);                                                 \
+    }                                                                                                                                                   \
+                                                                                                                                                        \
+    KINLINE name##_darray_it name##_darray_iterator_begin(name##_darray* arr) {                                                                         \
+        name##_darray_it it;                                                                                                                            \
+        it.arr = arr;                                                                                                                                   \
+        it.pos = 0;                                                                                                                                     \
+        return it;                                                                                                                                      \
+    }                                                                                                                                                   \
+                                                                                                                                                        \
+    KINLINE b8 name##_darray_iterator_end(const name##_darray_it* it) { return it->pos >= it->arr->length; }                                            \
+    KINLINE type* name##_darray_iterator_value(const name##_darray_it* it) { return &it->arr->data[it->pos]; }                                          \
+    KINLINE void name##_darray_iterator_next(name##_darray_it* it) { it->pos++; }                                                                       \
+    KINLINE void name##_darray_iterator_prev(name##_darray_it* it) { it->pos--; }
+
+// Create an array type of the given type. For advanced types or pointers, use ARRAY_TYPE_NAMED directly.
+#define DARRAY_TYPE(type) DARRAY_TYPE_NAMED(type, type)
+
+// Create array types for well-known types
+
+DARRAY_TYPE(b8);
+
+DARRAY_TYPE(u8);
+DARRAY_TYPE(u16);
+DARRAY_TYPE(u32);
+DARRAY_TYPE(u64);
+
+DARRAY_TYPE(i8);
+DARRAY_TYPE(i16);
+DARRAY_TYPE(i32);
+DARRAY_TYPE(i64);
+
+DARRAY_TYPE(f32);
+DARRAY_TYPE(f64);
+
+// Create array types for well-known "advanced" types, such as strings.
+DARRAY_TYPE_NAMED(const char*, string);

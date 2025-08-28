@@ -139,6 +139,8 @@
         "functional": "c",
         "kasset_material_serializer.h": "c",
         "asset_handler_binary.h": "c",
-        "array.h": "c"
+        "array.h": "c",
+        "freelist_tests.h": "c",
+        "hashtable_tests.h": "c"
     },
 }
