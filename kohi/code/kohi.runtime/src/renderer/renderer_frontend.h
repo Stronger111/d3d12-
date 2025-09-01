@@ -278,7 +278,7 @@ KAPI b8 renderer_texture_resources_acquire(struct renderer_system_state* state, 
  * @param out_renderer_texture_handle A pointer to hold the renderer texture handle, which points to the backing resource(s) of the texture.
  * @returns True on success, otherwise false;
  */
-KAPI b8 renderer_kresource_texture_resources_acquire(struct renderer_system_state* state,kname name, kresource_type type, u32 width, u32 height, u8 channel_count, u8 mip_level, u16 array_size, texture_flag_bits flags, k_handle* out_renderer_texture_handle);
+KAPI b8 renderer_kresource_texture_resources_acquire(struct renderer_system_state* state,kname name, kresource_texture_type type, u32 width, u32 height, u8 channel_count, u8 mip_level, u16 array_size, kresource_texture_flag_bits flags, k_handle* out_renderer_texture_handle);
 
 /**
  * Releases backing renderer-specific resources for the given renderer_texture_id.
