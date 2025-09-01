@@ -141,6 +141,9 @@
         "asset_handler_binary.h": "c",
         "array.h": "c",
         "freelist_tests.h": "c",
-        "hashtable_tests.h": "c"
+        "hashtable_tests.h": "c",
+        "expected": "c",
+        "kson_parser_tests.h": "c",
+        "linear_allocator_tests.h": "c"
     },
 }

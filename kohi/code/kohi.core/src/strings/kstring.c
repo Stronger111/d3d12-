@@ -157,10 +157,23 @@ void string_free(const char* str) {
     }
 }
 b8 strings_equal(const char* str0, const char* str1) {
+    if (!str0 && !str1) {
+        return true; // Technically equal since both are null.
+    }
+    else if (!str0 || !str1) {
+        return false; // If only one is null, they can never be equal.
+    }
+
     return strcmp(str0, str1) == 0;
 }
 // Case-insensitive string comparison. True if the same, otherwise false.
 KAPI b8 strings_equali(const char* str0, const char* str1) {
+    if (!str0 && !str1) {
+        return true; // Technically equal since both are null.
+    }
+    else if (!str0 || !str1) {
+        return false; // If only one is null, they can never be equal.
+    }
 #if defined(__GNUC__)
     return strcasecmp(str0, str1) == 0;
 #elif (defined _MSC_VER)
@@ -169,10 +182,22 @@ KAPI b8 strings_equali(const char* str0, const char* str1) {
 }
 
 KAPI b8 strings_nequal(const char* str0, const char* str1, u64 length) {
+    if (!str0 && !str1) {
+        return true; // Technically equal since both are null.
+    }
+    else if (!str0 || !str1) {
+        return false; // If only one is null, they can never be equal.
+    }
     return strncmp(str0, str1, length) == 0;
 }
 
 KAPI b8 strings_nequali(const char* str0, const char* str1, u64 length) {
+    if (!str0 && !str1) {
+        return true; // Technically equal since both are null.
+    }
+    else if (!str0 || !str1) {
+        return false; // If only one is null, they can never be equal.
+    }
 #if defined(__GNUC__)
     return strncasecmp(str0, str1, length) == 0;
 #elif (defined _MSC_VER)
@@ -882,18 +907,18 @@ b8 string_parse_array_length(const char* str, u32* out_length) {
 
 b8 codepoint_is_lower(i32 codepoint) {
     return (codepoint >= 'a' && codepoint <= 'z') ||
-           (codepoint >= 0xE0 && codepoint <= 0xFF);
+        (codepoint >= 0xE0 && codepoint <= 0xFF);
 }
 
 b8 codepoint_is_upper(i32 codepoint) {
     return (codepoint <= 'Z' && codepoint >= 'A') ||
-           (codepoint >= 0xC0 && codepoint <= 0xDF);
+        (codepoint >= 0xC0 && codepoint <= 0xDF);
 }
 
 b8 codepoint_is_alpha(i32 codepoint) {
     return ((codepoint >= 'a' && codepoint <= 'z') ||
-            (codepoint >= 'A' && codepoint <= 'Z') ||
-            (codepoint >= 0xC0 && codepoint <= 0xFF));
+        (codepoint >= 'A' && codepoint <= 'Z') ||
+        (codepoint >= 0xC0 && codepoint <= 0xFF));
 }
 
 b8 codepoint_is_numeric(i32 codepoint) {
