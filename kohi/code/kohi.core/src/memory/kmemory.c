@@ -1,7 +1,7 @@
 #include "kmemory.h"
 
 #include "logger.h"
-#include "memory/dynamic_allocator.h"
+#include "memory/allocators/dynamic_allocator.h"
 #include "platform/platform.h"
 #include "strings/kstring.h"
 #include "threads/kmutex.h"

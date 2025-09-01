@@ -144,6 +144,7 @@
         "hashtable_tests.h": "c",
         "expected": "c",
         "kson_parser_tests.h": "c",
-        "linear_allocator_tests.h": "c"
+        "linear_allocator_tests.h": "c",
+        "platform.h": "c"
     },
 }

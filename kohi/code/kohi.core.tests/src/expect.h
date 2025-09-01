@@ -47,7 +47,7 @@
         return false;                                                                  \
     }
 
-#define expect_string_to_be_false(expected,actual)                                                     \
+#define expect_string_to_be(expected,actual)                                                     \
     if (!strings_equal(expected,actual)) {                                                             \
         KERROR("--> Expected '%s', but got: '%s'. File: %s:%d.", expected, actual, __FILE__, __LINE__); \
         return false;                                                                  \

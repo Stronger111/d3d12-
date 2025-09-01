@@ -17,7 +17,7 @@
 #include "identifiers/khandle.h"
 #include "identifiers/uuid.h"
 #include "logger.h"
-#include "memory/linear_allocator.h"
+#include "memory/allocators/linear_allocator.h"
 #include "memory/kmemory.h"
 #include "platform/platform.h"
 #include "platform/vfs.h"
