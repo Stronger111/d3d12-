@@ -1,5 +1,6 @@
 #include "kmemory.h"
 
+#include "kdebug/kassert.h"
 #include "logger.h"
 #include "memory/allocators/dynamic_allocator.h"
 #include "platform/platform.h"
@@ -143,6 +144,7 @@ KAPI void* kallocate(u64 size, memory_tag tag) {
     return kallocate_aligned(size, 1, tag);
 }
 void* kallocate_aligned(u64 size, u16 alignment, memory_tag tag) {
+    KASSERT_MSG(size, "kallocate_aligned requires a nonzero size.");
     if (tag == MEMORY_TAG_UNKNOWN) {
         KWARN("kallocate_aligned called using MEMORY_TAG_UNKNOWN. Re-class this allocation.");
     }

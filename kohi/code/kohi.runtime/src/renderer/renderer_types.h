@@ -328,6 +328,9 @@ typedef struct shader_instance_uniform_texture_config {
     u32 texture_map_count;
     /** @brief An array of pointers to texture maps to be mapped to the uniform. */
     struct texture_map** texture_maps;
+
+    u32 kresource_texture_map_count;
+    struct kresource_texture_map** kresource_texture_maps;
 } shader_instance_uniform_texture_config;
 
 /**
@@ -389,6 +392,40 @@ typedef struct texture_map {
     /** @brief An identifier used for internal resource lookups/management. */
     u32 internal_id;
 } texture_map;
+
+/**
+ * @brief A structure which maps a texture, use and
+ * other properties.
+ */
+typedef struct kresource_texture_map {
+    /**
+     * @brief The cached generation of the assigned texture.
+     * Used to determine when to regenerate this texture map's
+     * resources when a texture's generation changes (as this could
+     * be required if, say, a texture's mip levels change).
+     * */
+    u32 generation;
+    /**
+     * @brief Cached mip map levels. Should match assigned
+     * texture. Must always be at least 1.
+     */
+    u32 mip_levels;
+    kresource_texture* texture;
+    /** @brief Texture filtering mode for minification. */
+    texture_filter filter_minify;
+    /** @brief Texture filtering mode for magnification. */
+    texture_filter filter_magnify;
+    /** @brief The repeat mode on the U axis (or X, or S) */
+    texture_repeat repeat_u;
+    /** @brief The repeat mode on the V axis (or Y, or T) */
+    texture_repeat repeat_v;
+    /** @brief The repeat mode on the W axis (or Z, or R) */
+    texture_repeat repeat_w;
+    /** @brief An identifier used for internal resource lookups/management. */
+    // TODO: handle?
+    u32 internal_id;
+} kresource_texture_map;
+
 
 /**
  * @brief A generic "interface" for the renderer backend. The renderer backend
@@ -593,10 +630,7 @@ typedef struct renderer_backend_interface {
     void (*colour_texture_prepare_for_present)(struct renderer_backend_interface* backend, struct texture_internal_data* tex_internal);
     void (*texture_prepare_for_sampling)(struct renderer_backend_interface* backend, struct texture_internal_data* tex_internal, texture_flag_bits flags);
 
-    KDEPRECATED("Old texture structure")
     b8 (*texture_resources_acquire)(struct renderer_backend_interface* backend, struct texture_internal_data* data, const char* name, texture_type type, u32 width, u32 height, u8 channel_count, u8 mip_levels, u16 array_size, texture_flag_bits flags);
-    
-    b8 (*kresource_texture_resources_acquire)(struct renderer_backend_interface* backend, struct texture_internal_data* data, kname name, kresource_texture_type type, u32 width, u32 height, u8 channel_count, u8 mip_levels, u16 array_size, kresource_texture_flag_bits flags);
 
     void (*texture_resources_release)(struct renderer_backend_interface* backend, struct texture_internal_data* data);
 
@@ -788,6 +822,22 @@ typedef struct renderer_backend_interface {
      */
     void (*texture_map_resources_release)(struct renderer_backend_interface* backend, struct texture_map* map);
 
+    /**
+  * @brief Acquires internal resources for the given texture map.
+  *
+  * @param backend A pointer to the renderer backend interface.
+  * @param map A pointer to the texture map to obtain resources for.
+  * @return True on success; otherwise false.
+  */
+    b8 (*kresource_texture_map_resources_acquire)(struct renderer_backend_interface* backend, struct kresource_texture_map* map);
+
+    /**
+  * @brief Releases internal resources for the given texture map.
+  *
+  * @param backend A pointer to the renderer backend interface.
+  * @param map A pointer to the texture map to release resources from.
+  */
+    void (*kresource_texture_map_resources_release)(struct renderer_backend_interface* backend, struct kresource_texture_map* map);
     /**
      * @brief Indicates if the renderer is capable of multi-threading.
      *

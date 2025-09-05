@@ -132,7 +132,6 @@ void vfs_request_asset_sync(vfs_state* state, kname package_name, kname asset_na
 
         if (package->name == package_name) {
 
-            kzero_memory(out_data, sizeof(vfs_asset_data));
             // Determine if the asset type is text.
             kpackage_result result = KPACKAGE_RESULT_INTERNAL_FAILURE;
 

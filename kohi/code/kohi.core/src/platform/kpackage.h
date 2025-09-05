@@ -7,6 +7,7 @@ typedef struct asset_manifest_asset {
     kname name;
     //TODO: If loaded from binary, this might be null?
     const char* path;
+    const char* source_path;
 }asset_manifest_asset;
 
 /**
@@ -19,6 +20,7 @@ typedef struct asset_manifest_reference {
 
 typedef struct asset_manifest {
     kname name;
+    const char* file_path;
     // Path to .kpackage file. Null if loading from disk.
     const char* path;
 

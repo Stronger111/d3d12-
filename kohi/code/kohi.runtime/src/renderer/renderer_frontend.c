@@ -20,6 +20,7 @@
 #include "renderer/renderer_utils.h"
 #include "renderer/viewport.h"
 #include "resources/resource_types.h"
+#include "strings/kname.h"
 #include "strings/kstring.h"
 #include "systems/material_system.h"
 #include "systems/plugin_system.h"
@@ -458,7 +459,7 @@ b8 renderer_texture_resources_acquire(struct renderer_system_state* state, const
     if (!state->textures) {
         state->textures = darray_create(texture_lookup);
     }
-
+    //TODO: Upon backend creation,setup a large contiguous array of some configured amount of these,and retrieve from there.
     struct texture_internal_data* data = kallocate(state->backend->texture_internal_data_size, MEMORY_TAG_RENDERER);
     b8 success;
     //表明纹理已经被包装 例如交换链
@@ -502,7 +503,7 @@ b8 renderer_texture_resources_acquire(struct renderer_system_state* state, const
 }
 
 b8 renderer_kresource_texture_resources_acquire(struct renderer_system_state* state, kname name, kresource_texture_type type, u32 width, u32 height, u8 channel_count, u8 mip_levels, u16 array_size, kresource_texture_flag_bits flags, k_handle* out_renderer_texture_handle) {
-  if (!state) {
+    if (!state) {
         return false;
     }
 
@@ -520,9 +521,25 @@ b8 renderer_kresource_texture_resources_acquire(struct renderer_system_state* st
         success = true;
     }
     else {
-        success = state->backend->kresource_texture_resources_acquire(state->backend, data, name, type, width, height, channel_count, mip_levels, array_size, flags);
+        // FIXME: Convert function call below to use the new type.
+        texture_type old_type = TEXTURE_TYPE_2D;
+        switch (type) {
+        default:
+            old_type = TEXTURE_TYPE_2D;
+            break;
+        case KRESOURCE_TEXTURE_TYPE_2D_ARRAY:
+            old_type = TEXTURE_TYPE_2D_ARRAY;
+            break;
+        case KRESOURCE_TEXTURE_TYPE_CUBE:
+            old_type = TEXTURE_TYPE_CUBE;
+            break;
+        case KRESOURCE_TEXTURE_TYPE_CUBE_ARRAY:
+            old_type = TEXTURE_TYPE_CUBE_ARRAY;
+            break;
+        }
+        success = state->backend->texture_resources_acquire(state->backend, data,kname_string_get(name), old_type, width, height, channel_count, mip_levels, array_size, flags);
     }
-    
+
     //Only insert into the lookup table on success
     if (success) {
         u32 texture_count = darray_length(state->textures);
@@ -1055,6 +1072,15 @@ void renderer_texture_map_resources_release(texture_map* map) {
     renderer_system_state* state_ptr = engine_systems_get()->renderer_system;
     state_ptr->backend->texture_map_resources_release(state_ptr->backend, map);
 }
+
+b8 renderer_kresource_texture_map_resources_acquire(struct renderer_system_state* state, struct kresource_texture_map* map) {
+    return state->backend->kresource_texture_map_resources_acquire(state->backend, map);
+}
+
+void renderer_kresource_texture_map_resources_release(struct renderer_system_state* state, struct kresource_texture_map* map) {
+    state->backend->kresource_texture_map_resources_release(state->backend, map);
+}
+
 
 b8 renderer_is_multithreaded(void) {
     renderer_system_state* state_ptr = engine_systems_get()->renderer_system;

@@ -13,7 +13,7 @@
 static void sui_panel_control_render_frame_prepare(standard_ui_state* state, struct sui_control* self, const struct frame_data* p_frame_data);
 
 b8 sui_panel_control_create(standard_ui_state* state, const char* name, vec2 size, vec4 colour, struct sui_control* out_control) {
-    if (!sui_base_control_create(state,name, out_control)) {
+    if (!sui_base_control_create(state, name, out_control)) {
         return false;
     }
 
@@ -24,14 +24,14 @@ b8 sui_panel_control_create(standard_ui_state* state, const char* name, vec2 siz
     // Reasonable defaults.
     typed_data->rect = vec4_create(0, 0, size.x, size.y);
     typed_data->colour = colour;
-    typed_data->is_dirty=true;
+    typed_data->is_dirty = true;
 
     // Assign function pointers.
     out_control->destroy = sui_panel_control_destroy;
     out_control->load = sui_panel_control_load;
     out_control->unload = sui_panel_control_unload;
     out_control->update = sui_panel_control_update;
-    out_control->render_prepare=sui_panel_control_render_frame_prepare;
+    out_control->render_prepare = sui_panel_control_render_frame_prepare;
     out_control->render = sui_panel_control_render;
 
     out_control->name = string_duplicate(name);
@@ -40,11 +40,11 @@ b8 sui_panel_control_create(standard_ui_state* state, const char* name, vec2 siz
 }
 
 void sui_panel_control_destroy(standard_ui_state* state, struct sui_control* self) {
-    sui_base_control_destroy(state,self);
+    sui_base_control_destroy(state, self);
 }
 
 b8 sui_panel_control_load(standard_ui_state* state, struct sui_control* self) {
-    if (!sui_base_control_load(state,self)) {
+    if (!sui_base_control_load(state, self)) {
         return false;
     }
 
@@ -56,49 +56,49 @@ b8 sui_panel_control_load(standard_ui_state* state, struct sui_control* self) {
     generate_uvs_from_image_coords(512, 512, 73, 36, &xmax, &ymax);
 
     // Create a simple plane.
-    geometry_config ui_config = {0};
+    geometry_config ui_config = { 0 };
     // 生成网格数据
     generate_quad_2d(self->name, typed_data->rect.width, typed_data->rect.height, xmin, xmax, ymin, ymax, &ui_config);
     // Get UI geometry from config. NOTE:this upload to GPU.
     typed_data->g = geometry_system_acquire_from_config(ui_config, true);
-    
+
     // Acquire instance resources for this control.
-    texture_map* maps[1] = {&state->ui_atlas};
+    kresource_texture_map* maps[1] = { &state->atlas };
     shader* s = shader_system_get("Shader.StandardUI");
     //u16 atlas_location = s->uniforms[s->instance_sampler_indices[0]].index;
-    shader_instance_resource_config instance_resource_config = {0};
+    shader_instance_resource_config instance_resource_config = { 0 };
     // Map count for this type is known.
-    shader_instance_uniform_texture_config atlas_texture = {0};
-    atlas_texture.texture_map_count = 1;
-    atlas_texture.texture_maps = maps;
+    shader_instance_uniform_texture_config atlas_texture = { 0 };
+    atlas_texture.kresource_texture_map_count = 1;
+    atlas_texture.kresource_texture_maps = maps;
 
     instance_resource_config.uniform_config_count = 1;
     instance_resource_config.uniform_configs = &atlas_texture;
 
-    renderer_shader_instance_resources_acquire(state->renderer,s, &instance_resource_config, &typed_data->instance_id);
+    renderer_shader_instance_resources_acquire(state->renderer, s, &instance_resource_config, &typed_data->instance_id);
 
     return true;
 }
 
-void sui_panel_control_unload(standard_ui_state* state,struct sui_control* self) {
+void sui_panel_control_unload(standard_ui_state* state, struct sui_control* self) {
 }
 
-b8 sui_panel_control_update(standard_ui_state* state,struct sui_control* self, struct frame_data* p_frame_data) {
-    if (!sui_base_control_update(state,self, p_frame_data)) {
+b8 sui_panel_control_update(standard_ui_state* state, struct sui_control* self, struct frame_data* p_frame_data) {
+    if (!sui_base_control_update(state, self, p_frame_data)) {
         return false;
     }
     //
     return true;
 }
 
-b8 sui_panel_control_render(standard_ui_state* state,struct sui_control* self, struct frame_data* p_frame_data, standard_ui_render_data* render_data) {
-    if (!sui_base_control_render(state,self, p_frame_data, render_data)) {
+b8 sui_panel_control_render(standard_ui_state* state, struct sui_control* self, struct frame_data* p_frame_data, standard_ui_render_data* render_data) {
+    if (!sui_base_control_render(state, self, p_frame_data, render_data)) {
         return false;
     }
 
     sui_panel_internal_data* typed_data = self->internal_data;
     if (typed_data->g) {
-        standard_ui_renderable renderable = {0};
+        standard_ui_renderable renderable = { 0 };
         renderable.render_data.unique_id = self->id.uniqueid;
         renderable.render_data.material = typed_data->g->material;
         renderable.render_data.vertex_count = typed_data->g->vertex_count;
@@ -118,16 +118,16 @@ b8 sui_panel_control_render(standard_ui_state* state,struct sui_control* self, s
     return true;
 }
 
-vec2 sui_panel_size(standard_ui_state* state,struct sui_control* self) {
+vec2 sui_panel_size(standard_ui_state* state, struct sui_control* self) {
     if (!self) {
         return vec2_zero();
     }
 
     sui_panel_internal_data* typed_data = self->internal_data;
-    return (vec2){typed_data->rect.width, typed_data->rect.height};
+    return (vec2) { typed_data->rect.width, typed_data->rect.height };
 }
 
-b8 sui_panel_control_resize(standard_ui_state* state,struct sui_control* self, vec2 new_size) {
+b8 sui_panel_control_resize(standard_ui_state* state, struct sui_control* self, vec2 new_size) {
     if (!self) {
         return false;
     }
@@ -146,7 +146,7 @@ b8 sui_panel_control_resize(standard_ui_state* state,struct sui_control* self, v
     return true;
 }
 
-static void sui_panel_control_render_frame_prepare(standard_ui_state* state,struct sui_control* self, const struct frame_data* p_frame_data) {
+static void sui_panel_control_render_frame_prepare(standard_ui_state* state, struct sui_control* self, const struct frame_data* p_frame_data) {
     if (self) {
         sui_panel_internal_data* typed_data = self->internal_data;
         renderer_geometry_vertex_update(typed_data->g, 0, typed_data->g->vertex_count, typed_data->g->vertices, true);

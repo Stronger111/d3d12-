@@ -1,8 +1,14 @@
 #include "array.h"
 
+#include "kdebug/kassert.h"
 #include "memory/kmemory.h"
 
 void _karray_init(u32 length, u32 stride, u32* out_length, u32* out_stride, void** block) {
+    KASSERT_DEBUG(length);
+    KASSERT_DEBUG(stride);
+    KASSERT_DEBUG(out_length);
+    KASSERT_DEBUG(out_stride);
+    KASSERT_DEBUG(block);
     *out_length = length;
     *out_stride = stride;
     *block = kallocate_aligned(length * stride, 16, MEMORY_TAG_ARRAY);
@@ -18,7 +24,7 @@ void _karray_free(u32* length, u32* stride, void** block) {
 }
 
 
-array_iterator array_iterator_begin(array_base* arr) {
+array_iterator array_iterator_begin(const array_base* arr) {
     array_iterator it;
     it.arr = arr;
     it.pos = 0;
@@ -31,7 +37,7 @@ array_iterator array_iterator_begin(array_base* arr) {
 }
 
 //反方向
-array_iterator array_iterator_rbegin(array_base* arr) {
+array_iterator array_iterator_rbegin(const array_base* arr) {
     array_iterator it;
     it.arr = arr;
     it.pos = arr->length - 1;
@@ -44,7 +50,7 @@ array_iterator array_iterator_rbegin(array_base* arr) {
 }
 
 b8 array_iterator_end(const array_iterator* it) {
-    return it->dir == 1 ? it->pos>=(i32)it->arr->length : it->pos < 0;
+    return it->dir == 1 ? it->pos >= (i32)it->arr->length : it->pos < 0;
 }
 
 void* array_iterator_value(const array_iterator* it) {

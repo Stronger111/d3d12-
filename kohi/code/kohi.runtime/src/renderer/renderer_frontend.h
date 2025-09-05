@@ -278,7 +278,7 @@ KAPI b8 renderer_texture_resources_acquire(struct renderer_system_state* state, 
  * @param out_renderer_texture_handle A pointer to hold the renderer texture handle, which points to the backing resource(s) of the texture.
  * @returns True on success, otherwise false;
  */
-KAPI b8 renderer_kresource_texture_resources_acquire(struct renderer_system_state* state,kname name, kresource_texture_type type, u32 width, u32 height, u8 channel_count, u8 mip_level, u16 array_size, kresource_texture_flag_bits flags, k_handle* out_renderer_texture_handle);
+KAPI b8 renderer_kresource_texture_resources_acquire(struct renderer_system_state* state, kname name, kresource_texture_type type, u32 width, u32 height, u8 channel_count, u8 mip_level, u16 array_size, kresource_texture_flag_bits flags, k_handle* out_renderer_texture_handle);
 
 /**
  * Releases backing renderer-specific resources for the given renderer_texture_id.
@@ -606,6 +606,21 @@ KAPI b8 renderer_texture_map_resources_acquire(struct texture_map* map);
  * @param map A pointer to the texture map to release resources from.
  */
 KAPI void renderer_texture_map_resources_release(struct texture_map* map);
+
+/**
+ * @brief Acquires internal resources for the given texture map.
+ *
+ * @param map A pointer to the texture map to obtain resources for.
+ * @return True on success; otherwise false.
+ */
+KAPI b8 renderer_kresource_texture_map_resources_acquire(struct renderer_system_state* state, struct kresource_texture_map* map);
+
+/**
+ * @brief Releases internal resources for the given texture map.
+ *
+ * @param map A pointer to the texture map to release resources from.
+ */
+KAPI void renderer_kresource_texture_map_resources_release(struct renderer_system_state* state, struct kresource_texture_map* map);
 
 /**
  * @brief Indicates if the renderer is capable of multi-threading.

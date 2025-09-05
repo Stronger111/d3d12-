@@ -13,17 +13,27 @@
 #define STBI_NO_STDIO
 #include "vendor/stb_image.h"
 
-b8 kasset_importer_image_import(const kasset_importer* self, u64 data_size,const void* data, void* params, kasset* out_asset) {
+b8 kasset_importer_image_import(const kasset_importer* self, u64 data_size, const void* data, void* params, kasset* out_asset) {
     if (!self || !data_size || !data) {
         KERROR("kasset_importer_image_import requires valid pointers to self and data, as well as a nonzero data_size.");
         return false;
     }
+    //Defaults
+    kasset_image_import_options default_options = { 0 };
+    default_options.flip_y = true;
+    default_options.format = KASSET_IMAGE_FORMAT_RGBA8;
+
+    kasset_image_import_options* options = { 0 };
     if (!params) {
-        KERROR("kasset_importer_image_import requires parameters to be present.");
-        return false;
+        /* KERROR("kasset_importer_image_import requires parameters to be present.");
+       return false; */
+        KWARN("kasset_importer_image_import - no params defined, using defaults.");
+        options = &default_options;
+    }
+    else {
+        options = (kasset_image_import_options*)params;
     }
 
-    kasset_image_import_options* options = (kasset_image_import_options*)params;
     kasset_image* typed_asset = (kasset_image*)out_asset;
 
     //Determin channel count.
@@ -41,14 +51,19 @@ b8 kasset_importer_image_import(const kasset_importer* self, u64 data_size,const
         bits_per_channel = 8;
         break;
     }
-    u8* pixels = stbi_load_from_memory(data, data_size, (i32*)&typed_asset->width,(i32*)&typed_asset->height, (i32*)&typed_asset->channel_count, required_channel_count);
+
+    //Set the "flip" as described in the options.
+    stbi_set_flip_vertically_on_load_thread(options->flip_y);
+
+    //Load the image.
+    u8* pixels = stbi_load_from_memory(data, data_size, (i32*)&typed_asset->width, (i32*)&typed_asset->height, (i32*)&typed_asset->channel_count, required_channel_count);
     if (!pixels) {
         KERROR("Image importer failed to import image '%s'.", out_asset->meta.source_asset_path);
         return false;
     }
     u64 actual_size = (bits_per_channel / 8) * typed_asset->channel_count * typed_asset->width * typed_asset->height;
     typed_asset->pixel_array_size = actual_size;
-    typed_asset->pixels= pixels;
+    typed_asset->pixels = pixels;
     // NOTE: Querying is done below.
    /* i32 result = stbi_info_from_memory(data, data_size, (i32*)&typed_asset->width, (i32*)&typed_asset->height, (i32*)&typed_asset->channel_count);
    if (result == 0) {
@@ -73,7 +88,7 @@ b8 kasset_importer_image_import(const kasset_importer* self, u64 data_size,const
     }
 
     b8 success = true;
-    if (vfs_asset_write(vfs, out_asset, true, serialized_block_size, serialized_block)) {
+    if (!vfs_asset_write(vfs, out_asset, true, serialized_block_size, serialized_block)) {
         KERROR("Failed to write Binary Image asset data to VFS. See logs for details.");
         success = false;
     }

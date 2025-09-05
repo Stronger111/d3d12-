@@ -92,6 +92,7 @@ b8 asset_system_initialize(u64* memory_requirement, asset_system_state* state, c
     }
 
     state->max_asset_count = config->max_asset_count;
+    state->lookups = kallocate(sizeof(asset_lookup) * state->max_asset_count, MEMORY_TAG_ENGINE);
 
     //Asset lookup tree
     {
@@ -175,6 +176,10 @@ void asset_system_request(struct asset_system_state* state, kasset_type type, kn
 
                 //Found a free slot,setup the asset.
                 lookup->asset.id = identifier_create();
+                lookup->asset.type = type;
+                lookup->asset.name = asset_name;
+                lookup->asset.package_name = package_name;
+                lookup->auto_release = auto_release;
 
                 //Get the appropriate asset handler for the type and request the asset.
                 asset_handler* handler = &state->handlers[lookup->asset.type];
