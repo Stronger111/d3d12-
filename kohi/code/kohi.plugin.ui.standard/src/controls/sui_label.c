@@ -78,7 +78,7 @@ KAPI b8 sui_label_control_create(standard_ui_state* state, const char* name, fon
     // Acquire resources for font texture map.
     // TODO: Should there be an override option for the shader?
     // FIXME: Convert fonts to use new texture resource type.
-    kresource_texture_map* maps[1] = { &state->atlas };
+    kresource_texture_map* maps[1] = { &typed_data->data->atlas }; //{ &state->atlas };
     shader* s = shader_system_get("Shader.StandardUI");
 
     //u16 atlas_location = s->uniforms[s->instance_sampler_indices[0]].index;
@@ -185,10 +185,15 @@ b8 sui_label_control_render(standard_ui_state* state, sui_control* self, struct 
         renderable.render_data.index_count = typed_data->quad_count * 6;
         renderable.render_data.index_buffer_offset = typed_data->index_buffer_offset;
         renderable.render_data.index_element_size = sizeof(u32);
-
+        
+        //FIXME: For some reason, this isn't assigned correctly in some cases for
+        //system fonts. Doing this assigment fixes it.
+        typed_data->data->atlas.texture=&typed_data->data->atlas_texture;
+        
         // NOTE: Override the default UI atlas use that and use that of the loaded font instead.
-        // FIXME: Change to use kresource_texture in font refactor.
-        renderable.atlas_override = 0;//&typed_data->data->atlas;
+        // TODO: At this point, should probably have a separate font shader anyway, since
+        // the future will require things like SDF, etc.
+        renderable.atlas_override = &typed_data->data->atlas;
 
         renderable.render_data.model = xform_world_get(self->xform);
         renderable.render_data.diffuse_colour = typed_data->colour;

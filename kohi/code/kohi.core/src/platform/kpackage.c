@@ -472,18 +472,7 @@ b8 kpackage_parse_manifest_file_content(const char* path, asset_manifest* out_ma
                     asset.source_path = string_format("%s/%s", out_manifest->path, asset_source_path_temp);
                     string_free(asset_source_path_temp);
                 }
-                /*if (!kson_object_property_value_get_string(&asset_obj, "type", &asset.type)) {
-                   KWARN("Failed to get asset type at array index %u. Skipping.", i);
-                   if (asset.name) {
-                       string_free(asset.name);
-                   }
-                   if (asset.path) {
-                       string_free(asset.path);
-                   }
-                   continue;
-               } */
-
-               //add to assets
+                //add to assets
                 darray_push(out_manifest->assets, asset);
             }
         }
