@@ -13,6 +13,7 @@
 #include "renderer/rendergraph.h"
 #include "renderer/viewport.h"
 #include "resources/resource_types.h"
+#include "strings/kname.h"
 #include "strings/kstring.h"
 #include "systems/shader_system.h"
 #include "systems/texture_system.h"
@@ -38,6 +39,7 @@ typedef struct shadow_shader_instance_data {
 
 typedef struct shadow_rendergraph_node_internal_data {
     struct renderer_system_state* renderer;
+    struct texture_system_state* texture_system;
     shadow_rendergraph_node_config config;
 
     shader* s;
@@ -48,7 +50,7 @@ typedef struct shadow_rendergraph_node_internal_data {
     viewport camera_viewport;
 
     // The depth texture used for the directional light shadow.
-    texture depth_texture;
+    kresource_texture* depth_texture;
 
     // One per cascade.
     cascade_resources cascade_resources[MAX_SHADOW_CASCADE_COUNT];
@@ -57,7 +59,7 @@ typedef struct shadow_rendergraph_node_internal_data {
     b8* instance_updated;
     u32 instance_count;
     // Default map to be used when materials arenot available.
-    texture_map default_colour_map;
+    kresource_texture_map default_colour_map;
     u32 default_instance_id;
     u64 default_instance_frame_number;
 
@@ -94,6 +96,7 @@ b8 shadow_rendergraph_node_create(struct rendergraph* graph, struct rendergraph_
     self->internal_data = kallocate(sizeof(shadow_rendergraph_node_internal_data), MEMORY_TAG_RENDERER);
     shadow_rendergraph_node_internal_data* internal_data = self->internal_data;
     internal_data->renderer = engine_systems_get()->renderer_system;
+    internal_data->texture_system = engine_systems_get()->texture_system;
     if (!deserialize_config(config->config_str, &internal_data->config)) {
         KERROR("Failed to deserialize configuration for shadow_rendergraph_node. Node creation failed.");
         return false;
@@ -170,7 +173,7 @@ b8 shadow_rendergraph_node_load_resources(rendergraph_node* self) {
         internal_data->default_colour_map.filter_minify = internal_data->default_colour_map.filter_magnify = TEXTURE_FILTER_MODE_LINEAR;
 
         // Grab the default texture for the default texture map.
-        internal_data->default_colour_map.texture = texture_system_get_default_diffuse_texture();
+        internal_data->default_colour_map.texture = texture_system_get_default_kresource_diffuse_texture(internal_data->texture_system);
 
         // Acquire resources for the default texture map.
         if (!renderer_texture_map_resources_acquire(&internal_data->default_colour_map)) {
@@ -180,15 +183,15 @@ b8 shadow_rendergraph_node_load_resources(rendergraph_node* self) {
 
         // Reserve an instance id for the default "material" to render to.
         {
-            texture_map* maps[1] = { &internal_data->default_colour_map };
+            kresource_texture_map* maps[1] = { &internal_data->default_colour_map };
             /* shader* s = internal_data->s; */
             /* u16 atlas_location = s->uniforms[s->instance_sampler_indices[0]].index; */
             shader_instance_resource_config instance_resource_config = { 0 };
             // Map count for this type is known.
             shader_instance_uniform_texture_config colour_texture = { 0 };
             /* colour_texture.uniform_location = atlas_location; */
-            colour_texture.texture_map_count = 1;
-            colour_texture.texture_maps = maps;
+            colour_texture.kresource_texture_map_count = 1;
+            colour_texture.kresource_texture_maps = maps;
 
             instance_resource_config.uniform_config_count = 1;
             instance_resource_config.uniform_configs = &colour_texture;
@@ -207,36 +210,17 @@ b8 shadow_rendergraph_node_load_resources(rendergraph_node* self) {
 
     // Create the depth attachment for the directional light shadow.
     // This should take renderer buffering into account.
-
-    texture* t = &internal_data->depth_texture;
-    t->width = t->height = internal_data->config.resolution;
-    t->type = TEXTURE_TYPE_2D_ARRAY;
-    t->flags = TEXTURE_FLAG_DEPTH | TEXTURE_FLAG_IS_WRITEABLE | TEXTURE_FLAG_RENDERER_BUFFERING;
-    t->array_size = MAX_SHADOW_CASCADE_COUNT;
-    t->channel_count = 4;
-    t->mip_levels = 1;
-    t->generation = INVALID_ID_U8;
-    t->id = -1;
-    t->name = string_duplicate("__shadow_rg_node_shadowmap__");
-
-    if (!renderer_texture_resources_acquire(
-        internal_data->renderer,
-        t->name,
-        t->type,
-        t->width,
-        t->height,
-        t->channel_count,
-        t->mip_levels,
-        t->array_size,
-        t->flags,
-        &internal_data->depth_texture.renderer_texture_handle)) {
-        KERROR("Failed to acquire renderer resources for shadow rendergraph node map.");
+    internal_data->depth_texture=texture_system_request_depth_arrayed(
+        kname_create("__shadow_rg_node_shadowmap__"),
+        internal_data->config.resolution,
+        internal_data->config.resolution,
+        MAX_SHADOW_CASCADE_COUNT
+    );
+    if (!internal_data->depth_texture) {
+        KERROR("Failed to request layered shadow map texture for shadow rendergraph node.");
         return false;
     }
 
-    self->sources[0].value.t = &internal_data->depth_texture;
-    // Texture never gets uploaded to as most others do, so manually set this.
-    t->generation = 0;
     return true;
 }
 
@@ -245,14 +229,11 @@ b8 shadow_rendergraph_node_execute(rendergraph_node* self, frame_data* p_frame_d
         return false;
     }
     renderer_begin_debug_label("shadow rendergraph node", (vec3) { 1.0f, 0.0f, 0.0f });
-    // FIXME: Need to transition the format from (whatever) to VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-   // then perform the render,
-    // then transition to VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL.
 
     shadow_rendergraph_node_internal_data* internal_data = self->internal_data;
 
     //Clear the image first.
-    renderer_clear_depth_stencil(engine_systems_get()->renderer_system, internal_data->depth_texture.renderer_texture_handle);
+    renderer_clear_depth_stencil(engine_systems_get()->renderer_system, internal_data->depth_texture->renderer_texture_handle);
 
     //One renderpass per cascade -directional light.
     for (u32 p = 0; p < MAX_SHADOW_CASCADE_COUNT; p++) {
@@ -262,7 +243,7 @@ b8 shadow_rendergraph_node_execute(rendergraph_node* self, frame_data* p_frame_d
 
         rect_2d render_area = (rect_2d){ 0,0,internal_data->config.resolution,internal_data->config.resolution };
 
-        renderer_begin_rendering(internal_data->renderer, p_frame_data, render_area, 0, 0, internal_data->depth_texture.renderer_texture_handle, p);
+        renderer_begin_rendering(internal_data->renderer, p_frame_data, render_area, 0, 0, internal_data->depth_texture->renderer_texture_handle, p);
         // Bind the internal viewport - do not use one provided in pass data.
         renderer_active_viewport_set(&internal_data->camera_viewport);
         // Use the standard shadowmap shader.
@@ -319,15 +300,15 @@ b8 shadow_rendergraph_node_execute(rendergraph_node* self, frame_data* p_frame_d
                 u32 instance_id;
 
                 // Use the same map for all.
-                texture_map* maps[1] = { &internal_data->default_colour_map };
+                kresource_texture_map* maps[1] = { &internal_data->default_colour_map };
                 // shader* s = internal_data->s;
                 // u16 atlas_location = s->uniforms[s->instance_sampler_indices[0]].index;
                 shader_instance_resource_config instance_resource_config = { 0 };
                 // Map count for this type is known.
                 shader_instance_uniform_texture_config colour_texture = { 0 };
                 // colour_texture.uniform_location = atlas_location;
-                colour_texture.texture_map_count = 1;
-                colour_texture.texture_maps = maps;
+                colour_texture.kresource_texture_map_count = 1;
+                colour_texture.kresource_texture_maps = maps;
 
                 instance_resource_config.uniform_config_count = 1;
                 instance_resource_config.uniform_configs = &colour_texture;
@@ -346,7 +327,7 @@ b8 shadow_rendergraph_node_execute(rendergraph_node* self, frame_data* p_frame_d
                 geometry_render_data* g = &internal_data->geometries[i];
 
                 u32 bind_id = INVALID_ID;
-                texture_map* bind_map = 0;
+                kresource_texture_map* bind_map = 0;
 
                 // Decide what bindings to use.
                 if (g->material && g->material->maps) {
@@ -433,7 +414,7 @@ b8 shadow_rendergraph_node_execute(rendergraph_node* self, frame_data* p_frame_d
     }  // End cascades pass
 
     // Prepare the image to be sampled from.
-    renderer_texture_prepare_for_sampling(internal_data->renderer, internal_data->depth_texture.renderer_texture_handle, internal_data->depth_texture.flags);
+    renderer_texture_prepare_for_sampling(internal_data->renderer, internal_data->depth_texture->renderer_texture_handle, internal_data->depth_texture->flags);
 
     renderer_end_debug_label();
     return true;
@@ -444,14 +425,9 @@ void shadow_rendergraph_node_destroy(rendergraph_node* self) {
         if (self->internal_data) {
             shadow_rendergraph_node_internal_data* internal_data = self->internal_data;
 
-            renderer_texture_resources_release(internal_data->renderer, &internal_data->depth_texture.renderer_texture_handle);
+            texture_system_release_resource(internal_data->depth_texture);
 
-            if (internal_data->depth_texture.name) {
-                string_free(internal_data->depth_texture.name);
-                internal_data->depth_texture.name = 0;
-            }
-
-            renderer_texture_map_resources_release(&internal_data->default_colour_map);
+            renderer_kresource_texture_map_resources_release(internal_data->renderer,&internal_data->default_colour_map);
             renderer_shader_instance_resources_release(internal_data->renderer, internal_data->s, internal_data->default_instance_id);
 
             //Internal data.

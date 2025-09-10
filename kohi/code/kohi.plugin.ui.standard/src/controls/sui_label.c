@@ -188,7 +188,7 @@ b8 sui_label_control_render(standard_ui_state* state, sui_control* self, struct 
         
         //FIXME: For some reason, this isn't assigned correctly in some cases for
         //system fonts. Doing this assigment fixes it.
-        typed_data->data->atlas.texture=&typed_data->data->atlas_texture;
+        typed_data->data->atlas.texture=typed_data->data->atlas_texture;
         
         // NOTE: Override the default UI atlas use that and use that of the loaded font instead.
         // TODO: At this point, should probably have a separate font shader anyway, since

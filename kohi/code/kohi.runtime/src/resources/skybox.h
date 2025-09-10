@@ -8,7 +8,7 @@
 typedef struct skybox_config {
     /** @brief The name of the cubemap to be used for the skybox. */
     const char* cubemap_name;
-  
+
 } skybox_config;
 
 typedef enum skybox_state {
@@ -21,8 +21,10 @@ typedef enum skybox_state {
 
 typedef struct skybox {
     skybox_state state;
-    texture_map cubemap;
-    const char* cubemap_name;
+
+    kname cubemap_name;
+    kresource_texture_map cubemap;
+
     geometry_config g_config;
     geometry* g;
     u32 instance_id;

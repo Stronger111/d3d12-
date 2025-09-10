@@ -287,7 +287,7 @@ KAPI u16 shader_system_uniform_location(u32 shader_id, const char* uniform_name)
  * @param value The value to be set.
  * @return True on success; otherwise false.
  */
-KAPI b8 shader_system_uniform_set(u32 shader_id,const char* uniform_name, const void* value);
+KAPI b8 shader_system_uniform_set(u32 shader_id, const char* uniform_name, const void* value);
 
 /**
  * @brief Sets the value of an arrayed uniform with the given name to the supplied value.
@@ -329,7 +329,7 @@ KAPI b8 shader_system_sampler_set_arrayed(u32 shader_id, const char* sampler_nam
  * @param value The value of the uniform.
  * @return True on success; otherwise false.
  */
-KAPI b8 shader_system_uniform_set_by_location(u32 shader_id,u16 location, const void* value);
+KAPI b8 shader_system_uniform_set_by_location(u32 shader_id, u16 location, const void* value);
 
 /**
  * @brief Sets a sampler value by location.
@@ -339,7 +339,7 @@ KAPI b8 shader_system_uniform_set_by_location(u32 shader_id,u16 location, const 
  * @param value A pointer to the texture to be set.
  * @return True on success; otherwise false.
  */
-KAPI b8 shader_system_uniform_set_by_location_arrayed(u32 shader_id,u16 location, u32 array_index, const void* value);
+KAPI b8 shader_system_uniform_set_by_location_arrayed(u32 shader_id, u16 location, u32 array_index, const void* value);
 
 /**
  * @brief Sets a sampler value by location.
@@ -350,7 +350,7 @@ KAPI b8 shader_system_uniform_set_by_location_arrayed(u32 shader_id,u16 location
  * @param value A pointer to the texture to be set.
  * @return True on success; otherwise false.
  */
-KAPI b8 shader_system_sampler_set_by_location(u32 shader_id,u16 local, const struct texture* t);
+KAPI b8 shader_system_sampler_set_by_location(u32 shader_id, u16 local, const struct texture* t);
 
 /**
  * @brief Binds the instance with the given id for use. Must be done before setting
@@ -396,7 +396,7 @@ KAPI b8 shader_system_apply_local(u32 shader_id);
  * @param out_instance_id A pointer to hold the instance id once resources are acquired.
  * @return True on success; otherwise false.
  */
-KAPI b8 shader_system_shader_instance_acquire(u32 shader_id,u32 map_count,texture_map* maps,u32* out_instance_id);
+KAPI b8 shader_system_shader_instance_acquire(u32 shader_id, u32 map_count, kresource_texture_map* maps, u32* out_instance_id);
 /**
  * @brief Releases instance resources and texture map resources from the provided shader.
  *
@@ -406,4 +406,4 @@ KAPI b8 shader_system_shader_instance_acquire(u32 shader_id,u32 map_count,textur
  * @param maps An array of texture maps to be released.
  * @return True on success; otherwise false.
  */
-KAPI b8 shader_system_shader_instance_release( u32 shader_id,u32 instance_id,u32 map_count,texture_map* maps);
+KAPI b8 shader_system_shader_instance_release(u32 shader_id, u32 instance_id, u32 map_count, kresource_texture_map* maps);

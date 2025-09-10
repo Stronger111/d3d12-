@@ -1,6 +1,7 @@
 #pragma once
 
 #include "math_types.h"
+#include "strings/kname.h"
 
 struct frame_data;
 
@@ -28,9 +29,9 @@ typedef struct geometry_config {
     vec3 min_extents;
     vec3 max_extents;
     /** @brief The name of the geometry. */
-    char name[GEOMETRY_NAME_MAX_LENGTH];
-       /** @brief The name of the material used by the geometry. */
-    char material_name[256]; //FIXME: Should probably just dynamically allocate this.
+    kname name;
+    /** @brief The name of the material used by the geometry. */
+    kname material_name;
 } geometry_config;
 
 
@@ -70,6 +71,12 @@ typedef struct geometry {
     struct material* material;
 } geometry;
 
+#pragma once
+
+#include "math/geometry.h"
+#include "math/math_types.h"
+
+struct frame_data;
 
 /**
  * @brief Calculates normals for the given vertex and index data. Modifies vertices in place.

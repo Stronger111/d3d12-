@@ -353,9 +353,9 @@ typedef struct kwindow_renderer_state {
     // The viewport information for the given window.
     struct viewport* active_viewport;
     // This is technically the swapchain images, which should be wrapped into a single texture.
-    texture colourbuffer;
+    kresource_texture* colourbuffer;
     // This is technically the per-frame depth image, which should be wrapped into a single texture.
-    texture depthbuffer;
+    kresource_texture* depthbuffer;
 
     /** @brief The internal state of the window containing renderer backend data. */
     struct kwindow_renderer_backend_state* backend_state;
@@ -410,7 +410,8 @@ typedef struct kresource_texture_map {
      * texture. Must always be at least 1.
      */
     u32 mip_levels;
-    kresource_texture* texture;
+    /** @brief A constant pointer to a texture resource. */
+    const kresource_texture* texture;
     /** @brief Texture filtering mode for minification. */
     texture_filter filter_minify;
     /** @brief Texture filtering mode for magnification. */

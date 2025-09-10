@@ -130,10 +130,11 @@ typedef struct skybox_shader_locations {
 
 typedef struct forward_rendergraph_node_internal_data {
     struct renderer_system_state* renderer;
+    struct texture_system_state* texture_system;
     /* forward_rendergraph_node_config config; */
 
-    struct texture* colourbuffer_texture;
-    struct texture* depthbuffer_texture;
+    struct kresource_texture* colourbuffer_texture;
+    struct kresource_texture* depthbuffer_texture;
 
     shader* pbr_shader;
     u32 pbr_shader_id;
@@ -160,7 +161,7 @@ typedef struct forward_rendergraph_node_internal_data {
 
     rendergraph_source* shadowmap_source;
     // Obtained from source.
-    texture_map shadow_map;
+    kresource_texture_map shadow_map;
 
     //Exection data
     u32 render_mode;
@@ -182,7 +183,7 @@ typedef struct forward_rendergraph_node_internal_data {
 
     skybox* sb;
 
-    struct texture* irradiance_cube_texture;
+    const struct kresource_texture* irradiance_cube_texture;
     const struct directional_light* dir_light;
 
     f32 cascade_splits[MAX_SHADOW_CASCADE_COUNT];
@@ -208,6 +209,7 @@ b8 forward_rendergraph_node_create(struct rendergraph* graph, struct rendergraph
     forward_rendergraph_node_internal_data* internal_data = self->internal_data;
 
     internal_data->renderer = engine_systems_get()->renderer_system;
+    internal_data->texture_system= engine_systems_get()->texture_system;
 
     self->name = string_duplicate(config->name);
 
@@ -406,7 +408,7 @@ b8 forward_rendergraph_node_initialize(struct rendergraph_node* self) {
     internal_data->index_buffer = renderer_renderbuffer_get(RENDERBUFFER_TYPE_INDEX);
 
     // Grab the default cubemap texture as the irradiance texture.
-    internal_data->irradiance_cube_texture = texture_system_get_default_cube_texture();
+    internal_data->irradiance_cube_texture = texture_system_get_default_kresource_cube_texture(internal_data->texture_system);
     // 设置一些默认值
     for (u32 i = 0; i < MAX_SHADOW_CASCADE_COUNT; ++i) {
         internal_data->directional_light_spaces[i] = mat4_identity();
@@ -444,13 +446,13 @@ b8 forward_rendergraph_node_load_resources(struct rendergraph_node* self) {
     }
 
     // Need a texture map (i.e. sampler) to use the shadowmap source texture.
-    texture_map* sm = &internal_data->shadow_map;
+    kresource_texture_map* sm = &internal_data->shadow_map;
     sm->repeat_u = sm->repeat_v = sm->repeat_w = TEXTURE_REPEAT_CLAMP_TO_EDGE;
     sm->filter_magnify = sm->filter_minify = TEXTURE_FILTER_MODE_LINEAR;
     sm->texture = internal_data->shadowmap_source->value.t;
     sm->generation = INVALID_ID_U8;
 
-    if (!renderer_texture_map_resources_acquire(sm)) {
+    if (!renderer_kresource_texture_map_resources_acquire(internal_data->renderer,sm)) {
         KERROR("Failed to acquire texture map resources for shadow map in forward pass. Initialize failed.");
         return false;
     }
@@ -458,7 +460,7 @@ b8 forward_rendergraph_node_load_resources(struct rendergraph_node* self) {
     return true;
 }
 
-b8 render_water_planes(forward_rendergraph_node_internal_data* internal_data, u32 plane_count, water_plane** planes, texture* colour, texture* depth, vec4 clipping_plane, camera* cam, struct frame_data* p_frame_data) {
+b8 render_water_planes(forward_rendergraph_node_internal_data* internal_data, u32 plane_count, water_plane** planes, kresource_texture* colour, kresource_texture* depth, vec4 clipping_plane, camera* cam, struct frame_data* p_frame_data) {
     //Draw the water plane
     renderer_begin_debug_label("water planes", (vec3) { 0, 0, 1 });
 
@@ -536,11 +538,11 @@ b8 render_water_planes(forward_rendergraph_node_internal_data* internal_data, u3
             shader_system_uniform_set_by_location(internal_data->water_shader_id, internal_data->water_shader_locations.normal_texture, &plane->maps[WATER_PLANE_MAP_NORMAL]);
 
             // Shadow maps
-            texture* shadow_map_texture = internal_data->shadowmap_source->value.t;
-            plane->maps[WATER_PLANE_MAP_SHADOW].texture = shadow_map_texture ? shadow_map_texture : texture_system_get_default_diffuse_texture();
+            const kresource_texture* shadow_map_texture = internal_data->shadowmap_source->value.t;
+            plane->maps[WATER_PLANE_MAP_SHADOW].texture = shadow_map_texture ? shadow_map_texture : texture_system_get_default_kresource_diffuse_texture(internal_data->texture_system);
             // Ensure there are valid resources acquired first.
             if (plane->maps[WATER_PLANE_MAP_SHADOW].internal_id == INVALID_ID) {
-                if (!renderer_texture_map_resources_acquire(&plane->maps[WATER_PLANE_MAP_SHADOW])) {
+                if (!renderer_kresource_texture_map_resources_acquire(internal_data->renderer,&plane->maps[WATER_PLANE_MAP_SHADOW])) {
                     KERROR("Unable to acquire resources for texture map.");
                     return false;
                 }
@@ -551,7 +553,7 @@ b8 render_water_planes(forward_rendergraph_node_internal_data* internal_data, u3
             plane->maps[WATER_PLANE_MAP_IBL_CUBE].texture = internal_data->irradiance_cube_texture;
             // Ensure there are valid resources acquired first.
             if (plane->maps[WATER_PLANE_MAP_IBL_CUBE].internal_id == INVALID_ID) {
-                if (!renderer_texture_map_resources_acquire(&plane->maps[WATER_PLANE_MAP_IBL_CUBE])) {
+                if (!renderer_kresource_texture_map_resources_acquire(internal_data->renderer,&plane->maps[WATER_PLANE_MAP_IBL_CUBE])) {
                     KERROR("Unable to acquire resources for texture map.");
                     return false;
                 }
@@ -583,7 +585,7 @@ b8 render_water_planes(forward_rendergraph_node_internal_data* internal_data, u3
     return true;
 }
 
-b8 render_scene(forward_rendergraph_node_internal_data* internal_data, texture* colour, texture* depth, u32 plane_count, water_plane** planes, b8 include_water_plane, vec4 clipping_plane, camera* cam, camera* inverted_cam, b8 use_inverted, struct frame_data* p_frame_data) {
+b8 render_scene(forward_rendergraph_node_internal_data* internal_data, kresource_texture* colour, kresource_texture* depth, u32 plane_count, water_plane** planes, b8 include_water_plane, vec4 clipping_plane, camera* cam, camera* inverted_cam, b8 use_inverted, struct frame_data* p_frame_data) {
     mat4 view_matrix = camera_view_get(cam);
     vec3 view_position = camera_position_get(cam);
     mat4 inverted_view_matrix = camera_view_get(inverted_cam);
@@ -767,8 +769,8 @@ b8 render_scene(forward_rendergraph_node_internal_data* internal_data, texture* 
                 // NOTE: apply other maps separately.
 
                  // Shadow Maps TODO: Should this be global?
-                texture* shadow_map_texture = internal_data->shadowmap_source->value.t;
-                m->maps[TERRAIN_SAMP_IDX_SHADOW_MAP].texture = shadow_map_texture ? shadow_map_texture : texture_system_get_default_diffuse_texture();
+                const kresource_texture* shadow_map_texture = internal_data->shadowmap_source->value.t;
+                m->maps[TERRAIN_SAMP_IDX_SHADOW_MAP].texture = shadow_map_texture ? shadow_map_texture : texture_system_get_default_kresource_diffuse_texture(internal_data->texture_system);
                 UNIFORM_APPLY_OR_FAIL(shader_system_uniform_set_by_location(internal_data->terrain_shader_id, internal_data->terrain_locations.shadow_textures, &m->maps[TERRAIN_SAMP_IDX_SHADOW_MAP]));
 
                 // Irradience map - use the material-assigned one if exists, otherwise use the "global" assigned one.
@@ -906,8 +908,8 @@ b8 render_scene(forward_rendergraph_node_internal_data* internal_data, texture* 
                     UNIFORM_APPLY_OR_FAIL(shader_system_uniform_set_by_location_arrayed(internal_data->pbr_shader_id, internal_data->pbr_locations.material_textures, PBR_SAMP_IDX_NORMAL, &m->maps[PBR_SAMP_IDX_NORMAL]));
                     UNIFORM_APPLY_OR_FAIL(shader_system_uniform_set_by_location_arrayed(internal_data->pbr_shader_id, internal_data->pbr_locations.material_textures, PBR_SAMP_IDX_COMBINED, &m->maps[PBR_SAMP_IDX_COMBINED]));
                     // Shadow map 阴影贴图
-                    texture* shadow_map_texture = internal_data->shadowmap_source->value.t;
-                    m->maps[PBR_SAMP_IDX_SHADOW_MAP].texture = shadow_map_texture ? shadow_map_texture : texture_system_get_default_diffuse_texture();
+                    const kresource_texture* shadow_map_texture = internal_data->shadowmap_source->value.t;
+                    m->maps[PBR_SAMP_IDX_SHADOW_MAP].texture = shadow_map_texture ? shadow_map_texture : texture_system_get_default_kresource_diffuse_texture(internal_data->texture_system);
                     UNIFORM_APPLY_OR_FAIL(shader_system_uniform_set_by_location(internal_data->pbr_shader_id, internal_data->pbr_locations.shadow_textures, &m->maps[PBR_SAMP_IDX_SHADOW_MAP]));
 
                     // Irradience map - use the material-assigned one if exists, otherwise use the "global" assigned one.
@@ -1007,24 +1009,24 @@ b8 forward_rendergraph_node_execute(struct rendergraph_node* self, struct frame_
         // Refraction, clip above plane. Don't render the water plane itself. Uses bound camera
        // TODO: clipping plane should be based on position/orientation of water plane.
         vec4 refract_plane = (vec4){ 0, -1, 0, 0 + 1.0f };// NOTE: w is distance from origin, in this case the y-coord. Setting this to vec4_zero() effectively disables this.
-        renderer_clear_colour(internal_data->renderer, plane->refraction_colour.renderer_texture_handle);
-        renderer_clear_depth_stencil(internal_data->renderer, plane->refraction_depth.renderer_texture_handle);
+        renderer_clear_colour(internal_data->renderer, plane->refraction_colour->renderer_texture_handle);
+        renderer_clear_depth_stencil(internal_data->renderer, plane->refraction_depth->renderer_texture_handle);
         if (!render_scene(internal_data, &plane->refraction_colour, &plane->refraction_depth, 0, 0, false, refract_plane, internal_data->current_camera, &inverted_camera, false, p_frame_data)) {
             KERROR("Failed to render scene.");
             return false;
         }
 
         // Reflection, clip below plane. Don't render the water plane itself.
-        renderer_clear_colour(internal_data->renderer, plane->reflection_colour.renderer_texture_handle);
-        renderer_clear_depth_stencil(internal_data->renderer, plane->reflection_depth.renderer_texture_handle);
+        renderer_clear_colour(internal_data->renderer, plane->reflection_colour->renderer_texture_handle);
+        renderer_clear_depth_stencil(internal_data->renderer, plane->reflection_depth->renderer_texture_handle);
         vec4 reflect_plane = (vec4){ 0, 1, 0, 0 }; // NOTE: w is distance from origin, in this case the y-coord. Setting this to vec4_zero() effectively disables this.
         if (!render_scene(internal_data, &plane->reflection_colour, &plane->reflection_depth, 0, 0, false, reflect_plane, internal_data->current_camera, &inverted_camera, true, p_frame_data)) {
             KERROR("Failed to render scene.");
             return false;
         }
-        renderer_texture_prepare_for_sampling(internal_data->renderer, plane->reflection_colour.renderer_texture_handle, plane->reflection_colour.flags);
-        renderer_texture_prepare_for_sampling(internal_data->renderer, plane->refraction_colour.renderer_texture_handle, plane->refraction_colour.flags);
-        renderer_texture_prepare_for_sampling(internal_data->renderer, plane->refraction_depth.renderer_texture_handle, plane->refraction_depth.flags);
+        renderer_texture_prepare_for_sampling(internal_data->renderer, plane->reflection_colour->renderer_texture_handle, plane->reflection_colour->flags);
+        renderer_texture_prepare_for_sampling(internal_data->renderer, plane->refraction_colour->renderer_texture_handle, plane->refraction_colour->flags);
+        renderer_texture_prepare_for_sampling(internal_data->renderer, plane->refraction_depth->renderer_texture_handle, plane->refraction_depth->flags);
     }
 
     // Finally, draw the scene normally with no clipping. Include the water plane rendering. Uses bound camera.
@@ -1044,7 +1046,7 @@ void forward_rendergraph_node_destroy(struct rendergraph_node* self) {
             forward_rendergraph_node_internal_data* internal_data = self->internal_data;
 
             // Destroy the texture maps/samplers.
-            renderer_texture_map_resources_release(&internal_data->shadow_map);
+            renderer_kresource_texture_map_resources_release(internal_data->renderer,&internal_data->shadow_map);
 
             kfree(self->internal_data, sizeof(forward_rendergraph_node_internal_data), MEMORY_TAG_RENDERER);
             self->internal_data = 0;
@@ -1143,7 +1145,7 @@ b8 forward_rendergraph_node_water_planes_set(struct rendergraph_node* self, stru
     return false;
 }
 
-b8 forward_rendergraph_node_irradiance_texture_set(struct rendergraph_node* self, struct frame_data* p_frame_data, struct texture* irradiance_cube_texture) {
+b8 forward_rendergraph_node_irradiance_texture_set(struct rendergraph_node* self, struct frame_data* p_frame_data,const struct kresource_texture* irradiance_cube_texture) {
     if (self && self->internal_data) {
         forward_rendergraph_node_internal_data* internal_data = self->internal_data;
         internal_data->irradiance_cube_texture = irradiance_cube_texture;

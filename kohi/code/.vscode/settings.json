@@ -153,6 +153,11 @@
         "kresource_handler_texture.h": "c",
         "khandle.h": "c",
         "resource_types.h": "c",
-        "kresource_utils.h": "c"
+        "kresource_utils.h": "c",
+        "iosfwd": "c",
+        "xlocbuf": "c",
+        "texture_system.h": "c",
+        "rendergraph.h": "c",
+        "material_system.h": "c"
     },
 }

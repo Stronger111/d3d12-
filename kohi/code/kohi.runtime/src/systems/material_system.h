@@ -1,18 +1,27 @@
+/**
+ * @file material_system.h
+ * @author Travis Vroman (travis@kohiengine.com)
+ * @brief The material system is responsible for managing materials in the
+ * engine, including reference counting and auto-unloading.
+ * @version 1.0
+ * @date 2022-01-11
+ *
+ * @copyright Kohi Game Engine is Copyright (c) Travis Vroman 2021-2022
+ *
+ */
+
 #pragma once
 
 #include "defines.h"
 
 #include "resources/resource_types.h"
 
-#define DEFAULT_MATERIAL_NAME "default"
-/** @brief The name of the default UI material. */
-#define DEFAULT_UI_MATERIAL_NAME "default_ui"
-
-/** @brief The name of the default PBR material. */
+ /** @brief The name of the default PBR material. */
 #define DEFAULT_PBR_MATERIAL_NAME "default_pbr"
-
 /** @brief The name of the default terrain material. */
 #define DEFAULT_TERRAIN_MATERIAL_NAME "default_terrain"
+
+struct material_system_state;
 
 typedef struct material_system_config {
     u32 max_material_count;
@@ -30,8 +39,13 @@ struct frame_data;
  * @param config The configuration (material_system_config) for this system.
  * @return True on success; otherwise false.
  */
-b8 material_system_initialize(u64* memory_requirement, void* state, void* config);
-void material_system_shutdown(void* state);
+b8 material_system_initialize(u64* memory_requirement, struct  material_system_state* state,const material_system_config* config);
+/**
+ * @brief Shuts down the material system.
+ *
+ * @param state The state block of memory.
+ */
+void material_system_shutdown(struct material_system_state* state);
 
 KAPI material* material_system_acquire(const char* name);
 /**

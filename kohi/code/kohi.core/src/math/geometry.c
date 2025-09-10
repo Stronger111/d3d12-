@@ -1,12 +1,13 @@
 #include "geometry.h"
 
 #include "kdebug/kassert.h"
-#include "memory/kmemory.h"
-#include "strings/kstring.h"
 #include "logger.h"
+#include "math/geometry.h"
 #include "math/kmath.h"
 #include "math/math_types.h"
-#include "math/geometry.h"
+#include "memory/kmemory.h"
+#include "strings/kname.h"
+#include "strings/kstring.h"
 
 void geometry_generate_normals(u32 vertex_count, vertex_3d* vertices, u32 index_count, u32* indices) {
     for (u32 i = 0; i < index_count; i += 3) {
@@ -135,7 +136,7 @@ void generate_quad_2d(const char* name, f32 width, f32 height, f32 tx_min, f32 t
         out_config->index_size = sizeof(u32);
         out_config->index_count = 6;
         out_config->indices = kallocate(out_config->index_size * out_config->index_count, MEMORY_TAG_ARRAY);
-        string_ncopy(out_config->name, name, GEOMETRY_NAME_MAX_LENGTH);
+        out_config->name=kname_create(name);
 
         vertex_2d uiverts[4];
         uiverts[0].position.x = 0.0f;    // 0    3

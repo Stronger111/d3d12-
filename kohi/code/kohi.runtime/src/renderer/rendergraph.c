@@ -68,7 +68,7 @@ static rg_dep_node* dep_node_create(u32 index);
 static void dep_node_connection_add(rg_dep_graph* dgraph, u32 from_index, u32 to_index);
 
 static b8 rg_dep_graph_topological_sort(rendergraph* graph);
-b8 rendergraph_create(const char* config_str, struct texture* global_colourbuffer, struct texture* global_depthbuffer, rendergraph* out_graph) {
+b8 rendergraph_create(const char* config_str, struct kresource_texture* global_colourbuffer, struct kresource_texture* global_depthbuffer, rendergraph* out_graph) {
     if (!out_graph) {
         return false;
     }
