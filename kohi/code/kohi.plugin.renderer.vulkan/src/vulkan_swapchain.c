@@ -92,7 +92,7 @@ static b8 create(renderer_backend_interface* backend, kwindow* window, renderer_
     }
 
     // Swapchain extent
-    if (context->device.swapchain_support.capabilities.currentExtent.width != UINT32_MAX_T) {
+    if (context->device.swapchain_support.capabilities.currentExtent.width != U32_MAX) {
         swapchain_extent = context->device.swapchain_support.capabilities.currentExtent;
     }
 
@@ -170,7 +170,7 @@ static b8 create(renderer_backend_interface* backend, kwindow* window, renderer_
     }
 
     //Swapchain images are stored in the backend of the window.colorbuffer.
-    if (k_handle_is_invalid(window_internal->colourbuffer.renderer_texture_handle)) {
+    if (k_handle_is_invalid(window_internal->colourbuffer->renderer_texture_handle)) {
         // If invalid, then a new one needs to be created. This does not reach out to the
         // texture system to create this, but handles it internally instead. This is because
         // the process for this varies greatly between backends.
@@ -186,7 +186,7 @@ static b8 create(renderer_backend_interface* backend, kwindow* window, renderer_
             // NOTE: This should be a wrapped texture, so the frontend does not try to
             // acquire the resources we already have here.
             TEXTURE_FLAG_IS_WRAPPED | TEXTURE_FLAG_IS_WRITEABLE | TEXTURE_FLAG_RENDERER_BUFFERING,
-            &window_internal->colourbuffer.renderer_texture_handle
+            &window_internal->colourbuffer->renderer_texture_handle
         )) {
 
             KFATAL("Failed to acquire internal texture resources for window.colourbuffer");
@@ -196,14 +196,14 @@ static b8 create(renderer_backend_interface* backend, kwindow* window, renderer_
 
     // Get the texture_internal_data based on the existing or newly-created handle above.
    // Use that to setup the internal images/views for the colourbuffer texture.
-    texture_internal_data* texture_data = renderer_texture_resources_get(backend->frontend_state, window_internal->colourbuffer.renderer_texture_handle);
+    texture_internal_data* texture_data = renderer_texture_resources_get(backend->frontend_state, window_internal->colourbuffer->renderer_texture_handle);
     if (!texture_data) {
         KFATAL("Unable to get internal data for colourbuffer image. Swapchain creation failed.");
         return false;
     }
     // Name is meaningless here, but might be useful for debugging.
-    if (!window_internal->colourbuffer.name) {
-        window_internal->colourbuffer.name = string_duplicate("__window_colourbuffer_texture__");
+    if (window_internal->colourbuffer->base.name == INVALID_KNAME) {
+        window_internal->colourbuffer->base.name = kname_create("__window_colourbuffer_texture__");
     }
 
     texture_data->image_count = swapchain->image_count;
@@ -268,7 +268,7 @@ static void destroy(renderer_backend_interface* backend, vulkan_swapchain* swapc
     kwindow_renderer_state* window_internal = window->renderer_state;
     //kwindow_renderer_backend_state* window_backend = window_internal->backend_state;
 
-    texture_internal_data* texture_data = renderer_texture_resources_get(backend->frontend_state, window_internal->colourbuffer.renderer_texture_handle);
+    texture_internal_data* texture_data = renderer_texture_resources_get(backend->frontend_state, window_internal->colourbuffer->renderer_texture_handle);
 
     vkDeviceWaitIdle(context->device.logical_device);
 

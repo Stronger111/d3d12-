@@ -112,7 +112,7 @@ static b8 mesh_loader_load(struct resource_loader* self, const char* name,
     }
     case MESH_FILE_TYPE_KSM:
         result = load_ksm_file(&f, &resource_data);
-       
+
         break;
     default:
     case MESH_FILE_TYPE_NOT_FOUND:
@@ -150,8 +150,7 @@ static void mesh_loader_unload(struct resource_loader* self,
     resource->data_size = 0;
 }
 
-static b8 load_ksm_file(file_handle* ksm_file,
-    geometry_config** out_geometries_darray) {
+static b8 load_ksm_file(file_handle* ksm_file, geometry_config** out_geometries_darray) {
     // Version
     u64 bytes_read = 0;
     u16 version = 0;
@@ -188,15 +187,19 @@ static b8 load_ksm_file(file_handle* ksm_file,
 
         // Name
         u32 g_name_length = 0;
+        char geometry_name[256];
+        kzero_memory(geometry_name, sizeof(char) * 256);
         filesystem_read(ksm_file, sizeof(u32), &g_name_length, &bytes_read);
-        filesystem_read(ksm_file, sizeof(char) * g_name_length, g.name,
-            &bytes_read);
+        filesystem_read(ksm_file, sizeof(char) * g_name_length, geometry_name, &bytes_read);
+        g.name = kname_create(geometry_name);
 
         // Material Name
         u32 m_name_length = 0;
+        char mat_name[256];
+        kzero_memory(mat_name, sizeof(char) * 256);
         filesystem_read(ksm_file, sizeof(u32), &m_name_length, &bytes_read);
-        filesystem_read(ksm_file, sizeof(char) * m_name_length, g.material_name,
-            &bytes_read);
+        filesystem_read(ksm_file, sizeof(char) * m_name_length, mat_name, &bytes_read);
+        g.material_name = kname_create(mat_name);
 
         // Handles backward compatability for
         // https://github.com/travisvroman/kohi/issues/130
@@ -263,15 +266,16 @@ static b8 write_ksm_file(const char* path, const char* name, u32 geometry_count,
         filesystem_write(&f, g->index_size * g->index_count, g->indices, &written);
 
         // Name
-        u32 g_name_length = string_length(g->name) + 1;
+        const char* geometry_name_str = kname_string_get(g->name);
+        u32 g_name_length = string_length(geometry_name_str) + 1;
         filesystem_write(&f, sizeof(u32), &g_name_length, &written);
-        filesystem_write(&f, sizeof(char) * g_name_length, g->name, &written);
+        filesystem_write(&f, sizeof(char) * g_name_length, geometry_name_str, &written);
 
         // Material Name
-        u32 m_name_length = string_length(g->material_name) + 1;
+        const char* mat_name_str = kname_string_get(g->material_name);
+        u32 m_name_length = string_length(mat_name_str) + 1;
         filesystem_write(&f, sizeof(u32), &m_name_length, &written);
-        filesystem_write(&f, sizeof(char) * m_name_length, g->material_name,
-            &written);
+        filesystem_write(&f, sizeof(char) * m_name_length, mat_name_str, &written);
 
         // Center
         filesystem_write(&f, sizeof(vec3), &g->center, &written);
@@ -431,14 +435,19 @@ static b8 import_obj_file(file_handle* obj_file, const char* out_ksm_filename,
             // Process each group as a subobject.
             for (u64 i = 0; i < group_count; ++i) {
                 geometry_config new_data = {};
-                string_ncopy(new_data.name, name, 255);
+                char* new_name = 0;
                 if (i > 0) {
-                    string_append_int(new_data.name, new_data.name, i);
+                    string_format("%s%d", name, i);
                 }
-                string_ncopy(new_data.material_name, material_names[i], 255);
+                else {
+                    new_name = string_duplicate(name);
+                }
+                new_data.name = kname_create(new_name);
+                string_free(new_name);
 
-                process_subobject(positions, normals, tex_coords, groups[i].faces,
-                    &new_data);
+                new_data.material_name = kname_create(material_names[i]);
+
+                process_subobject(positions, normals, tex_coords, groups[i].faces, &new_data);
                 new_data.vertex_count = darray_length(new_data.vertices);
                 new_data.vertex_size = sizeof(vertex_3d);
                 new_data.index_count = darray_length(new_data.indices);
@@ -472,14 +481,19 @@ static b8 import_obj_file(file_handle* obj_file, const char* out_ksm_filename,
     u64 group_count = darray_length(groups);
     for (u64 i = 0; i < group_count; ++i) {
         geometry_config new_data = {};
-        string_ncopy(new_data.name, name, 255);
+        char* new_name = 0;
         if (i > 0) {
-            string_append_int(new_data.name, new_data.name, i);
+            string_format("%s%d", name, i);
         }
-        string_ncopy(new_data.material_name, material_names[i], 255);
+        else {
+            new_name = string_duplicate(name);
+        }
+        new_data.name = kname_create(new_name);
+        string_free(new_name);
 
-        process_subobject(positions, normals, tex_coords, groups[i].faces,
-            &new_data);
+        new_data.material_name = kname_create(material_names[i]);
+
+        process_subobject(positions, normals, tex_coords, groups[i].faces,&new_data);
         new_data.vertex_count = darray_length(new_data.vertices);
         new_data.vertex_size = sizeof(vertex_3d);
         new_data.index_count = darray_length(new_data.indices);

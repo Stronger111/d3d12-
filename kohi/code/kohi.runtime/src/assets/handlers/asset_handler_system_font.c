@@ -39,7 +39,7 @@ void asset_handler_system_font_request_asset(struct asset_handler* self, struct 
     context.handler = self;
     context.listener_instance = listener_instance;
     context.user_callback = user_callback;
-    vfs_request_asset(self->vfs,asset->name, asset->package_name, false, false, sizeof(asset_handler_request_context), &context, asset_handler_system_font_on_asset_loaded);
+    vfs_request_asset(self->vfs, asset->name, asset->package_name, false, false, sizeof(asset_handler_request_context), &context, asset_handler_system_font_on_asset_loaded);
 }
 
 void asset_handler_system_font_release_asset(struct asset_handler* self, struct kasset* asset) {
@@ -68,7 +68,7 @@ static void asset_handler_system_font_on_asset_loaded(struct vfs_state* vfs, vfs
     // 4. On success, attempt to load the binary asset again. Return result of that load request. NOTE: not currently doing this.
 
     if (asset_data.result == VFS_REQUEST_RESULT_SUCCESS) {
-        KTRACE("Asset load from VFS successful.");
+        KTRACE("Asset '%s'  load from VFS successful.", kname_string_get(asset_data.asset_name));
 
         // Default to an internal failure.
         asset_request_result result = ASSET_REQUEST_RESULT_INTERNAL_FAILURE;
@@ -79,7 +79,7 @@ static void asset_handler_system_font_on_asset_loaded(struct vfs_state* vfs, vfs
             KERROR("There is no import process for system fonts. Secondary asset should not be used.");
         }
         else {
-            KTRACE("Primary asset loaded.");
+            KTRACE("Primary asset '%s' loaded.", kname_string_get(asset_data.asset_name));
             // From primary file.
             // Deserialize directly. This either means that the primary asset already existed or was imported successfully.
             if (context.handler->binary_deserialize) {

@@ -74,6 +74,7 @@ b8 kresource_handler_texture_request(struct kresource_handler* self, kresource* 
 
     //Load all assets (might only be one)
     if (info->assets.data) {
+        kzero_memory(listener_inst->typed_resource, sizeof(kresource_texture));
         for (array_iterator it = info->assets.begin(&info->assets.base);!it.end(&it);it.next(&it)) {
             kresource_asset_info* asset_info = it.value(&it);
             if (asset_info->type == KASSET_TYPE_IMAGE) {
@@ -118,7 +119,6 @@ b8 kresource_handler_texture_request(struct kresource_handler* self, kresource* 
         typed_resource->height = first_px_data->height;
         typed_resource->format = first_px_data->format;
         typed_resource->mip_levels = first_px_data->mip_levels;
-        typed_resource->array_size = typed_request->pixel_data.base.length;
 
         // Acquire the resources for the texture.
         b8 acquisition_result = renderer_kresource_texture_resources_acquire(
@@ -150,7 +150,8 @@ b8 kresource_handler_texture_request(struct kresource_handler* self, kresource* 
 
         //Flip to a "loaded" state.
         typed_resource->base.state = KRESOURCE_STATE_LOADED;
-    }else{
+    }
+    else {
         //No assets, no pixel data. Must be writable or depth texture.
         //Nothing to uplooad, so this is available immediately.
         struct renderer_system_state* renderer = engine_systems_get()->renderer_system;
@@ -333,13 +334,21 @@ static void texture_kasset_on_result(asset_request_result result, const struct k
                 // Increase the generation also.
                 listener->typed_resource->base.generation++;
             }
+            goto destroy_request;
         }
         // TODO: Need to think about hot-reloading here, and how/where listening should happen. Maybe in the resource system?
+        // Boot out so the request isn't destroyed.
+        return;
     }
     else {
         KERROR("Failed to load a required asset for texture resource '%s'. Resource may not appear correctly when rendered.", kname_string_get(listener->typed_resource->base.name));
     }
 
+destroy_request:
     //Destroy the request.
     array_kimage_ptr_destroy(&listener->assets);
+    array_kresource_asset_info_destroy(&listener->request_info->base.assets);
+    kfree(listener->request_info, sizeof(kresource_texture_request_info), MEMORY_TAG_RESOURCE);
+    // Free the listener itself.
+    kfree(listener, sizeof(texture_resource_handler_info), MEMORY_TAG_RESOURCE);
 }

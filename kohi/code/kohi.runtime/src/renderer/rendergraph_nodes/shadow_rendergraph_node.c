@@ -176,7 +176,7 @@ b8 shadow_rendergraph_node_load_resources(rendergraph_node* self) {
         internal_data->default_colour_map.texture = texture_system_get_default_kresource_diffuse_texture(internal_data->texture_system);
 
         // Acquire resources for the default texture map.
-        if (!renderer_texture_map_resources_acquire(&internal_data->default_colour_map)) {
+        if (!renderer_kresource_texture_map_resources_acquire(internal_data->renderer, &internal_data->default_colour_map)) {
             KERROR("Failed to acquire texture map resources for default colour map in shadowmap pass.");
             return false;
         }
@@ -210,11 +210,12 @@ b8 shadow_rendergraph_node_load_resources(rendergraph_node* self) {
 
     // Create the depth attachment for the directional light shadow.
     // This should take renderer buffering into account.
-    internal_data->depth_texture=texture_system_request_depth_arrayed(
+    internal_data->depth_texture = texture_system_request_depth_arrayed(
         kname_create("__shadow_rg_node_shadowmap__"),
         internal_data->config.resolution,
         internal_data->config.resolution,
-        MAX_SHADOW_CASCADE_COUNT
+        MAX_SHADOW_CASCADE_COUNT,
+        true
     );
     if (!internal_data->depth_texture) {
         KERROR("Failed to request layered shadow map texture for shadow rendergraph node.");
@@ -278,7 +279,7 @@ b8 shadow_rendergraph_node_execute(rendergraph_node* self, frame_data* p_frame_d
         u32 highest_id = 0;
         for (u32 i = 0; i < internal_data->geometry_count; ++i) {
             material* m = internal_data->geometries[i].material;
-            if (m->internal_id > highest_id) {
+            if (m && m->internal_id > highest_id) {
                 // NOTE: +1 to account for the first id being taken by the default instance.
                 highest_id = m->internal_id + 1;
             }
@@ -427,7 +428,7 @@ void shadow_rendergraph_node_destroy(rendergraph_node* self) {
 
             texture_system_release_resource(internal_data->depth_texture);
 
-            renderer_kresource_texture_map_resources_release(internal_data->renderer,&internal_data->default_colour_map);
+            renderer_kresource_texture_map_resources_release(internal_data->renderer, &internal_data->default_colour_map);
             renderer_shader_instance_resources_release(internal_data->renderer, internal_data->s, internal_data->default_instance_id);
 
             //Internal data.

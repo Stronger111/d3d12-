@@ -106,21 +106,21 @@ b8 water_plane_load(water_plane* plane) {
         u32 tex_height = window->height;
 
         // Create reflection textures.
-        plane->reflection_colour = texture_system_request_writeable(kname_create("__waterplane_reflection_colour__"), tex_width, tex_height, KRESOURCE_TEXTURE_FORMAT_RGBA8, false);
+        plane->reflection_colour = texture_system_request_writeable(kname_create("__waterplane_reflection_colour__"), tex_width, tex_height, KRESOURCE_TEXTURE_FORMAT_RGBA8, false, true);
         if (!plane->reflection_colour) {
             return false;
         }
-        plane->reflection_depth = texture_system_request_depth(kname_create("__waterplane_reflection_depth__"), tex_width, tex_height);
+        plane->reflection_depth = texture_system_request_depth(kname_create("__waterplane_reflection_depth__"), tex_width, tex_height, true);
         if (!plane->reflection_depth) {
             return false;
         }
 
         // Create refraction textures.
-        plane->refraction_colour = texture_system_request_writeable(kname_create("__waterplane_refraction_colour__"), tex_width, tex_height, KRESOURCE_TEXTURE_FORMAT_RGBA8, false);
+        plane->refraction_colour = texture_system_request_writeable(kname_create("__waterplane_refraction_colour__"), tex_width, tex_height, KRESOURCE_TEXTURE_FORMAT_RGBA8, false, true);
         if (!plane->refraction_colour) {
             return false;
         }
-        plane->refraction_depth = texture_system_request_depth(kname_create("__waterplane_refraction_depth__"), tex_width, tex_height);
+        plane->refraction_depth = texture_system_request_depth(kname_create("__waterplane_refraction_depth__"), tex_width, tex_height, true);
         if (!plane->refraction_depth) {
             return false;
         }
@@ -224,23 +224,23 @@ static b8 water_plane_on_event(u16 code, void* sender, void* listener_inst, even
         water_plane* plane = listener_inst;
 
         if (plane->reflection_colour->base.generation != INVALID_ID_U8) {
-            if (!texture_system_resize(&plane->reflection_colour, width, height, true)) {
+            if (!texture_system_resize(plane->reflection_colour, width, height, true)) {
                 KERROR("Failed to resize reflection colour texture for water plane.");
             }
         }
         if (plane->reflection_depth->base.generation != INVALID_ID_U8) {
-            if (!texture_system_resize(&plane->reflection_depth, width, height, true)) {
+            if (!texture_system_resize(plane->reflection_depth, width, height, true)) {
                 KERROR("Failed to resize reflection depth texture for water plane.");
             }
         }
 
         if (plane->refraction_colour->base.generation != INVALID_ID_U8) {
-            if (!texture_system_resize(&plane->refraction_colour, width, height, true)) {
+            if (!texture_system_resize(plane->refraction_colour, width, height, true)) {
                 KERROR("Failed to resize refraction colour texture for water plane.");
             }
         }
         if (plane->refraction_depth->base.generation != INVALID_ID_U8) {
-            if (!texture_system_resize(&plane->refraction_depth, width, height, true)) {
+            if (!texture_system_resize(plane->refraction_depth, width, height, true)) {
                 KERROR("Failed to resize refraction depth texture for water plane.");
             }
         }

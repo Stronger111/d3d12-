@@ -254,9 +254,12 @@ b8 renderer_on_window_created(struct renderer_system_state* state, struct kwindo
     //Create a new window state and register it.
     window->renderer_state = kallocate(sizeof(kwindow_renderer_state), MEMORY_TAG_RENDERER);
 
+    window->renderer_state->colourbuffer = kallocate(sizeof(kresource_texture), MEMORY_TAG_RENDERER);
+    window->renderer_state->depthbuffer = kallocate(sizeof(kresource_texture), MEMORY_TAG_RENDERER);
+
     //Start with invalid colour/depth buffer texture handles.
-    window->renderer_state->colourbuffer.renderer_texture_handle = k_handle_invalid();
-    window->renderer_state->depthbuffer.renderer_texture_handle = k_handle_invalid();
+    window->renderer_state->colourbuffer->renderer_texture_handle = k_handle_invalid();
+    window->renderer_state->depthbuffer->renderer_texture_handle = k_handle_invalid();
 
     //Create backend resource (i.e swapchain,surface,image,etc.).
     if (!state->backend->window_create(state->backend, window)) {
@@ -537,7 +540,7 @@ b8 renderer_kresource_texture_resources_acquire(struct renderer_system_state* st
             old_type = TEXTURE_TYPE_CUBE_ARRAY;
             break;
         }
-        success = state->backend->texture_resources_acquire(state->backend, data,kname_string_get(name), old_type, width, height, channel_count, mip_levels, array_size, flags);
+        success = state->backend->texture_resources_acquire(state->backend, data, kname_string_get(name), old_type, width, height, channel_count, mip_levels, array_size, flags);
     }
 
     //Only insert into the lookup table on success

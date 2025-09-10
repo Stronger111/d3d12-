@@ -694,14 +694,14 @@ b8 create_system_font_variant(system_font_lookup* lookup, u16 size, const char* 
         out_variant->atlas_size_x,
         out_variant->atlas_size_y,
         KRESOURCE_TEXTURE_FORMAT_RGB8,
-        true);
+        true, false);
     string_free(font_tex_name);
     font_tex_name = 0;
 
     //Create map resources.
     out_variant->atlas.filter_magnify = out_variant->atlas.filter_minify = TEXTURE_FILTER_MODE_LINEAR;
     out_variant->atlas.repeat_u = out_variant->atlas.repeat_v = out_variant->atlas.repeat_w = TEXTURE_REPEAT_CLAMP_TO_EDGE;
-    out_variant->atlas.texture = &out_variant->atlas_texture;
+    out_variant->atlas.texture = out_variant->atlas_texture;
     if (!renderer_kresource_texture_map_resources_acquire(engine_systems_get()->renderer_system, &out_variant->atlas)) {
         KERROR("Unable to acquire resources for font atlas texture map.");
         return false;

@@ -497,8 +497,8 @@ b8 application_initialize(struct application* game_inst) {
 
             //Get colourbuffer and depthbuffer from the currently active window.
             kwindow* current_window = engine_active_window_get();
-            kresource_texture* global_colourbuffer = &current_window->renderer_state->colourbuffer;
-            kresource_texture* global_depthbuffer = &current_window->renderer_state->depthbuffer;
+            kresource_texture* global_colourbuffer = current_window->renderer_state->colourbuffer;
+            kresource_texture* global_depthbuffer = current_window->renderer_state->depthbuffer;
 
             //create the rendergraph.
             if (!rendergraph_create(rg_config->configuration_str, global_colourbuffer, global_depthbuffer, &state->forward_graph)) {
