@@ -255,7 +255,7 @@ b8 engine_create(application* game_inst) {
     {
         //TODO: deserialize from application config. if provided.
         kresource_system_config resource_sys_config = { 0 };
-        resource_sys_config.max_resource_count =2000;
+        resource_sys_config.max_resource_count = 2000;
 
         kresource_system_initialize(&systems->kresource_system_memory_requirement, 0, &resource_sys_config);
         systems->kresource_state = kallocate(systems->kresource_system_memory_requirement, MEMORY_TAG_ENGINE);
@@ -868,10 +868,10 @@ b8 engine_run(application* game_inst) {
         audio_system_shutdown(systems->audio_system);
         plugin_system_shutdown(systems->plugin_system);
         shader_system_shutdown(systems->shader_system);
+        kresource_system_shutdown(systems->kresource_state);
         renderer_system_shutdown(systems->renderer_system);
         job_system_shutdown(systems->job_system);
         resource_system_shutdown(systems->resource_system);
-        kresource_system_shutdown(systems->kresource_state);
         input_system_shutdown(systems->input_system);
         event_system_shutdown(systems->event_system);
         kvar_system_shutdown(systems->kvar_system);

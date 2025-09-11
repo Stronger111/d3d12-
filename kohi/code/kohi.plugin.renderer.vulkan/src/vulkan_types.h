@@ -345,8 +345,6 @@ typedef struct vulkan_uniform_sampler_state {
      * @brief Instance texture map  pointers, which are used during rendering. These
      * are set by calls to set_sampler.
      */
-    struct texture_map** uniform_texture_maps;
-
     kresource_texture_map** uniform_kresource_texture_maps;
     /** @brief A descriptor state per descriptor, which in turn handles frames.
      * Count is managed in shader config.
