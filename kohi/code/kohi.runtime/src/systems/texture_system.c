@@ -186,7 +186,7 @@ kresource_texture* texture_system_request_cube(kname name, b8 auto_release, b8 m
         kname side_name = kname_create(buf);
         string_free(buf);
 
-        request.base.assets.data->type = KASSET_TYPE_IMAGE;
+        request.base.assets.data[i].type = KASSET_TYPE_IMAGE;
         request.base.assets.data[i].package_name = INVALID_KNAME; // TODO: automatic package name?
         request.base.assets.data[i].asset_name = side_name;
     }
@@ -394,7 +394,7 @@ struct texture_internal_data* texture_system_resource_get_internal_or_default(co
     k_handle tex_handle = t->renderer_texture_handle;
 
     //Texture isn't loaded yet, use a default.
-    if (t->base.generation == INVALID_ID_U8) {
+    if (t->base.generation == INVALID_ID) {
         // Texture generations are always invalid for default textures, so
        // check first if already using one.
        // TODO: Default texture for kresource_texture
@@ -1428,7 +1428,6 @@ static kresource_texture* default_texture_by_name(texture_system_state* state, k
     else if (name == state->default_kresource_terrain_texture->base.name) {
         return state->default_kresource_terrain_texture;
     }
-
     return 0;
 }
 

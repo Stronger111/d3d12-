@@ -235,7 +235,7 @@ static void asset_system_release_internal(struct asset_system_state* state, knam
                 kasset_type type = asset->type;
                 asset_handler* handler = &state->handlers[type];
                 if (!handler->release_asset) {
-                    KWARN("No release setup on handler for asset type %d, asset_name='%s', package_name='%s'", type, kname_string_get(asset_name), kname_string_get(package_name)); KWARN("No release setup on handler for asset type %d, fully_qualified_name='%s'", type, fully_qualified_name);
+                    KWARN("No release setup on handler for asset type %d, asset_name='%s', package_name='%s'", type, kname_string_get(asset_name), kname_string_get(package_name)); 
                 }
                 else {
                     //Release the asset-specific data.
@@ -254,7 +254,7 @@ static void asset_system_release_internal(struct asset_system_state* state, knam
         }
         else {
             // Entry not found, nothing to do.
-            KWARN("asset_system_release: Attempted to release asset '%s' (package '%s'), which does not exist or is not already loaded. Nothing to do.", kname_string_get(asset_name), kname_string_get(package_name)); KWARN("asset_system_release: Attempted to release an asset '%s',  which does not exist or is not already loaded. Nothing to do.", fully_qualified_name);
+            KWARN("asset_system_release: Attempted to release asset '%s' (package '%s'), which does not exist or is not already loaded. Nothing to do.", kname_string_get(asset_name), kname_string_get(package_name)); 
         }
     }
 }

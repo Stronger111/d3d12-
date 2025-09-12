@@ -13,7 +13,7 @@
 #include "defines.h"
 
 /** @brief Indicates if warning level logging is enabled. */
-#define LOG_WARN_ENABLE 1
+#define LOG_WARN_ENABLED 1
 /** @brief Indicates if info level logging is enabled. */
 #define LOG_INFO_ENABLED 1
 
@@ -91,7 +91,7 @@ KAPI void log_output(log_level level, const char* message, ...);
  * @param message The message to be logged.
  * @param ... Any formatted data that should be included in the log entry.
  */
-#define KWARN(message, ...)
+#define KWARN(message, ...) 
 #endif
 
 #if LOG_INFO_ENABLED == 1
