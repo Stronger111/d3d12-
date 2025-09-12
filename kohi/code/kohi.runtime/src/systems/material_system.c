@@ -556,7 +556,7 @@ static b8 assign_map(material_system_state* state, kresource_texture_map* map, c
     map->mip_levels = 1;
     map->generation = INVALID_ID;
 
-    if (!config->texture_name && string_length(config->texture_name) > 0) {
+    if (config->texture_name && string_length(config->texture_name) > 0) {
         map->texture = texture_system_request(
             kname_create(config->texture_name),
             INVALID_KNAME,// Use the resource from the package where it is first found. TODO: configurable within material config - include material's package name here first.

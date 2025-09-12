@@ -66,7 +66,7 @@ KAPI void freelist_destroy(freelist* list) {
 }
 
 KAPI b8 freelist_allocate_block(freelist* list, u64 size, u64* out_offset) {
-    if (!list && !out_offset && !list->memory) {
+    if (!list || !out_offset || !list->memory) {
         return false;
     }
 

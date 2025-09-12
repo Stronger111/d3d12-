@@ -66,6 +66,7 @@ KAPI b8 dynamic_allocator_destroy(dynamic_allocator* allocator) {
         kzero_memory(state->memory_block, state->total_size);
         state->total_size = 0;
         allocator->memory = 0;
+        return true;
     }
 
     KWARN("dynamic_allocator_destroy requires a pointer to an allocator. Destroy failed.");
