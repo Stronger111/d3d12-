@@ -393,14 +393,16 @@ typedef struct vulkan_shader {
      * Is 1 if only using global uniforms/samplers; otherwise 2.
      */
     u8 descriptor_set_count;
-    /** @brief Descriptor sets, max of 2. Index 0=global, 1=instance */
-    vulkan_descriptor_set_config descriptor_sets[2];
+    /** @brief Descriptor sets, max of 3. Index 0=global, 1=instance, 2=local */
+    vulkan_descriptor_set_config descriptor_sets[3];
     /** @brief An array of attribute descriptions for this shader. */
     VkVertexInputAttributeDescription attributes[VULKAN_SHADER_MAX_ATTRIBUTES];
     /** @brief Face culling mode, provided by the front end. */
     face_cull_mode cull_mode;
 
     u32 max_instances;
+
+    u32 max_local_count;
 
     /** @brief The number of shader stages in this shader. */
     u8 stage_count;
@@ -416,8 +418,8 @@ typedef struct vulkan_shader {
     /** @brief The descriptor pool used for this shader. */
     VkDescriptorPool descriptor_pool;
 
-    /** @brief Descriptor set layouts, max of 2. Index 0=global, 1=instance. */
-    VkDescriptorSetLayout descriptor_set_layouts[2];
+    /** @brief Descriptor set layouts, max of 2. Index 0=global, 1=instance, 2=local (samplers only). */
+    VkDescriptorSetLayout descriptor_set_layouts[3];
 
     /** @brief Global descriptor sets, one per swapchain image. */
     VkDescriptorSet* global_descriptor_sets;
@@ -443,6 +445,9 @@ typedef struct vulkan_shader {
     VkPrimitiveTopology current_topology;
 
     vulkan_shader_instance_state* instance_states;
+
+    /** @brief The states for all local things/entities/actors/whatever. */
+    vulkan_shader_instance_state* local_states;
 }vulkan_shader;
 
 // Forward declare shader compiler.

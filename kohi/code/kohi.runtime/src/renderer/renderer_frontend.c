@@ -524,7 +524,7 @@ b8 renderer_kresource_texture_resources_acquire(struct renderer_system_state* st
         success = true;
     }
     else {
-        success = state->backend->texture_resources_acquire(state->backend, data, kname_string_get(name),type, width, height, channel_count, mip_levels, array_size, flags);
+        success = state->backend->texture_resources_acquire(state->backend, data, kname_string_get(name), type, width, height, channel_count, mip_levels, array_size, flags);
     }
 
     //Only insert into the lookup table on success
@@ -1023,6 +1023,14 @@ b8 renderer_shader_instance_resources_acquire(struct renderer_system_state* stat
 
 b8 renderer_shader_instance_resources_release(struct renderer_system_state* state, shader* s, u32 instance_id) {
     return state->backend->shader_instance_resources_release(state->backend, s, instance_id);
+}
+
+b8 renderer_shader_local_resources_acquire(struct renderer_system_state* state, struct shader* s, const shader_instance_resource_config* config, u32* out_local_id) {
+    return state->backend->shader_local_resources_acquire(state->backend, s, config, out_local_id);
+}
+
+b8 renderer_shader_local_resources_release(struct renderer_system_state* state, struct shader* s, u32 local_id) {
+    return state->backend->shader_local_resources_release(state->backend, s, local_id);
 }
 
 shader_uniform* renderer_shader_uniform_get_by_location(shader* s, u16 location) {

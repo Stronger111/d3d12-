@@ -90,6 +90,10 @@
         "kresource_system.h": "c",
         "system_error": "c",
         "xlocale": "c",
-        "malloc.h": "c"
+        "malloc.h": "c",
+        "xmemory": "c",
+        "algorithm": "c",
+        "xiosbase": "c",
+        "xutility": "c"
     },
 }

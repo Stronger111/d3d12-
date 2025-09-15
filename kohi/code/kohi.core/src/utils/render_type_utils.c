@@ -133,13 +133,17 @@ const char* shader_scope_to_string(shader_scope scope) {
 texture_repeat string_to_texture_repeat(const char* str) {
     if (strings_equali("repeat", str)) {
         return TEXTURE_REPEAT_REPEAT;
-    } else if (strings_equali("clamp_to_edge", str)) {
+    }
+    else if (strings_equali("clamp_to_edge", str)) {
         return TEXTURE_REPEAT_CLAMP_TO_EDGE;
-    } else if (strings_equali("clamp_to_border", str)) {
+    }
+    else if (strings_equali("clamp_to_border", str)) {
         return TEXTURE_REPEAT_CLAMP_TO_BORDER;
-    } else if (strings_equali("mirrored_repeat", str)) {
+    }
+    else if (strings_equali("mirrored_repeat", str)) {
         return TEXTURE_REPEAT_MIRRORED_REPEAT;
-    } else {
+    }
+    else {
         KASSERT_MSG(false, "Unrecognized texture repeat.");
         return TEXTURE_REPEAT_REPEAT;
     }
@@ -148,9 +152,11 @@ texture_repeat string_to_texture_repeat(const char* str) {
 texture_filter string_to_texture_filter_mode(const char* str) {
     if (strings_equali("linear", str)) {
         return TEXTURE_FILTER_MODE_LINEAR;
-    } else if (strings_equali("nearest", str)) {
+    }
+    else if (strings_equali("nearest", str)) {
         return TEXTURE_FILTER_MODE_LINEAR;
-    } else {
+    }
+    else {
         KASSERT_MSG(false, "Unrecognized texture filter type.");
         return TEXTURE_FILTER_MODE_LINEAR;
     }
@@ -159,43 +165,62 @@ texture_filter string_to_texture_filter_mode(const char* str) {
 shader_uniform_type string_to_shader_uniform_type(const char* str) {
     if (strings_equali("f32", str)) {
         return SHADER_UNIFORM_TYPE_FLOAT32;
-    } else if (strings_equali("vec2", str)) {
+    }
+    else if (strings_equali("vec2", str)) {
         return SHADER_UNIFORM_TYPE_FLOAT32_2;
-    } else if (strings_equali("vec3", str)) {
+    }
+    else if (strings_equali("vec3", str)) {
         return SHADER_UNIFORM_TYPE_FLOAT32_3;
-    } else if (strings_equali("vec4", str)) {
+    }
+    else if (strings_equali("vec4", str)) {
         return SHADER_UNIFORM_TYPE_FLOAT32_4;
-    } else if (strings_equali("i8", str)) {
+    }
+    else if (strings_equali("i8", str)) {
         return SHADER_UNIFORM_TYPE_INT8;
-    } else if (strings_equali("i16", str)) {
+    }
+    else if (strings_equali("i16", str)) {
         return SHADER_UNIFORM_TYPE_INT16;
-    } else if (strings_equali("i32", str)) {
+    }
+    else if (strings_equali("i32", str)) {
         return SHADER_UNIFORM_TYPE_INT32;
-    } else if (strings_equali("u8", str)) {
+    }
+    else if (strings_equali("u8", str)) {
         return SHADER_UNIFORM_TYPE_UINT8;
-    } else if (strings_equali("u16", str)) {
+    }
+    else if (strings_equali("u16", str)) {
         return SHADER_UNIFORM_TYPE_UINT16;
-    } else if (strings_equali("u32", str)) {
+    }
+    else if (strings_equali("u32", str)) {
         return SHADER_UNIFORM_TYPE_UINT32;
-    } else if (strings_equali("mat4", str)) {
+    }
+    else if (strings_equali("mat4", str)) {
         return SHADER_UNIFORM_TYPE_MATRIX_4;
-    } else if (strings_equali("sampler1d", str)) {
+    }
+    else if (strings_equali("sampler1d", str)) {
         return SHADER_UNIFORM_TYPE_SAMPLER_1D;
-    } else if (strings_equali("sampler2d", str)) {
+    }
+    else if (strings_equali("sampler2d", str)) {
         return SHADER_UNIFORM_TYPE_SAMPLER_2D;
-    } else if (strings_equali("sampler3d", str)) {
+    }
+    else if (strings_equali("sampler3d", str)) {
         return SHADER_UNIFORM_TYPE_SAMPLER_3D;
-    } else if (strings_equali("sampler1dArray", str)) {
+    }
+    else if (strings_equali("sampler1dArray", str)) {
         return SHADER_UNIFORM_TYPE_SAMPLER_1D_ARRAY;
-    } else if (strings_equali("sampler2dArray", str)) {
+    }
+    else if (strings_equali("sampler2dArray", str)) {
         return SHADER_UNIFORM_TYPE_SAMPLER_2D_ARRAY;
-    } else if (strings_equali("samplerCube", str)) {
+    }
+    else if (strings_equali("samplerCube", str)) {
         return SHADER_UNIFORM_TYPE_SAMPLER_CUBE;
-    } else if (strings_equali("samplerCubeArray", str)) {
+    }
+    else if (strings_equali("samplerCubeArray", str)) {
         return SHADER_UNIFORM_TYPE_SAMPLER_CUBE_ARRAY;
-    } else if (strings_equali("custom", str)) {
+    }
+    else if (strings_equali("custom", str)) {
         return SHADER_UNIFORM_TYPE_CUSTOM;
-    } else {
+    }
+    else {
         KASSERT_MSG(false, "Unrecognized uniform type.");
         return SHADER_UNIFORM_TYPE_FLOAT32;
     }
@@ -204,27 +229,38 @@ shader_uniform_type string_to_shader_uniform_type(const char* str) {
 shader_attribute_type string_to_shader_attribute_type(const char* str) {
     if (strings_equali("f32", str) || strings_equali("float", str)) {
         return SHADER_ATTRIB_TYPE_FLOAT32;
-    } else if (strings_equali("vec2", str)) {
+    }
+    else if (strings_equali("vec2", str)) {
         return SHADER_ATTRIB_TYPE_FLOAT32_2;
-    } else if (strings_equali("vec3", str)) {
+    }
+    else if (strings_equali("vec3", str)) {
         return SHADER_ATTRIB_TYPE_FLOAT32_3;
-    } else if (strings_equali("vec4", str)) {
+    }
+    else if (strings_equali("vec4", str)) {
         return SHADER_ATTRIB_TYPE_FLOAT32_4;
-    } else if (strings_equali("mat4", str)) {
+    }
+    else if (strings_equali("mat4", str)) {
         return SHADER_ATTRIB_TYPE_MATRIX_4;
-    } else if (strings_equali("i8", str)) {
+    }
+    else if (strings_equali("i8", str)) {
         return SHADER_ATTRIB_TYPE_INT8;
-    } else if (strings_equali("u8", str)) {
+    }
+    else if (strings_equali("u8", str)) {
         return SHADER_ATTRIB_TYPE_UINT8;
-    } else if (strings_equali("i16", str)) {
+    }
+    else if (strings_equali("i16", str)) {
         return SHADER_ATTRIB_TYPE_INT16;
-    } else if (strings_equali("u16", str)) {
+    }
+    else if (strings_equali("u16", str)) {
         return SHADER_ATTRIB_TYPE_UINT16;
-    } else if (strings_equali("i32", str) || strings_equali("int", str)) {
+    }
+    else if (strings_equali("i32", str) || strings_equali("int", str)) {
         return SHADER_ATTRIB_TYPE_INT32;
-    } else if (strings_equali("u32", str)) {
+    }
+    else if (strings_equali("u32", str)) {
         return SHADER_ATTRIB_TYPE_UINT32;
-    } else {
+    }
+    else {
         KERROR("Unrecognized attribute type '%s'. Defaulting to i32", str);
         return SHADER_ATTRIB_TYPE_INT32;
     }
@@ -233,13 +269,17 @@ shader_attribute_type string_to_shader_attribute_type(const char* str) {
 shader_stage string_to_shader_stage(const char* str) {
     if (strings_equali("vertex", str) || strings_equali("vert", str)) {
         return SHADER_STAGE_VERTEX;
-    } else if (strings_equali("geometry", str) || strings_equali("geom", str)) {
+    }
+    else if (strings_equali("geometry", str) || strings_equali("geom", str)) {
         return SHADER_STAGE_GEOMETRY;
-    } else if (strings_equali("fragment", str) || strings_equali("frag", str)) {
+    }
+    else if (strings_equali("fragment", str) || strings_equali("frag", str)) {
         return SHADER_STAGE_FRAGMENT;
-    } else if (strings_equali("compute", str) || strings_equali("comp", str)) {
+    }
+    else if (strings_equali("compute", str) || strings_equali("comp", str)) {
         return SHADER_STAGE_COMPUTE;
-    } else {
+    }
+    else {
         KERROR("Unknown shader stage '%s'. Defaulting to vertex.", str);
         return SHADER_STAGE_VERTEX;
     }
@@ -248,11 +288,14 @@ shader_stage string_to_shader_stage(const char* str) {
 shader_scope string_to_shader_scope(const char* str) {
     if (strings_equali("global", str)) {
         return SHADER_SCOPE_GLOBAL;
-    } else if (strings_equali("instance", str)) {
+    }
+    else if (strings_equali("instance", str)) {
         return SHADER_SCOPE_INSTANCE;
-    } else if (strings_equali("local", str)) {
+    }
+    else if (strings_equali("local", str)) {
         return SHADER_SCOPE_LOCAL;
-    } else {
+    }
+    else {
         KERROR("Unknown shader scope '%s'. Defaulting to global.", str);
         return SHADER_SCOPE_GLOBAL;
     }
@@ -264,8 +307,6 @@ const char* kmaterial_type_to_string(kmaterial_type type) {
         return "pbr";
     case KMATERIAL_TYPE_PBR_WATER:
         return "pbr_water";
-    case KMATERIAL_TYPE_PBR_TERRAIN:
-        return "pbr_terrain";
     case KMATERIAL_TYPE_UNLIT:
         return "unlit";
     case KMATERIAL_TYPE_CUSTOM:
@@ -279,15 +320,17 @@ const char* kmaterial_type_to_string(kmaterial_type type) {
 kmaterial_type string_to_kmaterial_type(const char* str) {
     if (strings_equali(str, "pbr")) {
         return KMATERIAL_TYPE_PBR;
-    } else if (strings_equali(str, "pbr_water")) {
+    }
+    else if (strings_equali(str, "pbr_water")) {
         return KMATERIAL_TYPE_PBR_WATER;
-    } else if (strings_equali(str, "pbr_terrain")) {
-        return KMATERIAL_TYPE_PBR_TERRAIN;
-    } else if (strings_equali(str, "unlit")) {
+    }
+    else if (strings_equali(str, "unlit")) {
         return KMATERIAL_TYPE_UNLIT;
-    } else if (strings_equali(str, "custom")) {
+    }
+    else if (strings_equali(str, "custom")) {
         return KMATERIAL_TYPE_CUSTOM;
-    } else {
+    }
+    else {
         KASSERT_MSG(false, "Unrecognized material type.");
         return KMATERIAL_TYPE_UNLIT;
     }
@@ -326,27 +369,38 @@ const char* material_map_channel_to_string(kasset_material_map_channel channel) 
 kasset_material_map_channel string_to_material_map_channel(const char* str) {
     if (strings_equali(str, "albedo")) {
         return KASSET_MATERIAL_MAP_CHANNEL_ALBEDO;
-    } else if (strings_equali(str, "normal")) {
+    }
+    else if (strings_equali(str, "normal")) {
         return KASSET_MATERIAL_MAP_CHANNEL_NORMAL;
-    } else if (strings_equali(str, "metallic")) {
+    }
+    else if (strings_equali(str, "metallic")) {
         return KASSET_MATERIAL_MAP_CHANNEL_METALLIC;
-    } else if (strings_equali(str, "roughness")) {
+    }
+    else if (strings_equali(str, "roughness")) {
         return KASSET_MATERIAL_MAP_CHANNEL_ROUGHNESS;
-    } else if (strings_equali(str, "ao")) {
+    }
+    else if (strings_equali(str, "ao")) {
         return KASSET_MATERIAL_MAP_CHANNEL_AO;
-    } else if (strings_equali(str, "emissive")) {
+    }
+    else if (strings_equali(str, "emissive")) {
         return KASSET_MATERIAL_MAP_CHANNEL_EMISSIVE;
-    } else if (strings_equali(str, "clearcoat")) {
+    }
+    else if (strings_equali(str, "clearcoat")) {
         return KASSET_MATERIAL_MAP_CHANNEL_CLEAR_COAT;
-    } else if (strings_equali(str, "clearcoat_roughness")) {
+    }
+    else if (strings_equali(str, "clearcoat_roughness")) {
         return KASSET_MATERIAL_MAP_CHANNEL_CLEAR_COAT_ROUGHNESS;
-    } else if (strings_equali(str, "dudv")) {
+    }
+    else if (strings_equali(str, "dudv")) {
         return KASSET_MATERIAL_MAP_CHANNEL_WATER_DUDV;
-    } else if (strings_equali(str, "diffuse")) {
+    }
+    else if (strings_equali(str, "diffuse")) {
         return KASSET_MATERIAL_MAP_CHANNEL_DIFFUSE;
-    } else if (strings_equali(str, "specular")) {
+    }
+    else if (strings_equali(str, "specular")) {
         return KASSET_MATERIAL_MAP_CHANNEL_SPECULAR;
-    } else {
+    }
+    else {
         KASSERT_MSG(false, "map channel not supported for material type.");
         return KASSET_MATERIAL_MAP_CHANNEL_DIFFUSE;
     }

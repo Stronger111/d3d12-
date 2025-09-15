@@ -49,9 +49,9 @@ KAPI b8 dynamic_allocator_create(u64 total_size, u64* memory_requirement, void* 
     out_allocator->memory = memory;
     dynamic_allocator_state* state = out_allocator->memory;  // memory首地址
     state->total_size = total_size;
-    state->freelist_block = (void*)(out_allocator->memory + sizeof(dynamic_allocator_state));
+    state->freelist_block = (void*)((u8*)out_allocator->memory + sizeof(dynamic_allocator_state));
     // state->memory_block 空闲队列所占空间大小
-    state->memory_block = (void*)(state->freelist_block + freelist_requirement);
+    state->memory_block = (void*)((u8*)state->freelist_block + freelist_requirement);
 
     // Actually create the freelist
     freelist_create(total_size, &freelist_requirement, state->freelist_block, &state->list);
@@ -96,7 +96,7 @@ void* dynamic_allocator_allocate_aligned(dynamic_allocator* allocator, u64 size,
             alloc_header
             */
             // Get the base pointer, or the unaligned memory block.
-            void* ptr = (void*)((u64)state->memory_block + base_offset);
+            void* ptr = (void*)((u8*)state->memory_block + base_offset);
             // Start the alignment after enough space to hold a u32. This allows for the u32 to be stored
             // immediately before the user block, while maintaining alignment on said user block.
             u64 aligned_block_offset = get_aligned((u64)ptr + KSIZE_STORAGE, alignment);
@@ -133,8 +133,8 @@ b8 dynamic_allocator_free_aligned(dynamic_allocator* allocator, void* block) {
     }
 
     dynamic_allocator_state* state = allocator->memory;
-    if (block < state->memory_block || block > state->memory_block + state->total_size) {
-        void* end_of_block = (void*)(state->memory_block + state->total_size);
+    if ((u8*)block < (u8*)state->memory_block || (u8*)block > ((u8*)state->memory_block + state->total_size)) {
+        void* end_of_block = (void*)((u8*)state->memory_block + state->total_size);
         KERROR("dynamic_allocator_free_aligned trying to release block (0x%p) outside of allocator range (0x%p)-(0x%p)", block, state->memory_block, end_of_block);
         return false;
     }
@@ -142,7 +142,7 @@ b8 dynamic_allocator_free_aligned(dynamic_allocator* allocator, void* block) {
     u32* block_size = (u32*)((u64)block - KSIZE_STORAGE);
     alloc_header* header = (alloc_header*)((u64)block + *block_size);
     u64 required_size = header->alignment + sizeof(alloc_header) + KSIZE_STORAGE + *block_size;
-    u64 offset = (u64)header->start - (u64)state->memory_block;
+    u64 offset = (u64)((u8*)header->start - (u8*)state->memory_block);
     if (!freelist_free_block(&state->list, required_size, offset)) {
         KERROR("dynamic_allocator_free_aligned failed.");
         return false;
