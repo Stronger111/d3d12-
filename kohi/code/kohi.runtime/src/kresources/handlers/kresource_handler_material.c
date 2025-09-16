@@ -2,7 +2,7 @@
 
 #include "assets/kasset_types.h"
 #include "core/engine.h"
-#include "debug/kassert.h"
+#include "kdebug/kassert.h"
 #include "defines.h"
 #include "kresources/kresource_types.h"
 #include "logger.h"
