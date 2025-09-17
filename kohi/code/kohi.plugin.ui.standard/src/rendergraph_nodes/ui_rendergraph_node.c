@@ -167,7 +167,7 @@ b8 ui_rendergraph_node_execute(struct rendergraph_node* self, struct frame_data*
     // Apply globals
     shader_system_uniform_set_by_location(internal_data->shader_id, internal_data->sui_locations.projection, &internal_data->projection);
     shader_system_uniform_set_by_location(internal_data->shader_id, internal_data->sui_locations.view, &internal_data->view);
-    shader_system_apply_global(internal_data->shader_id);
+    shader_system_apply_per_draw(internal_data->shader_id);
 
     u32 renderable_count = darray_length(internal_data->render_data.renderables);
     for (u32 i = 0; i < renderable_count; ++i) {
@@ -192,7 +192,7 @@ b8 ui_rendergraph_node_execute(struct rendergraph_node* self, struct frame_data*
             renderer_clear_stencil_set(internal_data->renderer, 0.0f);
 
             shader_system_uniform_set_by_location(internal_data->shader_id, internal_data->sui_locations.model, &renderable->clip_mask_render_data->model);
-            shader_system_apply_local(internal_data->shader_id);
+            shader_system_apply_per_draw(internal_data->shader_id);
 
             // Draw the clip mask geometry
             renderer_geometry_draw(renderable->clip_mask_render_data);
@@ -218,11 +218,11 @@ b8 ui_rendergraph_node_execute(struct rendergraph_node* self, struct frame_data*
         shader_system_uniform_set_by_location(internal_data->shader_id, internal_data->sui_locations.properties, &renderable->render_data.diffuse_colour);
         kresource_texture_map* atlas = renderable->atlas_override ? renderable->atlas_override : internal_data->ui_atlas;
         shader_system_uniform_set_by_location(internal_data->shader_id, internal_data->sui_locations.diffuse_map, atlas);
-        shader_system_apply_instance(internal_data->shader_id);
+        shader_system_apply_per_group(internal_data->shader_id);
 
         // Apply local
         shader_system_uniform_set_by_location(internal_data->shader_id, internal_data->sui_locations.model, &renderable->render_data.model);
-        shader_system_apply_local(internal_data->shader_id);
+        shader_system_apply_per_draw(internal_data->shader_id);
 
         // Draw
         renderer_geometry_draw(&renderable->render_data);

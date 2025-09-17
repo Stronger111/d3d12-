@@ -94,6 +94,9 @@
         "xmemory": "c",
         "algorithm": "c",
         "xiosbase": "c",
-        "xutility": "c"
+        "xutility": "c",
+        "timeline_system.h": "c",
+        "kassert.h": "c",
+        "vfs.h": "c"
     },
 }

@@ -389,7 +389,7 @@ b8 render_view_pick_on_render(const render_view* self, const render_view_packet*
         if (!shader_system_uniform_set_by_location(data->world_shader_info.view_location, &data->world_shader_info.view)) {
             KERROR("Failed to apply view matrix");
         }
-        shader_system_apply_global(true, p_frame_data);
+        shader_system_apply_per_draw(true, p_frame_data);
 
         // Draw geometries. Start from 0 since world geometries are added first, and stop at the world geometry count.
         u32 world_geometry_count = !packet_data->world_mesh_data ? 0 : darray_length(packet_data->world_mesh_data);
@@ -410,7 +410,7 @@ b8 render_view_pick_on_render(const render_view* self, const render_view_packet*
             }
 
             b8 needs_update = !data->instance_updated[current_instance_id];
-            shader_system_apply_instance(needs_update, p_frame_data);
+            shader_system_apply_per_group(needs_update, p_frame_data);
             data->instance_updated[current_instance_id] = true;
 
             // Apply the locals
@@ -438,7 +438,7 @@ b8 render_view_pick_on_render(const render_view* self, const render_view_packet*
             KERROR("Failed to apply view matrix");
         }
 
-        shader_system_apply_global(true, p_frame_data);
+        shader_system_apply_per_draw(true, p_frame_data);
 
         // Draw geometries. Start from 0 since terrain geometries are added first, and stop at the terrain geometry count.
         u32 terrain_geometry_count = !packet_data->terrain_mesh_data ? 0 : darray_length(packet_data->terrain_mesh_data);
@@ -459,7 +459,7 @@ b8 render_view_pick_on_render(const render_view* self, const render_view_packet*
             }
 
             b8 needs_update = !data->instance_updated[current_instance_id];
-            shader_system_apply_instance(needs_update, p_frame_data);
+            shader_system_apply_per_group(needs_update, p_frame_data);
             data->instance_updated[current_instance_id] = true;
 
             // Apply the locals
@@ -503,7 +503,7 @@ b8 render_view_pick_on_render(const render_view* self, const render_view_packet*
         if (!shader_system_uniform_set_by_location(data->ui_shader_info.view_location, &data->ui_shader_info.view)) {
             KERROR("Failed to apply view matrix");
         }
-        shader_system_apply_global(true, p_frame_data);
+        shader_system_apply_per_draw(true, p_frame_data);
 
         // Draw geometries. Start off where world geometries left off.
         for (u32 i = world_geometry_count; i < packet->geometry_count; ++i) {
@@ -523,7 +523,7 @@ b8 render_view_pick_on_render(const render_view* self, const render_view_packet*
             }
 
             b8 needs_update = !data->instance_updated[current_instance_id];
-            shader_system_apply_instance(needs_update, p_frame_data);
+            shader_system_apply_per_group(needs_update, p_frame_data);
             data->instance_updated[current_instance_id] = true;
 
             // Apply the locals
@@ -551,7 +551,7 @@ b8 render_view_pick_on_render(const render_view* self, const render_view_packet*
                return false;
            }
 
-           shader_system_apply_instance(true);
+           shader_system_apply_per_group(true);
 
            // Apply the locals
            mat4 model = transform_world_get(&text->transform);

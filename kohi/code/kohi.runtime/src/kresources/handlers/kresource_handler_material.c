@@ -164,14 +164,16 @@ static void material_on_metallic_roughness_ao_image_asset_loaded(asset_request_r
                     height = m->asset->height;
                     pixel_array_size = sizeof(u8) * width * height * 4;
                     pixels = kallocate(pixel_array_size, MEMORY_TAG_RESOURCE);
-                } else if (width != m->asset->width || height != m->asset->height) {
+                }
+                else if (width != m->asset->width || height != m->asset->height) {
                     KWARN("All assets for material metallic, roughness and AO maps must be the same resolution. Default data will be used instead.");
                     // Use default data instead by releasing the asset and resetting the state.
                     asset_system_release(engine_systems_get()->asset_state, m->image_asset_name, m->image_asset_package_name);
                     m->asset = 0;
                     m->state = MRA_STATE_UNINITIALIZED;
                 }
-            } else if (m->state == MRA_STATE_UNINITIALIZED) {
+            }
+            else if (m->state == MRA_STATE_UNINITIALIZED) {
                 // TODO: Use default data instead.
             }
         }
@@ -206,7 +208,8 @@ static void material_on_metallic_roughness_ao_image_asset_loaded(asset_request_r
                     }
                 }
 
-            } else if (m->state == MRA_STATE_UNINITIALIZED) {
+            }
+            else if (m->state == MRA_STATE_UNINITIALIZED) {
                 // Use default data instead.
                 u32 offset = 0;
                 u8 value = 0;
@@ -269,7 +272,8 @@ static void material_on_metallic_roughness_ao_image_asset_loaded(asset_request_r
             KTRACE("Successfully uploaded combined texture data for material resource '%s'", kname_string_get(listener->typed_resource->base.name));
         }
 
-    } else {
+    }
+    else {
         KERROR("Asset failed to load. See logs for details.");
     }
 }
@@ -305,7 +309,8 @@ static void material_kasset_on_result(asset_request_result result, const struct 
                     if (!process_asset_material_map(listener->typed_resource->base.name, map, &listener->typed_resource->albedo_diffuse_map)) {
                         KERROR("Failed to process material map. See logs for details.");
                     }
-                } else {
+                }
+                else {
                     KERROR("An unlit material does not use a map of '%u' type (name='%s'). Skipping.", map->channel, map->name);
                     continue;
                 }
@@ -318,9 +323,11 @@ static void material_kasset_on_result(asset_request_result result, const struct 
 
                 if (prop->name == kname_create("diffuse_colour")) {
                     listener->typed_resource->diffuse_colour = prop->value.v4;
-                } else if (prop->name == kname_create("specular_strength")) {
+                }
+                else if (prop->name == kname_create("specular_strength")) {
                     listener->typed_resource->specular_strength = prop->value.f32;
-                } else {
+                }
+                else {
                     KWARN("Property '%s' for material '%s' not recognized. Skipping.", kname_string_get(prop->name), kname_string_get(listener->typed_resource->base.name));
                 }
             }
@@ -438,22 +445,14 @@ static void material_kasset_on_result(asset_request_result result, const struct 
             // Acquire instance resources from the PBR shader.
             kresource_material* m = listener->typed_resource;
 
-            kresource_texture_map* material_maps[PBR_MATERIAL_CHANNEL_COUNT] = {&m->albedo_diffuse_map,
+            kresource_texture_map* material_maps[PBR_MATERIAL_CHANNEL_COUNT] = { &m->albedo_diffuse_map,
                                                                                 &m->normal_map,
-                                                                                &m->metallic_roughness_ao_map};
+                                                                                &m->metallic_roughness_ao_map };
 
             u32 pbr_shader_id = shader_system_get_id("Shader.PBRMaterial");
-            if (!shader_system_shader_instance_acquire(pbr_shader_id, PBR_MATERIAL_CHANNEL_COUNT, material_maps, &m->instance_id)) {
+            if (!shader_system_shader_group_acquire(pbr_shader_id, PBR_MATERIAL_CHANNEL_COUNT, material_maps, &m->instance_id)) {
                 KASSERT_MSG(false, "Failed to acquire renderer resources for default PBR material. Application cannot continue.");
             }
-
-            // IBL cube texture - FIXME: This should also not be done here (but local-level), but be applied as part of the PBR pass.
-            shader_instance_uniform_texture_config* ibl_cube_texture = &instance_resource_config.uniform_configs[2];
-            /* ibl_cube_texture->uniform_location = state_ptr->pbr_locations.ibl_cube_texture; */
-            ibl_cube_texture->kresource_texture_map_count = 1;
-            ibl_cube_texture->kresource_texture_maps = kallocate(sizeof(kresource_texture_map*) * ibl_cube_texture->kresource_texture_map_count, MEMORY_TAG_ARRAY);
-            ibl_cube_texture->kresource_texture_maps[0] = &m->maps[SAMP_IRRADIANCE_MAP];
-
         } break;
         case KMATERIAL_TYPE_CUSTOM:
             KASSERT_MSG(false, "custom material type not yet supported.");
@@ -464,11 +463,11 @@ static void material_kasset_on_result(asset_request_result result, const struct 
         }
 
         listener->typed_resource->base.state = KRESOURCE_STATE_LOADED;
-    } else {
+    }
+    else {
         KERROR("Failed to load a required asset for material resource '%s'. Resource may not appear correctly when rendered.", kname_string_get(listener->typed_resource->base.name));
     }
 
-destroy_request:
     // Destroy the request.
     array_kresource_asset_info_destroy(&listener->request_info->base.assets);
     kfree(listener->request_info, sizeof(kresource_material_request_info), MEMORY_TAG_RESOURCE);

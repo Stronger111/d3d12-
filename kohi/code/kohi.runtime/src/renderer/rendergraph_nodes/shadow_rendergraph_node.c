@@ -271,7 +271,7 @@ b8 shadow_rendergraph_node_execute(rendergraph_node* self, frame_data* p_frame_d
             }
         }
 
-        shader_system_apply_global(internal_data->shader_id);
+        shader_system_apply_per_draw(internal_data->shader_id);
 
         // Verify enough instance resources for this frame.
         // This is done by taking the highest material instance id
@@ -357,12 +357,12 @@ b8 shadow_rendergraph_node_execute(rendergraph_node* self, frame_data* p_frame_d
                     KERROR("Failed to apply shadowmap color_map uniform to static geometry.");
                     return false;
                 }
-                shader_system_apply_instance(internal_data->shader_id);
+                shader_system_apply_per_group(internal_data->shader_id);
 
                 // Apply the locals
                 shader_system_uniform_set_by_location(internal_data->shader_id, internal_data->locations.model_location, &g->model);
                 shader_system_uniform_set_by_location(internal_data->shader_id, internal_data->locations.cascade_index_location, &p);
-                shader_system_apply_local(internal_data->shader_id);
+                shader_system_apply_per_draw(internal_data->shader_id);
                 // Invert if needed
                 if (internal_data->geometries[i].winding_inverted) {
                     renderer_winding_set(RENDERER_WINDING_CLOCKWISE);
@@ -397,7 +397,7 @@ b8 shadow_rendergraph_node_execute(rendergraph_node* self, frame_data* p_frame_d
                 }
             }
 
-            shader_system_apply_global(internal_data->terrain_shader_id);
+            shader_system_apply_per_draw(internal_data->terrain_shader_id);
 
             for (u32 i = 0; i < internal_data->terrain_geometry_count; ++i) {
                 geometry_render_data* terrain = &internal_data->terrain_geometries[i];
@@ -405,7 +405,7 @@ b8 shadow_rendergraph_node_execute(rendergraph_node* self, frame_data* p_frame_d
                 // Apply the locals
                 shader_system_uniform_set_by_location(internal_data->terrain_shader_id, internal_data->terrain_locations.model_location, &terrain->model);
                 shader_system_uniform_set_by_location(internal_data->terrain_shader_id, internal_data->terrain_locations.cascade_index_location, &p);
-                shader_system_apply_local(internal_data->terrain_shader_id);
+                shader_system_apply_per_draw(internal_data->terrain_shader_id);
 
                 // Draw it.
                 renderer_geometry_draw(terrain);

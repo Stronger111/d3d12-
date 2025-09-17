@@ -2097,7 +2097,7 @@ static b8 shader_create_modules_and_pipelines(renderer_backend_interface* backen
         pipeline_config.push_constant_range_count = 1;
         range push_constant_range;
         push_constant_range.offset = 0;
-        push_constant_range.size = s->local_ubo_stride;
+        push_constant_range.size = s->per_draw_ubo_stride;
         pipeline_config.push_constant_ranges = &push_constant_range;
         pipeline_config.name = string_duplicate(s->name);
         pipeline_config.topology_types = s->topology_types;
@@ -2397,7 +2397,7 @@ b8 vulkan_renderer_shader_initialize(renderer_backend_interface* backend, shader
     s->required_ubo_alignment = context->device.properties.limits.minUniformBufferOffsetAlignment;
 
     // Make sure the UBO is aligned according to device requirements.
-    s->global_ubo_stride = get_aligned(s->global_ubo_size, s->required_ubo_alignment);
+    s->per_frame_ubo_stride = get_aligned(s->per_frame_ubo_size, s->required_ubo_alignment);
     s->ubo_stride = get_aligned(s->ubo_size, s->required_ubo_alignment);
 
     internal_shader->mapped_uniform_buffer_blocks = kallocate(sizeof(void*) * image_count, MEMORY_TAG_ARRAY);
@@ -2405,7 +2405,7 @@ b8 vulkan_renderer_shader_initialize(renderer_backend_interface* backend, shader
     internal_shader->uniform_buffer_count = image_count;
 
     // Uniform  buffer.
-    u64 total_buffer_size = s->global_ubo_stride + (s->ubo_stride * internal_shader->max_instances);
+    u64 total_buffer_size = s->per_frame_ubo_stride + (s->ubo_stride * internal_shader->max_instances);
     for (u32 i = 0;i < image_count;++i) {
         const char* buffer_name = string_format("renderbuffer_uniform_%s_idx_%d", s->name, i);
         if (!renderer_renderbuffer_create(buffer_name, RENDERBUFFER_TYPE_UNIFORM, total_buffer_size, RENDERBUFFER_TRACK_TYPE_FREELIST, &internal_shader->uniform_buffers[i])) {
@@ -2423,10 +2423,10 @@ b8 vulkan_renderer_shader_initialize(renderer_backend_interface* backend, shader
     //
     //  Allocate space for the global UBO, whcih should occupy the _stride_ space
     // _not_ the actual size used.
-    if (s->global_ubo_size > 0 && s->global_ubo_stride > 0) {
+    if (s->per_frame_ubo_size > 0 && s->per_frame_ubo_stride > 0) {
         //Per swapchain image
         for (u32 i = 0;i < internal_shader->uniform_buffer_count;++i) {
-            if (!renderer_renderbuffer_allocate(&internal_shader->uniform_buffers[i], s->global_ubo_stride, &s->global_ubo_offset)) {
+            if (!renderer_renderbuffer_allocate(&internal_shader->uniform_buffers[i], s->per_frame_ubo_stride, &s->global_ubo_offset)) {
                 KERROR("Failed to allocate space for the uniform buffer!");
                 return false;
             }
@@ -2695,7 +2695,7 @@ b8 vulkan_renderer_shader_apply_globals(renderer_backend_interface* backend, sha
         descriptor_set_index,
         &internal->global_ubo_descriptor_state,
         s->global_ubo_offset,
-        s->global_ubo_stride,
+        s->per_frame_ubo_stride,
         s->global_uniform_count,
         internal->global_sampler_uniforms,
         s->global_uniform_sampler_count)) {
@@ -2716,7 +2716,7 @@ b8 vulkan_renderer_shader_apply_instance(renderer_backend_interface* backend, sh
     vulkan_shader* internal = s->internal_data;
 
     // Obtain instance data.
-    vulkan_shader_instance_state* instance_state = &internal->instance_states[s->bound_instance_id];
+    vulkan_shader_instance_state* instance_state = &internal->instance_states[s->bound_per_group_id];
     VkDescriptorSet instance_descriptor_set = instance_state->descriptor_sets[image_index];
 
     // Determine the descriptor set index which will be first. If there are no globals, for example,
@@ -2759,7 +2759,7 @@ b8 vulkan_renderer_shader_apply_local(renderer_backend_interface* backend, struc
         u32 image_index = get_current_image_index(context);
 
         //Obtain local data.
-        vulkan_shader_instance_state* local_state = &internal->local_states[s->bound_instance_id];
+        vulkan_shader_instance_state* local_state = &internal->local_states[s->bound_per_group_id];
         VkDescriptorSet local_descriptor_set = local_state->descriptor_sets[image_index];
 
         // Determine the descriptor set index which will be first. If there are no globals and no instance uniforms, for example,
@@ -3078,7 +3078,7 @@ b8 vulkan_renderer_shader_local_resources_acquire(renderer_backend_interface* ba
     // Map texture maps in the config to the correct uniforms
     vulkan_shader_instance_state* local_state = &internal->local_states[*out_local_id];
     // Only setup if the shader actually requires it.
-    if (s->local_texture_count > 0) {
+    if (s->per_draw_texture_count > 0) {
         local_state->sampler_uniforms = kallocate(sizeof(vulkan_uniform_sampler_state) * s->local_uniform_sampler_count, MEMORY_TAG_ARRAY);
 
         // Assign uniforms to each of the sampler states.
@@ -3271,19 +3271,19 @@ b8 vulkan_renderer_uniform_set(renderer_backend_interface* backend, shader* s, s
         case SHADER_SCOPE_GLOBAL:
             return sampler_state_try_set(internal->global_sampler_uniforms, s->global_uniform_sampler_count, uniform->location, array_index, value);
         case SHADER_SCOPE_INSTANCE:
-            if (s->bound_instance_id == INVALID_ID) {
+            if (s->bound_per_group_id == INVALID_ID) {
                 KERROR("Trying to set an instance-level uniform without having bound an instance first.");
                 return false;
             }
 
-            vulkan_shader_instance_state* instance_state = &internal->instance_states[s->bound_instance_id];
+            vulkan_shader_instance_state* instance_state = &internal->instance_states[s->bound_per_group_id];
             return sampler_state_try_set(instance_state->sampler_uniforms, s->instance_uniform_sampler_count, uniform->location, array_index, value);
         case SHADER_SCOPE_LOCAL:
-            if (s->bound_local_id == INVALID_ID) {
+            if (s->bound_per_draw_id == INVALID_ID) {
                 KERROR("Trying to set a local-level uniform without having bound an local id first.");
                 return false;
             }
-            vulkan_shader_instance_state* local_state = &internal->local_states[s->bound_local_id];
+            vulkan_shader_instance_state* local_state = &internal->local_states[s->bound_per_draw_id];
             return sampler_state_try_set(local_state->sampler_uniforms, s->local_uniform_sampler_count, uniform->location, array_index, value);
         }
     }
@@ -3293,19 +3293,19 @@ b8 vulkan_renderer_uniform_set(renderer_backend_interface* backend, shader* s, s
         u32 image_index = ((vulkan_context*)backend->internal_context)->current_window->renderer_state->backend_state->image_index;
         switch (uniform->scope) {
         case SHADER_SCOPE_LOCAL:
-            if (s->bound_local_id == INVALID_ID) {
+            if (s->bound_per_draw_id == INVALID_ID) {
                 KERROR("An local id must be bound before setting a local uniform.");
                 return false;
             }
             addr = (u64)internal->local_push_constant_block;
             break;
         case SHADER_SCOPE_INSTANCE:
-            if (s->bound_instance_id == INVALID_ID) {
+            if (s->bound_per_group_id == INVALID_ID) {
                 KERROR("An instance must be bound before setting an instance uniform.");
                 return false;
             }
             addr = (u64)internal->mapped_uniform_buffer_blocks[image_index];
-            vulkan_shader_instance_state* instance = &internal->instance_states[s->bound_instance_id];
+            vulkan_shader_instance_state* instance = &internal->instance_states[s->bound_per_group_id];
             ubo_offset = instance->offset;
             break;
         case SHADER_SCOPE_GLOBAL:

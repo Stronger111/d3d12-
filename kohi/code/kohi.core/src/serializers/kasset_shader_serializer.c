@@ -30,7 +30,7 @@ const char* kasset_shader_serialize(const kasset* asset) {
     const char* out_str = 0;
 
     // Setup the KSON tree to serialize below.
-    kson_tree tree = {0};
+    kson_tree tree = { 0 };
     tree.root = kson_object_create();
 
     // version
@@ -89,12 +89,12 @@ const char* kasset_shader_serialize(const kasset* asset) {
     if (typed_asset->uniform_count > 0) {
         kson_object uniforms_obj = kson_object_create();
 
-        kson_array global_array = kson_array_create();
-        kson_array instance_array = kson_array_create();
-        kson_array local_array = kson_array_create();
-        u32 global_count = 0;
-        u32 instance_count = 0;
-        u32 local_count = 0;
+        kson_array per_frame_array = kson_array_create();
+        kson_array per_group_array = kson_array_create();
+        kson_array per_draw_array = kson_array_create();
+        u32 per_frame_count = 0;
+        u32 per_group_count = 0;
+        u32 per_draw_count = 0;
         for (u32 i = 0; i < typed_asset->uniform_count; ++i) {
             kson_object uniform_obj = kson_object_create();
             kasset_shader_uniform* uniform = &typed_asset->uniforms[i];
@@ -102,29 +102,33 @@ const char* kasset_shader_serialize(const kasset* asset) {
             kson_object_value_add_string(&uniform_obj, "type", shader_uniform_type_to_string(uniform->type));
             kson_object_value_add_string(&uniform_obj, "name", uniform->name);
 
-            if (uniform->scope == SHADER_SCOPE_GLOBAL) {
-                kson_array_value_add_object(&global_array, uniform_obj);
-                global_count++;
-            } else if (uniform->scope == SHADER_SCOPE_INSTANCE) {
-                kson_array_value_add_object(&instance_array, uniform_obj);
-                instance_count++;
-            } else if (uniform->scope == SHADER_SCOPE_LOCAL) {
-                kson_array_value_add_object(&local_array, uniform_obj);
-                local_count++;
-            } else {
-                KERROR("Unknown shader scope... skipping.");
+            switch (uniform->frequency) {
+            default:
+            case SHADER_UPDATE_FREQUENCY_PER_FRAME:
+                kson_array_value_add_object(&per_frame_array, uniform_obj);
+                per_frame_count++;
+                break;
+            case SHADER_UPDATE_FREQUENCY_PER_GROUP:
+                kson_array_value_add_object(&per_group_array, uniform_obj);
+                per_group_count++;
+                break;
+            case SHADER_UPDATE_FREQUENCY_PER_DRAW:
+                kson_array_value_add_object(&per_draw_array, uniform_obj);
+                per_draw_count++;
+                break;
+
             }
+            if (per_frame_count) {
+                kson_object_value_add_array(&uniforms_obj, "global", per_frame_array);
+            }
+            if (per_group_count) {
+                kson_object_value_add_array(&uniforms_obj, "instance", per_group_array);
+            }
+            if (per_draw_count) {
+                kson_object_value_add_array(&uniforms_obj, "local", per_draw_array);
+            }
+            kson_object_value_add_object(&tree.root, "uniforms", uniforms_obj);
         }
-        if (global_count) {
-            kson_object_value_add_array(&uniforms_obj, "global", global_array);
-        }
-        if (instance_count) {
-            kson_object_value_add_array(&uniforms_obj, "instance", instance_array);
-        }
-        if (local_count) {
-            kson_object_value_add_array(&uniforms_obj, "local", local_array);
-        }
-        kson_object_value_add_object(&tree.root, "uniforms", uniforms_obj);
     }
 
     // Output to string.
@@ -145,7 +149,7 @@ b8 kasset_shader_deserialize(const char* file_text, kasset* out_asset) {
         kasset_shader* typed_asset = (kasset_shader*)out_asset;
 
         // Deserialize the loaded asset data
-        kson_tree tree = {0};
+        kson_tree tree = { 0 };
         if (!kson_tree_from_string(file_text, &tree)) {
             KERROR("Failed to parse asset data for shader. See logs for details.");
             goto cleanup_kson;
@@ -188,7 +192,7 @@ b8 kasset_shader_deserialize(const char* file_text, kasset* out_asset) {
 
             typed_asset->stages = kallocate(sizeof(kasset_shader_stage) * typed_asset->stage_count, MEMORY_TAG_ARRAY);
             for (u32 i = 0; i < typed_asset->stage_count; ++i) {
-                kson_object stage_obj = {0};
+                kson_object stage_obj = { 0 };
                 kson_array_element_value_get_object(&stages_array, i, &stage_obj);
 
                 kasset_shader_stage* stage = &typed_asset->stages[i];
@@ -201,13 +205,14 @@ b8 kasset_shader_deserialize(const char* file_text, kasset* out_asset) {
                 kson_object_property_value_get_string(&stage_obj, "source_asset_name", &stage->source_asset_name);
                 kson_object_property_value_get_string(&stage_obj, "package_name", &stage->package_name);
             }
-        } else {
+        }
+        else {
             KERROR("Stages are required for shader configurations. Make sure at least one exists.");
             return false;
         }
 
         // Attributes
-        kson_array attributes_array = {0};
+        kson_array attributes_array = { 0 };
         if (kson_object_property_value_get_object(&tree.root, "attributes", &attributes_array)) {
             if (!kson_array_element_count_get(&attributes_array, &typed_asset->attribute_count)) {
                 KERROR("Failed to get attributes_array count. See logs for details.");
@@ -216,7 +221,7 @@ b8 kasset_shader_deserialize(const char* file_text, kasset* out_asset) {
 
             typed_asset->attributes = kallocate(sizeof(kasset_shader_attribute) * typed_asset->attribute_count, MEMORY_TAG_ARRAY);
             for (u32 i = 0; i < typed_asset->attribute_count; ++i) {
-                kson_object attribute_obj = {0};
+                kson_object attribute_obj = { 0 };
                 kson_array_element_value_get_object(&attributes_array, i, &attribute_obj);
                 kasset_shader_attribute* attribute = &typed_asset->attributes[i];
 
@@ -230,12 +235,12 @@ b8 kasset_shader_deserialize(const char* file_text, kasset* out_asset) {
         }
 
         // Uniforms
-        kson_object uniforms_obj = {0};
+        kson_object uniforms_obj = { 0 };
         if (kson_object_property_value_get_object(&tree.root, "uniforms", &uniforms_obj)) {
 
-            kson_array global_array = {0};
-            kson_array instance_array = {0};
-            kson_array local_array = {0};
+            kson_array global_array = { 0 };
+            kson_array instance_array = { 0 };
+            kson_array local_array = { 0 };
             u32 global_count = 0;
             u32 instance_count = 0;
             u32 local_count = 0;
@@ -256,7 +261,7 @@ b8 kasset_shader_deserialize(const char* file_text, kasset* out_asset) {
 
             // Globals
             for (u32 i = 0; i < global_count; ++i) {
-                kson_object uniform_obj = {0};
+                kson_object uniform_obj = { 0 };
                 kson_array_element_value_get_object(&global_array, i, &uniforms_obj);
                 kasset_shader_uniform* uniform = &typed_asset->uniforms[uniform_index];
 
@@ -272,7 +277,7 @@ b8 kasset_shader_deserialize(const char* file_text, kasset* out_asset) {
 
             // Instance
             for (u32 i = 0; i < instance_count; ++i) {
-                kson_object uniform_obj = {0};
+                kson_object uniform_obj = { 0 };
                 kson_array_element_value_get_object(&instance_array, i, &uniforms_obj);
                 kasset_shader_uniform* uniform = &typed_asset->uniforms[uniform_index];
 
@@ -288,7 +293,7 @@ b8 kasset_shader_deserialize(const char* file_text, kasset* out_asset) {
 
             // Local
             for (u32 i = 0; i < local_count; ++i) {
-                kson_object uniform_obj = {0};
+                kson_object uniform_obj = { 0 };
                 kson_array_element_value_get_object(&local_array, i, &uniforms_obj);
                 kasset_shader_uniform* uniform = &typed_asset->uniforms[uniform_index];
 
