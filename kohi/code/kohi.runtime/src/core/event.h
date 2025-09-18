@@ -1,7 +1,12 @@
 #pragma once
 
 #include "defines.h"
-
+/**
+ * @brief Represents event contextual data to be sent along with an
+ * event code when an event is fired.
+ * It is a union that is 128 bytes in size, meaning data can be mixed
+ * and matched as required by the developer.
+ * */
 typedef struct event_context {
     // 128bytes
     union {

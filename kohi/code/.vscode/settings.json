@@ -97,6 +97,10 @@
         "xutility": "c",
         "timeline_system.h": "c",
         "kassert.h": "c",
-        "vfs.h": "c"
+        "vfs.h": "c",
+        "array": "c",
+        "span": "c",
+        "vector": "c",
+        "xstring": "c"
     },
 }
