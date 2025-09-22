@@ -286,7 +286,7 @@ static void material_kasset_on_result(asset_request_result result, const struct 
 
         // TODO: Need to think about hot-reloading here, and how/where listening should happen. Maybe in the resource system?
 
-        listener->typed_resource->type = KRESOURCE_MATERIAL_TYPE_UNKNOWN;
+        listener->typed_resource->type = KRESOURCE_MATERIAL_MODEL_UNKNOWN;
 
         // Examine the material asset's type.
         switch (listener->asset->type) {
