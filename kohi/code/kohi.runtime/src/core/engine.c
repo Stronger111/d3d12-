@@ -33,13 +33,13 @@
 #include "systems/audio_system.h"
 #include "systems/camera_system.h"
 #include "systems/font_system.h"
-#include "systems/geometry_system.h"
 #include "systems/job_system.h"
 #include "systems/kresource_system.h"
 #include "systems/light_system.h"
 #include "systems/material_system.h" 
 #include "systems/resource_system.h" // TODO: remove old resource system
 #include "systems/shader_system.h"
+#include "systems/static_mesh_system.h"
 #include "systems/texture_system.h"
 #include "systems/timeline_system.h"
 #include "systems/xform_system.h"
@@ -506,8 +506,8 @@ b8 engine_create(application* game_inst) {
         shader_system_config shader_sys_config;
         shader_sys_config.max_shader_count = 1024;
         shader_sys_config.max_uniform_count = 128;
-        shader_sys_config.max_global_textures = 31;
-        shader_sys_config.max_instance_textures = 31;
+        shader_sys_config.max_per_frame_textures = 31;
+        shader_sys_config.max_per_group_textures = 31;
         shader_system_initialize(&systems->shader_system_memory_requirement, 0, &shader_sys_config);
         systems->shader_system = kallocate(systems->shader_system_memory_requirement, MEMORY_TAG_ENGINE);
         if (!shader_system_initialize(&systems->shader_system_memory_requirement, systems->shader_system, &shader_sys_config)) {
@@ -540,6 +540,17 @@ b8 engine_create(application* game_inst) {
         }
     }
 
+
+    // static mesh system
+    {
+        static_mesh_system_initialize(&systems->static_mesh_system_memory_requirement, 0);
+        systems->static_mesh_system = kallocate(systems->static_mesh_system_memory_requirement, MEMORY_TAG_ENGINE);
+        if (!static_mesh_system_initialize(&systems->static_mesh_system_memory_requirement, systems->static_mesh_system)) {
+            KERROR("Failed to initialize static mesh system.");
+            return false;
+        }
+    }
+
     // Font System
     {
         // Get the generic config from application config first.
@@ -564,17 +575,6 @@ b8 engine_create(application* game_inst) {
         }
     }
 
-    // Geometry system
-    {
-        geometry_system_config geometry_sys_config = { 0 };
-        geometry_sys_config.max_geometry_count = 4096;
-        geometry_system_initialize(&systems->geometry_system_memory_requirement, 0, &geometry_sys_config);
-        systems->geometry_system = kallocate(systems->geometry_system_memory_requirement, MEMORY_TAG_ENGINE);
-        if (!geometry_system_initialize(&systems->geometry_system_memory_requirement, systems->geometry_system, &geometry_sys_config)) {
-            KERROR("Failed to initialize geometry system.");
-            return false;
-        }
-    }
 
     // Light System
     {
@@ -859,7 +859,7 @@ b8 engine_run(application* game_inst) {
 
         camera_system_shutdown(systems->camera_system);
         light_system_shutdown(systems->light_system);
-        geometry_system_shutdown(systems->geometry_system);
+        static_mesh_system_shutdown(systems->static_mesh_system);
         material_system_shutdown(systems->material_system);
         font_system_shutdown(systems->font_system);
         texture_system_shutdown(systems->texture_system);

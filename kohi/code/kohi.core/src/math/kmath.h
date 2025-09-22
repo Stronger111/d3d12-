@@ -1,8 +1,8 @@
 #pragma once
 
-#include "memory/kmemory.h"
 #include "defines.h"
 #include "math_types.h"
+#include "memory/kmemory.h"
 
 #define K_PI 3.14159265358979323846f
 #define K_2PI (2.0f * K_PI)
@@ -63,7 +63,7 @@ KINLINE void kswap(f32* a, f32* b) {
 /** @brief Returns 0.0f if x == 0.0f, -1.0f if negative, otherwise 1.0f. */
 KINLINE f32 ksign(f32 x) {
     return x == 0.0f ? 0.0f : x < 0.0f ? -1.0f
-                                       : 1.0f;
+        : 1.0f;
 }
 
 /** @brief Compares x to edge, returning 0 if x < edge; otherwise 1.0f; */
@@ -140,6 +140,12 @@ KINLINE b8 is_power_of_2(u64 value) {
 
 KAPI i32 krandom(void);
 KAPI i32 krandom_in_range(i32 min, i32 max);
+
+/**
+ * @brief Returns a random unsigned 64-bit integer.
+ * @return A random unsigned 64-bit integer.
+ */
+KAPI u64 krandom_u64(void);
 /**
  * @brief Returns a random floating-point number.
  *
@@ -209,42 +215,42 @@ KINLINE vec2 vec2_create(f32 x, f32 y) {
  * @brief Creates and returns a 2-component vector with all components set to 0.0f.
  */
 KINLINE vec2 vec2_zero(void) {
-    return (vec2){0.0f, 0.0f};
+    return (vec2) { 0.0f, 0.0f };
 }
 
 /**
  * @brief Creates and returns a 2-component vector with all components set to 1.0f.
  */
 KINLINE vec2 vec2_one(void) {
-    return (vec2){1.0f, 1.0f};
+    return (vec2) { 1.0f, 1.0f };
 }
 
 /**
  * @brief Creates and returns a 2-component vector pointing up (0, 1).
  */
 KINLINE vec2 vec2_up(void) {
-    return (vec2){0.0f, 1.0f};
+    return (vec2) { 0.0f, 1.0f };
 }
 
 /**
  * @brief Creates and returns a 2-component vector pointing down (0, -1).
  */
 KINLINE vec2 vec2_down(void) {
-    return (vec2){0.0f, -1.0f};
+    return (vec2) { 0.0f, -1.0f };
 }
 
 /**
  * @brief Creates and returns a 2-component vector pointing left (-1, 0).
  */
 KINLINE vec2 vec2_left(void) {
-    return (vec2){-1.0f, 0.0f};
+    return (vec2) { -1.0f, 0.0f };
 }
 
 /**
  * @brief Creates and returns a 2-component vector pointing right (1, 0).
  */
 KINLINE vec2 vec2_right(void) {
-    return (vec2){1.0f, 0.0f};
+    return (vec2) { 1.0f, 0.0f };
 }
 
 /**
@@ -255,7 +261,7 @@ KINLINE vec2 vec2_right(void) {
  * @return The resulting vector.
  */
 KINLINE vec2 vec2_add(vec2 vector_0, vec2 vector_1) {
-    return (vec2){vector_0.x + vector_1.x, vector_0.y + vector_1.y};
+    return (vec2) { vector_0.x + vector_1.x, vector_0.y + vector_1.y };
 }
 
 /**
@@ -266,7 +272,7 @@ KINLINE vec2 vec2_add(vec2 vector_0, vec2 vector_1) {
  * @return The resulting vector.
  */
 KINLINE vec2 vec2_sub(vec2 vector_0, vec2 vector_1) {
-    return (vec2){vector_0.x - vector_1.x, vector_0.y - vector_1.y};
+    return (vec2) { vector_0.x - vector_1.x, vector_0.y - vector_1.y };
 }
 
 /**
@@ -277,9 +283,10 @@ KINLINE vec2 vec2_sub(vec2 vector_0, vec2 vector_1) {
  * @return The resulting vector.
  */
 KINLINE vec2 vec2_mul(vec2 vector_0, vec2 vector_1) {
-    return (vec2){
-        vector_0.x * vector_1.x,
-        vector_0.y * vector_1.y};
+    return (vec2) {
+        vector_0.x* vector_1.x,
+            vector_0.y* vector_1.y
+    };
 }
 
 /**
@@ -291,7 +298,7 @@ KINLINE vec2 vec2_mul(vec2 vector_0, vec2 vector_1) {
  * @return A copy of the resulting vector.
  */
 KINLINE vec2 vec2_mul_scalar(vec2 vector_0, f32 scalar) {
-    return (vec2){vector_0.x * scalar, vector_0.y * scalar};
+    return (vec2) { vector_0.x* scalar, vector_0.y* scalar };
 }
 
 /**
@@ -303,9 +310,10 @@ KINLINE vec2 vec2_mul_scalar(vec2 vector_0, f32 scalar) {
  * @return The resulting vector.
  */
 KINLINE vec2 vec2_mul_add(vec2 vector_0, vec2 vector_1, vec2 vector_2) {
-    return (vec2){
-        vector_0.x * vector_1.x + vector_2.x,
-        vector_0.y * vector_1.y + vector_2.y};
+    return (vec2) {
+        vector_0.x* vector_1.x + vector_2.x,
+            vector_0.y* vector_1.y + vector_2.y
+    };
 }
 
 /**
@@ -316,9 +324,10 @@ KINLINE vec2 vec2_mul_add(vec2 vector_0, vec2 vector_1, vec2 vector_2) {
  * @return The resulting vector.
  */
 KINLINE vec2 vec2_div(vec2 vector_0, vec2 vector_1) {
-    return (vec2){
+    return (vec2) {
         vector_0.x / vector_1.x,
-        vector_0.y / vector_1.y};
+            vector_0.y / vector_1.y
+    };
 }
 
 /**
@@ -394,7 +403,7 @@ KINLINE b8 vec2_compare(vec2 vector_0, vec2 vector_1, f32 tolerance) {
 KINLINE f32 vec2_distance(vec2 vector_0, vec2 vector_1) {
     vec2 d = (vec2){
         vector_0.x - vector_1.x,
-        vector_0.y - vector_1.y};
+        vector_0.y - vector_1.y };
     return vec2_length(d);
 }
 
@@ -409,7 +418,7 @@ KINLINE f32 vec2_distance(vec2 vector_0, vec2 vector_1) {
 KINLINE f32 vec2_distance_squared(vec2 vector_0, vec2 vector_1) {
     vec2 d = (vec2){
         vector_0.x - vector_1.x,
-        vector_0.y - vector_1.y};
+        vector_0.y - vector_1.y };
     return vec2_length_squared(d);
 }
 
@@ -426,7 +435,7 @@ KINLINE f32 vec2_distance_squared(vec2 vector_0, vec2 vector_1) {
  * @return A new 3-element vector.
  */
 KINLINE vec3 vec3_create(f32 x, f32 y, f32 z) {
-    return (vec3){x, y, z};
+    return (vec3) { x, y, z };
 }
 
 /**
@@ -437,7 +446,19 @@ KINLINE vec3 vec3_create(f32 x, f32 y, f32 z) {
  * @return A new vec3
  */
 KINLINE vec3 vec3_from_vec4(vec4 vector) {
-    return (vec3){vector.x, vector.y, vector.z};
+    return (vec3) { vector.x, vector.y, vector.z };
+}
+
+/*
+ * @brief Returns a new vec3 containing the x and y components of the
+ * supplied vec2, with a z component specified.
+ *
+ * @param vector The 2-component vector to extract from.
+ * @param z The value to use for the z element.
+ * @return A new vec3
+ */
+KINLINE vec3 vec3_from_vec2(vec2 vector, f32 z) {
+    return (vec3) { vector.x, vector.y, z };
 }
 
 /**
@@ -448,63 +469,63 @@ KINLINE vec3 vec3_from_vec4(vec4 vector) {
  * @return A new vec4
  */
 KINLINE vec4 vec3_to_vec4(vec3 vector, f32 w) {
-    return (vec4){vector.x, vector.y, vector.z, w};
+    return (vec4) { vector.x, vector.y, vector.z, w };
 }
 
 /**
  * @brief Creates and returns a 3-component vector with all components set to 0.0f.
  */
 KINLINE vec3 vec3_zero() {
-    return (vec3){0.0f, 0.0f, 0.0f};
+    return (vec3) { 0.0f, 0.0f, 0.0f };
 }
 
 /**
  * @brief Creates and returns a 3-component vector with all components set to 1.0f.
  */
 KINLINE vec3 vec3_one() {
-    return (vec3){1.0f, 1.0f, 1.0f};
+    return (vec3) { 1.0f, 1.0f, 1.0f };
 }
 
 /**
  * @brief Creates and returns a 3-component vector pointing up (0, 1, 0).
  */
 KINLINE vec3 vec3_up() {
-    return (vec3){0.0f, 1.0f, 0.0f};
+    return (vec3) { 0.0f, 1.0f, 0.0f };
 }
 
 /**
  * @brief Creates and returns a 3-component vector pointing down (0, -1, 0).
  */
 KINLINE vec3 vec3_down() {
-    return (vec3){0.0f, -1.0f, 0.0f};
+    return (vec3) { 0.0f, -1.0f, 0.0f };
 }
 
 /**
  * @brief Creates and returns a 3-component vector pointing left (-1, 0, 0).
  */
 KINLINE vec3 vec3_left() {
-    return (vec3){-1.0f, 0.0f, 0.0f};
+    return (vec3) { -1.0f, 0.0f, 0.0f };
 }
 
 /**
  * @brief Creates and returns a 3-component vector pointing right (1, 0, 0).
  */
 KINLINE vec3 vec3_right() {
-    return (vec3){1.0f, 0.0f, 0.0f};
+    return (vec3) { 1.0f, 0.0f, 0.0f };
 }
 
 /**
  * @brief Creates and returns a 3-component vector pointing forward (0, 0, -1).
  */
 KINLINE vec3 vec3_forward() {
-    return (vec3){0.0f, 0.0f, -1.0f};
+    return (vec3) { 0.0f, 0.0f, -1.0f };
 }
 
 /**
  * @brief Creates and returns a 3-component vector pointing backward (0, 0, 1).
  */
 KINLINE vec3 vec3_back() {
-    return (vec3){0.0f, 0.0f, 1.0f};
+    return (vec3) { 0.0f, 0.0f, 1.0f };
 }
 
 /**
@@ -515,10 +536,11 @@ KINLINE vec3 vec3_back() {
  * @return The resulting vector.
  */
 KINLINE vec3 vec3_add(vec3 vector_0, vec3 vector_1) {
-    return (vec3){
+    return (vec3) {
         vector_0.x + vector_1.x,
-        vector_0.y + vector_1.y,
-        vector_0.z + vector_1.z};
+            vector_0.y + vector_1.y,
+            vector_0.z + vector_1.z
+    };
 }
 
 /**
@@ -529,10 +551,11 @@ KINLINE vec3 vec3_add(vec3 vector_0, vec3 vector_1) {
  * @return The resulting vector.
  */
 KINLINE vec3 vec3_sub(vec3 vector_0, vec3 vector_1) {
-    return (vec3){
+    return (vec3) {
         vector_0.x - vector_1.x,
-        vector_0.y - vector_1.y,
-        vector_0.z - vector_1.z};
+            vector_0.y - vector_1.y,
+            vector_0.z - vector_1.z
+    };
 }
 
 /**
@@ -543,10 +566,11 @@ KINLINE vec3 vec3_sub(vec3 vector_0, vec3 vector_1) {
  * @return The resulting vector.
  */
 KINLINE vec3 vec3_mul(vec3 vector_0, vec3 vector_1) {
-    return (vec3){
-        vector_0.x * vector_1.x,
-        vector_0.y * vector_1.y,
-        vector_0.z * vector_1.z};
+    return (vec3) {
+        vector_0.x* vector_1.x,
+            vector_0.y* vector_1.y,
+            vector_0.z* vector_1.z
+    };
 }
 
 /**
@@ -557,10 +581,11 @@ KINLINE vec3 vec3_mul(vec3 vector_0, vec3 vector_1) {
  * @return A copy of the resulting vector.
  */
 KINLINE vec3 vec3_mul_scalar(vec3 vector_0, f32 scalar) {
-    return (vec3){
-        vector_0.x * scalar,
-        vector_0.y * scalar,
-        vector_0.z * scalar};
+    return (vec3) {
+        vector_0.x* scalar,
+            vector_0.y* scalar,
+            vector_0.z* scalar
+    };
 }
 
 /**
@@ -572,10 +597,11 @@ KINLINE vec3 vec3_mul_scalar(vec3 vector_0, f32 scalar) {
  * @return The resulting vector.
  */
 KINLINE vec3 vec3_mul_add(vec3 vector_0, vec3 vector_1, vec3 vector_2) {
-    return (vec3){
-        vector_0.x * vector_1.x + vector_2.x,
-        vector_0.y * vector_1.y + vector_2.y,
-        vector_0.z * vector_1.z + vector_2.z};
+    return (vec3) {
+        vector_0.x* vector_1.x + vector_2.x,
+            vector_0.y* vector_1.y + vector_2.y,
+            vector_0.z* vector_1.z + vector_2.z
+    };
 }
 
 /**
@@ -586,10 +612,11 @@ KINLINE vec3 vec3_mul_add(vec3 vector_0, vec3 vector_1, vec3 vector_2) {
  * @return The resulting vector.
  */
 KINLINE vec3 vec3_div(vec3 vector_0, vec3 vector_1) {
-    return (vec3){
+    return (vec3) {
         vector_0.x / vector_1.x,
-        vector_0.y / vector_1.y,
-        vector_0.z / vector_1.z};
+            vector_0.y / vector_1.y,
+            vector_0.z / vector_1.z
+    };
 }
 
 KINLINE vec3 vec3_div_scalar(vec3 vector_0, f32 scalar) {
@@ -668,10 +695,11 @@ KINLINE f32 vec3_dot(vec3 vector_0, vec3 vector_1) {
  * @return The cross product.
  */
 KINLINE vec3 vec3_cross(vec3 vector_0, vec3 vector_1) {
-    return (vec3){
-        vector_0.y * vector_1.z - vector_0.z * vector_1.y,
-        vector_0.z * vector_1.x - vector_0.x * vector_1.z,
-        vector_0.x * vector_1.y - vector_0.y * vector_1.x};
+    return (vec3) {
+        vector_0.y* vector_1.z - vector_0.z * vector_1.y,
+            vector_0.z* vector_1.x - vector_0.x * vector_1.z,
+            vector_0.x* vector_1.y - vector_0.y * vector_1.x
+    };
 }
 
 /**
@@ -710,7 +738,7 @@ KINLINE f32 vec3_distance(vec3 vector_0, vec3 vector_1) {
     vec3 d = (vec3){
         vector_0.x - vector_1.x,
         vector_0.y - vector_1.y,
-        vector_0.z - vector_1.z};
+        vector_0.z - vector_1.z };
     return vec3_length(d);
 }
 
@@ -723,7 +751,7 @@ KINLINE f32 vec3_distance(vec3 vector_0, vec3 vector_1) {
  * @return The squared distance between vector_0 and vector_1.
  */
 KINLINE f32 vec3_distance_squared(vec3 vector_0, vec3 vector_1) {
-    vec3 d = (vec3){vector_0.x - vector_1.x, vector_0.y - vector_1.y, vector_0.z - vector_1.z};
+    vec3 d = (vec3){ vector_0.x - vector_1.x, vector_0.y - vector_1.y, vector_0.z - vector_1.z };
     return vec3_length_squared(d);
 }
 
@@ -776,7 +804,7 @@ KINLINE vec4 vec4_create(f32 x, f32 y, f32 z, f32 w) {
  * @return A new vec3
  */
 KINLINE vec3 vec4_to_vec3(vec4 vector) {
-    return (vec3){vector.x, vector.y, vector.z};
+    return (vec3) { vector.x, vector.y, vector.z };
 }
 
 /**
@@ -792,7 +820,7 @@ KINLINE vec4 vec4_from_vec3(vec3 vector, f32 w) {
     out_vector.data = _mm_setr_ps(x, y, z, w);
     return out_vector;
 #else
-    return (vec4){vector.x, vector.y, vector.z, w};
+    return (vec4) { vector.x, vector.y, vector.z, w };
 #endif
 }
 
@@ -800,14 +828,14 @@ KINLINE vec4 vec4_from_vec3(vec3 vector, f32 w) {
  * @brief Creates and returns a 4-component vector with all components set to 0.0f.
  */
 KINLINE vec4 vec4_zero(void) {
-    return (vec4){0.0f, 0.0f, 0.0f, 0.0f};
+    return (vec4) { 0.0f, 0.0f, 0.0f, 0.0f };
 }
 
 /**
  * @brief Creates and returns a 4-component vector with all components set to 1.0f.
  */
 KINLINE vec4 vec4_one(void) {
-    return (vec4){1.0f, 1.0f, 1.0f, 1.0f};
+    return (vec4) { 1.0f, 1.0f, 1.0f, 1.0f };
 }
 
 /**
@@ -864,7 +892,7 @@ KINLINE vec4 vec4_mul(vec4 vector_0, vec4 vector_1) {
  * @return A copy of the resulting vector.
  */
 KINLINE vec4 vec4_mul_scalar(vec4 vector_0, f32 scalar) {
-    return (vec4){vector_0.x * scalar, vector_0.y * scalar, vector_0.z * scalar, vector_0.w * scalar};
+    return (vec4) { vector_0.x* scalar, vector_0.y* scalar, vector_0.z* scalar, vector_0.w* scalar };
 }
 
 /**
@@ -876,11 +904,12 @@ KINLINE vec4 vec4_mul_scalar(vec4 vector_0, f32 scalar) {
  * @return The resulting vector.
  */
 KINLINE vec4 vec4_mul_add(vec4 vector_0, vec4 vector_1, vec4 vector_2) {
-    return (vec4){
-        vector_0.x * vector_1.x + vector_2.x,
-        vector_0.y * vector_1.y + vector_2.y,
-        vector_0.z * vector_1.z + vector_2.z,
-        vector_0.w * vector_1.w + vector_2.w};
+    return (vec4) {
+        vector_0.x* vector_1.x + vector_2.x,
+            vector_0.y* vector_1.y + vector_2.y,
+            vector_0.z* vector_1.z + vector_2.z,
+            vector_0.w* vector_1.w + vector_2.w
+    };
 }
 
 /**
@@ -1192,13 +1221,13 @@ KINLINE f32 mat4_determinant(mat4 matrix) {
     f32* o = temp_mat.data;
 
     o[0] = (t0 * m[5] + t3 * m[9] + t4 * m[13]) -
-           (t1 * m[5] + t2 * m[9] + t5 * m[13]);
+        (t1 * m[5] + t2 * m[9] + t5 * m[13]);
     o[1] = (t1 * m[1] + t6 * m[9] + t9 * m[13]) -
-           (t0 * m[1] + t7 * m[9] + t8 * m[13]);
+        (t0 * m[1] + t7 * m[9] + t8 * m[13]);
     o[2] = (t2 * m[1] + t7 * m[5] + t10 * m[13]) -
-           (t3 * m[1] + t6 * m[5] + t11 * m[13]);
+        (t3 * m[1] + t6 * m[5] + t11 * m[13]);
     o[3] = (t5 * m[1] + t8 * m[5] + t11 * m[9]) -
-           (t4 * m[1] + t9 * m[5] + t10 * m[9]);
+        (t4 * m[1] + t9 * m[5] + t10 * m[9]);
 
     f32 determinant = 1.0f / (m[0] * o[0] + m[4] * o[1] + m[8] * o[2] + m[12] * o[3]);
     return determinant;
@@ -1445,10 +1474,11 @@ KINLINE vec3 mat4_position(mat4 matrix) {
  * @return The transformed vector.
  */
 KINLINE vec3 mat4_mul_vec3(mat4 m, vec3 v) {
-    return (vec3){
-        v.x * m.data[0] + v.y * m.data[1] + v.z * m.data[2] + m.data[3],
-        v.x * m.data[4] + v.y * m.data[5] + v.z * m.data[6] + m.data[7],
-        v.x * m.data[8] + v.y * m.data[9] + v.z * m.data[10] + m.data[11]};
+    return (vec3) {
+        v.x* m.data[0] + v.y * m.data[1] + v.z * m.data[2] + m.data[3],
+            v.x* m.data[4] + v.y * m.data[5] + v.z * m.data[6] + m.data[7],
+            v.x* m.data[8] + v.y * m.data[9] + v.z * m.data[10] + m.data[11]
+    };
 }
 
 /**
@@ -1459,10 +1489,11 @@ KINLINE vec3 mat4_mul_vec3(mat4 m, vec3 v) {
  * @return The transformed vector.
  */
 KINLINE vec3 vec3_mul_mat4(vec3 v, mat4 m) {
-    return (vec3){
-        v.x * m.data[0] + v.y * m.data[4] + v.z * m.data[8] + m.data[12],
-        v.x * m.data[1] + v.y * m.data[5] + v.z * m.data[9] + m.data[13],
-        v.x * m.data[2] + v.y * m.data[6] + v.z * m.data[10] + m.data[14]};
+    return (vec3) {
+        v.x* m.data[0] + v.y * m.data[4] + v.z * m.data[8] + m.data[12],
+            v.x* m.data[1] + v.y * m.data[5] + v.z * m.data[9] + m.data[13],
+            v.x* m.data[2] + v.y * m.data[6] + v.z * m.data[10] + m.data[14]
+    };
 }
 
 /**
@@ -1473,11 +1504,12 @@ KINLINE vec3 vec3_mul_mat4(vec3 v, mat4 m) {
  * @return The transformed vector.
  */
 KINLINE vec4 mat4_mul_vec4(mat4 m, vec4 v) {
-    return (vec4){
-        v.x * m.data[0] + v.y * m.data[1] + v.z * m.data[2] + v.w * m.data[3],
-        v.x * m.data[4] + v.y * m.data[5] + v.z * m.data[6] + v.w * m.data[7],
-        v.x * m.data[8] + v.y * m.data[9] + v.z * m.data[10] + v.w * m.data[11],
-        v.x * m.data[12] + v.y * m.data[13] + v.z * m.data[14] + v.w * m.data[15]};
+    return (vec4) {
+        v.x* m.data[0] + v.y * m.data[1] + v.z * m.data[2] + v.w * m.data[3],
+            v.x* m.data[4] + v.y * m.data[5] + v.z * m.data[6] + v.w * m.data[7],
+            v.x* m.data[8] + v.y * m.data[9] + v.z * m.data[10] + v.w * m.data[11],
+            v.x* m.data[12] + v.y * m.data[13] + v.z * m.data[14] + v.w * m.data[15]
+    };
 }
 
 /**
@@ -1488,11 +1520,12 @@ KINLINE vec4 mat4_mul_vec4(mat4 m, vec4 v) {
  * @return The transformed vector.
  */
 KINLINE vec4 vec4_mul_mat4(vec4 v, mat4 m) {
-    return (vec4){
-        v.x * m.data[0] + v.y * m.data[4] + v.z * m.data[8] + v.w * m.data[12],
-        v.x * m.data[1] + v.y * m.data[5] + v.z * m.data[9] + v.w * m.data[13],
-        v.x * m.data[2] + v.y * m.data[6] + v.z * m.data[10] + v.w * m.data[14],
-        v.x * m.data[3] + v.y * m.data[7] + v.z * m.data[11] + v.w * m.data[15]};
+    return (vec4) {
+        v.x* m.data[0] + v.y * m.data[4] + v.z * m.data[8] + v.w * m.data[12],
+            v.x* m.data[1] + v.y * m.data[5] + v.z * m.data[9] + v.w * m.data[13],
+            v.x* m.data[2] + v.y * m.data[6] + v.z * m.data[10] + v.w * m.data[14],
+            v.x* m.data[3] + v.y * m.data[7] + v.z * m.data[11] + v.w * m.data[15]
+    };
 }
 
 // ------------------------------------------
@@ -1500,7 +1533,7 @@ KINLINE vec4 vec4_mul_mat4(vec4 v, mat4 m) {
 // ------------------------------------------
 
 KINLINE quat quat_identity(void) {
-    return (quat){0, 0, 0, 1.0f};
+    return (quat) { 0, 0, 0, 1.0f };
 }
 
 KINLINE f32 quat_normal(quat q) {
@@ -1513,19 +1546,21 @@ KINLINE f32 quat_normal(quat q) {
 
 KINLINE quat quat_normalize(quat q) {
     f32 normal = quat_normal(q);
-    return (quat){
+    return (quat) {
         q.x / normal,
-        q.y / normal,
-        q.z / normal,
-        q.w / normal};
+            q.y / normal,
+            q.z / normal,
+            q.w / normal
+    };
 }
 
 KINLINE quat quat_conjugate(quat q) {
-    return (quat){
+    return (quat) {
         -q.x,
-        -q.y,
-        -q.z,
-        q.w};
+            -q.y,
+            -q.z,
+            q.w
+    };
 }
 
 KINLINE quat quat_inverse(quat q) {
@@ -1536,33 +1571,33 @@ KINLINE quat quat_mul(quat q_0, quat q_1) {
     quat out_quaternion;
 
     out_quaternion.x = q_0.x * q_1.w +
-                       q_0.y * q_1.z -
-                       q_0.z * q_1.y +
-                       q_0.w * q_1.x;
+        q_0.y * q_1.z -
+        q_0.z * q_1.y +
+        q_0.w * q_1.x;
 
     out_quaternion.y = -q_0.x * q_1.z +
-                       q_0.y * q_1.w +
-                       q_0.z * q_1.x +
-                       q_0.w * q_1.y;
+        q_0.y * q_1.w +
+        q_0.z * q_1.x +
+        q_0.w * q_1.y;
 
     out_quaternion.z = q_0.x * q_1.y -
-                       q_0.y * q_1.x +
-                       q_0.z * q_1.w +
-                       q_0.w * q_1.z;
+        q_0.y * q_1.x +
+        q_0.z * q_1.w +
+        q_0.w * q_1.z;
 
     out_quaternion.w = -q_0.x * q_1.x -
-                       q_0.y * q_1.y -
-                       q_0.z * q_1.z +
-                       q_0.w * q_1.w;
+        q_0.y * q_1.y -
+        q_0.z * q_1.z +
+        q_0.w * q_1.w;
 
     return out_quaternion;
 }
 
 KINLINE f32 quat_dot(quat q_0, quat q_1) {
     return q_0.x * q_1.x +
-           q_0.y * q_1.y +
-           q_0.z * q_1.z +
-           q_0.w * q_1.w;
+        q_0.y * q_1.y +
+        q_0.z * q_1.z +
+        q_0.w * q_1.w;
 }
 
 KINLINE vec3 vec3_min(vec3 vector_0, vec3 vector_1) {
@@ -1648,7 +1683,7 @@ KINLINE quat quat_from_axis_angle(vec3 axis, f32 angle, b8 normalize) {
     f32 s = ksin(half_angle);
     f32 c = kcos(half_angle);
 
-    quat q = (quat){s * axis.x, s * axis.y, s * axis.z, c};
+    quat q = (quat){ s * axis.x, s * axis.y, s * axis.z, c };
     if (normalize) {
         return quat_normalize(q);
     }
@@ -1686,7 +1721,7 @@ KINLINE quat quat_slerp(quat q_0, quat q_1, f32 percentage) {
             v0.x + ((v1.x - v0.x) * percentage),
             v0.y + ((v1.y - v0.y) * percentage),
             v0.z + ((v1.z - v0.z) * percentage),
-            v0.w + ((v1.w - v0.w) * percentage)};
+            v0.w + ((v1.w - v0.w) * percentage) };
 
         return quat_normalize(out_quaternion);
     }
@@ -1700,11 +1735,12 @@ KINLINE quat quat_slerp(quat q_0, quat q_1, f32 percentage) {
     f32 s0 = kcos(theta) - dot * sin_theta / sin_theta_0;  // == sin(theta_0 - theta) / sin(theta_0)
     f32 s1 = sin_theta / sin_theta_0;
 
-    return (quat){
+    return (quat) {
         (v0.x * s0) + (v1.x * s1),
-        (v0.y * s0) + (v1.y * s1),
-        (v0.z * s0) + (v1.z * s1),
-        (v0.w * s0) + (v1.w * s1)};
+            (v0.y * s0) + (v1.y * s1),
+            (v0.z * s0) + (v1.z * s1),
+            (v0.w * s0) + (v1.w * s1)
+    };
 }
 
 /**
@@ -1879,14 +1915,22 @@ KINLINE b8 rect_2d_contains_point(rect_2d rect, vec2 point) {
 
 KAPI f32 vec3_distance_to_line(vec3 point, vec3 line_start, vec3 line_direction);
 
-KINLINE vec3 extents_2d_half(extents_2d extents){
-    return (vec3){(extents.min.x+extents.max.x)*0.5f,(extents.min.y+extents.max.y)*0.5f};
+KINLINE vec3 extents_2d_half(extents_2d extents) {
+    return (vec3) { (extents.min.x + extents.max.x) * 0.5f, (extents.min.y + extents.max.y) * 0.5f };
 }
 
-KINLINE vec3 extents_3d_half(extents_3d extents){
-    return (vec3){
-         (extents.min.x + extents.max.x)*0.5f,
-         (extents.min.y + extents.max.y)*0.5f,
-         (extents.min.z + extents.max.z)*0.5f,
+KINLINE vec3 extents_3d_half(extents_3d extents) {
+    return (vec3) {
+        (extents.min.x + extents.max.x) * 0.5f,
+            (extents.min.y + extents.max.y) * 0.5f,
+            (extents.min.z + extents.max.z) * 0.5f,
     };
+}
+
+KINLINE vec2 vec2_mid(vec2 v_0, vec2 v_1) {
+    return (vec2) { (v_0.x - v_1.x) * 0.5f, (v_0.y - v_1.y) * 0.5f };
+}
+
+KINLINE vec3 vec3_mid(vec3 v_0, vec3 v_1) {
+    return (vec3) { (v_0.x - v_1.x) * 0.5f, (v_0.y - v_1.y) * 0.5f, (v_0.z - v_1.z) * 0.5f };
 }

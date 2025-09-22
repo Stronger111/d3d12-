@@ -1,6 +1,7 @@
 #include "resource_system.h"
 
 #include "kdebug/kassert.h"
+#include "logger.h"
 #include "memory/kmemory.h"
 #include "strings/kstring.h"
 #include "logger.h"
@@ -10,7 +11,6 @@
 #include "resources/loaders/bitmap_font_loader.h"
 #include "resources/loaders/image_loader.h"
 #include "resources/loaders/material_loader.h"
-#include "resources/loaders/mesh_loader.h"
 #include "resources/loaders/scene_loader.h"
 #include "resources/loaders/shader_loader.h"
 #include "resources/loaders/system_font_loader.h"
@@ -57,7 +57,7 @@ b8 resource_system_initialize(u64* memory_requirement, void* state, void* config
     resource_system_loader_register(image_resource_loader_create());
     resource_system_loader_register(material_resource_loader_create());
     resource_system_loader_register(shader_resource_loader_create());
-    resource_system_loader_register(mesh_resource_loader_create());
+    //resource_system_loader_register(mesh_resource_loader_create());
     resource_system_loader_register(bitmap_font_resource_loader_create());
     resource_system_loader_register(system_font_resource_loader_create());
     resource_system_loader_register(terrain_resource_loader_create());
@@ -84,7 +84,8 @@ b8 resource_system_loader_register(resource_loader loader) {
                 if (l->type == loader.type) {
                     KERROR("resource_system_loader_register - Loader of type %d already exists and will not be registered.", loader.type);
                     return false;
-                } else if (loader.custom_type && string_length(loader.custom_type) > 0 && strings_equali(l->custom_type, loader.custom_type)) {
+                }
+                else if (loader.custom_type && string_length(loader.custom_type) > 0 && strings_equali(l->custom_type, loader.custom_type)) {
                     KERROR("resource_system_loader_register - Loader of custom type %s already exists and will not be registered.", loader.custom_type);
                     return false;
                 }
@@ -104,7 +105,7 @@ b8 resource_system_loader_register(resource_loader loader) {
 }
 
 b8 resource_system_load(const char* name, resource_type type, void* params, resource* out_resource) {
-    KDEBUG("Load type:%d name:%s",type,name);
+    KDEBUG("Load type:%d name:%s", type, name);
     if (state_ptr && type != RESOURCE_TYPE_CUSTOM) {
         // Select loader.
         u32 count = state_ptr->config.max_loader_count;

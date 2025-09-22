@@ -97,25 +97,17 @@ typedef struct scene {
 
     // Singlular pointer to a directional light.
     struct directional_light* dir_lights;
-    // TODO: Delete this
-    // Indices into the attachment array for xform lookups.
-    u32* directional_light_attachment_indices;
     // Array of scene attachments for directional lights.
     scene_attachment* directional_light_attachments;
 
     // darray of point lights.
     struct point_light* point_lights;
-    // TODO: Delete this
-    // Indices into the attachment array for xform lookups.
-    u32* point_light_attachment_indices;
     // Array of scene attachments for point lights.
     scene_attachment* point_light_attachments;
 
     // darray of meshes to be loaded.`
     struct mesh* meshes;
-    // TODO: Delete this
-    // Indices into the attachment array for xform and resource lookups.
-    u32* mesh_attachment_indices;
+  
     // Array of scene attachments for meshes.
     scene_attachment* mesh_attachments;
     // Array of mesh metadata.
@@ -123,9 +115,7 @@ typedef struct scene {
 
     // darray of terrains.
     struct terrain* terrains;
-    // TODO: Delete this
-    // Indices into the attachment array for xform lookups.
-    u32* terrain_attachment_indices;
+   
     // Array of scene attachments for terrains.
     scene_attachment* terrain_attachments;
     // Array of terrain metadata.
@@ -133,9 +123,7 @@ typedef struct scene {
 
     // Singlular pointer to a skybox.
     struct skybox* skyboxes;
-    // TODO: Delete this
-    // Indices into the attachment array for xform lookups.
-    u32* skybox_attachment_indices;
+   
     // Array of scene attachments for skyboxes
     scene_attachment* skybox_attachments;
     // Array of skybox metadata.
@@ -143,9 +131,6 @@ typedef struct scene {
 
     //darray of water planes.
     struct water_plane* water_planes;
-    //TODO: Delete this
-    //Indices into the attachment array for xform lookups.
-    u32* water_plane_attachment_indices;
     //Array of scene attachments for water planes.
     scene_attachment* water_plane_attachments;
     // Array of water plane metadata.

@@ -27,16 +27,6 @@ typedef struct kactor_staticmesh_system_config {
     u32 max_components;
 }kactor_staticmesh_system_config;
 
-typedef enum staticmesh_render_data_flag {
-    /** @brief Indicates that the winding order for the given static mesh should be inverted. */
-    STATICMESH_RENDER_DATA_FLAG_WINDING_INVERTED_BIT = 0x0001
-}staticmesh_render_data_flag;
-
-/**
- * @brief Collection of flags for a static mesh to be rendered.
- * @see staticmesh_render_data_flag
- */
-typedef u32 staticmesh_render_data_flags_bits;
 
 typedef struct  kactor_comp_staticmesh_render_data {
     const kresource_material_instance* material;

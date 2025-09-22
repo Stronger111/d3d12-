@@ -92,17 +92,11 @@ b8 scene_create(scene_config* config, scene_flags flags, scene* out_scene) {
     // Internal lists of attachments.
     /* out_scene->attachments = darray_create(scene_attachment); */
     out_scene->mesh_attachments = darray_create(scene_attachment);
-    out_scene->mesh_attachment_indices = darray_create(u32);
     out_scene->terrain_attachments = darray_create(scene_attachment);
-    out_scene->terrain_attachment_indices = darray_create(u32);
     out_scene->skybox_attachments = darray_create(scene_attachment);
-    out_scene->skybox_attachment_indices = darray_create(u32);
     out_scene->directional_light_attachments = darray_create(scene_attachment);
-    out_scene->directional_light_attachment_indices = darray_create(u32);
     out_scene->point_light_attachments = darray_create(scene_attachment);
-    out_scene->point_light_attachment_indices = darray_create(u32);
     out_scene->water_plane_attachments = darray_create(scene_attachment);
-    out_scene->water_plane_attachment_indices = darray_create(u32);
 
     b8 is_readonly = ((out_scene->flags & SCENE_FLAG_READONLY) != 0);
     if (!is_readonly) {
@@ -220,7 +214,6 @@ void scene_node_initialize(scene* s, k_handle parent_handle, scene_node_config* 
                                 s->mesh_attachments[i].resource_handle = k_handle_create(resource_index);
                                 s->mesh_attachments[i].hierarchy_node_handle = node_handle;
                                 s->mesh_attachments[i].attachment_type = SCENE_NODE_ATTACHMENT_TYPE_STATIC_MESH;
-                                s->mesh_attachment_indices[i] = resource_index;
                                 // For "edit" mode, retain metadata.
                                 if (!is_readonly) {
                                     s->mesh_metadata[i].resource_name = string_duplicate(typed_attachment_config->resource_name);
@@ -231,7 +224,6 @@ void scene_node_initialize(scene* s, k_handle parent_handle, scene_node_config* 
                         if (resource_index == INVALID_ID) {
                             darray_push(s->meshes, new_mesh);
                             resource_index = count;
-                            darray_push(s->mesh_attachment_indices, resource_index);
                             scene_attachment mesh_attachment = { 0 };
                             mesh_attachment.resource_handle = k_handle_create(resource_index);
                             mesh_attachment.hierarchy_node_handle = node_handle;
@@ -283,7 +275,6 @@ void scene_node_initialize(scene* s, k_handle parent_handle, scene_node_config* 
                                 s->terrain_attachments[i].resource_handle = k_handle_create(index);
                                 s->terrain_attachments[i].hierarchy_node_handle = node_handle;
                                 s->terrain_attachments[i].attachment_type = SCENE_NODE_ATTACHMENT_TYPE_TERRAIN;
-                                s->terrain_attachment_indices[i] = index;
                                 // For "edit" mode, retain metadata.
                                 if (!is_readonly) {
                                     s->terrain_metadata[i].resource_name = string_duplicate(typed_attachment->resource_name);
@@ -295,7 +286,6 @@ void scene_node_initialize(scene* s, k_handle parent_handle, scene_node_config* 
                         if (index == INVALID_ID) {
                             darray_push(s->terrains, new_terrain);
                             index = count;
-                            darray_push(s->terrain_attachment_indices, index);
                             scene_attachment terrain_attachment = { 0 };
                             terrain_attachment.resource_handle = k_handle_create(index);
                             terrain_attachment.hierarchy_node_handle = node_handle;
@@ -341,7 +331,6 @@ void scene_node_initialize(scene* s, k_handle parent_handle, scene_node_config* 
                                 s->skybox_attachments[i].resource_handle = k_handle_create(index);
                                 s->skybox_attachments[i].hierarchy_node_handle = node_handle;
                                 s->skybox_attachments[i].attachment_type = SCENE_NODE_ATTACHMENT_TYPE_SKYBOX;
-                                s->skybox_attachment_indices[i] = index;
                                 // For "edit" mode, retain metadata.
                                 if (!is_readonly) {
                                     s->skybox_metadata[i].cubemap_name = string_duplicate(typed_attachment->cubemap_name);
@@ -353,7 +342,6 @@ void scene_node_initialize(scene* s, k_handle parent_handle, scene_node_config* 
                         if (index == INVALID_ID) {
                             darray_push(s->skyboxes, sb);
                             index = skybox_count;
-                            darray_push(s->skybox_attachment_indices, index);
                             scene_attachment skybox_attachment = { 0 };
                             skybox_attachment.resource_handle = k_handle_create(index);
                             skybox_attachment.hierarchy_node_handle = node_handle;
@@ -408,14 +396,12 @@ void scene_node_initialize(scene* s, k_handle parent_handle, scene_node_config* 
                                 s->directional_light_attachments[i].resource_handle = k_handle_create(index);
                                 s->directional_light_attachments[i].hierarchy_node_handle = node_handle;
                                 s->directional_light_attachments[i].attachment_type = SCENE_NODE_ATTACHMENT_TYPE_DIRECTIONAL_LIGHT;
-                                s->directional_light_attachment_indices[i] = index;
                                 break;
                             }
                         }
                         if (index == INVALID_ID) {
                             darray_push(s->dir_lights, new_dir_light);
                             index = directional_light_count;
-                            darray_push(s->directional_light_attachment_indices, index);
                             scene_attachment directional_light_attachment = { 0 };
                             directional_light_attachment.resource_handle = k_handle_create(index);
                             directional_light_attachment.hierarchy_node_handle = node_handle;

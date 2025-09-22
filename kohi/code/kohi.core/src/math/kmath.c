@@ -4,9 +4,13 @@
 #include <stdlib.h>
 
 #include "math/math_types.h"
+#include "math/mtwister.h" // for 64-bit RNG
 #include "platform/platform.h"
 
 static b8 rand_seeded = false;
+static mtrand_state rng_u64 = { 0 };  //State for unsigned 64-bit RNG
+
+static void seed_randoms(void);
 /**
  * Note that these are here in order to prevent having to import the
  * entire <math.h> everywhere.
@@ -49,18 +53,23 @@ f32 kpow(f32 x, f32 y) {
 
 i32 krandom(void) {
     if (!rand_seeded) {
-        srand((u32)platform_get_absolute_time());
-        rand_seeded = true;
+        seed_randoms();
     }
     return rand();
 }
 
 i32 krandom_in_range(i32 min, i32 max) {
     if (!rand_seeded) {
-        srand((u32)platform_get_absolute_time());
-        rand_seeded = true;
+        seed_randoms();
     }
     return (rand() % (max - min + 1)) + min;
+}
+
+u64 krandom_u64(void) {
+    if (!rand_seeded) {
+        seed_randoms();
+    }
+    return mtrand_generate(&rng_u64);
 }
 
 f32 kfrandom(void) {
@@ -98,10 +107,10 @@ frustum frustum_from_view_projection(mat4 view_projection) {
     f32* md = inv.data;
 
     // Extract the rows
-    vec4 mat0 = {md[0], md[1], md[2], md[3]};
-    vec4 mat1 = {md[4], md[5], md[6], md[7]};
-    vec4 mat2 = {md[8], md[9], md[10], md[11]};
-    vec4 mat3 = {md[12], md[13], md[14], md[15]};
+    vec4 mat0 = { md[0], md[1], md[2], md[3] };
+    vec4 mat1 = { md[4], md[5], md[6], md[7] };
+    vec4 mat2 = { md[8], md[9], md[10], md[11] };
+    vec4 mat3 = { md[12], md[13], md[14], md[15] };
 
     // Calculate the projection planes and normalize them, including distances.
     vec4 sides[6];
@@ -161,8 +170,8 @@ b8 frustum_intersects_sphere(const frustum* f, const vec3* center, f32 radius) {
 
 b8 plane_intersects_aabb(const plane_3d* p, const vec3* center, const vec3* extents) {
     f32 r = extents->x * kabs(p->normal.x) +
-            extents->y * kabs(p->normal.y) +
-            extents->z * kabs(p->normal.z);
+        extents->y * kabs(p->normal.y) +
+        extents->z * kabs(p->normal.z);
 
     return -r <= plane_signed_distance(p, center);
 }
@@ -179,15 +188,15 @@ b8 frustum_intersects_aabb(const frustum* f, const vec3* center, const vec3* ext
 void frustum_corner_points_world_space(mat4 projection_view, vec4 corners[8]) {
     mat4 inverse_view_proj = mat4_inverse(projection_view);
 
-    corners[0] = (vec4){-1.0f, -1.0f, 0.0f, 1.0f};
-    corners[1] = (vec4){1.0f, -1.0f, 0.0f, 1.0f};
-    corners[2] = (vec4){1.0f, 1.0f, 0.0f, 1.0f};
-    corners[3] = (vec4){-1.0f, 1.0f, 0.0f, 1.0f};
+    corners[0] = (vec4){ -1.0f, -1.0f, 0.0f, 1.0f };
+    corners[1] = (vec4){ 1.0f, -1.0f, 0.0f, 1.0f };
+    corners[2] = (vec4){ 1.0f, 1.0f, 0.0f, 1.0f };
+    corners[3] = (vec4){ -1.0f, 1.0f, 0.0f, 1.0f };
 
-    corners[4] = (vec4){-1.0f, -1.0f, 1.0f, 1.0f};
-    corners[5] = (vec4){1.0f, -1.0f, 1.0f, 1.0f};
-    corners[6] = (vec4){1.0f, 1.0f, 1.0f, 1.0f};
-    corners[7] = (vec4){-1.0f, 1.0f, 1.0f, 1.0f};
+    corners[4] = (vec4){ -1.0f, -1.0f, 1.0f, 1.0f };
+    corners[5] = (vec4){ 1.0f, -1.0f, 1.0f, 1.0f };
+    corners[6] = (vec4){ 1.0f, 1.0f, 1.0f, 1.0f };
+    corners[7] = (vec4){ -1.0f, 1.0f, 1.0f, 1.0f };
 
     for (u32 i = 0; i < 8; ++i) {
         vec4 point = mat4_mul_vec4(inverse_view_proj, corners[i]);
@@ -198,4 +207,25 @@ void frustum_corner_points_world_space(mat4 projection_view, vec4 corners[8]) {
 f32 vec3_distance_to_line(vec3 point, vec3 line_start, vec3 line_direction) {
     f32 magnitude = vec3_length(vec3_cross(vec3_sub(point, line_start), line_direction));
     return magnitude / vec3_length(line_direction);
+}
+
+static void seed_randoms(void) {
+    u32 ptime_u32;
+    u64 ptime_u64;
+#ifdef KOHI_DEBUG
+    // NOTE: Use a predetermined seed for debug builds for testing purposes.
+    ptime_u32 = 42;
+    ptime_u64 = 42;
+#else
+    // TODO: Might need to use current date/time for this in case this
+       // as using the absolute time is the application _run_ time, which
+       // might not be random _enough_ for this to be truly useful.
+    ptime_u32 = (u32)platform_get_absolute_time();
+    ptime_u64 = (u64)platform_get_absolute_time();
+#endif
+    //Seed standard random number generator.
+    srand(ptime_u32);
+    //64-bit RNG
+    rng_u64 = mtrand_create(ptime_u64);
+    rand_seeded = true;
 }

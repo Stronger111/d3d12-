@@ -126,9 +126,9 @@ void material_system_shutdown(struct material_system_state* state) {
     if (state) {
 
         // Release default materials.
-        kresource_system_release(state->resource_system, (kresource*)state->default_pbr_material);
+        kresource_system_release(state->resource_system, (kresource*)state->default_pbr_material->base.name);
         // Bug 报错 销毁pDescriptorSets
-        kresource_system_release(state->resource_system, (kresource*)state->default_layered_material);
+        kresource_system_release(state->resource_system, (kresource*)state->default_layered_material->base.name);
     }
 }
 
@@ -204,7 +204,7 @@ void material_system_release_instance(material_system_state* state, kresource_ma
 
         //Only release if not a default material.
         if (do_release) {
-            kresource_system_release(state->resource_system, (kresource*)instance->material);
+            kresource_system_release(state->resource_system, instance->material->base.name);
         }
 
         instance->material = 0;
@@ -646,7 +646,7 @@ properties = [\
 }
 
 static b8 create_default_terrain_material(material_system_state* state) {
-    kresource_material_request_info request = {0};
+    kresource_material_request_info request = { 0 };
     request.base.type = KRESOURCE_TYPE_MATERIAL;
     // FIXME: figure out how the layers should look for this material type.
     request.material_source_text = "\
@@ -670,7 +670,7 @@ properties = [\
     kresource_material* m = state->default_layered_material;
 
     // NOTE: This is an array that includes 3 maps (albedo, normal, met/roughness/ao) per layer.
-    kresource_texture_map* maps[LAYERED_PBR_MATERIAL_MAP_COUNT] = {&m->layered_material_map};
+    kresource_texture_map* maps[LAYERED_PBR_MATERIAL_MAP_COUNT] = { &m->layered_material_map };
 
     // Acquire group resources.
     if (!shader_system_shader_group_acquire(shader_id, LAYERED_PBR_MATERIAL_MAP_COUNT, maps, &m->group_id)) {

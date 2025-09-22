@@ -8,7 +8,6 @@
 #include "memory/kmemory.h"
 #include "platform/platform.h"
 #include "renderer/renderer_frontend.h"
-#include "resources/resource_types.h"
 #include "strings/kname.h"
 #include "systems/shader_system.h"
 #include "systems/texture_system.h"
@@ -148,7 +147,7 @@ b8 water_plane_load(water_plane* plane) {
 
         // Acquire instance resources for this plane.
         u32 shader_id = shader_system_get_id("Runtime.Shader.Water");
-        if (!shader_system_shader_group_acquire(shader_id, plane->map_count, plane->maps, &plane->instance_id)) {
+        if (!shader_system_shader_group_acquire(shader_id, plane->map_count, &plane->maps, &plane->instance_id)) {
             KERROR("Failed to acquire instance resources for water plane.");
             return false;
         }
