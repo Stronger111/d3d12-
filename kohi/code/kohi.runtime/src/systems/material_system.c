@@ -134,7 +134,7 @@ void material_system_shutdown(struct material_system_state* state) {
 
 static void material_resource_loaded(kresource* resource, void* listener) {
     kresource_material* typed_resource = (kresource_material*)resource;
-    kresource_material_instance* instance = (kresource_material_instance*)listener;
+    material_instance* instance = (material_instance*)listener;
     // TODO: In this case, the texture map should probably actually be stored on the "probe" itself,
     // this would reduce the number of samplers required. Scenes can either have a probe or not.
     // If there is no probe, whatever is rendering the scene (i.e the forward rendergraph node) should have
@@ -162,7 +162,7 @@ static void material_resource_loaded(kresource* resource, void* listener) {
     }
 }
 
-b8 material_system_acquire(material_system_state* state, kname name, kresource_material_instance* out_instance) {
+b8 material_system_acquire(material_system_state* state, kname name, material_instance* out_instance) {
     KASSERT_MSG(out_instance, "out_instance is required.");
 
     kresource_material_request_info request = { 0 };
@@ -173,7 +173,7 @@ b8 material_system_acquire(material_system_state* state, kname name, kresource_m
     return true;
 }
 
-void material_system_release_instance(material_system_state* state, kresource_material_instance* instance) {
+void material_system_release_instance(material_system_state* state, material_instance* instance) {
     if (instance) {
         u32 shader_id;
         b8 do_release = true;
@@ -212,8 +212,8 @@ void material_system_release_instance(material_system_state* state, kresource_ma
     }
 }
 
-kresource_material_instance material_system_get_default_unlit(material_system_state* state) {
-    kresource_material_instance instance = { 0 };
+material_instance material_system_get_default_unlit(material_system_state* state) {
+    material_instance instance = { 0 };
     //FIXME: use kname instead
     u32 shader_id = shader_system_get_id("Shader.Unlit");
     // NOTE: No maps for this shader type.
@@ -224,8 +224,8 @@ kresource_material_instance material_system_get_default_unlit(material_system_st
     return instance;
 }
 
-kresource_material_instance material_system_get_default_phong(material_system_state* state) {
-    kresource_material_instance instance = { 0 };
+material_instance material_system_get_default_phong(material_system_state* state) {
+    material_instance instance = { 0 };
     // FIXME: use kname instead
     u32 shader_id = shader_system_get_id("Shader.Phong");
     // NOTE: No maps for this shader type.
@@ -236,8 +236,8 @@ kresource_material_instance material_system_get_default_phong(material_system_st
     return instance;
 }
 
-kresource_material_instance material_system_get_default_pbr(material_system_state* state) {
-    kresource_material_instance instance = { 0 };
+material_instance material_system_get_default_pbr(material_system_state* state) {
+    material_instance instance = { 0 };
     // FIXME: use kname instead
     u32 shader_id = shader_system_get_id("Shader.PBRMaterial");
     // NOTE: No maps for this shader type.
@@ -248,8 +248,8 @@ kresource_material_instance material_system_get_default_pbr(material_system_stat
     return instance;
 }
 
-kresource_material_instance material_system_get_default_layered_pbr(material_system_state* state) {
-    kresource_material_instance instance = { 0 };
+material_instance material_system_get_default_layered_pbr(material_system_state* state) {
+    material_instance instance = { 0 };
     // FIXME: use kname instead
     u32 shader_id = shader_system_get_id("Shader.LayeredPBRMaterial");
     // NOTE: No maps for this shader type.
@@ -610,14 +610,40 @@ static b8 assign_map(material_system_state* state, kresource_texture_map* map, c
 static b8 create_default_pbr_material(material_system_state* state) {
     kresource_material_request_info request = { 0 };
     request.base.type = KRESOURCE_TYPE_MATERIAL;
-    request.material_source_text = "\
+  request.material_source_text = "\
 version = 3\
 type = \"pbr\"\
 \
 maps = [\
     {\
         name = \"albedo\"\
+        channel = \"albedo\"\
         texture_name = \"default_diffuse\"\
+    }\
+    {\
+        name = \"normal\"\
+        channel = \"normal\"\
+        texture_name = \"default_normal\"\
+    }\
+    {\
+        name = \"metallic\"\
+        channel = \"metallic\"\
+        texture_name = \"default_metallic\"\
+    }\
+    {\
+        name = \"roughness\"\
+        channel = \"roughness\"\
+        texture_name = \"default_roughness\"\
+    }\
+    {\
+        name = \"ao\"\
+        channel = \"ao\"\
+        texture_name = \"default_ao\"\
+    }\
+    {\
+        name = \"emissive\"\
+        channel = \"emissive\"\
+        texture_name = \"default_emissive\"\
     }\
 ]\
 \
@@ -645,7 +671,7 @@ properties = [\
     return true;
 }
 
-static b8 create_default_terrain_material(material_system_state* state) {
+static b8 create_default_layered_material(material_system_state* state) {
     kresource_material_request_info request = { 0 };
     request.base.type = KRESOURCE_TYPE_MATERIAL;
     // FIXME: figure out how the layers should look for this material type.
@@ -653,10 +679,126 @@ static b8 create_default_terrain_material(material_system_state* state) {
 version = 3\
 type = \"layered_pbr\"\
 \
-maps = [\
+layers = [\
     {\
-        name = \"albedo\"\
-        texture_name = \"default_diffuse\"\
+        name = \"layer_0\"\
+        maps = [\
+            {\
+                name = \"albedo\"\
+                channel = \"albedo\"\
+                texture_name = \"default_diffuse\"\
+            }\
+            {\
+                name = \"normal\"\
+                channel = \"normal\"\
+                texture_name = \"default_normal\"\
+            }\
+            {\
+                name = \"metallic\"\
+                channel = \"metallic\"\
+                texture_name = \"default_metallic\"\
+            }\
+            {\
+                name = \"roughness\"\
+                channel = \"roughness\"\
+                texture_name = \"default_roughness\"\
+            }\
+            {\
+                name = \"ao\"\
+                channel = \"ao\"\
+                texture_name = \"default_ao\"\
+            }\
+        ]\
+    }\
+    {\
+        name = \"layer_1\"\
+        maps = [\
+            {\
+                name = \"albedo\"\
+                channel = \"albedo\"\
+                texture_name = \"default_diffuse\"\
+            }\
+            {\
+                name = \"normal\"\
+                channel = \"normal\"\
+                texture_name = \"default_normal\"\
+            }\
+            {\
+                name = \"metallic\"\
+                channel = \"metallic\"\
+                texture_name = \"default_metallic\"\
+            }\
+            {\
+                name = \"roughness\"\
+                channel = \"roughness\"\
+                texture_name = \"default_roughness\"\
+            }\
+            {\
+                name = \"ao\"\
+                channel = \"ao\"\
+                texture_name = \"default_ao\"\
+            }\
+        ]\
+    }\
+    {\
+        name = \"layer_2\"\
+        maps = [\
+            {\
+                name = \"albedo\"\
+                channel = \"albedo\"\
+                texture_name = \"default_diffuse\"\
+            }\
+            {\
+                name = \"normal\"\
+                channel = \"normal\"\
+                texture_name = \"default_normal\"\
+            }\
+            {\
+                name = \"metallic\"\
+                channel = \"metallic\"\
+                texture_name = \"default_metallic\"\
+            }\
+            {\
+                name = \"roughness\"\
+                channel = \"roughness\"\
+                texture_name = \"default_roughness\"\
+            }\
+            {\
+                name = \"ao\"\
+                channel = \"ao\"\
+                texture_name = \"default_ao\"\
+            }\
+        ]\
+    }\
+    {\
+        name = \"layer_3\"\
+        maps = [\
+            {\
+                name = \"albedo\"\
+                channel = \"albedo\"\
+                texture_name = \"default_diffuse\"\
+            }\
+            {\
+                name = \"normal\"\
+                channel = \"normal\"\
+                texture_name = \"default_normal\"\
+            }\
+            {\
+                name = \"metallic\"\
+                channel = \"metallic\"\
+                texture_name = \"default_metallic\"\
+            }\
+            {\
+                name = \"roughness\"\
+                channel = \"roughness\"\
+                texture_name = \"default_roughness\"\
+            }\
+            {\
+                name = \"ao\"\
+                channel = \"ao\"\
+                texture_name = \"default_ao\"\
+            }\
+        ]\
     }\
 ]\
 \
