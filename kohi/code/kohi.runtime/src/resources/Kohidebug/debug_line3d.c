@@ -11,7 +11,7 @@
 static void recalculate_points(debug_line3d *line);
 static void update_vert_colour(debug_line3d *line);
 
-b8 debug_line3d_create(vec3 point_0, vec3 point_1, k_handle parent_xform, debug_line3d *out_line) {
+b8 debug_line3d_create(vec3 point_0, vec3 point_1, khandle parent_xform, debug_line3d *out_line) {
     if (!out_line) {
         return false;
     }
@@ -37,7 +37,7 @@ void debug_line3d_destroy(debug_line3d *line) {
     line->id.uniqueid = INVALID_ID_U64;
 }
 
-void debug_line3d_parent_set(debug_line3d *line, k_handle parent_xform) {
+void debug_line3d_parent_set(debug_line3d *line, khandle parent_xform) {
     if (line) {
         line->xform_parent = parent_xform;
     }

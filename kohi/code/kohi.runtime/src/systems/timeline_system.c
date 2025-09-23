@@ -98,13 +98,13 @@ b8 timeline_system_update(void* state, f32 engine_delta_time) {
     return true;
 }
 
-k_handle timeline_system_create(f32 scale) {
-    k_handle new_handle;
+khandle timeline_system_create(f32 scale) {
+    khandle new_handle;
     timeline_system_state* state = engine_systems_get()->timeline_system;
     for (u32 i = 0; i < state->entry_count; ++i) {
         if (state->handle_uuids[i] == INVALID_ID_U64) {
             // Found a free slot. Use it.
-            new_handle = k_handle_create(i);
+            new_handle = khandle_create(i);
 
             state->handle_uuids[i] = new_handle.unique_id.uniqueid;
             state->timelines[i].total_time = 0.0f;
@@ -121,7 +121,7 @@ k_handle timeline_system_create(f32 scale) {
     ensure_allocated(state, old_count * 2);
 
     // Found a free slot, Use it.
-    new_handle = k_handle_create(old_count);
+    new_handle = khandle_create(old_count);
 
     state->handle_uuids[old_count] = new_handle.unique_id.uniqueid;
     state->timelines[old_count].total_time = 0;
@@ -131,12 +131,12 @@ k_handle timeline_system_create(f32 scale) {
     return new_handle;
 }
 
-void timeline_system_destroy(k_handle timeline) {
+void timeline_system_destroy(khandle timeline) {
     if (timeline.handle_index < 2) {
         KERROR("timeline_system_destroy cannot be called for default engine or game timelines.");
         return;
     }
-    if (k_handle_is_invalid(timeline)) {
+    if (khandle_is_invalid(timeline)) {
         return;
     }
 
@@ -152,8 +152,8 @@ void timeline_system_destroy(k_handle timeline) {
     state->handle_uuids[timeline.handle_index] = INVALID_ID_U64;
 }
 
-static timeline_data* timeline_get_at(k_handle timeline) {
-    if (k_handle_is_invalid(timeline)) {
+static timeline_data* timeline_get_at(khandle timeline) {
+    if (khandle_is_invalid(timeline)) {
         KWARN("Cannot get timeline for invalid handle.");
         return 0;
     }
@@ -170,7 +170,7 @@ static timeline_data* timeline_get_at(k_handle timeline) {
     return 0;
 }
 
-f32 timeline_system_scale_get(k_handle timeline) {
+f32 timeline_system_scale_get(khandle timeline) {
     timeline_data* data = timeline_get_at(timeline);
     if (!data) {
         return 0;
@@ -178,7 +178,7 @@ f32 timeline_system_scale_get(k_handle timeline) {
     return data->time_scale;
 }
 
-void timeline_system_scale_set(k_handle timeline, f32 scale) {
+void timeline_system_scale_set(khandle timeline, f32 scale) {
     if (timeline.handle_index == 0) {
         // NOTE: 0 is always the engine scale, which should never be modified!
         KWARN("timeline_system_scale_set cannot be used against the default engine timeline");
@@ -190,7 +190,7 @@ void timeline_system_scale_set(k_handle timeline, f32 scale) {
     }
 }
 
-f32 timeline_system_total_get(k_handle timeline) {
+f32 timeline_system_total_get(khandle timeline) {
     timeline_data* data = timeline_get_at(timeline);
     if (!data) {
         return 0;
@@ -198,7 +198,7 @@ f32 timeline_system_total_get(k_handle timeline) {
     return data->total_time;
 }
 
-f32 timeline_system_delta_get(k_handle timeline) {
+f32 timeline_system_delta_get(khandle timeline) {
     timeline_data* data = timeline_get_at(timeline);
     if (!data) {
         return 0;
@@ -206,17 +206,17 @@ f32 timeline_system_delta_get(k_handle timeline) {
     return data->delta_time;
 }
 
-k_handle timeline_system_get_engine(void) {
+khandle timeline_system_get_engine(void) {
     timeline_system_state* state =  engine_systems_get()->timeline_system;
-    k_handle handle;
+    khandle handle;
     handle.handle_index = 0;
     handle.unique_id.uniqueid = state->handle_uuids[0];
     return handle;
 }
 
-k_handle timeline_system_get_game(void) {
+khandle timeline_system_get_game(void) {
     timeline_system_state* state =  engine_systems_get()->timeline_system;
-    k_handle handle;
+    khandle handle;
     handle.handle_index = 1;
     handle.unique_id.uniqueid = state->handle_uuids[1];
     return handle;
