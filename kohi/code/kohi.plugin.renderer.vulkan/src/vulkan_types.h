@@ -340,7 +340,7 @@ typedef struct vulkan_descriptor_state {
 } vulkan_descriptor_state;
 
 typedef struct vulkan_uniform_sampler_state {
-    struct shader_uniform* uniform;
+    shader_uniform uniform;
     /**
      * @brief Instance texture map  pointers, which are used during rendering. These
      * are set by calls to set_sampler.

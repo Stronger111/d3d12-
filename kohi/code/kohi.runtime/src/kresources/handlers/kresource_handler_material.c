@@ -115,7 +115,7 @@ typedef enum mra_indices {
 
 typedef struct material_mra_data {
     mra_state state;
-    kasset_material_map_channel channel;
+    kasset_material_texture_map channel;
     kname image_asset_name;
     kname image_asset_package_name;
     kasset_image* asset;

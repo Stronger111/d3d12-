@@ -121,6 +121,7 @@
         "xtree": "c",
         "xform_system.h": "c",
         "font_system.h": "c",
-        "khandle.h": "c"
+        "khandle.h": "c",
+        "ios": "c"
     },
 }

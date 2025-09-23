@@ -685,7 +685,7 @@ typedef struct renderer_backend_interface {
        * @param renderer_frame_number The current renderer frame number provided by the frontend.
        * @return True on success; otherwise false.
        */
-    b8 (*shader_apply_globals)(struct renderer_backend_interface* backend, struct shader* s, u64 renderer_frame_number);
+    b8 (*shader_apply_per_frame)(struct renderer_backend_interface* backend, struct shader* s, u64 renderer_frame_number);
 
     /**
       * @brief Applies data for the currently bound instance.
@@ -695,7 +695,7 @@ typedef struct renderer_backend_interface {
       * @param renderer_frame_number The current renderer frame number provided by the frontend.
       * @return True on success; otherwise false.
       */
-    b8 (*shader_apply_instance)(struct renderer_backend_interface* backend, struct shader* s, u64 renderer_frame_number);
+    b8 (*shader_apply_per_group)(struct renderer_backend_interface* backend, struct shader* s, u64 renderer_frame_number);
 
     /**
      * @brief Applies local data to the uniform buffer.
@@ -705,7 +705,7 @@ typedef struct renderer_backend_interface {
      * @param renderer_frame_number The current renderer frame number provided by the frontend.
      * @return True on success; otherwise false.
      */
-    b8 (*shader_apply_local)(struct renderer_backend_interface* backend, struct shader* s, u64 renderer_frame_number);
+    b8 (*shader_apply_per_draw)(struct renderer_backend_interface* backend, struct shader* s, u64 renderer_frame_number);
 
     /**
      * @brief Acquires internal instance-level resources and provides an instance id.
@@ -716,7 +716,7 @@ typedef struct renderer_backend_interface {
      * @param out_instance_id A pointer to hold the new instance identifier.
      * @return True on success; otherwise false.
      */
-    b8(*shader_instance_resources_acquire)(struct renderer_backend_interface* backend, struct shader* s, const shader_texture_resource_config* config, u32* out_instance_id);
+    b8(*shader_per_group_resources_acquire)(struct renderer_backend_interface* backend, struct shader* s, const shader_texture_resource_config* config, u32* out_instance_id);
 
     /**
      * @brief Releases internal instance-level resources for the given instance id.
@@ -726,7 +726,7 @@ typedef struct renderer_backend_interface {
      * @param instance_id The instance identifier whose resources are to be released.
      * @return True on success; otherwise false.
      */
-    b8(*shader_instance_resources_release)(struct renderer_backend_interface* backend, struct shader* s, u32 instance_id);
+    b8(*shader_per_group_resources_release)(struct renderer_backend_interface* backend, struct shader* s, u32 instance_id);
 
     /**
      * @brief Acquires internal local-level resources and provides an instance id.
@@ -738,7 +738,7 @@ typedef struct renderer_backend_interface {
      * @param out_local_id A pointer to hold the new local identifier.
      * @return True on success; otherwise false.
      */
-    b8 (*shader_local_resources_acquire)(struct renderer_backend_interface* backend, struct shader* s, const shader_texture_resource_config* config, u32* out_local_id);
+    b8 (*shader_per_draw_resources_acquire)(struct renderer_backend_interface* backend, struct shader* s, const shader_texture_resource_config* config, u32* out_local_id);
 
     /**
      * @brief Releases internal local-level resources for the given instance id.
@@ -748,7 +748,7 @@ typedef struct renderer_backend_interface {
      * @param instance_id The local identifier whose resources are to be released.
      * @return True on success; otherwise false.
      */
-    b8 (*shader_local_resources_release)(struct renderer_backend_interface* backend, struct shader* s, u32 local_id);
+    b8 (*shader_per_draw_resources_release)(struct renderer_backend_interface* backend, struct shader* s, u32 local_id);
     /**
      * @brief Sets the uniform of the given shader to the provided value.
      *
@@ -759,24 +759,39 @@ typedef struct renderer_backend_interface {
      * @param value A pointer to the value to be set.
      * @return b8 True on success; otherwise false.
      */
-    b8(*shader_uniform_set)(struct renderer_backend_interface* backend, struct shader* frontend_shader, struct shader_uniform* uniform, u32 array_index, const void* value);
+    b8 (*shader_uniform_set)(struct renderer_backend_interface* backend, struct shader* frontend_shader, struct shader_uniform* uniform, u32 array_index, const void* value);
 
     /**
-     * @brief Acquires internal resources for the given texture map.
+   * @brief Acquires a internal sampler and returns a handle to it.
+   *
+   * @param backend A pointer to the renderer backend interface.
+   * @param filter The min/mag filter.
+   * @param repeat The repeat mode.
+   * @param anisotropy The anisotropy level, if needed; otherwise 0.
+   * @param mip_levels The mip levels, if used; otherwise 0.
+   * @return A handle to the sampler on success; otherwise an invalid handle.
+   */
+    k_handle (*sampler_acquire)(struct renderer_backend_interface* backend, texture_filter filter, texture_repeat repeat, f32 anisotropy, u32 mip_levels);
+
+    /**
+     * @brief Releases the internal sampler for the given handle.
      *
      * @param backend A pointer to the renderer backend interface.
-     * @param map A pointer to the texture map to obtain resources for.
-     * @return True on success; otherwise false.
+     * @param map A pointer to the handle whose sampler is to be released. Handle is invalidated upon release.
      */
-    b8 (*kresource_texture_map_resources_acquire)(struct renderer_backend_interface* backend, struct kresource_texture_map* map);
-
+    void (*sampler_release)(struct renderer_backend_interface* backend, k_handle* sampler);
     /**
-  * @brief Releases internal resources for the given texture map.
-  *
-  * @param backend A pointer to the renderer backend interface.
-  * @param map A pointer to the texture map to release resources from.
-  */
-    void (*kresource_texture_map_resources_release)(struct renderer_backend_interface* backend, struct kresource_texture_map* map);
+ * @brief Recreates the internal sampler pointed to by the given handle. Modifies the handle.
+ *
+ * @param backend A pointer to the renderer backend interface.
+ * @param sampler A pointer to the handle of the sampler to be refreshed.
+ * @param filter The min/mag filter.
+ * @param repeat The repeat mode.
+ * @param anisotropy The anisotropy level, if needed; otherwise 0.
+ * @param mip_levels The mip levels, if used; otherwise 0.
+ * @return True on success; otherwise false.
+ */
+    b8 (*sampler_refresh)(struct renderer_backend_interface* backend, k_handle* sampler, texture_filter filter, texture_repeat repeat, f32 anisotropy, u32 mip_levels);
     /**
      * @brief Indicates if the renderer is capable of multi-threading.
      *
