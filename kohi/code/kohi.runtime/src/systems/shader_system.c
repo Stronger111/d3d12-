@@ -451,12 +451,12 @@ static b8 per_group_or_per_draw_acquire(u32 shader_id, shader_update_frequency f
     shader* selected_shader = shader_system_get_by_id(shader_id);
 
     //Ensure that configs are setup for required texturep maps.
-    shader_instance_resource_config config = { 0 };
+    shader_texture_resource_config config = { 0 };
     u32 sampler_count = selected_shader->per_group_uniform_sampler_count;
 
     config.uniform_config_count = sampler_count;
     if (sampler_count > 0) {
-        config.uniform_configs = kallocate(sizeof(shader_instance_uniform_texture_config) * config.uniform_config_count, MEMORY_TAG_ARRAY);
+        config.uniform_configs = kallocate(sizeof(shader_frequency_uniform_texture_config) * config.uniform_config_count, MEMORY_TAG_ARRAY);
     }
     else {
         config.uniform_configs = 0;
@@ -465,7 +465,7 @@ static b8 per_group_or_per_draw_acquire(u32 shader_id, shader_update_frequency f
     //Create a sampler config for each map.
     for (u32 i = 0;i < sampler_count;++i) {
         shader_uniform* u = &selected_shader->uniforms[selected_shader->per_group_sampler_indices[i]];
-        shader_instance_uniform_texture_config* uniform_config = &config.uniform_configs[i];
+        shader_frequency_uniform_texture_config* uniform_config = &config.uniform_configs[i];
         /* uniform_config->uniform_location = u->location; */
         uniform_config->kresource_texture_map_count = KMAX(u->array_length, 1);
         uniform_config->kresource_texture_maps = kallocate(sizeof(kresource_texture_map*) * uniform_config->kresource_texture_map_count, MEMORY_TAG_ARRAY);
@@ -503,13 +503,13 @@ static b8 per_group_or_per_draw_acquire(u32 shader_id, shader_update_frequency f
     //Clean up the uniform configs.
     if (config.uniform_configs) {
         for (u32 i = 0;i < config.uniform_config_count;++i) {
-            shader_instance_uniform_texture_config* ucfg = &config.uniform_configs[i];
+            shader_frequency_uniform_texture_config* ucfg = &config.uniform_configs[i];
             if (ucfg->kresource_texture_maps) {
-                kfree(ucfg->kresource_texture_maps, sizeof(shader_instance_uniform_texture_config) * ucfg->kresource_texture_map_count, MEMORY_TAG_ARRAY);
+                kfree(ucfg->kresource_texture_maps, sizeof(shader_frequency_uniform_texture_config) * ucfg->kresource_texture_map_count, MEMORY_TAG_ARRAY);
                 ucfg->kresource_texture_maps = 0;
             }
         }
-        kfree(config.uniform_configs, sizeof(shader_instance_uniform_texture_config) * config.uniform_config_count, MEMORY_TAG_ARRAY);
+        kfree(config.uniform_configs, sizeof(shader_frequency_uniform_texture_config) * config.uniform_config_count, MEMORY_TAG_ARRAY);
     }
 
     return result;

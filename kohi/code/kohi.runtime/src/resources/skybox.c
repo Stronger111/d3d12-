@@ -63,9 +63,9 @@ b8 skybox_load(skybox* sb) {
     kresource_texture_map* maps[1] = { &sb->cubemap };
     // shader* s = skybox_shader;
     // u16 atlas_location = s->uniforms[s->instance_sampler_indices[0]].index;
-    shader_instance_resource_config instance_resource_config = { 0 };
+    shader_texture_resource_config instance_resource_config = { 0 };
     // Map count for this type is knowm.
-    shader_instance_uniform_texture_config colour_texture = { 0 };
+    shader_frequency_uniform_texture_config colour_texture = { 0 };
     //colour_texture.uniform_location = atlas_location;
     colour_texture.kresource_texture_map_count = 1;
     colour_texture.kresource_texture_maps = maps;

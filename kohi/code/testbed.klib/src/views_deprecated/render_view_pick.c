@@ -77,7 +77,7 @@ static void acquire_shader_instances(const struct render_view* self) {
 
     // Not saving the instance id because it doesn't matter.
     u32 instance;
-    shader_instance_resource_config instance_resource_config = { 0 };
+    shader_texture_resource_config instance_resource_config = { 0 };
     instance_resource_config.uniform_config_count = 0; //NOTE:no textures,so this doesn't matter
     instance_resource_config.uniform_configs = 0;
     // UI shader

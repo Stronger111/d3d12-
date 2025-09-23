@@ -258,9 +258,9 @@ b8 sui_textbox_control_load(standard_ui_state* state, struct sui_control* self) 
     kresource_texture_map* maps[1] = { &state->atlas };
     shader* s = shader_system_get("Shader.StandardUI");
     //u16 atlas_location = s->uniforms[s->instance_sampler_indices[0]].index;
-    shader_instance_resource_config instance_resource_config = { 0 };
+    shader_texture_resource_config instance_resource_config = { 0 };
     // Map count for this type is known.
-    shader_instance_uniform_texture_config atlas_texture = { 0 };
+    shader_frequency_uniform_texture_config atlas_texture = { 0 };
     atlas_texture.kresource_texture_map_count = 1;
     atlas_texture.kresource_texture_maps = maps;
 

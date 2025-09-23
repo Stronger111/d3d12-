@@ -99,7 +99,7 @@ b8 render_view_wireframe_on_registered(struct render_view* self) {
         info->normal_instance = (wireframe_colour_instance){ 0 };
         info->normal_instance.colour = normal_colours[s];
 
-        shader_instance_resource_config instance_resource_config = { 0 };
+        shader_texture_resource_config instance_resource_config = { 0 };
         instance_resource_config.uniform_config_count = 0;  // NOTE: no textures, so this doesn't matter.
         instance_resource_config.uniform_configs = 0;
 

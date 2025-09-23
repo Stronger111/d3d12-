@@ -186,9 +186,9 @@ b8 shadow_rendergraph_node_load_resources(rendergraph_node* self) {
             kresource_texture_map* maps[1] = { &internal_data->default_colour_map };
             /* shader* s = internal_data->s; */
             /* u16 atlas_location = s->uniforms[s->instance_sampler_indices[0]].index; */
-            shader_instance_resource_config instance_resource_config = { 0 };
+            shader_texture_resource_config instance_resource_config = { 0 };
             // Map count for this type is known.
-            shader_instance_uniform_texture_config colour_texture = { 0 };
+            shader_frequency_uniform_texture_config colour_texture = { 0 };
             /* colour_texture.uniform_location = atlas_location; */
             colour_texture.kresource_texture_map_count = 1;
             colour_texture.kresource_texture_maps = maps;
@@ -307,9 +307,9 @@ b8 shadow_rendergraph_node_execute(rendergraph_node* self, frame_data* p_frame_d
                 kresource_texture_map* maps[1] = { &internal_data->default_colour_map };
                 // shader* s = internal_data->s;
                 // u16 atlas_location = s->uniforms[s->instance_sampler_indices[0]].index;
-                shader_instance_resource_config instance_resource_config = { 0 };
+                shader_texture_resource_config instance_resource_config = { 0 };
                 // Map count for this type is known.
-                shader_instance_uniform_texture_config colour_texture = { 0 };
+                shader_frequency_uniform_texture_config colour_texture = { 0 };
                 // colour_texture.uniform_location = atlas_location;
                 colour_texture.kresource_texture_map_count = 1;
                 colour_texture.kresource_texture_maps = maps;

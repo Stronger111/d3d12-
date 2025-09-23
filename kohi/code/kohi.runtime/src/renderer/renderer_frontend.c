@@ -1017,7 +1017,7 @@ b8 renderer_shader_apply_local(struct renderer_system_state* state, shader* s) {
     return state->backend->shader_apply_local(state->backend, s, state->frame_number);
 }
 
-b8 renderer_shader_instance_resources_acquire(struct renderer_system_state* state, shader* s, const shader_instance_resource_config* config, u32* out_instance_id) {
+b8 renderer_shader_instance_resources_acquire(struct renderer_system_state* state, shader* s, const shader_texture_resource_config* config, u32* out_instance_id) {
     return state->backend->shader_instance_resources_acquire(state->backend, s, config, out_instance_id);
 }
 
@@ -1025,7 +1025,7 @@ b8 renderer_shader_instance_resources_release(struct renderer_system_state* stat
     return state->backend->shader_instance_resources_release(state->backend, s, instance_id);
 }
 
-b8 renderer_shader_local_resources_acquire(struct renderer_system_state* state, struct shader* s, const shader_instance_resource_config* config, u32* out_local_id) {
+b8 renderer_shader_local_resources_acquire(struct renderer_system_state* state, struct shader* s, const shader_texture_resource_config* config, u32* out_local_id) {
     return state->backend->shader_local_resources_acquire(state->backend, s, config, out_local_id);
 }
 
