@@ -15,7 +15,7 @@
 #include "systems/shader_system.h"
 
 typedef struct render_view_pick_shader_info {
-    shader* s;
+    kshader* s;
     renderpass* pass;
     u16 id_colour_location;
     u16 model_location;
@@ -80,20 +80,20 @@ static void acquire_shader_instances(const struct render_view* self) {
     shader_texture_resource_config instance_resource_config = { 0 };
     instance_resource_config.uniform_config_count = 0; //NOTE:no textures,so this doesn't matter
     instance_resource_config.uniform_configs = 0;
-    // UI shader
+    // UI kshader
     if (!renderer_shader_instance_resources_acquire(data->ui_shader_info.s, &instance_resource_config, &instance)) {
-        KFATAL("render_view_pick failed to acquire UI shader resources.");
+        KFATAL("render_view_pick failed to acquire UI kshader resources.");
         return;
     }
-    // World shader
+    // World kshader
     if (!renderer_shader_instance_resources_acquire(data->world_shader_info.s, &instance_resource_config, &instance)) {
-        KFATAL("render_view_pick failed to acquire World shader resources.");
+        KFATAL("render_view_pick failed to acquire World kshader resources.");
         return;
     }
 
     // Terrain Shader
     if (!renderer_shader_instance_resources_acquire(data->terrain_shader_info.s, &instance_resource_config, &instance)) {
-        KFATAL("render_view_pick failed to acquire Terrain shader resources.");
+        KFATAL("render_view_pick failed to acquire Terrain kshader resources.");
         return;
     }
     data->instance_count++;
@@ -104,19 +104,19 @@ void release_shader_instances(const struct render_view* self) {
     render_view_pick_internal_data* data = self->internal_data;
 
     for (i32 i = 0; i < data->instance_count; ++i) {
-        // UI shader
+        // UI kshader
         if (!renderer_shader_instance_resources_release(data->ui_shader_info.s, i)) {
-            KWARN("Failed to release UI shader resources.");
+            KWARN("Failed to release UI kshader resources.");
         }
 
-        // World shader
+        // World kshader
         if (!renderer_shader_instance_resources_release(data->world_shader_info.s, i)) {
-            KWARN("Failed to release World shader resources.");
+            KWARN("Failed to release World kshader resources.");
         }
 
-        // Terrain shader  Fixed:报错 DescriptorSet 被释放两次导致报错
+        // Terrain kshader  Fixed:报错 DescriptorSet 被释放两次导致报错
         if (!renderer_shader_instance_resources_release(data->terrain_shader_info.s, i)) {
-            KWARN("Failed to release Terrain shader resources.");
+            KWARN("Failed to release Terrain kshader resources.");
         }
     }
     darray_destroy(data->instance_updated);
@@ -135,16 +135,16 @@ b8 render_view_pick_on_registered(struct render_view* self) {
         data->terrain_shader_info.pass = &self->passes[0];
         data->ui_shader_info.pass = &self->passes[1];
 
-        // Builtin UI Pick shader.
+        // Builtin UI Pick kshader.
         const char* ui_shader_name = "Shader.Builtin.UIPick";
         resource config_resource;
         if (!resource_system_load(ui_shader_name, RESOURCE_TYPE_SHADER, 0, &config_resource)) {
-            KERROR("Failed to load builtin UI Pick shader.");
+            KERROR("Failed to load builtin UI Pick kshader.");
             return false;
         }
         shader_config* config = (shader_config*)config_resource.data;
         if (!shader_system_create(data->ui_shader_info.pass, config)) {
-            KERROR("Failed to load builtin UI Pick shader.");
+            KERROR("Failed to load builtin UI Pick kshader.");
             return false;
         }
         resource_system_unload(&config_resource);
@@ -159,15 +159,15 @@ b8 render_view_pick_on_registered(struct render_view* self) {
         // Default UI properties
         data->ui_shader_info.view = mat4_identity();
 
-        // Builtin World Pick shader.
+        // Builtin World Pick kshader.
         const char* world_shader_name = "Shader.Builtin.WorldPick";
         if (!resource_system_load(world_shader_name, RESOURCE_TYPE_SHADER, 0, &config_resource)) {
-            KERROR("Failed to load builtin World Pick shader.");
+            KERROR("Failed to load builtin World Pick kshader.");
             return false;
         }
         config = (shader_config*)config_resource.data;
         if (!shader_system_create(data->world_shader_info.pass, config)) {
-            KERROR("Failed to load builtin World Pick shader.");
+            KERROR("Failed to load builtin World Pick kshader.");
             return false;
         }
         resource_system_unload(&config_resource);
@@ -182,15 +182,15 @@ b8 render_view_pick_on_registered(struct render_view* self) {
         // Default World properties
         data->world_shader_info.view = mat4_identity();
 
-        // Builtin Terrain Pick shader.
+        // Builtin Terrain Pick kshader.
         const char* terrain_shader_name = "Shader.Builtin.TerrainPick";
         if (!resource_system_load(terrain_shader_name, RESOURCE_TYPE_SHADER, 0, &config_resource)) {
-            KERROR("Failed to load builtin Terrain Pick shader.");
+            KERROR("Failed to load builtin Terrain Pick kshader.");
             return false;
         }
         config = (shader_config*)config_resource.data;
         if (!shader_system_create(data->terrain_shader_info.pass, config)) {
-            KERROR("Failed to load builtin Terrain Pick shader.");
+            KERROR("Failed to load builtin Terrain Pick kshader.");
             return false;
         }
         resource_system_unload(&config_resource);
@@ -377,7 +377,7 @@ b8 render_view_pick_on_render(const render_view* self, const render_view_packet*
 
         // World
         if (!shader_system_use_by_id(data->world_shader_info.s->id)) {
-            KERROR("Failed to use world pick shader. Render frame failed.");
+            KERROR("Failed to use world pick kshader. Render frame failed.");
             return false;
         }
 
@@ -389,7 +389,7 @@ b8 render_view_pick_on_render(const render_view* self, const render_view_packet*
         if (!shader_system_uniform_set_by_location(data->world_shader_info.view_location, &data->world_shader_info.view)) {
             KERROR("Failed to apply view matrix");
         }
-        shader_system_apply_per_draw(true, p_frame_data);
+        shader_system_apply_per_frame(true, p_frame_data);
 
         // Draw geometries. Start from 0 since world geometries are added first, and stop at the world geometry count.
         u32 world_geometry_count = !packet_data->world_mesh_data ? 0 : darray_length(packet_data->world_mesh_data);
@@ -425,7 +425,7 @@ b8 render_view_pick_on_render(const render_view* self, const render_view_packet*
 
         // Terrain geometries
         if (!shader_system_use_by_id(data->terrain_shader_info.s->id)) {
-            KERROR("Failed to use terrain pick shader.Render frame failed.");
+            KERROR("Failed to use terrain pick kshader.Render frame failed.");
             return false;
         }
 
@@ -438,7 +438,7 @@ b8 render_view_pick_on_render(const render_view* self, const render_view_packet*
             KERROR("Failed to apply view matrix");
         }
 
-        shader_system_apply_per_draw(true, p_frame_data);
+        shader_system_apply_per_frame(true, p_frame_data);
 
         // Draw geometries. Start from 0 since terrain geometries are added first, and stop at the terrain geometry count.
         u32 terrain_geometry_count = !packet_data->terrain_mesh_data ? 0 : darray_length(packet_data->terrain_mesh_data);
@@ -486,7 +486,7 @@ b8 render_view_pick_on_render(const render_view* self, const render_view_packet*
 
         // UI
         if (!shader_system_use_by_id(data->ui_shader_info.s->id)) {
-            KERROR("Failed to use material shader. Render frame failed.");
+            KERROR("Failed to use material kshader. Render frame failed.");
             return false;
         }
 
@@ -503,7 +503,7 @@ b8 render_view_pick_on_render(const render_view* self, const render_view_packet*
         if (!shader_system_uniform_set_by_location(data->ui_shader_info.view_location, &data->ui_shader_info.view)) {
             KERROR("Failed to apply view matrix");
         }
-        shader_system_apply_per_draw(true, p_frame_data);
+        shader_system_apply_per_frame(true, p_frame_data);
 
         // Draw geometries. Start off where world geometries left off.
         for (u32 i = world_geometry_count; i < packet->geometry_count; ++i) {

@@ -60,7 +60,7 @@ typedef struct obj_mtl_source_material {
     //Name of the material.
     kname name;
     //Material type.
-    kmaterial_type type;
+    kasset_material_type type;
     //Texture maps
     u32 texture_map_count;
     obj_mtl_source_texture_map* maps;

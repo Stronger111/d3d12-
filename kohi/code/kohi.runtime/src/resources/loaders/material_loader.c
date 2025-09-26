@@ -329,7 +329,7 @@ static b8 material_loader_load(struct resource_loader *self, const char *name, v
                     "Format error: unexpected variable 'diffuse_colour', this "
                     "should only exist for version 1 materials. Ignored.");
             }
-        } else if (strings_equali(trimmed_var_name, "shader")) {
+        } else if (strings_equali(trimmed_var_name, "kshader")) {
             // Take a copy of the material name.
             resource_data->shader_name = string_duplicate(trimmed_value);
         } else if (strings_equali(trimmed_var_name, "shininess")) {

@@ -29,11 +29,6 @@
 
 struct texture_internal_data;
 
-typedef struct texture_lookup {
-    u64 uniqueid;
-    struct texture_internal_data* data;
-}texture_lookup;
-
 typedef struct renderer_dynamic_state {
     vec4 viewport;
     vec4 scissor;
@@ -64,9 +59,6 @@ typedef struct renderer_system_state {
     kruntime_plugin* backend_plugin;
     // The interface to the backend plugin. This is a cold-cast from backend_plugin->plugin_state.
     renderer_backend_interface* backend;
-
-    // darray Collection of renderer-specific texture data.
-    texture_lookup* textures;
 
     /** @brief The object vertex buffer, used to hold geometry vertices. */
     renderbuffer geometry_vertex_buffer;
@@ -526,117 +518,54 @@ b8 renderer_kresource_texture_resources_acquire(struct renderer_system_state* st
         return false;
     }
 
-    if (!state->textures) {
-        state->textures = darray_create(texture_lookup);
+    if (!out_renderer_texture_handle) {
+        KERROR("renderer_kresource_texture_resources_acquire requires a valid pointer to a handle.");
+        return false;
     }
-
-    struct texture_internal_data* data = kallocate(state->backend->texture_internal_data_size, MEMORY_TAG_RENDERER);
-    b8 success;
-    //表明纹理已经被包装 例如交换链
-    if (flags & TEXTURE_FLAG_IS_WRAPPED) {
-        // If the texure is considered "wrapped" (i.e. internal resources are created somwhere else,
-        // such as swapchain images), then don't reach out to the backend to create resources. Just
-        // count it as a success and proceed to get a handle.
-        success = true;
-    }
-    else {
-        success = state->backend->texture_resources_acquire(state->backend, data, kname_string_get(name), type, width, height, channel_count, mip_levels, array_size, flags);
-    }
-
-    //Only insert into the lookup table on success
-    if (success) {
-        u32 texture_count = darray_length(state->textures);
-        for (u32 i = 0;i < texture_count;++i) {
-            texture_lookup* lookup = &state->textures[i];
-            if (lookup->uniqueid == INVALID_ID_U64) {
-                //Found a free "slot",use it.
-                khandle new_handle = khandle_create(i);
-                lookup->uniqueid = new_handle.unique_id.uniqueid;
-                lookup->data = data;
-                *out_renderer_texture_handle = new_handle;
-                return success;
-            }
-        }
-
-        // No free "slots", add one.
-        texture_lookup new_lookup = { 0 };
-        khandle new_handle = khandle_create(texture_count);
-        new_lookup.uniqueid = new_handle.unique_id.uniqueid;
-        new_lookup.data = data;
-        darray_push(state->textures, new_lookup);
-        *out_renderer_texture_handle = new_handle;
-    }
-    else {
+    if (!state->backend->texture_resources_acquire(state->backend, kname_string_get(name), type, width, height, channel_count, mip_levels, array_size, flags, out_renderer_texture_handle)) {
         KERROR("Failed to acquire texture resources. See logs for details.");
-        kfree(data, state->backend->texture_internal_data_size, MEMORY_TAG_RENDERER);
+        return false;
     }
-    return success;
+    return true;
 }
 
 void renderer_texture_resources_release(struct renderer_system_state* state, khandle* renderer_texture_handle) {
     if (state && !khandle_is_invalid(*renderer_texture_handle)) {
-        texture_lookup* lookup = &state->textures[renderer_texture_handle->handle_index];
-        if (lookup->uniqueid != renderer_texture_handle->unique_id.uniqueid) {
-            KWARN("Stale handle passed while trying to release renderer texture resources.");
-            return;
-        }
-        state->backend->texture_resources_release(state->backend, lookup->data);
-        kfree(lookup->data, state->backend->texture_internal_data_size, MEMORY_TAG_RENDERER);
-        lookup->data = 0;
-        lookup->uniqueid = INVALID_ID_U64;
-        *renderer_texture_handle = khandle_invalid();
+        state->backend->texture_resources_release(state->backend, renderer_texture_handle);
     }
-}
-
-struct texture_internal_data* renderer_texture_resources_get(struct renderer_system_state* state, khandle renderer_texture_handle) {
-    if (state && !khandle_is_invalid(renderer_texture_handle)) {
-        texture_lookup* lookup = &state->textures[renderer_texture_handle.handle_index];
-        if (lookup->uniqueid != renderer_texture_handle.unique_id.uniqueid) {
-            KWARN("Stale handle passed while trying to get renderer texture resources. Nothing will be returned");
-            return 0;
-        }
-        return lookup->data;
-    }
-    return 0;
 }
 
 b8 renderer_texture_write_data(struct renderer_system_state* state, khandle renderer_texture_handle, u32 offset, u32 size, const u8* pixels) {
     if (state && !khandle_is_invalid(renderer_texture_handle)) {
-        struct texture_internal_data* data = state->textures[renderer_texture_handle.handle_index].data;
-        return state->backend->texture_write_data(state->backend, data, offset, size, pixels, true);
+        b8 include_in_frame_workload = true;
+        b8 result = state->backend->texture_write_data(state->backend, renderer_texture_handle, offset, size, pixels, include_in_frame_workload);
+        if (!include_in_frame_workload) {
+            // TODO: update generation?
+        }
+        return result;
     }
     return false;
 }
 
 b8 renderer_texture_read_data(struct renderer_system_state* state, khandle renderer_texture_handle, u32 offset, u32 size, u8** out_pixels) {
     if (state && !khandle_is_invalid(renderer_texture_handle)) {
-        struct texture_internal_data* data = state->textures[renderer_texture_handle.handle_index].data;
-        return state->backend->texture_read_data(state->backend, data, offset, size, out_pixels);
+        return state->backend->texture_read_data(state->backend, renderer_texture_handle, offset, size, out_pixels);
     }
     return false;
 }
 
 b8 renderer_texture_read_pixel(struct renderer_system_state* state, khandle renderer_texture_handle, u32 x, u32 y, u8** out_rgba) {
     if (state && !khandle_is_invalid(renderer_texture_handle)) {
-        struct texture_internal_data* data = state->textures[renderer_texture_handle.handle_index].data;
-        return   state->backend->texture_read_pixel(state->backend, data, x, y, out_rgba);
+        return   state->backend->texture_read_pixel(state->backend, renderer_texture_handle, x, y, out_rgba);
     }
     return false;
 }
 
 b8 renderer_texture_resize(struct renderer_system_state* state, khandle renderer_texture_handle, u32 new_width, u32 new_height) {
     if (state && !khandle_is_invalid(renderer_texture_handle)) {
-        struct texture_internal_data* data = state->textures[renderer_texture_handle.handle_index].data;
-        return state->backend->texture_resize(state->backend, data, new_width, new_height);
+        return state->backend->texture_resize(state->backend, renderer_texture_handle, new_width, new_height);
     }
     return false;
-}
-
-struct texture_internal_data* renderer_texture_internal_get(struct renderer_system_state* state, khandle renderer_texture_handle) {
-    if (state && !khandle_is_invalid(renderer_texture_handle)) {
-        return state->textures[renderer_texture_handle.handle_index].data;
-    }
-    return 0;
 }
 
 renderbuffer* renderer_renderbuffer_get(renderbuffer_type type) {
@@ -853,88 +782,11 @@ void renderer_texture_prepare_for_sampling(struct renderer_system_state* state, 
     KERROR("renderer_texture_prepare_for_sampling requires a valid handle to a texture. Nothing was done.");
 }
 
-b8 renderer_shader_create(struct renderer_system_state* state, shader* s, const shader_config* config) {
-    // Get the uniform counts.
-//     s->global_uniform_count = 0;
-//     // Number of samplers in the shader,per frame. NOT the number of descriptors needed (i.e could be an array).
-//     s->global_uniform_sampler_count = 0;
-//     s->global_sampler_indices = darray_create(u32);
-//     s->instance_uniform_count = 0;
-//     // Number of samplers in the shader,per instance,per frame NOT the number of descriptors needed (i.e could be an array).
-//     s->instance_uniform_sampler_count = 0;
-//     s->instance_sampler_indices = darray_create(u32);
-//     s->local_uniform_count = 0;
-
-//     s->shader_stage_count = config->stage_count;
-
-//     // Exambine the uniforms and determine scope as well as a count of samplers.
-//     u32 total_count = darray_length(config->uniforms);
-//     for (u32 i = 0; i < total_count; ++i) {
-//         switch (config->uniforms[i].scope) {
-//         case SHADER_SCOPE_GLOBAL:
-//             if (uniform_type_is_sampler(config->uniforms[i].type)) {
-//                 s->global_uniform_sampler_count++;
-//                 darray_push(s->global_sampler_indices, i);
-//             }
-//             else {
-//                 s->global_uniform_count++;
-//             }
-//             break;
-//         case SHADER_SCOPE_INSTANCE:
-//             if (uniform_type_is_sampler(config->uniforms[i].type)) {
-//                 s->instance_uniform_sampler_count++;
-//                 darray_push(s->instance_sampler_indices, i);
-//             }
-//             else {
-//                 s->instance_uniform_count++;
-//             }
-//             break;
-//         case SHADER_SCOPE_LOCAL:
-//             s->local_uniform_count++;
-//             break;
-//         }
-//     }
-
-//     // Examine shader stages and load shader source as required. This source is
-//     // then fed to the backend renderer,which stands up any shader program resources
-//     // as required.
-//     // TODO: Implement #include directives here at this level so it's handled the same
-//     // regardless of what backend is being used.
-//     s->stage_configs = kallocate(sizeof(shader_stage_config) * config->stage_count, MEMORY_TAG_ARRAY);
-// #ifdef _DEBUG
-//     s->module_watch_ids = kallocate(sizeof(u32) * config->stage_count, MEMORY_TAG_ARRAY);
-// #endif
-//     // Each stage.
-//     for (u8 i = 0; i < config->stage_count; ++i) {
-//         s->stage_configs[i].stage = config->stage_configs[i].stage;
-//         s->stage_configs[i].filename = string_duplicate(config->stage_configs[i].filename);
-//         // Read the resource.
-//         resource text_resource;
-//         if (!resource_system_load(s->stage_configs[i].filename, RESOURCE_TYPE_TEXT, 0, &text_resource)) {
-//             KERROR("Unable to read shader file: %s.", s->stage_configs[i].filename);
-//             return false;
-//         }
-//         // Take a copy of the source and length, then release the resource.
-//         s->stage_configs[i].source_length = text_resource.data_size;
-//         s->stage_configs[i].source = string_duplicate(text_resource.data);
-//         // TODO: Implement recursive #include directives here at this level so it's handled the same
-//         // regardless of what backend is being used.
-//         // This should recursively replace #includes with the file content in-place and adjust the source
-//         // length along the way.
-// #ifdef _DEBUG
-//         // Allow shader hot-reloading in debug builds.
-//         if (!platform_watch_file(text_resource.full_path, &s->module_watch_ids[i])) {
-//             // If this fails,warn about it but there's no need to crash over it.
-//             KWARN("Failed to watch shader source file '%s'.", text_resource.full_path);
-//         }
-// #endif
-//         // Release the resource as it isn't needed anymore at this point.
-//         resource_system_unload(&text_resource);
-//     }
+b8 renderer_shader_create(struct renderer_system_state* state, kshader* s, const shader_config* config) {
     return state->backend->shader_create(state->backend, s, config);
 }
 
-void renderer_shader_destroy(struct renderer_system_state* state, shader* s) {
+void renderer_shader_destroy(struct renderer_system_state* state, kshader* s) {
     state->backend->shader_destroy(state->backend, s);
     // #ifdef _DEBUG
     //     if (s->module_watch_ids) {
@@ -947,11 +799,11 @@ void renderer_shader_destroy(struct renderer_system_state* state, shader* s) {
     // #endif
 }
 
-b8 renderer_shader_initialize(struct renderer_system_state* state, shader* s) {
+b8 renderer_shader_initialize(struct renderer_system_state* state, kshader* s) {
     return state->backend->shader_initialize(state->backend, s);
 }
 
-b8 renderer_shader_reload(struct renderer_system_state* state, struct shader* s) {
+b8 renderer_shader_reload(struct renderer_system_state* state, struct kshader* s) {
 
     // Examine shader stages and load shader source as required. This source is
     // then fed to the backend renderer, which stands up any shader program resources
@@ -1007,11 +859,11 @@ b8 renderer_shader_reload(struct renderer_system_state* state, struct shader* s)
     return state->backend->shader_reload(state->backend, s);
 }
 
-b8 renderer_shader_use(struct renderer_system_state* state, shader* s) {
+b8 renderer_shader_use(struct renderer_system_state* state, kshader* s) {
     return state->backend->shader_use(state->backend, s);
 }
 
-b8 renderer_shader_set_wireframe(struct renderer_system_state* state, struct shader* s, b8 wireframe_enabled) {
+b8 renderer_shader_set_wireframe(struct renderer_system_state* state, struct kshader* s, b8 wireframe_enabled) {
     // Enusre that this shader has the ability to go wireframe before changing.
     if (!state->backend->shader_supports_wireframe(state->backend, s)) {
         // Not supported, don't enable, Bleat about it.
@@ -1022,42 +874,42 @@ b8 renderer_shader_set_wireframe(struct renderer_system_state* state, struct sha
     return true;
 }
 
-b8 renderer_shader_apply_per_frame(struct renderer_system_state* state, shader* s) {
+b8 renderer_shader_apply_per_frame(struct renderer_system_state* state, kshader* s) {
     return state->backend->shader_apply_per_frame(state->backend, s, state->frame_number);
 }
 
-b8 renderer_shader_apply_per_group(struct renderer_system_state* state, shader* s) {
+b8 renderer_shader_apply_per_group(struct renderer_system_state* state, kshader* s) {
     return state->backend->shader_apply_per_group(state->backend, s, state->frame_number);
 }
 
-b8 renderer_shader_apply_per_draw(struct renderer_system_state* state, shader* s) {
+b8 renderer_shader_apply_per_draw(struct renderer_system_state* state, kshader* s) {
     return state->backend->shader_apply_per_draw(state->backend, s, state->frame_number);
 }
 
-b8 renderer_shader_per_group_resources_acquire(struct renderer_system_state* state, shader* s, const shader_texture_resource_config* config, u32* out_group_id) {
+b8 renderer_shader_per_group_resources_acquire(struct renderer_system_state* state, kshader* s, const shader_texture_resource_config* config, u32* out_group_id) {
     return state->backend->shader_per_group_resources_acquire(state->backend, s, config, out_group_id);
 }
 
-b8 renderer_shader_per_group_resources_release(struct renderer_system_state* state, shader* s, u32 group_id) {
+b8 renderer_shader_per_group_resources_release(struct renderer_system_state* state, kshader* s, u32 group_id) {
     return state->backend->shader_per_group_resources_release(state->backend, s, group_id);
 }
 
-b8 renderer_shader_per_draw_resources_acquire(struct renderer_system_state* state, struct shader* s, const shader_texture_resource_config* config, u32* out_draw_id) {
+b8 renderer_shader_per_draw_resources_acquire(struct renderer_system_state* state, struct kshader* s, const shader_texture_resource_config* config, u32* out_draw_id) {
     return state->backend->shader_per_draw_resources_acquire(state->backend, s, config, out_draw_id);
 }
 
-b8 renderer_shader_per_draw_resources_release(struct renderer_system_state* state, struct shader* s, u32 draw_id) {
+b8 renderer_shader_per_draw_resources_release(struct renderer_system_state* state, struct kshader* s, u32 draw_id) {
     return state->backend->shader_per_draw_resources_release(state->backend, s, draw_id);
 }
 
-shader_uniform* renderer_shader_uniform_get_by_location(shader* s, u16 location) {
+shader_uniform* renderer_shader_uniform_get_by_location(kshader* s, u16 location) {
     if (!s) {
         return 0;
     }
     return &s->uniforms[location];
 }
 
-shader_uniform* renderer_shader_uniform_get(shader* s, const char* name) {
+shader_uniform* renderer_shader_uniform_get(kshader* s, const char* name) {
     if (!s || !name) {
         return 0;
     }

@@ -511,7 +511,7 @@ b8 engine_create(application* game_inst) {
         shader_system_initialize(&systems->shader_system_memory_requirement, 0, &shader_sys_config);
         systems->shader_system = kallocate(systems->shader_system_memory_requirement, MEMORY_TAG_ENGINE);
         if (!shader_system_initialize(&systems->shader_system_memory_requirement, systems->shader_system, &shader_sys_config)) {
-            KERROR("Failed to initialize shader system.");
+            KERROR("Failed to initialize kshader system.");
             return false;
         }
     }

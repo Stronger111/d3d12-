@@ -15,7 +15,7 @@ typedef enum resource_type {
     RESOURCE_TYPE_BINARY,
     RESOURCE_TYPE_IMAGE,
     RESOURCE_TYPE_MATERIAL,
-    /** @brief Shader resource type (or more accurately shader config). */
+    /** @brief Shader resource type (or more accurately kshader config). */
     RESOURCE_TYPE_SHADER,
     /** @brief Mesh resource type (collection of geometry configs). */
     RESOURCE_TYPE_MESH,

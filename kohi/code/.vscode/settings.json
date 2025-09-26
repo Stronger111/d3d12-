@@ -122,6 +122,8 @@
         "xform_system.h": "c",
         "font_system.h": "c",
         "khandle.h": "c",
-        "ios": "c"
+        "ios": "c",
+        "core_render_types.h": "c",
+        "kasset_types.h": "c"
     },
 }

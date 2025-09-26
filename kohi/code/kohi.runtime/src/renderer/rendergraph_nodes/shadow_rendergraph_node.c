@@ -42,7 +42,7 @@ typedef struct shadow_rendergraph_node_internal_data {
     struct texture_system_state* texture_system;
     shadow_rendergraph_node_config config;
 
-    shader* s;
+    kshader* s;
     u32 shader_id;
     shadow_shader_locations locations;
 
@@ -67,7 +67,7 @@ typedef struct shadow_rendergraph_node_internal_data {
     shadow_shader_instance_data* instances;
 
     // Separate shader/instance info for terrains;
-    shader* ts;
+    kshader* ts;
     u32 terrain_shader_id;
     shadow_shader_locations terrain_locations;
 
@@ -271,7 +271,7 @@ b8 shadow_rendergraph_node_execute(rendergraph_node* self, frame_data* p_frame_d
             }
         }
 
-        shader_system_apply_per_draw(internal_data->shader_id);
+        shader_system_apply_per_frame(internal_data->shader_id);
 
         // Verify enough instance resources for this frame.
         // This is done by taking the highest material instance id
@@ -362,7 +362,7 @@ b8 shadow_rendergraph_node_execute(rendergraph_node* self, frame_data* p_frame_d
                 // Apply the locals
                 shader_system_uniform_set_by_location(internal_data->shader_id, internal_data->locations.model_location, &g->model);
                 shader_system_uniform_set_by_location(internal_data->shader_id, internal_data->locations.cascade_index_location, &p);
-                shader_system_apply_per_draw(internal_data->shader_id);
+                shader_system_apply_per_frame(internal_data->shader_id);
                 // Invert if needed
                 if (internal_data->geometries[i].winding_inverted) {
                     renderer_winding_set(RENDERER_WINDING_CLOCKWISE);
@@ -397,7 +397,7 @@ b8 shadow_rendergraph_node_execute(rendergraph_node* self, frame_data* p_frame_d
                 }
             }
 
-            shader_system_apply_per_draw(internal_data->terrain_shader_id);
+            shader_system_apply_per_frame(internal_data->terrain_shader_id);
 
             for (u32 i = 0; i < internal_data->terrain_geometry_count; ++i) {
                 geometry_render_data* terrain = &internal_data->terrain_geometries[i];
@@ -405,7 +405,7 @@ b8 shadow_rendergraph_node_execute(rendergraph_node* self, frame_data* p_frame_d
                 // Apply the locals
                 shader_system_uniform_set_by_location(internal_data->terrain_shader_id, internal_data->terrain_locations.model_location, &terrain->model);
                 shader_system_uniform_set_by_location(internal_data->terrain_shader_id, internal_data->terrain_locations.cascade_index_location, &p);
-                shader_system_apply_per_draw(internal_data->terrain_shader_id);
+                shader_system_apply_per_frame(internal_data->terrain_shader_id);
 
                 // Draw it.
                 renderer_geometry_draw(terrain);

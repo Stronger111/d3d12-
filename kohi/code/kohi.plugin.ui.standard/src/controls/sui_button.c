@@ -89,7 +89,7 @@ b8 sui_button_control_load(standard_ui_state* state, sui_control* self) {
 
     // Acquire instance resources for this control.
     kresource_texture_map* maps[1] = { &state->atlas };
-    shader* s = shader_system_get("Shader.StandardUI");
+    kshader* s = shader_system_get("Shader.StandardUI");
     //u16 atlas_location = s->uniforms[s->instance_sampler_indices[0]].index;
     shader_texture_resource_config instance_resource_config = { 0 };
     // Map count for this type is known

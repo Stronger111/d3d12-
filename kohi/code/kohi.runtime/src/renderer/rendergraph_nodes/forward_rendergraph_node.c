@@ -138,22 +138,22 @@ typedef struct forward_rendergraph_node_internal_data {
     struct kresource_texture* colourbuffer_texture;
     struct kresource_texture* depthbuffer_texture;
 
-    shader* pbr_shader;
+    kshader* pbr_shader;
     u32 pbr_shader_id;
     //Known locations for the PBR shader
     pbr_shader_uniform_locations pbr_locations;
 
-    shader* terrain_shader;
+    kshader* terrain_shader;
     u32 terrain_shader_id;
     //Known locations for the terrain shader
     terrain_shader_locations terrain_locations;
 
     u32 water_shader_id;
-    shader* water_shader;
+    kshader* water_shader;
     // Known locations for water shader.
     water_shader_locations water_shader_locations;
 
-    shader* skybox_shader;
+    kshader* skybox_shader;
     u32 skybox_shader_id;
     // Known locations for skybox shader.
     skybox_shader_locations skybox_shader_locations;
@@ -573,7 +573,7 @@ b8 render_water_planes(forward_rendergraph_node_internal_data* internal_data, u3
 
             //Set model matrix.
             shader_system_uniform_set_by_location(internal_data->water_shader_id, internal_data->water_shader_locations.model, &plane->model);
-            shader_system_apply_per_draw(internal_data->water_shader_id);
+            shader_system_apply_per_frame(internal_data->water_shader_id);
 
             // Draw based on vert/index data.
             if (!renderer_renderbuffer_draw(internal_data->vertex_buffer, plane->vertex_buffer_offset, 4, true)) {
@@ -663,7 +663,7 @@ b8 render_scene(forward_rendergraph_node_internal_data* internal_data, kresource
             {
                 int view_index = use_inverted ? 1 : 0;
                 UNIFORM_APPLY_OR_FAIL(shader_system_uniform_set_by_location(internal_data->skybox_shader_id, internal_data->skybox_shader_locations.view_index, &view_index));
-                shader_system_apply_per_draw(internal_data->skybox_shader_id);
+                shader_system_apply_per_frame(internal_data->skybox_shader_id);
             }
 
             // Draw it.
@@ -814,7 +814,7 @@ b8 render_scene(forward_rendergraph_node_internal_data* internal_data, kresource
                 UNIFORM_APPLY_OR_FAIL(shader_system_uniform_set_by_location(internal_data->terrain_shader_id, internal_data->terrain_locations.model, &internal_data->terrain_geometries[i].model));
                 int view_index = use_inverted ? 1 : 0;
                 UNIFORM_APPLY_OR_FAIL(shader_system_uniform_set_by_location(internal_data->terrain_shader_id, internal_data->terrain_locations.view_index, &view_index));
-                shader_system_apply_per_draw(internal_data->terrain_shader_id);
+                shader_system_apply_per_frame(internal_data->terrain_shader_id);
             }
 
             // Draw it.
@@ -972,7 +972,7 @@ b8 render_scene(forward_rendergraph_node_internal_data* internal_data, kresource
                     int view_index = use_inverted ? 1 : 0;
                     UNIFORM_APPLY_OR_FAIL(shader_system_uniform_set_by_location(internal_data->pbr_shader_id, internal_data->pbr_locations.view_index, &view_index));
                     UNIFORM_APPLY_OR_FAIL(shader_system_uniform_set_by_location(internal_data->pbr_shader_id, internal_data->pbr_locations.ibl_index, &render_data->ibl_probe_index));
-                    shader_system_apply_per_draw(internal_data->pbr_shader_id);
+                    shader_system_apply_per_frame(internal_data->pbr_shader_id);
                 }
 
                 // Invert if needed

@@ -23,7 +23,7 @@ const char* kasset_shader_serialize(const kasset* asset) {
 
     // Validate that there are actual stages, because these are required.
     if (!typed_asset->stage_count) {
-        KERROR("kasset_shader_serializer requires at least one stage to serialize. Otherwise it's an invalid shader, ya dingus.");
+        KERROR("kasset_shader_serializer requires at least one stage to serialize. Otherwise it's an invalid kshader, ya dingus.");
         return 0;
     }
 
@@ -134,7 +134,7 @@ const char* kasset_shader_serialize(const kasset* asset) {
     // Output to string.
     out_str = kson_tree_to_string(&tree);
     if (!out_str) {
-        KERROR("Failed to serialize shader to string. See logs for details.");
+        KERROR("Failed to serialize kshader to string. See logs for details.");
     }
 
 cleanup_kson:
@@ -151,7 +151,7 @@ b8 kasset_shader_deserialize(const char* file_text, kasset* out_asset) {
         // Deserialize the loaded asset data
         kson_tree tree = { 0 };
         if (!kson_tree_from_string(file_text, &tree)) {
-            KERROR("Failed to parse asset data for shader. See logs for details.");
+            KERROR("Failed to parse asset data for kshader. See logs for details.");
             goto cleanup_kson;
         }
 
@@ -186,7 +186,7 @@ b8 kasset_shader_deserialize(const char* file_text, kasset* out_asset) {
         kson_array stages_array;
         if (kson_object_property_value_get_object(&tree.root, "stages", &stages_array)) {
             if (!kson_array_element_count_get(&stages_array, &typed_asset->stage_count) || typed_asset->stage_count == 0) {
-                KERROR("Stages are required for shader configurations. Make sure at least one exists.");
+                KERROR("Stages are required for kshader configurations. Make sure at least one exists.");
                 return false;
             }
 
@@ -207,7 +207,7 @@ b8 kasset_shader_deserialize(const char* file_text, kasset* out_asset) {
             }
         }
         else {
-            KERROR("Stages are required for shader configurations. Make sure at least one exists.");
+            KERROR("Stages are required for kshader configurations. Make sure at least one exists.");
             return false;
         }
 

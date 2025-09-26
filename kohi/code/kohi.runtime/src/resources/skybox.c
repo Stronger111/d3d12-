@@ -59,7 +59,7 @@ b8 skybox_load(skybox* sb) {
 
     sb->render_frame_number = INVALID_ID_U64;
 
-    shader* skybox_shader = shader_system_get("Shader.Builtin.Skybox");  // TODO: allow configurable shader.
+    kshader* skybox_shader = shader_system_get("Shader.Builtin.Skybox");  // TODO: allow configurable shader.
     kresource_texture_map* maps[1] = { &sb->cubemap };
     // shader* s = skybox_shader;
     // u16 atlas_location = s->uniforms[s->instance_sampler_indices[0]].index;
@@ -87,7 +87,7 @@ b8 skybox_unload(skybox* sb) {
     }
     sb->state = SKYBOX_STATE_UNDEFINED;
 
-    shader* skybox_shader = shader_system_get("Shader.Builtin.Skybox");  // TODO: allow configurable shader.
+    kshader* skybox_shader = shader_system_get("Shader.Builtin.Skybox");  // TODO: allow configurable shader.
     renderer_shader_instance_resources_release(engine_systems_get()->renderer_system, skybox_shader, sb->instance_id);
     sb->instance_id = INVALID_ID;
     renderer_kresource_texture_map_resources_release(engine_systems_get()->renderer_system, &sb->cubemap);

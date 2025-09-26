@@ -87,7 +87,7 @@ i32 combine_texture_maps(i32 argc, char** argv) {
     channel_map maps[MAP_TYPE_MAX] = { 0 };
     char out_file_path[1024] = { 0 };
 
-    // Starting at third argument. One argument = 1 shader.
+    // Starting at third argument. One argument = 1 kshader.
     for (u32 i = 2; i < argc; ++i) {
         // Parse the stage from the file name.
         char** parts = darray_create(char*);

@@ -1,7 +1,6 @@
 #pragma once
 
 #include "kresources/kresource_types.h"
-#include "renderer/renderer_types.h"
 
 struct texture_system_state;
 
@@ -224,8 +223,17 @@ KAPI const kresource_texture* texture_system_get_default_kresource_cube_texture(
 /**
  * @brief Gets a pointer to the default terrain texture.
  * @param state A pointer to the texture system state.
- * @returns A pointer to the texture.
+ * @returns A handle to texture internal data if successful, otherwise invalid handle.
  */
 KAPI const kresource_texture* texture_system_get_default_kresource_terrain_texture(struct texture_system_state* state);
-
-KAPI struct texture_internal_data* texture_system_resource_get_internal_or_default(const kresource_texture* t, u32* out_generation);
+/**
+ * @brief Gets a pointer to either the internal data of the supplied texture if loaded,
+ * or one to the internal of a default texture of the appropriate type. If a default texture
+ * is used, out_generation will be set to INVALID_ID. If an invalid texture is passed, 0/null
+ * will be returned.
+ *
+ * @param t A pointer to the texture whose internal data will be fetched.
+ * @param out_generation A pointer to hold the generation of the texture.
+ * @returns A handle to texture internal data if successful, otherwise invalid handle.
+ */
+KAPI khandle  texture_system_resource_get_internal_or_default(const kresource_texture* t, u32* out_generation);

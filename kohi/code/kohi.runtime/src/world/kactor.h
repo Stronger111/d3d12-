@@ -30,7 +30,7 @@ typedef struct kactor_staticmesh_system_config {
 
 // typedef struct  kactor_comp_staticmesh_render_data {
 //     const kresource_material_instance* material;
-//     // TODO: Should there be another way to represent this? (note: used in pick shader for flat-colour rendering)
+//     // TODO: Should there be another way to represent this? (note: used in pick kshader for flat-colour rendering)
 //     u64 unique_id;
 
 //     /** @brief Flags for the static mesh to be rendered. */

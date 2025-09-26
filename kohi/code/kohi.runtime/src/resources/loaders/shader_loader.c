@@ -22,7 +22,7 @@ static b8 shader_loader_load(struct resource_loader* self, const char* name, voi
 
     file_handle f;
     if (!filesystem_open(full_file_path, FILE_MODE_READ, false, &f)) {
-        KERROR("shader_loader_load - unable to open shader file for reading: '%s'.", full_file_path);
+        KERROR("shader_loader_load - unable to open kshader file for reading: '%s'.", full_file_path);
         return false;
     }
 
@@ -410,7 +410,7 @@ static b8 shader_loader_load(struct resource_loader* self, const char* name, voi
                     }
                     else {
                         // List out the entire unparsed field to make the error more useful.
-                        KERROR("Error in shader file. Unsupported sampler type '%s' found. %s:%u", fields[0], full_file_path, line_number);
+                        KERROR("Error in kshader file. Unsupported sampler type '%s' found. %s:%u", fields[0], full_file_path, line_number);
                         return false;
                     }
                 }

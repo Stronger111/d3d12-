@@ -79,7 +79,7 @@ KAPI b8 sui_label_control_create(standard_ui_state* state, const char* name, fon
     // TODO: Should there be an override option for the shader?
     // FIXME: Convert fonts to use new texture resource type.
     kresource_texture_map* maps[1] = { &typed_data->data->atlas }; //{ &state->atlas };
-    shader* s = shader_system_get("Shader.StandardUI");
+    kshader* s = shader_system_get("Shader.StandardUI");
 
     //u16 atlas_location = s->uniforms[s->instance_sampler_indices[0]].index;
     shader_texture_resource_config instance_resource_config = { 0 };
@@ -153,7 +153,7 @@ void sui_label_control_unload(standard_ui_state* state, sui_control* self) {
     }
 
     // Release resource for font texture map.
-    shader* ui_shader = shader_system_get("Shader.StandardUI");  // TODO: text shader.
+    kshader* ui_shader = shader_system_get("Shader.StandardUI");  // TODO: text shader.
     if (!renderer_shader_instance_resources_release(state->renderer, ui_shader, typed_data->instance_id)) {
         KERROR("Unable to release shader resources for font texture map.");
     }

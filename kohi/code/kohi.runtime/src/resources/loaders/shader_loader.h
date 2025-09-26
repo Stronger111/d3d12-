@@ -1,7 +1,7 @@
 /**
  * @file shader_loader.h
  * @author Travis Vroman (travis@kohiengine.com)
- * @brief A resource loader that handles shader config resources.
+ * @brief A resource loader that handles kshader config resources.
  * @version 1.0
  * @date 2022-02-28
  * 
@@ -14,7 +14,7 @@
 #include "systems/resource_system.h"
 
 /**
- * @brief Creates and returns a shader resource loader.
+ * @brief Creates and returns a kshader resource loader.
  * 
  * @return The newly created resource loader.
  */

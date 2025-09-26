@@ -7,7 +7,7 @@
 
 /*
 Need to modify the geometry structure/functions to allow for multiple materials.
-Write shader to handle 8 material weights/blending
+Write kshader to handle 8 material weights/blending
 Multi-materials (combine maps using uv offsets)?
 Load terrain configuration from file
 Load heightmaps

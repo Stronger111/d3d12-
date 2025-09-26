@@ -147,7 +147,7 @@ b8 kasset_importer_static_mesh_obj_import(const struct kasset_importer* self, u6
                         // Since it's an import, make note of the source asset path as well.
                         new_material.base.meta.source_asset_path = kname_create(mtl_path);
 
-                        // Imports do not use a custom shader.
+                        // Imports do not use a custom kshader.
                         new_material.custom_shader_name = 0;
 
                         new_material.type = m_src->type;

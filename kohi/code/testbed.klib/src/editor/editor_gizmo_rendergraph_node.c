@@ -25,7 +25,7 @@ typedef struct editor_gizmo_rendergraph_node_internal_data {
     struct renderer_system_state* renderer;
 
     u32 colour_shader_id;
-    shader* colour_shader;
+    kshader* colour_shader;
     debug_shader_locations debug_locations;
 
     struct kresource_texture* colourbuffer_texture;
@@ -161,7 +161,7 @@ b8 editor_gizmo_rendergraph_node_execute(struct rendergraph_node* self, struct f
         // Globals
         shader_system_uniform_set_by_location(internal_data->colour_shader_id, internal_data->debug_locations.projection, &internal_data->projection);
         shader_system_uniform_set_by_location(internal_data->colour_shader_id, internal_data->debug_locations.view, &internal_data->view);
-        shader_system_apply_per_draw(internal_data->colour_shader_id);
+        shader_system_apply_per_frame(internal_data->colour_shader_id);
 
         if (gizmo) {
             editor_gizmo_render_frame_prepare(gizmo, p_frame_data);
@@ -195,7 +195,7 @@ b8 editor_gizmo_rendergraph_node_execute(struct rendergraph_node* self, struct f
 
         // Set model matrix.
         shader_system_uniform_set_by_location(internal_data->colour_shader_id, internal_data->debug_locations.model, &model);
-        shader_system_apply_per_draw(internal_data->colour_shader_id);
+        shader_system_apply_per_frame(internal_data->colour_shader_id);
 
         // Draw it.
         renderer_geometry_draw(&render_data);

@@ -12,8 +12,8 @@
 #ifndef _khandle_H_
 #define _khandle_H_
 
-#include "identifier.h"
 #include "defines.h"
+#include "identifier.h"
 
 #define INVALID_khandle INVALID_ID_U64
 
@@ -35,6 +35,9 @@ KAPI khandle khandle_create(u32 handle_index);
 
 /** @brief Creates and returns a handle based on the handle index and identifier provided. */
 KAPI khandle khandle_create_with_identifier(u32 handle_index,identifier id);
+
+/** @brief Creates and returns a handle based on the handle index provided, using the given u64 to create an identifier. */
+KAPI khandle khandle_create_with_u64_identifier(u32 handle_index,u64 uniqueid);
 
 /** @brief Creates and returns an invalid handle. */
 KAPI khandle khandle_invalid(void);

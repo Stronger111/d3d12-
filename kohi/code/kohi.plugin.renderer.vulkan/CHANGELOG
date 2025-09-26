@@ -1,4 +1,7 @@
 Kohi Vulkan Renderer Plugin Changelog
+- 0.8.0
+  - Intentionally skipped 0.7 to sync with base engine version.
+  - Samplers no longer require knowledge of mip levels, and thus no longer clamp LODs.
 
 - 0.6.0
   - Added support for secondary command buffers.

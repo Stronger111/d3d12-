@@ -328,7 +328,7 @@ void vulkan_image_transition_layout(vulkan_context* context,
         dest_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
     }
     else if (old_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && new_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
-        // Transitioning from a transfer destination layout to a shader-readonly layout.
+        // Transitioning from a transfer destination layout to a kshader-readonly layout.
         barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
         barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
@@ -339,7 +339,7 @@ void vulkan_image_transition_layout(vulkan_context* context,
         dest_stage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
     }
     else if (old_layout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL && new_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
-        // Transitioning from a transfer source layout to a shader-readonly layout.
+        // Transitioning from a transfer source layout to a kshader-readonly layout.
         barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
         barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
@@ -460,7 +460,7 @@ b8 vulkan_image_mipmaps_generate(
         barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
         barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
-        // Transition the previous mip layer's image subresource to a shader-readable layout.
+        // Transition the previous mip layer's image subresource to a kshader-readable layout.
         vkCmdPipelineBarrier(
             command_buffer->handle,
             VK_PIPELINE_STAGE_TRANSFER_BIT,
@@ -480,7 +480,7 @@ b8 vulkan_image_mipmaps_generate(
         }
     }
 
-    // Finally,transition the last mip level to a shader-readable layout.
+    // Finally,transition the last mip level to a kshader-readable layout.
     // This would not have been handled in the above loop since that always transitions
     // the previous layer.
     barrier.subresourceRange.baseMipLevel = image->mip_levels - 1;

@@ -29,7 +29,7 @@ typedef struct wireframe_colour_instance {
 } wireframe_colour_instance;
 
 typedef struct wireframe_shader_info {
-    shader* s;
+    kshader* s;
     wireframe_shader_locations locations;
     // One instance per colour drawn.
     wireframe_colour_instance normal_instance;
@@ -76,15 +76,15 @@ b8 render_view_wireframe_on_registered(struct render_view* self) {
 
     for (u32 s = 0; s < 2; ++s) {
         wireframe_shader_info* info = shader_infos[s];
-        // Load the wireframe shader and its locations.
+        // Load the wireframe kshader and its locations.
         resource wireframe_shader_config_resource;
         if (!resource_system_load(shader_names[s], RESOURCE_TYPE_SHADER, 0, &wireframe_shader_config_resource)) {
-            KERROR("Failed to load builtin wireframe shader.");
+            KERROR("Failed to load builtin wireframe kshader.");
             return false;
         }
         shader_config* wireframe_shader_config = wireframe_shader_config_resource.data;
         if (!shader_system_create(&self->passes[0], wireframe_shader_config)) {
-            KERROR("Failed to load builtin wireframe shader.");
+            KERROR("Failed to load builtin wireframe kshader.");
             return false;
         }
         resource_system_unload(&wireframe_shader_config_resource);
@@ -95,7 +95,7 @@ b8 render_view_wireframe_on_registered(struct render_view* self) {
         info->locations.model = shader_system_uniform_location(info->s, "model");
         info->locations.colour = shader_system_uniform_location(info->s, "colour");
 
-        // Acquire shader instance resources.
+        // Acquire kshader instance resources.
         info->normal_instance = (wireframe_colour_instance){ 0 };
         info->normal_instance.colour = normal_colours[s];
 
@@ -104,14 +104,14 @@ b8 render_view_wireframe_on_registered(struct render_view* self) {
         instance_resource_config.uniform_configs = 0;
 
         if (!renderer_shader_instance_resources_acquire(info->s, &instance_resource_config, &info->normal_instance.id)) {
-            KERROR("Unable to acquire geometry shader instance resources from wireframe shader.");
+            KERROR("Unable to acquire geometry kshader instance resources from wireframe kshader.");
             return false;
         }
 
         info->selected_instance = (wireframe_colour_instance){ 0 };
         info->selected_instance.colour = vec4_create(0.0f, 1.0f, 0.0f, 1.0f);
         if (!renderer_shader_instance_resources_acquire(info->s, &instance_resource_config, &info->selected_instance.id)) {
-            KERROR("Unable to acquire selected shader instance resources from wireframe shader.");
+            KERROR("Unable to acquire selected kshader instance resources from wireframe kshader.");
             return false;
         }
     }
@@ -135,7 +135,7 @@ void render_view_wireframe_on_destroy(struct render_view* self) {
     // Unregister from event.
     event_unregister(EVENT_CODE_DEFAULT_RENDERTARGET_REFRESH_REQUIRED, self, render_view_on_event);
 
-    // Release shader instance resources.
+    // Release kshader instance resources.
     renderer_shader_instance_resources_release(internal_data->mesh_shader.s, internal_data->mesh_shader.normal_instance.id);
     renderer_shader_instance_resources_release(internal_data->mesh_shader.s, internal_data->mesh_shader.selected_instance.id);
     renderer_shader_instance_resources_release(internal_data->terrain_shader.s, internal_data->terrain_shader.normal_instance.id);
@@ -247,15 +247,15 @@ b8 render_view_wireframe_on_render(const struct render_view* self, const struct 
             renderer_shader_bind_globals(info->s);
 
             if (!shader_system_uniform_set_by_location(info->locations.projection, &packet->projection_matrix)) {
-                KERROR("Failed to set projection matrix uniform on wireframe shader.");
+                KERROR("Failed to set projection matrix uniform on wireframe kshader.");
                 return false;
             }
             if (!shader_system_uniform_set_by_location(info->locations.view, &packet->view_matrix)) {
-                KERROR("Failed to set view matrix uniform on wireframe shader.");
+                KERROR("Failed to set view matrix uniform on wireframe kshader.");
                 return false;
             }
 
-            shader_system_apply_per_draw(true, p_frame_data);
+            shader_system_apply_per_frame(true, p_frame_data);
 
             if (array) {
                 for (u32 i = 0; i < counts[s]; ++i) {
@@ -275,7 +275,7 @@ b8 render_view_wireframe_on_render(const struct render_view* self, const struct 
                     b8 needs_update = inst->frame_number != p_frame_data->renderer_frame_number || inst->draw_index != p_frame_data->draw_index;
                     if (needs_update) {
                         if (!shader_system_uniform_set_by_location(info->locations.colour, &inst->colour)) {
-                            KERROR("Unable to set uniform colour for wireframe shader.");
+                            KERROR("Unable to set uniform colour for wireframe kshader.");
                             return false;
                         }
                     }
@@ -288,7 +288,7 @@ b8 render_view_wireframe_on_render(const struct render_view* self, const struct 
 
                     // Locals.
                     if (!shader_system_uniform_set_by_location(info->locations.model, &array[i].model)) {
-                        KERROR("Failed to apply model matrix uniform for wireframe shader.");
+                        KERROR("Failed to apply model matrix uniform for wireframe kshader.");
                         return false;
                     }
 

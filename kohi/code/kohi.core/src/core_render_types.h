@@ -16,7 +16,7 @@ typedef enum face_cull_mode {
 } face_cull_mode;
 
 typedef enum primitive_topology_type {
-    /** Topology type not defined. Not valid for shader creation. */
+    /** Topology type not defined. Not valid for kshader creation. */
     PRIMITIVE_TOPOLOGY_TYPE_NONE = 0x00,
     /** A list of triangles. The default if nothing is defined. */
     PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE_LIST = 0x01,
@@ -53,12 +53,12 @@ typedef enum shader_stage {
 } shader_stage;
 
 /**
- * @brief Defines shader update frequencies, typically used for uniforms.
+ * @brief Defines kshader update frequencies, typically used for uniforms.
  */
 typedef enum shader_update_frequency {
     /** @brief The uniform is updated once per frame. */
     SHADER_UPDATE_FREQUENCY_PER_FRAME = 0,
-    /** @brief The uniform is updated once per "group", it is up to the shader using this to determine what this means. */
+    /** @brief The uniform is updated once per "group", it is up to the kshader using this to determine what this means. */
     SHADER_UPDATE_FREQUENCY_PER_GROUP = 1,
     /** @brief The uniform is updated once per draw call (i.e. "instance" of an object in the world). */
     SHADER_UPDATE_FREQUENCY_PER_DRAW = 2
@@ -142,7 +142,7 @@ typedef struct shader_uniform {
 } shader_uniform;
 
 /**
- * @brief Represents a single shader vertex attribute.
+ * @brief Represents a single kshader vertex attribute.
  */
 typedef struct shader_attribute {
     /** @brief The attribute name. */
@@ -174,17 +174,19 @@ typedef enum shader_flags {
 typedef u32 shader_flag_bits;
 
 /**
- * @brief Represents data required for a particular update frequency within a shader.
+ * @brief Represents data required for a particular update frequency within a kshader.
  */
 typedef struct shader_frequency_data {
-    /** @brief The number of texture uniforms for this frequency. */
-    u8 uniform_texture_count;
     /** @brief The number of non-sampler and non-texture uniforms for this frequency. */
     u8 uniform_count;
     /** @brief The number of sampler uniforms for this frequency. */
     u8 uniform_sampler_count;
     // darray Keeps the uniform indices of samplers for fast lookups.
     u32* sampler_indices;
+    /** @brief The number of texture uniforms for this frequency. */
+    u8 uniform_texture_count;
+    // darray Keeps the uniform indices of textures for fast lookups.
+    u32* texture_indices;
     /** @brief The actual size of the uniform buffer object for this frequency. */
     u64 ubo_size;
     /** @brief The stride of the uniform buffer object for this frequency. */
@@ -201,14 +203,14 @@ typedef struct shader_frequency_data {
 } shader_frequency_data;
 
 /**
- * @brief Represents the current state of a given shader.
+ * @brief Represents the current state of a given kshader.
  */
 typedef enum shader_state {
-    /** @brief The shader has not yet gone through the creation process, and is unusable.*/
+    /** @brief The kshader has not yet gone through the creation process, and is unusable.*/
     SHADER_STATE_NOT_CREATED,
-    /** @brief The shader has gone through the creation process, but not initialization. It is unusable.*/
+    /** @brief The kshader has gone through the creation process, but not initialization. It is unusable.*/
     SHADER_STATE_UNINITIALIZED,
-    /** @brief The shader is created and initialized, and is ready for use.*/
+    /** @brief The kshader is created and initialized, and is ready for use.*/
     SHADER_STATE_INITIALIZED,
 } shader_state;
 
@@ -250,18 +252,18 @@ typedef struct shader_uniform_config {
 } shader_uniform_config;
 
 /**
- * @brief Configuration for a shader. Typically created and
- * destroyed by the shader resource loader, and set to the
+ * @brief Configuration for a kshader. Typically created and
+ * destroyed by the kshader resource loader, and set to the
  * properties found in a .shadercfg resource file.
  */
 typedef struct shader_config {
-    /** @brief The name of the shader to be created. */
+    /** @brief The name of the kshader to be created. */
     char* name;
 
     /** @brief The face cull mode to be used. Default is BACK if not supplied. */
     face_cull_mode cull_mode;
 
-    /** @brief The topology types for the shader pipeline. See primitive_topology_type. Defaults to "triangle list" if unspecified. */
+    /** @brief The topology types for the kshader pipeline. See primitive_topology_type. Defaults to "triangle list" if unspecified. */
     u32 topology_types;
 
     /** @brief The count of attributes. */
@@ -272,7 +274,7 @@ typedef struct shader_config {
     u8 uniform_count;
     /** @brief The collection of uniforms. Darray. */
     shader_uniform_config* uniforms;
-    /** @brief The number of stages present in the shader. */
+    /** @brief The number of stages present in the kshader. */
     u8 stage_count;
     /** @brief The collection of stage configs. */
     shader_stage_config* stage_configs;
@@ -283,22 +285,22 @@ typedef struct shader_config {
     /** @brief The maximum number of per-draw instances allowed. */
     u32 max_per_draw_count;
 
-    /** @brief The flags set for this shader. */
+    /** @brief The flags set for this kshader. */
     u32 flags;
 } shader_config;
 
 
 /**
- * @brief Represents a shader on the frontend.
+ * @brief Represents a kshader on the frontend.
  */
-typedef struct shader {
-    /** @brief The shader identifier */
-    u32 id;
+typedef struct kshader {
+    /** @brief unique identifier that is compared against a handle. */
+    u64 uniqueid;
 
-    char* name;
+    kname name;
 
     shader_flag_bits flags;
-    /** @brief The types of topologies used by the shader and its pipeline. See primitive_topology_type. */
+    /** @brief The types of topologies used by the kshader and its pipeline. See primitive_topology_type. */
     u32 topology_types;
     /**
      * @brief The amount of bytes that are required for UBO alignment.
@@ -310,7 +312,7 @@ typedef struct shader {
      */
     u64 required_ubo_alignment;
 
-    /** @brief An array of uniforms in this shader. Darray. */
+    /** @brief An array of uniforms in this kshader. Darray. */
     shader_uniform* uniforms;
 
     /** @brief An array of attributes. Darray. */
@@ -330,10 +332,10 @@ typedef struct shader {
 
     /** @brief Per-draw frequency data. */
     shader_frequency_data per_draw;
-    /** @brief The internal state of the shader. */
+    /** @brief The internal state of the kshader. */
     shader_state state;
 
-    /** @brief Indicates if the shader is currently flagged to use wireframe. */
+    /** @brief Indicates if the kshader is currently flagged to use wireframe. */
     b8 is_wireframe;
 
     /** @brief An opaque pointer to hold renderer API specific data. Renderer is responsible for creation and destruction of this.  */
@@ -343,7 +345,41 @@ typedef struct shader {
     u32* module_watch_ids;
 #endif
 
-} shader;
+} kshader;
+
+typedef enum kmaterial_type {
+    KMATERIAL_TYPE_UNKNOWN = 0,
+    KMATERIAL_TYPE_STANDARD,
+    KMATERIAL_TYPE_WATER,
+    KMATERIAL_TYPE_BLENDED,
+    KMATERIAL_TYPE_COUNT,
+    KMATERIAL_TYPE_CUSTOM = 99
+}kmaterial_type;
+
+typedef enum kmaterial_model {
+    KMATERIAL_MODEL_UNLIT = 0,
+    KMATERIAL_MODEL_PBR,
+    KMATERIAL_MODEL_PHONG,
+    KMATERIAL_MODEL_COUNT,
+    KMATERIAL_MODEL_CUSTOM = 99
+}kmaterial_model;
+
+typedef enum kmaterial_texture_map {
+    KMATERIAL_TEXTURE_MAP_BASE_COLOUR,
+    KMATERIAL_TEXTURE_MAP_NORMAL,
+    KMATERIAL_TEXTURE_MAP_METALLIC,
+    KMATERIAL_TEXTURE_MAP_ROUGHNESS,
+    KMATERIAL_TEXTURE_MAP_AO,
+    KMATERIAL_TEXTURE_MAP_MRA,
+    KMATERIAL_TEXTURE_MAP_EMISSIVE,
+} kmaterial_texture_map;
+
+typedef enum kmaterial_texture_map_channel {
+    KMATERIAL_TEXTURE_MAP_CHANNEL_R = 0,
+    KMATERIAL_TEXTURE_MAP_CHANNEL_G = 1,
+    KMATERIAL_TEXTURE_MAP_CHANNEL_B = 2,
+    KMATERIAL_TEXTURE_MAP_CHANNEL_A = 3
+} kmaterial_texture_map_channel;
 
 
 

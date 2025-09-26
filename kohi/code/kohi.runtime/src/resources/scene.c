@@ -712,7 +712,7 @@ b8 scene_update(scene* scene, const struct frame_data* p_frame_data) {
                     scene_debug_data* debug = scene->dir_lights[i].debug_data;
                     if (debug->line.geo.generation != INVALID_ID_U16) {
                         // Update colour. NOTE:doing this every frame might be expensitive if we have to reload the geometry. all the time.
-                        // TODO: Perhaps there is another way to accomplish this.like a shader that uses a uniform for colour.?
+                        // TODO: Perhaps there is another way to accomplish this.like a kshader that uses a uniform for colour.?
                         debug_line3d_colour_set(&debug->line, scene->dir_lights[i].data.colour);
                     }
                 }
@@ -750,7 +750,7 @@ b8 scene_update(scene* scene, const struct frame_data* p_frame_data) {
                         xform_position_set(debug->box.xform, vec3_from_vec4(scene->point_lights[i].data.position));
 
                         // Update colour. NOTE: doing this every frame might be expensive if we have to reload the geometry all the time.
-                        // TODO: Perhaps there is another way to accomplish this, like a shader that uses a uniform for colour?
+                        // TODO: Perhaps there is another way to accomplish this, like a kshader that uses a uniform for colour?
                         debug_box3d_colour_set(&debug->box, scene->point_lights[i].data.colour);
                     }
                 }

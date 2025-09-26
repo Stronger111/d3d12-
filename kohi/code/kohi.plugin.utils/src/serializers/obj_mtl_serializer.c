@@ -78,7 +78,7 @@ static b8 import_obj_material_library_file(const char* mtl_file_text, obj_mtl_so
 
                 sscanf(line, "%s %f %f %f", t, &prop.value.v4.r, &prop.value.v4.g, &prop.value.v4.b);
 
-                // NOTE: This is only used by the colour shader, and will set to
+                // NOTE: This is only used by the colour kshader, and will set to
                 // max_norm by default. Transparency could be added as a material
                 // property all its own at a later time.
                 prop.value.v4.a = 1.0f;
