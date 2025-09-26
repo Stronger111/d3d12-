@@ -347,9 +347,9 @@ static b8 material_loader_load(struct resource_loader *self, const char *name, v
                 if (parse_mode == MATERIAL_PARSE_MODE_GLOBAL) {
                     if (strings_equali(trimmed_value, "phong")) {
                         KERROR("Phong materials are no longer supported. Attempting to convert to PBR.");
-                        resource_data->type = MATERIAL_TYPE_PBR;
+                        resource_data->type = MATERIAL_TYPE_STANDARD;
                     } else if (strings_equali(trimmed_value, "pbr")) {
-                        resource_data->type = MATERIAL_TYPE_PBR;
+                        resource_data->type = MATERIAL_TYPE_STANDARD;
                     } else if (strings_equali(trimmed_value, "terrain")) {
                         resource_data->type = MATERIAL_TYPE_TERRAIN;
                     } else if (strings_equali(trimmed_value, "custom")) {
@@ -405,7 +405,7 @@ static b8 material_loader_load(struct resource_loader *self, const char *name, v
 
     // If version 1 and unknown material type, default to "PBR"
     if (resource_data->version == 1 && resource_data->type == MATERIAL_TYPE_UNKNOWN) {
-        resource_data->type = MATERIAL_TYPE_PBR;
+        resource_data->type = MATERIAL_TYPE_STANDARD;
     }
 
     filesystem_close(&f);
