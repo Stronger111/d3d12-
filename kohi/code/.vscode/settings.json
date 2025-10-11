@@ -124,6 +124,13 @@
         "khandle.h": "c",
         "ios": "c",
         "core_render_types.h": "c",
-        "kasset_types.h": "c"
+        "kasset_types.h": "c",
+        "scene_loader.h": "c",
+        "font_types.h": "c",
+        "renderer_types.h": "c",
+        "debug_box3d.h": "c",
+        "debug_line3d.h": "c",
+        "iosfwd": "c",
+        "xlocbuf": "c"
     },
 }

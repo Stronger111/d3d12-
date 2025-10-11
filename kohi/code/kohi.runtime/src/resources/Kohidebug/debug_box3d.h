@@ -15,12 +15,9 @@ typedef struct debug_box3d {
     khandle xform;
     khandle parent_xform;
 
-    u32 vertex_count;
-    colour_vertex_3d *vertices;
-
     b8 is_dirty;
 
-    geometry geo;
+    kgeometry geometry;
 } debug_box3d;
 
 struct frame_data;

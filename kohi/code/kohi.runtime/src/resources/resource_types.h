@@ -206,27 +206,6 @@ typedef struct material_config {
     b8 auto_release;
 } material_config;
 
-// typedef struct material_phong_properties {
-//     /** @brief The diffuse colour. */
-//     vec4 diffuse_colour;
-//     vec3 padding;
-//     /** @brief The material shininess, determines how concentrated the specular
-//      * lighting is. */
-//     f32 shininess;
-// } material_phong_properties;
-
-// typedef struct material_ui_properties {
-//     /** @brief The diffuse colour. */
-//     vec4 diffuse_colour;
-// } material_ui_properties;
-
-// typedef struct material_terrain_properties {
-//     material_phong_properties materials[4];
-//     vec3 padding;
-//     i32 num_materials;
-//     vec4 padding2;
-// } material_terrain_properties;
-
 /**
  * @brief A material, which represents various properties
  * of a surface in the world such as texture, colour,

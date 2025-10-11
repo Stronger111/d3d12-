@@ -6,12 +6,12 @@
 #include "math/math_types.h"
 #include "resources/Kohidebug/debug_grid.h"
 #include "resources/resource_types.h"
+#include "systems/static_mesh_system.h"
 
 struct frame_data;
 struct render_packet;
 struct directional_light;
 struct point_light;
-struct mesh;
 struct skybox;
 struct water_plane;
 struct geometry_config;
@@ -105,9 +105,9 @@ typedef struct scene {
     // Array of scene attachments for point lights.
     scene_attachment* point_light_attachments;
 
-    // darray of meshes to be loaded.`
-    struct mesh* meshes;
-  
+    // darray of static meshes.
+    static_mesh_instance* static_meshes;
+
     // Array of scene attachments for meshes.
     scene_attachment* mesh_attachments;
     // Array of mesh metadata.
@@ -115,7 +115,7 @@ typedef struct scene {
 
     // darray of terrains.
     struct terrain* terrains;
-   
+
     // Array of scene attachments for terrains.
     scene_attachment* terrain_attachments;
     // Array of terrain metadata.
@@ -123,7 +123,7 @@ typedef struct scene {
 
     // Singlular pointer to a skybox.
     struct skybox* skyboxes;
-   
+
     // Array of scene attachments for skyboxes
     scene_attachment* skybox_attachments;
     // Array of skybox metadata.

@@ -16,11 +16,11 @@ typedef struct static_mesh_instance {
     /** @brief A constant pointer to the underlying mesh resource. */
     const kresource_static_mesh* mesh_resource;
     /**
-    * @brief An array of handles to  material instances associated with the submeshes.
+    * @brief An array of  material instances associated with the submeshes.
     * Elements match up to mesh_resource->submeshes index-wise. Thus the
     * count of this array is the same as mesh_resource->submesh_count.
     */
-    khandle* material_instances;
+    material_instance* material_instances;
 
     vec4 tint;
 }static_mesh_instance;
@@ -56,33 +56,32 @@ typedef struct static_mesh_submesh_render_data {
     u64 index_buffer_offset;
 
     /** @brief The instance of the material to use with this static mesh when rendering. */
-   // FIXME: Provide a copy of relevant material/material instance data here, not just a handle to it.
-   /* material_instance material; */
+    material_instance material;
 }static_mesh_submesh_render_data;
 
 /**
  * Contains data required to render a static mesh (ultimately its submeshes).
  */
-    typedef struct static_mesh_render_data {
-        /** The identifier of the mesh instance being rendered. */
-        u64 instance_id;
-        /** @brief The number of submeshes to be rendered. */
-        u32 submesh_count;
-        /** @brief The array of submeshes to be rendered. */
-        static_mesh_submesh_render_data* submeshes;
-        /** The index of the Image-Based-Lighting probe to be used, if applicable. */
-        u8 ibl_probe_index;
-        /** @brief The tint override to be used when rendering all submeshes. Typically white (1, 1, 1, 1) if not used. */
-        vec4 tint;
-    }static_mesh_render_data;
+typedef struct static_mesh_render_data {
+    /** The identifier of the mesh instance being rendered. */
+    u64 instance_id;
+    /** @brief The number of submeshes to be rendered. */
+    u32 submesh_count;
+    /** @brief The array of submeshes to be rendered. */
+    static_mesh_submesh_render_data* submeshes;
+    /** The index of the Image-Based-Lighting probe to be used, if applicable. */
+    u8 ibl_probe_index;
+    /** @brief The tint override to be used when rendering all submeshes. Typically white (1, 1, 1, 1) if not used. */
+    vec4 tint;
+}static_mesh_render_data;
 
-    struct static_mesh_system_state;
+struct static_mesh_system_state;
 
-    KAPI b8 static_mesh_system_initialize(u64* memory_requirement, struct static_mesh_system_state* state);
-    KAPI void static_mesh_system_shutdown(struct static_mesh_system_state* state);
+KAPI b8 static_mesh_system_initialize(u64* memory_requirement, struct static_mesh_system_state* state);
+KAPI void static_mesh_system_shutdown(struct static_mesh_system_state* state);
 
-    KAPI b8 static_mesh_system_instance_acquire(struct static_mesh_system_state* state, kname name, kname resource_name, static_mesh_instance* out_instance);
-    KAPI void static_mesh_system_instance_release(struct static_mesh_system_state* state, static_mesh_instance* instance);
+KAPI b8 static_mesh_system_instance_acquire(struct static_mesh_system_state* state, kname name, kname resource_name, static_mesh_instance* out_instance);
+KAPI void static_mesh_system_instance_release(struct static_mesh_system_state* state, static_mesh_instance* instance);
 
-    KAPI b8 static_mesh_system_render_data_generate(const static_mesh_instance* instance, static_mesh_render_data_flag_bits flags, static_mesh_render_data* out_render_data);
-    KAPI void static_mesh_system_render_data_destroy(static_mesh_render_data* render_data);
+KAPI b8 static_mesh_system_render_data_generate(const static_mesh_instance* instance, static_mesh_render_data_flag_bits flags, static_mesh_render_data* out_render_data);
+KAPI void static_mesh_system_render_data_destroy(static_mesh_render_data* render_data);

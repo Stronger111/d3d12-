@@ -4,6 +4,7 @@
 #include "identifiers/identifier.h"
 #include "math/math_types.h"
 #include "resources/resource_types.h"
+#include "systems/material_system.h"
 
 /*
 Need to modify the geometry structure/functions to allow for multiple materials.
@@ -83,8 +84,8 @@ typedef struct terrain_chunk {
     /** @brief The extents of the geometry in local coordinates. */
     extents_3d extents;
 
-    /** @brief A pointer to the material associated with this geometry.. */
-    struct material* material;
+    /** @brief The material instance associated with this geometry. */
+    material_instance material;
 
     u8 current_lod;
 } terrain_chunk;
@@ -103,6 +104,7 @@ typedef struct terrain {
     terrain_state state;
     char* name;
     char* resource_name;
+    kname material_name;
     // X 轴像素的长度
     u32 tile_count_x;
     u32 tile_count_z;

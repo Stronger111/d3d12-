@@ -16,11 +16,7 @@ typedef struct debug_line3d {
     khandle xform;
     khandle xform_parent;
     b8 is_dirty;
-
-    u32 vertex_count;
-    colour_vertex_3d *vertices;
-
-    geometry geo;
+    kgeometry geometry;
 } debug_line3d;
 
 struct frame_data;

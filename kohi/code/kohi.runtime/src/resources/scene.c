@@ -2,11 +2,13 @@
 
 #include "containers/darray.h"
 #include "core/console.h"
+#include "core/engine.h"
 #include "core/frame_data.h"
 #include "defines.h"
 #include "graphs/hierarchy_graph.h"
 #include "identifiers/identifier.h"
 #include "identifiers/khandle.h"
+#include "kresources/kresource_types.h"
 #include "logger.h"
 #include "math/geometry_3d.h"
 #include "math/kmath.h"
@@ -14,19 +16,18 @@
 #include "memory/kmemory.h"
 #include "parsers/kson_parser.h"
 #include "platform/filesystem.h"
-#include "renderer/camera.h"
 #include "renderer/renderer_types.h"
-#include "renderer/viewport.h"
 #include "resources/Kohidebug/debug_box3d.h"
 #include "resources/Kohidebug/debug_line3d.h"
-#include "resources/mesh.h"
 #include "resources/resource_types.h"
 #include "resources/skybox.h"
 #include "resources/terrain.h"
 #include "resources/water_plane.h"
+#include "strings/kname.h"
 #include "strings/kstring.h"
 #include "systems/light_system.h"
-#include "systems/resource_system.h"
+#include "systems/material_system.h"
+#include "systems/static_mesh_system.h"
 #include "systems/xform_system.h"
 #include "utils/ksort.h"
 
@@ -55,10 +56,7 @@ typedef struct geometry_distance {
 static i32 geometry_render_data_compare(void* a, void* b) {
     geometry_render_data* a_typed = a;
     geometry_render_data* b_typed = b;
-    if (!a_typed->material || !b_typed->material) {
-        return 0;  // Don't  sort invalid entries.
-    }
-    return a_typed->material->id - b_typed->material->id;
+    return a_typed->material.material.handle_index - b_typed->material.material.handle_index;
 }
 
 static i32 geometry_distance_compare(void* a, void* b) {
@@ -84,7 +82,7 @@ b8 scene_create(scene_config* config, scene_flags flags, scene* out_scene) {
     // Internal "lists" of renderable objects.
     out_scene->dir_lights = darray_create(directional_light);
     out_scene->point_lights = darray_create(point_light);
-    out_scene->meshes = darray_create(mesh);
+    out_scene->static_meshes = darray_create(static_mesh_instance);
     out_scene->terrains = darray_create(terrain);
     out_scene->skyboxes = darray_create(skybox);
     out_scene->water_planes = darray_create(water_plane);
@@ -121,11 +119,11 @@ b8 scene_create(scene_config* config, scene_flags flags, scene* out_scene) {
     }
 
     debug_grid_config grid_config = { 0 };
-    grid_config.orientation = DEBUG_GRID_ORIENTATION_XZ;
-    grid_config.tile_count_dim_0 = 100;
-    grid_config.tile_count_dim_1 = 100;
-    grid_config.tile_scale = 1.0f;
-    grid_config.name = "debug_grid";
+    grid_config.orientation = GRID_ORIENTATION_XZ;
+    grid_config.segment_count_dim_0 = 100;
+    grid_config.segment_count_dim_1 = 100;
+    grid_config.segment_size = 1.0f;
+    grid_config.name = kname_create("debug_grid");
     grid_config.use_third_axis = true;
 
     if (!debug_grid_create(&grid_config, &out_scene->grid)) {
@@ -185,32 +183,21 @@ void scene_node_initialize(scene* s, khandle parent_handle, scene_node_config* n
                         return;
                     }
 
-                    // Create mesh config, then create the mesh.
-                    mesh_config new_mesh_config = { 0 };
-                    new_mesh_config.resource_name = string_duplicate(typed_attachment_config->resource_name);
-                    mesh new_mesh = { 0 };
-                    if (!mesh_create(new_mesh_config, &new_mesh)) {
-                        KERROR("Failed to new mesh in scene.");
-                        string_free(new_mesh_config.resource_name);
-                        return;
-                    }
-
-                    // Destroy the config.
-                    string_free(new_mesh_config.resource_name);
-                    if (!mesh_initialize(&new_mesh)) {
-                        KERROR("Failed to initialize static mesh.");
+                    static_mesh_instance new_static_mesh = { 0 };
+                    if (!static_mesh_system_instance_acquire(engine_systems_get()->static_mesh_system, 0, kname_create(typed_attachment_config->resource_name), &new_static_mesh)) {
+                        KERROR("Failed to create new static mesh in scene.");
                         return;
                     }
                     else {
                         // Find a free static mesh slot and take it, or push a new one.
                         // Find a free static mesh slot and take it, or push a new one.
                         u32 resource_index = INVALID_ID;
-                        u32 count = darray_length(s->meshes);
+                        u32 count = darray_length(s->static_meshes);
                         for (u32 i = 0; i < count; ++i) {
-                            if (s->meshes[i].state == MESH_STATE_UNDEFINED) {
+                            if (s->static_meshes[i].instance_id == INVALID_ID_U64) {
                                 // Found a slot, use it.
                                 resource_index = i;
-                                s->meshes[i] = new_mesh;
+                                s->static_meshes[i] = new_static_mesh;
                                 s->mesh_attachments[i].resource_handle = khandle_create(resource_index);
                                 s->mesh_attachments[i].hierarchy_node_handle = node_handle;
                                 s->mesh_attachments[i].attachment_type = SCENE_NODE_ATTACHMENT_TYPE_STATIC_MESH;
@@ -222,7 +209,7 @@ void scene_node_initialize(scene* s, khandle parent_handle, scene_node_config* n
                             }
                         }
                         if (resource_index == INVALID_ID) {
-                            darray_push(s->meshes, new_mesh);
+                            darray_push(s->static_meshes, new_static_mesh);
                             resource_index = count;
                             scene_attachment mesh_attachment = { 0 };
                             mesh_attachment.resource_handle = khandle_create(resource_index);
@@ -597,12 +584,13 @@ b8 scene_load(scene* scene) {
     }
 
     // Load static meshes
-    if (scene->meshes) {
-        u32 mesh_count = darray_length(scene->meshes);
+    if (scene->static_meshes) {
+        u32 mesh_count = darray_length(scene->static_meshes);
         for (u32 i = 0; i < mesh_count; ++i) {
-            if (!mesh_load(&scene->meshes[i])) {
-                KERROR("Mesh failed to load.");
-            }
+            // TODO: is this needed anymore?
+           /* if (!mesh_load(&scene->static_meshes[i])) {
+               KERROR("Mesh failed to load.");
+           } */
         }
     }
 
@@ -702,7 +690,7 @@ b8 scene_update(scene* scene, const struct frame_data* p_frame_data) {
     }
 
     if (scene->state >= SCENE_STATE_LOADED) {
-        hierarchy_graph_update(&scene->hierarchy, p_frame_data);
+        hierarchy_graph_update(&scene->hierarchy);
 
         if (scene->dir_lights) {
             u32 directional_light_count = darray_length(scene->dir_lights);
@@ -710,7 +698,7 @@ b8 scene_update(scene* scene, const struct frame_data* p_frame_data) {
                 // TODO:Only Update directional light. if changed
                 if (scene->dir_lights[i].generation != INVALID_ID && scene->dir_lights[i].debug_data) {
                     scene_debug_data* debug = scene->dir_lights[i].debug_data;
-                    if (debug->line.geo.generation != INVALID_ID_U16) {
+                    if (debug->line.geometry.generation != INVALID_ID_U16) {
                         // Update colour. NOTE:doing this every frame might be expensitive if we have to reload the geometry. all the time.
                         // TODO: Perhaps there is another way to accomplish this.like a kshader that uses a uniform for colour.?
                         debug_line3d_colour_set(&debug->line, scene->dir_lights[i].data.colour);
@@ -745,7 +733,7 @@ b8 scene_update(scene* scene, const struct frame_data* p_frame_data) {
 
                 if (scene->point_lights[i].debug_data) {
                     scene_debug_data* debug = (scene_debug_data*)scene->point_lights[i].debug_data;
-                    if (debug->box.geo.generation != INVALID_ID_U16) {
+                    if (debug->box.geometry.generation != INVALID_ID_U16) {
                         // Update transform.
                         xform_position_set(debug->box.xform, vec3_from_vec4(scene->point_lights[i].data.position));
 
@@ -760,50 +748,51 @@ b8 scene_update(scene* scene, const struct frame_data* p_frame_data) {
         // Check meshes to see if they have debug data. if not,add it here and init/load it.
         // Doing this here because mesh loading is multi-threaded. and may not yet be available
         // even though the object is present in the scene.
-        u32 mesh_count = darray_length(scene->meshes);
+        u32 mesh_count = darray_length(scene->static_meshes);
         for (u32 i = 0; i < mesh_count; ++i) {
-            mesh* m = &scene->meshes[i];
-            if (m->generation == INVALID_ID_U8) {
-                continue;
-            }
+            // TODO: debug data - refactor this or find another way to handle it.
+             /* static_mesh_instance* m = &scene->static_meshes[i];
+             if (m->generation == INVALID_ID_U8) {
+                 continue;
+             }
 
-            if (!m->debug_data) {
-                m->debug_data = kallocate(sizeof(scene_debug_data), MEMORY_TAG_RESOURCE);
-                scene_debug_data* debug = m->debug_data;
+             if (!m->debug_data) {
+                 m->debug_data = kallocate(sizeof(scene_debug_data), MEMORY_TAG_RESOURCE);
+                 scene_debug_data* debug = m->debug_data;
 
-                if (!debug_box3d_create((vec3) { 0.2f, 0.2f, 0.2f }, khandle_invalid(), & debug->box)) {
-                    KERROR("Failed to create debug box for mesh '%s.'", m->name);
-                }
-                else {
-                    // Lookup the attachment to get the xform handle to set as the parent.
-                    scene_attachment* attachment = &scene->mesh_attachments[i];
-                    khandle xform_handle = scene->hierarchy.xform_handles[attachment->hierarchy_node_handle.handle_index];
-                    // Since debug objects aren't actually added to the hierarchy or as attachments, need to manually update
-                    // the xform here, using the node's world xform as the parent.
-                    xform_calculate_local(debug->box.xform);
-                    mat4 local = xform_local_get(debug->box.xform);
-                    mat4 parent_world = xform_world_get(xform_handle);
-                    mat4 model = mat4_mul(local, parent_world);
-                    xform_world_set(debug->box.xform, model);
+                 if (!debug_box3d_create((vec3) { 0.2f, 0.2f, 0.2f }, khandle_invalid(), & debug->box)) {
+                     KERROR("Failed to create debug box for mesh '%s.'", m->name);
+                 }
+                 else {
+                     // Lookup the attachment to get the xform handle to set as the parent.
+                     scene_attachment* attachment = &scene->mesh_attachments[i];
+                     khandle xform_handle = scene->hierarchy.xform_handles[attachment->hierarchy_node_handle.handle_index];
+                     // Since debug objects aren't actually added to the hierarchy or as attachments, need to manually update
+                     // the xform here, using the node's world xform as the parent.
+                     xform_calculate_local(debug->box.xform);
+                     mat4 local = xform_local_get(debug->box.xform);
+                     mat4 parent_world = xform_world_get(xform_handle);
+                     mat4 model = mat4_mul(local, parent_world);
+                     xform_world_set(debug->box.xform, model);
 
-                    if (!debug_box3d_initialize(&debug->box)) {
-                        KERROR("debug box failed to initialize.");
-                        kfree(m->debug_data, sizeof(scene_debug_data), MEMORY_TAG_RESOURCE);
-                        m->debug_data = 0;
-                        continue;
-                    }
+                     if (!debug_box3d_initialize(&debug->box)) {
+                         KERROR("debug box failed to initialize.");
+                         kfree(m->debug_data, sizeof(scene_debug_data), MEMORY_TAG_RESOURCE);
+                         m->debug_data = 0;
+                         continue;
+                     }
 
-                    if (!debug_box3d_load(&debug->box)) {
-                        KERROR("debug box failed to load.");
-                        kfree(m->debug_data, sizeof(scene_debug_data), MEMORY_TAG_RESOURCE);
-                        m->debug_data = 0;
-                    }
+                     if (!debug_box3d_load(&debug->box)) {
+                         KERROR("debug box failed to load.");
+                         kfree(m->debug_data, sizeof(scene_debug_data), MEMORY_TAG_RESOURCE);
+                         m->debug_data = 0;
+                     }
 
-                    // Update the extents
-                    debug_box3d_colour_set(&debug->box, (vec4) { 0.0f, 1.0f, 0.0f, 1.0f });
-                    debug_box3d_extents_set(&debug->box, m->extents);
-                }
-            }
+                     // Update the extents
+                     debug_box3d_colour_set(&debug->box, (vec4) { 0.0f, 1.0f, 0.0f, 1.0f });
+                     debug_box3d_extents_set(&debug->box, m->extents);
+                 }
+             }*/
         }
     }
 
@@ -849,28 +838,29 @@ void scene_render_frame_prepare(scene* scene, const struct frame_data* p_frame_d
         }
 
         // Check meshes to see if they have debug data.
-        if (scene->meshes) {
-            u32 mesh_count = darray_length(scene->meshes);
+        if (scene->static_meshes) {
+            u32 mesh_count = darray_length(scene->static_meshes);
             for (u32 i = 0; i < mesh_count; ++i) {
-                mesh* m = &scene->meshes[i];
-                if (m->generation == INVALID_ID_U8) {
-                    continue;
-                }
-                if (m->debug_data) {
-                    scene_debug_data* debug = m->debug_data;
+                // TODO: debug data - refactor or find another way to do it.
+              /* static_mesh_instance* m = &scene->static_meshes[i];
+               if (m->generation == INVALID_ID_U8) {
+                   continue;
+               }
+               if (m->debug_data) {
+                   scene_debug_data* debug = m->debug_data;
 
-                    // Lookup the attachment to get the xform handle to set as the parent.
-                    scene_attachment* attachment = &scene->mesh_attachments[i];
-                    khandle xform_handle = scene->hierarchy.xform_handles[attachment->hierarchy_node_handle.handle_index];
-                    // Since debug objects aren't actually added to the hierarchy or as attachments, need to manually update
-                    // the xform here, using the node's world xform as the parent.
-                    xform_calculate_local(debug->box.xform);
-                    mat4 local = xform_local_get(debug->box.xform);
-                    mat4 parent_world = xform_world_get(xform_handle);
-                    mat4 model = mat4_mul(local, parent_world);
-                    xform_world_set(debug->box.xform, model);
-                    debug_box3d_render_frame_prepare(&debug->box, p_frame_data);
-                }
+                   // Lookup the attachment to get the xform handle to set as the parent.
+                   scene_attachment* attachment = &scene->mesh_attachments[i];
+                   khandle xform_handle = scene->hierarchy.xform_handles[attachment->hierarchy_node_handle.handle_index];
+                   // Since debug objects aren't actually added to the hierarchy or as attachments, need to manually update
+                   // the xform here, using the node's world xform as the parent.
+                   xform_calculate_local(debug->box.xform);
+                   mat4 local = xform_local_get(debug->box.xform);
+                   mat4 parent_world = xform_world_get(xform_handle);
+                   mat4 model = mat4_mul(local, parent_world);
+                   xform_world_set(debug->box.xform, model);
+                   debug_box3d_render_frame_prepare(&debug->box, p_frame_data);
+               }*/
             }
         }
     }
@@ -945,16 +935,18 @@ b8 scene_raycast(scene* scene, const struct ray* r, struct raycast_result* out_r
     // Iterate meshes in the scene.
     // TODO: This needs to be optimized. We need some sort of spatial partitioning to speed this up.
     // Otherwise a scene with thousands of objects will be super slow!
-    u32 mesh_count = darray_length(scene->meshes);
+    u32 mesh_count = darray_length(scene->static_meshes);
     for (u32 i = 0; i < mesh_count; ++i) {
-        mesh* m = &scene->meshes[i];
+        static_mesh_instance* m = &scene->static_meshes[i];
         // Perform a lookup into the attachments array to get the hierarchy node.
         // TODO: simplify the look process.
         scene_attachment* attachment = &scene->mesh_attachments[i];
         khandle xform_handle = scene->hierarchy.xform_handles[attachment->hierarchy_node_handle.handle_index];
         mat4 model = xform_world_get(xform_handle);
         f32 dist;
-        if (raycast_oriented_extents(m->extents, model, r, &dist)) {
+        // FIXME: This just selects the first geometry's extents. Need to add extents to the whole
+        // thing based on all submeshes.
+        if (raycast_oriented_extents(m->mesh_resource->submeshes[0].geometry.extents, model, r, &dist)) {
             // Hit
             if (!out_result->hits) {
                 out_result->hits = darray_create(raycast_hit);
@@ -1017,8 +1009,9 @@ b8 scene_debug_render_data_query(scene* scene, u32* data_count, geometry_render_
             geometry_render_data data = { 0 };
             data.model = mat4_identity();
 
-            geometry* g = &scene->grid.geo;
-            data.material = g->material;
+            kgeometry* g = &scene->grid.geometry;
+            data.material.material = khandle_invalid(); // debug geometries don't need a material.;
+            data.material.instance = khandle_invalid(); // debug geometries don't need a material.;
             data.vertex_count = g->vertex_count;
             data.vertex_buffer_offset = g->vertex_buffer_offset;
             data.index_count = g->index_count;
@@ -1041,8 +1034,9 @@ b8 scene_debug_render_data_query(scene* scene, u32* data_count, geometry_render_
                     // Debug line 3d
                     geometry_render_data data = { 0 };
                     data.model = xform_world_get(debug->line.xform);
-                    geometry* g = &debug->line.geo;
-                    data.material = g->material;
+                    kgeometry* g = &debug->line.geometry;
+                    data.material.material = khandle_invalid(); // debug geometries don't need a material.
+                    data.material.instance = khandle_invalid(); // debug geometries don't need a material.
                     data.vertex_count = g->vertex_count;
                     data.vertex_buffer_offset = g->vertex_buffer_offset;
                     data.index_count = g->index_count;
@@ -1068,8 +1062,9 @@ b8 scene_debug_render_data_query(scene* scene, u32* data_count, geometry_render_
                         // Debug box 3d
                         geometry_render_data data = { 0 };
                         data.model = xform_world_get(debug->box.xform);
-                        geometry* g = &debug->box.geo;
-                        data.material = g->material;
+                        kgeometry* g = &debug->box.geometry;
+                        data.material.material = khandle_invalid(); // debug geometries don't need a material.
+                        data.material.instance = khandle_invalid(); // debug geometries don't need a material.
                         data.vertex_count = g->vertex_count;
                         data.vertex_buffer_offset = g->vertex_buffer_offset;
                         data.index_count = g->index_count;
@@ -1086,12 +1081,13 @@ b8 scene_debug_render_data_query(scene* scene, u32* data_count, geometry_render_
 
     // Mesh debug shapes
     {
-        if (scene->meshes) {
-            u32 mesh_count = darray_length(scene->meshes);
+        if (scene->static_meshes) {
+            u32 mesh_count = darray_length(scene->static_meshes);
             for (u32 i = 0; i < mesh_count; ++i) {
-                if (scene->meshes[i].debug_data) {
+                // TODO: debug data - refactor or find another way to do it.
+                 /*if (scene->meshes[i].debug_data) {
                     if (debug_geometries) {
-                        scene_debug_data* debug = (scene_debug_data*)scene->meshes[i].debug_data;
+                        scene_debug_data* debug = (scene_debug_data*)scene->static_meshes[i].debug_data;
 
                         // Debug box 3d
                         geometry_render_data data = { 0 };
@@ -1107,7 +1103,7 @@ b8 scene_debug_render_data_query(scene* scene, u32* data_count, geometry_render_
                         (*debug_geometries)[(*data_count)] = data;
                     }
                     (*data_count)++;
-                }
+                }*/
             }
         }
     }
@@ -1121,74 +1117,72 @@ b8 scene_mesh_render_data_query_from_line(const scene* scene, vec3 direction, ve
     }
     geometry_distance* transparent_geometries = darray_create_with_allocator(geometry_distance, &p_frame_data->allocator);
 
-    u32 mesh_count = darray_length(scene->meshes);
+    u32 mesh_count = darray_length(scene->static_meshes);
     for (u32 i = 0; i < mesh_count; ++i) {
-        mesh* m = &scene->meshes[i];
-        if (m->generation != INVALID_ID_U8) {
-            scene_attachment* attachment = &scene->mesh_attachments[i];
-            khandle xform_handle = scene->hierarchy.xform_handles[attachment->hierarchy_node_handle.handle_index];
-            mat4 model = xform_world_get(xform_handle);
-            // TODO: Cache this somewhere instead of calculating all the time.
-            f32 determinant = mat4_determinant(model);
-            b8 winding_inverted = determinant < 0;
+        static_mesh_instance* m = &scene->static_meshes[i];
+        // if (m->generation != INVALID_ID_U8) {
+        scene_attachment* attachment = &scene->mesh_attachments[i];
+        khandle xform_handle = hierarchy_graph_xform_handle_get(&scene->hierarchy, attachment->hierarchy_node_handle);
+        mat4 model = xform_world_get(xform_handle);
+        // TODO: Cache this somewhere instead of calculating all the time.
+        f32 determinant = mat4_determinant(model);
+        b8 winding_inverted = determinant < 0;
 
-            for (u32 j = 0; j < m->geometry_count; ++j) {
-                geometry* g = m->geometries[j];
+        for (u32 j = 0; j < m->mesh_resource->submesh_count; ++j) {
+            static_mesh_submesh* submesh = &m->mesh_resource->submeshes[j];
+            kgeometry* g = &submesh->geometry;
 
-                // TODO: cache this somewhere...
-                //
-                // Translate/scale the extents.转换到世界空间
-                vec3 extents_min = vec3_mul_mat4(g->extents.min, model);
-                vec3 extents_max = vec3_mul_mat4(g->extents.max, model);
-                // Translate/scale the center.
-                vec3 transformed_center = vec3_mul_mat4(center, model);
-                // Find the one furthest from the center.
-                f32 mesh_radius = KMAX(vec3_distance(extents_min, transformed_center), vec3_distance(extents_max, transformed_center));
+            // TODO: cache this somewhere...
+            //
+            // Translate/scale the extents.转换到世界空间
+            vec3 extents_min = vec3_mul_mat4(g->extents.min, model);
+            vec3 extents_max = vec3_mul_mat4(g->extents.max, model);
+            // Translate/scale the center.
+            vec3 transformed_center = vec3_mul_mat4(center, model);
+            // Find the one furthest from the center.
+            f32 mesh_radius = KMAX(vec3_distance(extents_min, transformed_center), vec3_distance(extents_max, transformed_center));
 
-                f32 dist_to_line = vec3_distance_to_line(transformed_center, center, direction);
+            f32 dist_to_line = vec3_distance_to_line(transformed_center, center, direction);
 
-                // Is whthin distance,so include it
-                if ((dist_to_line - mesh_radius) <= radius) {
-                    // Add it to the list to be rendered.
-                    geometry_render_data data = { 0 };
-                    data.model = model;
-                    data.material = g->material;
-                    data.vertex_count = g->vertex_count;
-                    data.vertex_buffer_offset = g->vertex_buffer_offset;
-                    data.index_count = g->index_count;
-                    data.index_buffer_offset = g->index_buffer_offset;
-                    data.unique_id = m->id.uniqueid;
-                    data.winding_inverted = winding_inverted;
+            // Is whthin distance,so include it
+            if ((dist_to_line - mesh_radius) <= radius) {
+                // Add it to the list to be rendered.
+                geometry_render_data data = { 0 };
+                data.model = model;
+                data.material = m->material_instances[j];
+                data.vertex_count = g->vertex_count;
+                data.vertex_buffer_offset = g->vertex_buffer_offset;
+                data.index_count = g->index_count;
+                data.index_buffer_offset = g->index_buffer_offset;
+                data.unique_id = 0;
+                data.winding_inverted = winding_inverted;
 
-                    // Check if transparent. If so, put into a separate, temp array to be
-                    // sorted by distance from the camera. Otherwise, put into the
-                    // ext_data->geometries array directly.
-                    b8 has_transparency = false;
-                    if (g->material && g->material->type == MATERIAL_TYPE_STANDARD) {
-                        // Check diffuse map (slot 0).
-                        has_transparency = ((g->material->maps[0].texture->flags & TEXTURE_FLAG_HAS_TRANSPARENCY) != 0);
-                    }
+                // Check if transparent. If so, put into a separate, temp array to be
+                // sorted by distance from the camera. Otherwise, put into the
+                // out_geometries array directly.
 
-                    if (has_transparency) {
-                        // For meshes _with_ transparency, add them to a separate list to be sorted by distance later.
-                        // Get the center, extract the global position from the model matrix and add it to the center,
-                        // then calculate the distance between it and the camera, and finally save it to a list to be sorted.
-                        // NOTE: This isn't perfect for translucent meshes that intersect, but is enough for our purposes now.
-                        vec3 geometry_center = vec3_transform(g->center, 1.0f, model);
-                        f32 distance = vec3_distance(geometry_center, center);
+                b8 has_transparency = material_flag_get(engine_systems_get()->material_system, m->material_instances[j].material, MATERIAL_FLAG_HAS_TRANSPARENCY);
 
-                        geometry_distance gdist;
-                        gdist.distance = kabs(distance);
-                        gdist.g = data;
-                        darray_push(transparent_geometries, gdist);
-                    }
-                    else {
-                        darray_push(*out_geometries, data);
-                    }
-                    p_frame_data->drawn_mesh_count++;
+                if (has_transparency) {
+                    // For meshes _with_ transparency, add them to a separate list to be sorted by distance later.
+                    // Get the center, extract the global position from the model matrix and add it to the center,
+                    // then calculate the distance between it and the camera, and finally save it to a list to be sorted.
+                    // NOTE: This isn't perfect for translucent meshes that intersect, but is enough for our purposes now.
+                    vec3 geometry_center = vec3_transform(g->center, 1.0f, model);
+                    f32 distance = vec3_distance(geometry_center, center);
+
+                    geometry_distance gdist;
+                    gdist.distance = kabs(distance);
+                    gdist.g = data;
+                    darray_push(transparent_geometries, gdist);
                 }
+                else {
+                    darray_push(*out_geometries, data);
+                }
+                p_frame_data->drawn_mesh_count++;
             }
         }
+        //}
     }
     // Sort opaque geometries by material.
     kquick_sort(sizeof(geometry_render_data), *out_geometries, 0, darray_length(*out_geometries) - 1, geometry_render_data_compare);
@@ -1272,103 +1266,98 @@ b8 scene_mesh_render_data_query(const scene* scene, const frustum* f, vec3 cente
 
     geometry_distance* transparent_geometries = darray_create_with_allocator(geometry_distance, &p_frame_data->allocator);
 
-    u32 mesh_count = darray_length(scene->meshes);
+    u32 mesh_count = darray_length(scene->static_meshes);
     for (u32 resource_index = 0; resource_index < mesh_count; ++resource_index) {
-        mesh* m = &scene->meshes[resource_index];
-        if (m->generation != INVALID_ID_U8) {
-            // Attachment lookup - by resource index.
-            scene_attachment* attachment = &scene->mesh_attachments[resource_index];
-            khandle xform_handle = scene->hierarchy.xform_handles[attachment->hierarchy_node_handle.handle_index];
-            mat4 model = xform_world_get(xform_handle);
-            // TODO: Cache this somewhere instead of calculating all the time.
-            f32 determinant = mat4_determinant(model);
-            b8 winding_inverted = determinant < 0;
+        static_mesh_instance* m = &scene->static_meshes[resource_index];
+        // Attachment lookup - by resource index.
+        scene_attachment* attachment = &scene->mesh_attachments[resource_index];
+        khandle xform_handle = hierarchy_graph_xform_handle_get(&scene->hierarchy, attachment->hierarchy_node_handle);
+        mat4 model = xform_world_get(xform_handle);
 
-            for (u32 j = 0; j < m->geometry_count; ++j) {
-                geometry* g = m->geometries[j];
+        // TODO: Cache this somewhere instead of calculating all the time.
+        f32 determinant = mat4_determinant(model);
+        b8 winding_inverted = determinant < 0;
 
-                // TODO: Distance-from-line detection per object (e.g. light direction and center pos, then distance check from that line.)
-                //
-                // // Bounding sphere calculation.
-                // {
-                //     // Translate/scale the extents.
-                //     vec3 extents_min = vec3_mul_mat4(g->extents.min, model);
-                //     vec3 extents_max = vec3_mul_mat4(g->extents.max, model);
+        for (u32 j = 0; j < m->mesh_resource->submesh_count; ++j) {
+            static_mesh_submesh* submesh = &m->mesh_resource->submeshes[j];
+            kgeometry* g = &submesh->geometry;
 
-                //     f32 min = KMIN(KMIN(extents_min.x, extents_min.y),
-                //     extents_min.z); f32 max = KMAX(KMAX(extents_max.x,
-                //     extents_max.y), extents_max.z); f32 diff = kabs(max - min);
-                //     f32 radius = diff * 0.5f;
+            // TODO: Distance-from-line detection per object (e.g. light direction and center pos, then distance check from that line.)
+            //
+            // // Bounding sphere calculation.
+            // {
+            //     // Translate/scale the extents.
+            //     vec3 extents_min = vec3_mul_mat4(g->extents.min, model);
+            //     vec3 extents_max = vec3_mul_mat4(g->extents.max, model);
 
-                //     // Translate/scale the center.
-                //     vec3 center = vec3_mul_mat4(g->center, model);
+            //     f32 min = KMIN(KMIN(extents_min.x, extents_min.y),
+            //     extents_min.z); f32 max = KMAX(KMAX(extents_max.x,
+            //     extents_max.y), extents_max.z); f32 diff = kabs(max - min);
+            //     f32 radius = diff * 0.5f;
 
-                //     if (frustum_intersects_sphere(&state->camera_frustum,
-                //     &center, radius)) {
-                //         // Add it to the list to be rendered.
-                //         geometry_render_data data = {0};
-                //         data.model = model;
-                //         data.geometry = g;
-                //         data.unique_id = m->unique_id;
-                //         darray_push(game_inst->frame_data.world_geometries,
-                //         data);
+            //     // Translate/scale the center.
+            //     vec3 center = vec3_mul_mat4(g->center, model);
 
-                //         draw_count++;
-                //     }
-                // }
+            //     if (frustum_intersects_sphere(&state->camera_frustum,
+            //     &center, radius)) {
+            //         // Add it to the list to be rendered.
+            //         geometry_render_data data = {0};
+            //         data.model = model;
+            //         data.geometry = g;
+            //         data.unique_id = m->unique_id;
+            //         darray_push(game_inst->frame_data.world_geometries,
+            //         data);
 
-                // AABB calculation
-                {
-                    // Translate/scale the extents.
-                    // vec3 extents_min = vec3_mul_mat4(g->extents.min, model);
-                    vec3 extents_max = vec3_mul_mat4(g->extents.max, model);
+            //         draw_count++;
+            //     }
+            // }
 
-                    // Translate/scale the center.
-                    vec3 center = vec3_mul_mat4(g->center, model);
-                    vec3 half_extents = {
-                        kabs(extents_max.x - center.x),
-                        kabs(extents_max.y - center.y),
-                        kabs(extents_max.z - center.z),
-                    };
-                    if (!f || frustum_intersects_aabb(f, &center, &half_extents)) {
-                        // Add it to the list to be rendered.
-                        geometry_render_data data = { 0 };
-                        data.model = model;
-                        data.material = g->material;
-                        data.vertex_count = g->vertex_count;
-                        data.vertex_buffer_offset = g->vertex_buffer_offset;
-                        data.index_count = g->index_count;
-                        data.index_buffer_offset = g->index_buffer_offset;
-                        data.unique_id = m->id.uniqueid;
-                        data.winding_inverted = winding_inverted;
+            // AABB calculation
+            {
+                // Translate/scale the extents.
+                // vec3 extents_min = vec3_mul_mat4(g->extents.min, model);
+                vec3 extents_max = vec3_mul_mat4(g->extents.max, model);
 
-                        // Check if transparent. If so, put into a separate, temp array to be
-                        // sorted by distance from the camera. Otherwise, put into the
-                        // ext_data->geometries array directly.
-                        b8 has_transparency = false;
-                        if (g->material && g->material->type == MATERIAL_TYPE_STANDARD) {
-                            // Check diffuse map (slot 0).
-                            has_transparency = ((g->material->maps[0].texture->flags & TEXTURE_FLAG_HAS_TRANSPARENCY) != 0);
-                        }
+                // Translate/scale the center.
+                vec3 g_center = vec3_mul_mat4(g->center, model);
+                vec3 half_extents = {
+                    kabs(extents_max.x - g_center.x),
+                    kabs(extents_max.y - g_center.y),
+                    kabs(extents_max.z - g_center.z),
+                };
 
-                        if (has_transparency) {
-                            // For meshes _with_ transparency, add them to a separate list to be sorted by distance later.
-                            // Get the center, extract the global position from the model matrix and add it to the center,
-                            // then calculate the distance between it and the camera, and finally save it to a list to be sorted.
-                            // NOTE: This isn't perfect for translucent meshes that intersect, but is enough for our purposes now.
-                            vec3 geometry_center = vec3_transform(g->center, 1.0f, model);
-                            f32 distance = vec3_distance(geometry_center, center);
+                if (!f || frustum_intersects_aabb(f, &g_center, &half_extents)) {
+                    // Add it to the list to be rendered.
+                    geometry_render_data data = { 0 };
+                    data.model = model;
+                    data.material = m->material_instances[j];
+                    data.vertex_count = g->vertex_count;
+                    data.vertex_buffer_offset = g->vertex_buffer_offset;
+                    data.index_count = g->index_count;
+                    data.index_buffer_offset = g->index_buffer_offset;
+                    data.unique_id = 0; // m->id.uniqueid; FIXME: needed for per-pixel selection
+                    data.winding_inverted = winding_inverted;
 
-                            geometry_distance gdist;
-                            gdist.distance = kabs(distance);
-                            gdist.g = data;
-                            darray_push(transparent_geometries, gdist);
-                        }
-                        else {
-                            darray_push(*out_geometries, data);
-                        }
-                        p_frame_data->drawn_mesh_count++;
+                    // Check if transparent. If so, put into a separate, temp array to be
+                    // sorted by distance from the camera. Otherwise, put into the
+                    // out_geometries array directly.
+                    b8 has_transparency = material_flag_get(engine_systems_get()->material_system, m->material_instances[j].material, MATERIAL_FLAG_HAS_TRANSPARENCY);
+                    if (has_transparency) {
+                        // For meshes _with_ transparency, add them to a separate list to be sorted by distance later.
+                        // Get the center, extract the global position from the model matrix and add it to the center,
+                        // then calculate the distance between it and the camera, and finally save it to a list to be sorted.
+                        // NOTE: This isn't perfect for translucent meshes that intersect, but is enough for our purposes now.
+                        f32 distance = vec3_distance(g_center, center);
+
+                        geometry_distance gdist;
+                        gdist.distance = kabs(distance);
+                        gdist.g = data;
+                        darray_push(transparent_geometries, gdist);
                     }
+                    else {
+                        darray_push(*out_geometries, data);
+                    }
+                    p_frame_data->drawn_mesh_count++;
                 }
             }
         }
@@ -1490,25 +1479,24 @@ static void scene_actual_unload(scene* s) {
         s->skyboxes[i].state = SKYBOX_STATE_UNDEFINED;
     }
 
-    u32 mesh_count = darray_length(s->meshes);
+    u32 mesh_count = darray_length(s->static_meshes);
     for (u32 i = 0; i < mesh_count; ++i) {
-        if (s->meshes[i].generation != INVALID_ID_U8) {
+        if (s->static_meshes[i].instance_id != INVALID_ID_U64) {
             // Unload any debug data.
-            if (s->meshes[i].debug_data) {
-                scene_debug_data* debug = s->meshes[i].debug_data;
+            // TODO: debug data
+            /* if (s->static_meshes[i].debug_data) {
+                scene_debug_data* debug = s->static_meshes[i].debug_data;
 
                 debug_box3d_unload(&debug->box);
                 debug_box3d_destroy(&debug->box);
 
-                kfree(s->meshes[i].debug_data, sizeof(scene_debug_data), MEMORY_TAG_RESOURCE);
-                s->meshes[i].debug_data = 0;
-            }
+                kfree(s->static_meshes[i].debug_data, sizeof(scene_debug_data), MEMORY_TAG_RESOURCE);
+                s->static_meshes[i].debug_data = 0;
+            } */
 
-            // Unload the mesh itself
-            if (!mesh_unload(&s->meshes[i])) {
-                KERROR("Failed to unload mesh.");
-            }
-            mesh_destroy(&s->meshes[i]);
+            static_mesh_system_instance_release(engine_systems_get()->static_mesh_system, &s->static_meshes[i]);
+
+            s->static_meshes->instance_id = INVALID_ID_U64;
         }
     }
 
@@ -1585,8 +1573,8 @@ static void scene_actual_unload(scene* s) {
         darray_destroy(s->point_lights);
     }
 
-    if (s->meshes) {
-        darray_destroy(s->meshes);
+    if (s->static_meshes) {
+        darray_destroy(s->static_meshes);
     }
 
     if (s->terrains) {

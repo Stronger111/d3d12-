@@ -142,7 +142,7 @@ typedef struct material_standard_shader_locations {
     u16 view_positions;
     u16 properties;
     u16 ibl_cube_textures;
-    u16 material_textures;
+    u16 material_texures;
     u16 shadow_textures;
     u16 light_space_0;
     u16 light_space_1;
@@ -560,156 +560,412 @@ b8 material_system_apply(material_system_state* state, material_instance* instan
     khandle shader;
 
     //TODO:DXS Shader system 重构过在进行 
+    switch (base_material->type) {
+    default:
+    case MATERIAL_TYPE_UNKNOWN:
+        KASSERT_MSG(false, "Unknown shader type cannot be applied.");
+        return false;
+    case MATERIAL_TYPE_STANDARD: {
+        shader = state->material_standard_shader;
+
+        //bind per-group
+        if (!shader_system_bind_group(instance->material, base_material->group_id)) {
+            KERROR("Failed to bind material shader group.");
+            return false;
+        }
+
+        //Only do if the material hasn't been synced this frame.
+        //TODO: Only do this if the base material is dirty!
+        if (base_material->renderer_frame_number != renderer_frame_number) {
+            //per-group - ensure this is done once per frame per material
+            //TODO: build group "properties" and bind it there.
+            shader_system_uniform_set_by_location(shader, state->standard_material_locations.properties, m->properties);
+
+            //Flags
+            shader_system_uniform_set_by_location(shader, state->standard_material_locations.flags, &base_material->flags);
+
+            //Textures
+            material_standard_flags tex_flags = 0;
+
+            if (base_material->base_colour_texture) {
+                tex_flags = FLAG_SET(tex_flags, MATERIAL_STANDARD_FLAG_USE_BASE_COLOUR_TEX, true);
+                shader_system_uniform_set_by_location_arrayed(shader, state->standard_material_locations.material_texures, MAT_STANDARD_IDX_BASE_COLOUR, &base_material->base_colour_texture);
+            }
+            else {
+                shader_system_uniform_set_by_location(shader, state->standard_material_locations.base_colour, &base_material->base_colour);
+            }
+            if (FLAG_GET(base_material->flags, MATERIAL_FLAG_NORMAL_ENABLED_BIT)) {
+                if (base_material->normal_texture) {
+                    tex_flags = FLAG_SET(tex_flags, MATERIAL_STANDARD_FLAG_USE_NORMAL_TEX, true);
+                    shader_system_uniform_set_by_location_arrayed(shader, state->standard_material_locations.material_texures, MAT_STANDARD_IDX_NORMAL, &base_material->normal_texture);
+                }
+                else {
+                    shader_system_uniform_set_by_location(shader, state->standard_material_locations.normal, &base_material->normal);
+                }
+            }
+
+            b8 mra_enabled = FLAG_GET(base_material->flags, MATERIAL_FLAG_MRA_ENABLED_BIT);
+            if (mra_enabled) {
+                if (base_material->mra_texture) {
+                    tex_flags = FLAG_SET(tex_flags, MATERIAL_STANDARD_FLAG_USE_MRA_TEX, true);
+                    shader_system_uniform_set_by_location_arrayed(shader, state->standard_material_locations.material_texures, MAT_STANDARD_IDX_MRA, &base_material->mra_texture);
+                }
+                else {
+                    shader_system_uniform_set_by_location(shader, state->standard_material_locations.mra, &base_material->mra);
+                }
+            }
+            else {
+                if (base_material->metallic_texture) {
+                    tex_flags = FLAG_SET(tex_flags, MATERIAL_STANDARD_FLAG_USE_METALLIC_TEX, true);
+                    shader_system_uniform_set_by_location_arrayed(shader, state->standard_material_locations.material_texures, MAT_STANDARD_IDX_METALLIC, &base_material->metallic_texture);
+                    shader_system_uniform_set_by_location(shader, state->standard_material_locations.metallic_source_channel, &base_material->metallic_texture_channel);
+                }
+                else {
+                    shader_system_uniform_set_by_location(shader, state->standard_material_locations.metallic, &base_material->metallic);
+                }
+
+                if (base_material->roughness_texture) {
+                    tex_flags = FLAG_SET(tex_flags, MATERIAL_STANDARD_FLAG_USE_ROUGHNESS_TEX, true);
+                    shader_system_uniform_set_by_location_arrayed(shader, state->standard_material_locations.material_texures, MAT_STANDARD_IDX_ROUGHNESS, &base_material->roughness_texture);
+                    shader_system_uniform_set_by_location(shader, state->standard_material_locations.roughness_source_channel, &base_material->roughness_texture_channel);
+                }
+                else {
+                    shader_system_uniform_set_by_location(shader, state->standard_material_locations.roughness, &base_material->roughness);
+                }
+
+                if (base_material->ao_texture && FLAG_GET(base_material->flags, MATERIAL_FLAG_AO_ENABLED_BIT)) {
+                    tex_flags = FLAG_SET(tex_flags, MATERIAL_STANDARD_FLAG_USE_AO_TEX, true);
+                    shader_system_uniform_set_by_location_arrayed(shader, state->standard_material_locations.material_texures, MAT_STANDARD_IDX_NORMAL, &base_material->ao_texture);
+                    shader_system_uniform_set_by_location(shader, state->standard_material_locations.ao_source_channel, &base_material->ao_texture_channel);
+                }
+                else {
+                    shader_system_uniform_set_by_location(shader, state->standard_material_locations.ao, &base_material->ao);
+                }
+            }
+
+            if (base_material->emissive_texture && FLAG_GET(base_material->flags, MATERIAL_FLAG_EMISSIVE_ENABLED_BIT)) {
+                tex_flags = FLAG_SET(tex_flags, MATERIAL_STANDARD_FLAG_USE_EMISSIVE_TEX, true);
+                shader_system_uniform_set_by_location_arrayed(shader, state->standard_material_locations.material_texures, MAT_STANDARD_IDX_EMISSIVE, &base_material->emissive_texture);
+            }
+            else {
+                shader_system_uniform_set_by_location(shader, state->standard_material_locations.emissive, &base_material->emissive);
+            }
+
+            //Texture usage flags
+            shader_system_uniform_set_by_location(shader, state->standard_material_locations.tex_flags, &tex_flags);
+
+            // LEFTOFF: Should these per-frame, and for the entire scene, then indexed at the per-draw level? Light count
+            // and list of indices into the light array would be per-draw.
+            // Directional light.
+            directional_light* dir_light = light_system_directional_light_get();
+            if (dir_light) {
+                shader_system_uniform_set_by_location(shader, state->standard_material_locations.dir_light, &dir_light->data);
+            }
+            else {
+                directional_light_data data = { 0 };
+                shader_system_uniform_set_by_location(shader, state->standard_material_locations.dir_light, &data);
+            }
+            // Point lights.
+            u32 p_light_count = light_system_point_light_count();
+            if (p_light_count) {
+                point_light* p_lights = p_frame_data->allocator.allocate(sizeof(point_light) * p_light_count);
+                light_system_point_lights_get(p_lights);
+
+                point_light_data* p_light_datas = p_frame_data->allocator.allocate(sizeof(point_light_data) * p_light_count);
+                for (u32 i = 0; i < p_light_count; ++i) {
+                    p_light_datas[i] = p_lights[i].data;
+                }
+
+                shader_system_uniform_set_by_location(shader, state->standard_material_locations.p_lights, p_light_datas);
+            }
+
+            shader_system_uniform_set_by_location(shader, state->standard_material_locations.num_p_lights, &p_light_count);
+
+            shader_system_apply_per_group(shader);
+        }
+        // Apply shader group via the rendrer.
+
+        // per-draw - this gets run every time apply is called
+        // bind per-draw
+        // update uniforms if dirty
+        // apply per-draw
+    }break;
+    case MATERIAL_TYPE_WATER:
+        shader = state->material_water_shader;
+        break;
+    case MATERIAL_TYPE_BLENDED:
+        shader = state->material_blended_shader;
+        break;
+    case MATERIAL_TYPE_CUSTOM:
+        KASSERT_MSG(false, "Not yet implemented!");
+        return false;
+    }
 }
 
-material_instance material_system_get_default_unlit(material_system_state* state) {
-    material_instance instance = { 0 };
-    //FIXME: use kname instead
-    u32 shader_id = shader_system_get_id("Shader.Unlit");
-    // NOTE: No maps for this shader type.
-    if (!shader_system_shader_per_draw_acquire(shader_id, 0, 0, &instance.per_draw_id)) {
-        KASSERT_MSG(false, "Failed to acquire per-draw renderer resources for default Unlit material. Application cannot continue.");
+b8 material_instance_flag_set(struct material_system_state* state, material_instance instance, material_flag_bits flag, b8 value) {
+    material_instance_data* data = get_instance_data(state, instance);
+    if (!data) {
+        return false;
     }
-    instance.material = state->default_unlit_material;
-    return instance;
+
+    data->flags = FLAG_SET(data->flags, flag, value);
+
+    return true;
 }
 
-material_instance material_system_get_default_phong(material_system_state* state) {
-    material_instance instance = { 0 };
-    // FIXME: use kname instead
-    u32 shader_id = shader_system_get_id("Shader.Phong");
-    // NOTE: No maps for this shader type.
-    if (!shader_system_shader_per_draw_acquire(shader_id, 0, 0, &instance.per_draw_id)) {
-        KASSERT_MSG(false, "Failed to acquire per-draw renderer resources for default Phong material. Application cannot continue.");
+b8 material_instance_flag_get(struct material_system_state* state, material_instance instance, material_flag_bits flag) {
+    material_instance_data* data = get_instance_data(state, instance);
+    if (!data) {
+        return false;
     }
-    instance.material = state->default_phong_material;
-    return instance;
+
+    return FLAG_GET(data->flags, flag);
 }
 
-material_instance material_system_get_default_pbr(material_system_state* state) {
-    material_instance instance = { 0 };
-    // FIXME: use kname instead
-    u32 shader_id = shader_system_get_id("Shader.PBRMaterial");
-    // NOTE: No maps for this shader type.
-    if (!shader_system_shader_per_draw_acquire(shader_id, 0, 0, &instance.per_draw_id)) {
-        KASSERT_MSG(false, "Failed to acquire per-draw renderer resources for default PBR material. Application cannot continue.");
+b8 material_instance_base_colour_get(struct material_system_state* state, material_instance instance, vec4* out_value) {
+    if (!out_value) {
+        return false;
     }
-    instance.material = state->default_pbr_material;
-    return instance;
+
+    material_instance_data* data = get_instance_data(state, instance);
+    if (!data) {
+        return false;
+    }
+
+    *out_value = data->base_colour;
+    return true;
 }
 
-material_instance material_system_get_default_layered_pbr(material_system_state* state) {
-    material_instance instance = { 0 };
-    // FIXME: use kname instead
-    u32 shader_id = shader_system_get_id("Shader.LayeredPBRMaterial");
-    // NOTE: No maps for this shader type.
-    if (!shader_system_shader_per_draw_acquire(shader_id, 0, 0, &instance.per_draw_id)) {
-        KASSERT_MSG(false, "Failed to acquire per-draw renderer resources for default LayeredPBR material. Application cannot continue.");
+b8 material_instance_base_colour_set(struct material_system_state* state, material_instance instance, vec4 value) {
+    material_instance_data* data = get_instance_data(state, instance);
+    if (!data) {
+        return false;
     }
-    instance.material = state->default_layered_material;
-    return instance;
+
+    data->base_colour = value;
+    data->is_dirty = true;
+    return true;
+}
+
+b8 material_instance_uv_offset_get(struct material_system_state* state, material_instance instance, vec3* out_value) {
+    if (!out_value) {
+        return false;
+    }
+
+    material_instance_data* data = get_instance_data(state, instance);
+    if (!data) {
+        return false;
+    }
+
+    *out_value = data->uv_offset;
+    return true;
+}
+b8 material_instance_uv_offset_set(struct material_system_state* state, material_instance instance, vec3 value) {
+    material_instance_data* data = get_instance_data(state, instance);
+    if (!data) {
+        return false;
+    }
+
+    data->uv_offset = value;
+    data->is_dirty = true;
+    return true;
+}
+
+b8 material_instance_uv_scale_get(struct material_system_state* state, material_instance instance, vec3* out_value) {
+    if (!out_value) {
+        return false;
+    }
+
+    material_instance_data* data = get_instance_data(state, instance);
+    if (!data) {
+        return false;
+    }
+
+    *out_value = data->uv_scale;
+    return true;
+}
+b8 material_instance_uv_scale_set(struct material_system_state* state, material_instance instance, vec3 value) {
+    material_instance_data* data = get_instance_data(state, instance);
+    if (!data) {
+        return false;
+    }
+
+    data->uv_offset = value;
+    data->is_dirty = true;
+    return true;
+}
+
+material_instance material_system_get_default_standard(material_system_state* state) {
+    return default_material_instance_get(state, state->default_standard_material, "standard");
+}
+
+material_instance material_system_get_default_water(material_system_state* state) {
+    return default_material_instance_get(state, state->default_water_material, "water");
+}
+
+material_instance material_system_get_default_blended(material_system_state* state) {
+    return default_material_instance_get(state, state->default_blended_material, "blended");
 }
 
 void material_system_dump(material_system_state* state) {
-    // FIXME: find a way to query this from the kresource system.
-     //
-     /* material_reference* refs = (material_reference*)state_ptr->registered_material_table.memory;
-     for (u32 i = 0; i < state_ptr->registered_material_table.element_count; ++i) {
-         material_reference* r = &refs[i];
-         if (r->reference_count > 0 || r->handle != INVALID_ID) {
-             KTRACE("Found material ref (handle/refCount): (%u/%u)", r->handle, r->reference_count);
-             if (r->handle != INVALID_ID) {
-                 KTRACE("Material name: %s", state_ptr->registered_materials[r->handle].name);
-             }
-         }
-     } */
-}
+    u32 material_count = darray_length(state->materials);
+    for (u32 i = 0;i < material_count;++i) {
+        material_data* m = &state->materials[i];
+        //Skip "free" slots
+        if (m->unique_id == INVALID_ID_U64) {
+            continue;
+        }
 
-static b8 assign_map(material_system_state* state, kresource_texture_map* map, const material_map* config, kname material_name, const kresource_texture* default_tex) {
-    map->filter_minify = config->filter_min;
-    map->filter_magnify = config->filter_mag;
-    map->repeat_u = config->repeat_u;
-    map->repeat_v = config->repeat_v;
-    map->repeat_w = config->repeat_w;
-    map->mip_levels = 1;
-    map->generation = INVALID_ID;
-
-    if (config->texture_name && string_length(config->texture_name) > 0) {
-        map->texture = texture_system_request(
-            kname_create(config->texture_name),
-            INVALID_KNAME,// Use the resource from the package where it is first found. TODO: configurable within material config - include material's package name here first.
-            0, // no listener
-            0);// no callback
-
-        if (!map->texture) {
-            // Use default texture instead if provided.
-            if (default_tex) {
-                KWARN("Failed to request material texture '%s'. Using default '%s'.", config->texture_name, kname_string_get(default_tex->base.name));
-                map->texture = default_tex;
-            }
-            else {
-                KERROR("Failed to request material texture '%s', and no default was provided.", config->texture_name);
-                return false;
+        material_instance_data* instance_array = state->instances[i];
+        //Get a count of active instances.
+        u32 instance_count = darray_length(instance_array);
+        u32 active_instance_count = 0;
+        for (u32 j = 0;j < instance_count;++j) {
+            if (instance_array[j].unique_id != INVALID_ID_U64) {
+                active_instance_count++;
             }
         }
-    }
-    else {
-        // This is done when a texture is not configured, as opposed to when it is configured and not found (above).
-        map->texture = default_tex;
-    }
-    // Acquire texture map resources.
-    if (!renderer_kresource_texture_map_resources_acquire(state->renderer, map)) {
-        KERROR("Unable to acquire resources for texture map.");
-        return false;
-    }
 
-    return true;
+        KTRACE("Material name: '%s', active instance count = %u", kname_string_get(m->name), active_instance_count);
+    }
 }
+
+// material_instance material_system_get_default_unlit(material_system_state* state) {
+//     material_instance instance = { 0 };
+//     //FIXME: use kname instead
+//     u32 shader_id = shader_system_get_id("Shader.Unlit");
+//     // NOTE: No maps for this shader type.
+//     if (!shader_system_shader_per_draw_acquire(shader_id, 0, 0, &instance.per_draw_id)) {
+//         KASSERT_MSG(false, "Failed to acquire per-draw renderer resources for default Unlit material. Application cannot continue.");
+//     }
+//     instance.material = state->default_unlit_material;
+//     return instance;
+// }
+
+// material_instance material_system_get_default_phong(material_system_state* state) {
+//     material_instance instance = { 0 };
+//     // FIXME: use kname instead
+//     u32 shader_id = shader_system_get_id("Shader.Phong");
+//     // NOTE: No maps for this shader type.
+//     if (!shader_system_shader_per_draw_acquire(shader_id, 0, 0, &instance.per_draw_id)) {
+//         KASSERT_MSG(false, "Failed to acquire per-draw renderer resources for default Phong material. Application cannot continue.");
+//     }
+//     instance.material = state->default_phong_material;
+//     return instance;
+// }
+
+// material_instance material_system_get_default_pbr(material_system_state* state) {
+//     material_instance instance = { 0 };
+//     // FIXME: use kname instead
+//     u32 shader_id = shader_system_get_id("Shader.PBRMaterial");
+//     // NOTE: No maps for this shader type.
+//     if (!shader_system_shader_per_draw_acquire(shader_id, 0, 0, &instance.per_draw_id)) {
+//         KASSERT_MSG(false, "Failed to acquire per-draw renderer resources for default PBR material. Application cannot continue.");
+//     }
+//     instance.material = state->default_pbr_material;
+//     return instance;
+// }
+
+// material_instance material_system_get_default_layered_pbr(material_system_state* state) {
+//     material_instance instance = { 0 };
+//     // FIXME: use kname instead
+//     u32 shader_id = shader_system_get_id("Shader.LayeredPBRMaterial");
+//     // NOTE: No maps for this shader type.
+//     if (!shader_system_shader_per_draw_acquire(shader_id, 0, 0, &instance.per_draw_id)) {
+//         KASSERT_MSG(false, "Failed to acquire per-draw renderer resources for default LayeredPBR material. Application cannot continue.");
+//     }
+//     instance.material = state->default_layered_material;
+//     return instance;
+// }
+
+
+
+// static b8 assign_map(material_system_state* state, kresource_texture_map* map, const material_map* config, kname material_name, const kresource_texture* default_tex) {
+//     map->filter_minify = config->filter_min;
+//     map->filter_magnify = config->filter_mag;
+//     map->repeat_u = config->repeat_u;
+//     map->repeat_v = config->repeat_v;
+//     map->repeat_w = config->repeat_w;
+//     map->mip_levels = 1;
+//     map->generation = INVALID_ID;
+
+//     if (config->texture_name && string_length(config->texture_name) > 0) {
+//         map->texture = texture_system_request(
+//             kname_create(config->texture_name),
+//             INVALID_KNAME,// Use the resource from the package where it is first found. TODO: configurable within material config - include material's package name here first.
+//             0, // no listener
+//             0);// no callback
+
+//         if (!map->texture) {
+//             // Use default texture instead if provided.
+//             if (default_tex) {
+//                 KWARN("Failed to request material texture '%s'. Using default '%s'.", config->texture_name, kname_string_get(default_tex->base.name));
+//                 map->texture = default_tex;
+//             }
+//             else {
+//                 KERROR("Failed to request material texture '%s', and no default was provided.", config->texture_name);
+//                 return false;
+//             }
+//         }
+//     }
+//     else {
+//         // This is done when a texture is not configured, as opposed to when it is configured and not found (above).
+//         map->texture = default_tex;
+//     }
+//     // Acquire texture map resources.
+//     if (!renderer_kresource_texture_map_resources_acquire(state->renderer, map)) {
+//         KERROR("Unable to acquire resources for texture map.");
+//         return false;
+//     }
+
+//     return true;
+// }
 
 static b8 create_default_standard_material(material_system_state* state) {
+    kname material_name = kname_create(MATERIAL_DEFAULT_NAME_STANDARD);
+
+    // Create a fake material "asset" that can be serialized into a string.
+    kasset_material asset = { 0 };
+    asset.base.name = material_name;
+    asset.base.type = KASSET_TYPE_MATERIAL;
+    asset.type = KASSET_MATERIAL_TYPE_STANDARD;
+    asset.has_transparency = false;
+    asset.double_sided = false;
+    asset.recieves_shadow = true;
+    asset.casts_shadow = true;
+    asset.use_vertex_colour_as_base_colour = false;
+    asset.base_colour = vec4_one(); // white
+    asset.normal = vec3_create(0.0f, 0.0f, 1.0f);
+    asset.normal_enabled = true;
+    asset.mra = vec3_create(0.0f, 0.5f, 1.0f);
+    asset.use_mra = true;
+
+    // Setup a listener.
+    material_request_listener* listener = KALLOC_TYPE(material_request_listener, MEMORY_TAG_MATERIAL_INSTANCE);
+    listener->state = state;
+    listener->material_handle = material_handle_create(state, material_name);
+    listener->instance_handle = 0; // NOTE: creation of default materials does not immediately need an instance.
+
     kresource_material_request_info request = { 0 };
     request.base.type = KRESOURCE_TYPE_MATERIAL;
-    request.material_source_text = "\
-version = 3\
-type = \"standard\"\
-\
-albedo_texture = \"default_albedo\"\
-normal_texture = \"default_normal\"\
-mra_texture = \"default_mra\"\
-emissive_texture = \"default_emissive\"\
-emissive_intensity = 1.0\
-has_transparency = false\
-double_sided = false\
-recieves_shadow = true\
-casts_shadow = true\
-normal_enabled = true\
-ao_enabled = false\
-emissive_enabled = false\
-refraction_enabled = false\
-use_vertex_colour_as_albedo = false";
+    request.base.listener_inst = listener;
+    request.base.user_callback = material_resource_loaded;
+    // The material source is serialized into a string.
+    request.material_source_text = kasset_material_serialize((kasset*)&asset);
 
-    state->default_pbr_material = (kresource_material*)kresource_system_request(state->resource_system, kname_create("default"), (kresource_request_info*)&request);
-
-    u32 shader_id = shader_system_get_id("Shader.PBRMaterial");
-    kresource_material* m = state->default_pbr_material;
-
-    kresource_texture_map* maps[PBR_MATERIAL_MAP_COUNT] = {
-        &m->albedo_diffuse_map,
-        &m->normal_map,
-        &m->metallic_roughness_ao_map
-        // TODO: emissive
-    };
-
-    // Acquire group resources.
-    if (!shader_system_shader_group_acquire(shader_id, PBR_MATERIAL_MAP_COUNT, maps, &m->group_id)) {
-        KERROR("Unable to acquire group resources for default PBR material.");
+    if (!kresource_system_request(state->resource_system, kname_create("default"), (kresource_request_info*)&request)) {
+        KERROR("Resource request for default standard material failed. See logs for details.");
         return false;
     }
-
     return true;
 }
 
-static b8 create_default_multi_material(material_system_state* state) {
+static b8 create_default_water_material(material_system_state* state) {
+    // TODO:
+    return true;
+}
+
+static b8 create_default_blended_material(material_system_state* state) {
     kresource_material_request_info request = { 0 };
     request.base.type = KRESOURCE_TYPE_MATERIAL;
     // FIXME: figure out how the layers should look for this material type.
@@ -743,25 +999,375 @@ materials = [\
     \"default\"\
 ]";
 
-    state->default_layered_material = (kresource_material*)kresource_system_request(state->resource_system, kname_create("default_layered"), (kresource_request_info*)&request);
-
-    // TODO: change to layered material shader.
-    u32 shader_id = shader_system_get_id("Shader.Builtin.Terrain");
-    kresource_material* m = state->default_layered_material;
-
-    // NOTE: This is an array that includes 3 maps (albedo, normal, met/roughness/ao) per layer.
-    kresource_texture_map* maps[LAYERED_PBR_MATERIAL_MAP_COUNT] = { &m->layered_material_map };
-
-    // Acquire group resources.
-    if (!shader_system_shader_group_acquire(shader_id, LAYERED_PBR_MATERIAL_MAP_COUNT, maps, &m->group_id)) {
-        KERROR("Unable to acquire group resources for default layered PBR material.");
-        return false;
-    }
-
     return true;
 }
 
 static void on_material_system_dump(console_command_context context) {
     material_system_dump(engine_systems_get()->material_system);
+}
+
+static khandle get_shader_for_material_type(const material_system_state* state, material_type type) {
+    switch (type) {
+    default:
+    case MATERIAL_TYPE_UNKNOWN:
+        KERROR("Cannot create a material using an 'unknown' material type.");
+        return khandle_invalid();
+    case MATERIAL_TYPE_STANDARD:
+        return state->material_standard_shader;
+        break;
+    case MATERIAL_TYPE_WATER:
+        return state->material_water_shader;
+        break;
+    case MATERIAL_TYPE_BLENDED:
+        return state->material_blended_shader;
+        break;
+    case MATERIAL_TYPE_CUSTOM:
+        KASSERT_MSG(false, "Not yet implemented!");
+        return khandle_invalid();
+    }
+}
+
+static khandle material_handle_create(material_system_state* state, kname name) {
+    u32 resource_index = INVALID_ID;
+
+    // Attempt to find a free "slot", or create a new entry if there isn't one.
+    u32 material_count = darray_length(state->materials);
+    for (u32 i = 0; i < material_count; ++i) {
+        if (state->materials[i].unique_id == INVALID_ID_U64) {
+            // free slot. An array should already exists for instances here.
+            resource_index = i;
+            break;
+        }
+    }
+    if (resource_index == INVALID_ID) {
+        resource_index = material_count;
+        darray_push(state->materials, (material_data){0});
+        // This also means a new entry needs to be created at this index for instances.
+        material_instance_data* new_inst_array = darray_create(material_instance_data);
+        new_inst_array->unique_id = INVALID_ID_U64;
+        darray_push(state->instances, new_inst_array);
+    }
+
+    material_data* material = &state->materials[resource_index];
+
+    // Setup a handle first.
+    khandle handle = khandle_create(resource_index);
+    material->unique_id = handle.unique_id.uniqueid;
+    material->name = name;
+
+    return handle;
+}
+
+static khandle material_instance_handle_create(material_system_state* state, khandle material_handle) {
+    u32 instance_index = INVALID_ID;
+
+    // Attempt to find a free "slot", or create a new entry if there isn't one.
+    u32 instance_count = darray_length(state->instances[material_handle.handle_index]);
+    for (u32 i = 0; i < instance_count; ++i) {
+        if (state->instances[material_handle.handle_index][i].unique_id == INVALID_ID_U64) {
+            // free slot. An array should already exists for instances here.
+            instance_index = i;
+            break;
+        }
+    }
+    if (instance_index == INVALID_ID) {
+        instance_index = instance_count;
+        darray_push(state->instances[material_handle.handle_index], (material_instance_data){0});
+    }
+
+    material_instance_data* inst = &state->instances[material_handle.handle_index][instance_index];
+
+    // Setup a handle first.
+    khandle handle = khandle_create(instance_index);
+    inst->unique_id = handle.unique_id.uniqueid;
+    inst->material = material_handle;
+
+    return handle;
+}
+
+static b8 material_create(material_system_state* state, khandle material_handle, const kresource_material* typed_resource) {
+    material_data* material = &state->materials[material_handle.handle_index];
+
+    //Validate the material type and model.
+    material->type=kresource_material_type_to_material_type(typed_resource->type);  
+    material->model=kresource_material_model_to_material_model(typed_resource->model);
+
+     // Select shader.
+    khandle material_shader = get_shader_for_material_type(state, material->type);
+    if (khandle_is_invalid(material_shader)) {
+        // TODO: invalidate handle/entry?
+        return false;
+    }
+
+    // Base colour map or value
+    if (typed_resource->base_colour_map.resource_name) {
+        material->base_colour_texture = texture_system_request(typed_resource->base_colour_map.resource_name, typed_resource->base_colour_map.package_name, 0, 0);
+    } else {
+        material->base_colour = typed_resource->base_colour;
+    }
+
+    // Normal map
+    if (typed_resource->normal_map.resource_name) {
+        material->normal_texture = texture_system_request(typed_resource->normal_map.resource_name, typed_resource->normal_map.package_name, 0, 0);
+    }
+    material->flags |= typed_resource->normal_enabled ? MATERIAL_FLAG_NORMAL_ENABLED_BIT : 0;
+
+    // Metallic map or value
+    if (typed_resource->metallic_map.resource_name) {
+        material->metallic_texture = texture_system_request(typed_resource->metallic_map.resource_name, typed_resource->metallic_map.package_name, 0, 0);
+        material->metallic_texture_channel = kresource_texture_map_channel_to_texture_channel(typed_resource->metallic_map.channel);
+    } else {
+        material->metallic = typed_resource->metallic;
+    }
+    // Roughness map or value
+    if (typed_resource->roughness_map.resource_name) {
+        material->roughness_texture = texture_system_request(typed_resource->roughness_map.resource_name, typed_resource->roughness_map.package_name, 0, 0);
+        material->roughness_texture_channel = kresource_texture_map_channel_to_texture_channel(typed_resource->roughness_map.channel);
+    } else {
+        material->roughness = typed_resource->roughness;
+    }
+    // Ambient occlusion map or value
+    if (typed_resource->ambient_occlusion_map.resource_name) {
+        material->ao_texture = texture_system_request(typed_resource->ambient_occlusion_map.resource_name, typed_resource->ambient_occlusion_map.package_name, 0, 0);
+        material->ao_texture_channel = kresource_texture_map_channel_to_texture_channel(typed_resource->ambient_occlusion_map.channel);
+    } else {
+        material->ao = typed_resource->ambient_occlusion;
+    }
+    material->flags |= typed_resource->ambient_occlusion_enabled ? MATERIAL_FLAG_AO_ENABLED_BIT : 0;
+
+    // MRA (combined metallic/roughness/ao) map or value
+    if (typed_resource->mra_map.resource_name) {
+        material->mra_texture = texture_system_request(typed_resource->mra_map.resource_name, typed_resource->mra_map.package_name, 0, 0);
+    } else {
+        material->mra = typed_resource->mra;
+    }
+    material->flags |= typed_resource->use_mra ? MATERIAL_FLAG_MRA_ENABLED_BIT : 0;
+
+    // Emissive map or value
+    if (typed_resource->emissive_map.resource_name) {
+        material->emissive_texture = texture_system_request(typed_resource->emissive_map.resource_name, typed_resource->emissive_map.package_name, 0, 0);
+    } else {
+        material->emissive = typed_resource->emissive;
+    }
+    material->flags |= typed_resource->emissive_enabled ? MATERIAL_FLAG_EMISSIVE_ENABLED_BIT : 0;
+
+    // Set remaining flags
+    material->flags |= typed_resource->has_transparency ? MATERIAL_FLAG_HAS_TRANSPARENCY : 0;
+    material->flags |= typed_resource->double_sided ? MATERIAL_FLAG_DOUBLE_SIDED_BIT : 0;
+    material->flags |= typed_resource->recieves_shadow ? MATERIAL_FLAG_RECIEVES_SHADOW_BIT : 0;
+    material->flags |= typed_resource->casts_shadow ? MATERIAL_FLAG_CASTS_SHADOW_BIT : 0;
+    material->flags |= typed_resource->use_vertex_colour_as_base_colour ? MATERIAL_FLAG_USE_VERTEX_COLOUR_AS_BASE_COLOUR : 0;
+
+    // Create a group for the material.
+    if (!shader_system_shader_group_acquire(material_shader, &material->group_id)) {
+        KERROR("Failed to acquire shader group while creating material. See logs for details.");
+        // TODO: destroy/release
+        return false;
+    }
+
+    // TODO: Custom samplers.
+
+    return true;
+}
+
+static void material_destroy(material_system_state* state, khandle* material_handle) {
+    if (khandle_is_invalid(*material_handle) || khandle_is_stale(*material_handle, state->materials[material_handle->handle_index].unique_id)) {
+        KWARN("Attempting to release material that has an invalid or stale handle.");
+        return;
+    }
+
+    material_data* material = &state->materials[material_handle->handle_index];
+
+    // Select shader.
+    khandle material_shader = get_shader_for_material_type(state, material->type);
+    if (khandle_is_invalid(material_shader)) {
+        KWARN("Attempting to release material that had an invalid shader.");
+        return;
+    }
+
+    // Release texture resources/references
+    if (material->base_colour_texture) {
+        texture_system_release_resource(material->base_colour_texture);
+    }
+    if (material->normal_texture) {
+        texture_system_release_resource(material->normal_texture);
+    }
+    if (material->metallic_texture) {
+        texture_system_release_resource(material->metallic_texture);
+    }
+    if (material->roughness_texture) {
+        texture_system_release_resource(material->roughness_texture);
+    }
+    if (material->ao_texture) {
+        texture_system_release_resource(material->ao_texture);
+    }
+    if (material->mra_texture) {
+        texture_system_release_resource(material->mra_texture);
+    }
+    if (material->emissive_texture) {
+        texture_system_release_resource(material->emissive_texture);
+    }
+
+    // Release the group for the material.
+    if (!shader_system_shader_group_release(material_shader, material->group_id)) {
+        KWARN("Failed to release shader group while creating material. See logs for details.");
+    }
+
+    // TODO: Custom samplers.
+
+    // Destroy instances.
+    u32 instance_count = darray_length(state->instances[material_handle->handle_index]);
+    for (u32 i = 0; i < instance_count; ++i) {
+        material_instance_data* inst = &state->instances[material_handle->handle_index][i];
+        if (inst->unique_id != INVALID_ID_U64) {
+            khandle temp_handle = khandle_create_with_u64_identifier(i, inst->unique_id);
+            material_instance_destroy(state, *material_handle, &temp_handle);
+        }
+    }
+
+    kzero_memory(material, sizeof(material_data));
+
+    // Mark the material slot as free for another material to be loaded.
+    material->unique_id = INVALID_ID_U64;
+    material->group_id = INVALID_ID;
+
+    khandle_invalidate(material_handle);
+}
+
+static b8 material_instance_create(material_system_state* state, khandle base_material, khandle* out_instance_handle) {
+
+    *out_instance_handle = material_instance_handle_create(state, base_material);
+    if (khandle_is_invalid(*out_instance_handle)) {
+        KERROR("Failed to create material instance handle. Instance will not be created.");
+        return false;
+    }
+
+    material_data* material = &state->materials[base_material.handle_index];
+    material_instance_data* inst = &state->instances[base_material.handle_index][out_instance_handle->handle_index];
+
+    // Get per-draw resources for the instance.
+    if (!renderer_shader_per_draw_resources_acquire(state->renderer, get_shader_for_material_type(state, material->type), &inst->per_draw_id)) {
+        KERROR("Failed to create per-draw resources for a material instance. Instance creation failed.");
+        return false;
+    }
+
+    // Take a copy of the base material properties.
+    inst->flags = material->flags;
+    inst->uv_scale = material->uv_scale;
+    inst->uv_offset = material->uv_offset;
+    inst->base_colour = material->base_colour;
+
+    // New instances are always dirty.
+    inst->is_dirty = true;
+
+    return true;
+}
+
+static void material_instance_destroy(material_system_state* state, khandle base_material, khandle* instance_handle) {
+    material_data* material = &state->materials[base_material.handle_index];
+    material_instance_data* inst = &state->instances[base_material.handle_index][instance_handle->handle_index];
+    if (khandle_is_invalid(*instance_handle) || khandle_is_stale(*instance_handle, state->instances[base_material.handle_index][instance_handle->handle_index].unique_id)) {
+        KWARN("Tried to destroy a material instance whose handle is either invalid or stale. Nothing will be done.");
+        return;
+    }
+
+    // Release per-draw resources for the instance.
+    renderer_shader_per_draw_resources_release(state->renderer, get_shader_for_material_type(state, material->type), inst->per_draw_id);
+
+    kzero_memory(inst, sizeof(material_instance_data));
+
+    // Make sure to invalidate the entry.
+    inst->unique_id = INVALID_ID_U64;
+    inst->per_draw_id = INVALID_ID;
+
+    // Invalidate the handle too.
+    khandle_invalidate(instance_handle);
+}
+
+static void material_resource_loaded(kresource* resource, void* listener) {
+    kresource_material* typed_resource = (kresource_material*)resource;
+    material_request_listener* listener_inst = (material_request_listener*)listener;
+    material_system_state* state = listener_inst->state;
+
+    // Create the base material.
+    if (!material_create(state, listener_inst->material_handle, typed_resource)) {
+        KERROR("Failed to create material. See logs for details.");
+        return;
+    }
+
+    // Create an instance of it if one is required.
+    if (listener_inst->instance_handle) {
+        if (!material_instance_create(state, listener_inst->material_handle, listener_inst->instance_handle)) {
+            KERROR("Failed to create material instance during new material creation.");
+        }
+    }
+}
+
+static material_instance default_material_instance_get(material_system_state* state, khandle base_material, const char* name_str) {
+    material_instance instance = {0};
+    instance.material = base_material;
+
+    // Get an instance of it.
+    if (!material_instance_create(state, instance.material, &instance.instance)) {
+        // Fatal here because if this happens on a default material, something is seriously borked.
+        KFATAL("Failed to obtain an instance of the default %s material.", name_str);
+
+        // Invalidate the handles.
+        khandle_invalidate(&instance.material);
+        khandle_invalidate(&instance.instance);
+    }
+
+    return instance;
+}
+
+static material_instance_data* get_instance_data(material_system_state* state, material_instance instance) {
+    if (!state) {
+        return 0;
+    }
+
+    // Verify handles first.
+    if (khandle_is_invalid(instance.material) || khandle_is_invalid(instance.instance)) {
+        KWARN("Attempted to get material instance with an invalid base material or instance handle. Nothing to do.");
+        return 0;
+    }
+
+    if (khandle_is_stale(instance.material, state->materials[instance.material.handle_index].unique_id)) {
+        KWARN("Attempted to get material instance using a stale material handle. Nothing will be done.");
+        return 0;
+    }
+
+    if (khandle_is_stale(instance.material, state->instances[instance.material.handle_index][instance.instance.handle_index].unique_id)) {
+        KWARN("Attempted to get material instance using a stale material instance handle. Nothing will be done.");
+        return 0;
+    }
+
+    return &state->instances[instance.material.handle_index][instance.instance.handle_index];
+}
+
+
+static void default_standard_material_locations_get(material_system_state* state) {
+    // Save off the shader's uniform locations.
+    state->standard_material_locations.projection = shader_system_uniform_location(state->material_standard_shader, kname_create("projection"));
+    state->standard_material_locations.views = shader_system_uniform_location(state->material_standard_shader, kname_create("views"));
+    state->standard_material_locations.light_space_0 = shader_system_uniform_location(state->material_standard_shader, kname_create("light_space_0"));
+    state->standard_material_locations.light_space_1 = shader_system_uniform_location(state->material_standard_shader, kname_create("light_space_1"));
+    state->standard_material_locations.light_space_2 = shader_system_uniform_location(state->material_standard_shader, kname_create("light_space_2"));
+    state->standard_material_locations.light_space_3 = shader_system_uniform_location(state->material_standard_shader, kname_create("light_space_3"));
+    state->standard_material_locations.cascade_splits = shader_system_uniform_location(state->material_standard_shader, kname_create("cascade_splits"));
+    state->standard_material_locations.view_positions = shader_system_uniform_location(state->material_standard_shader, kname_create("view_positions"));
+    state->standard_material_locations.properties = shader_system_uniform_location(state->material_standard_shader, kname_create("properties"));
+    state->standard_material_locations.material_texures = shader_system_uniform_location(state->material_standard_shader, kname_create("material_textures"));
+    state->standard_material_locations.shadow_textures = shader_system_uniform_location(state->material_standard_shader, kname_create("shadow_textures"));
+    state->standard_material_locations.ibl_cube_textures = shader_system_uniform_location(state->material_standard_shader, kname_create("ibl_cube_textures"));
+    state->standard_material_locations.model = shader_system_uniform_location(state->material_standard_shader, kname_create("model"));
+    state->standard_material_locations.render_mode = shader_system_uniform_location(state->material_standard_shader, kname_create("mode"));
+    state->standard_material_locations.dir_light = shader_system_uniform_location(state->material_standard_shader, kname_create("dir_light"));
+    state->standard_material_locations.p_lights = shader_system_uniform_location(state->material_standard_shader, kname_create("p_lights"));
+    state->standard_material_locations.num_p_lights = shader_system_uniform_location(state->material_standard_shader, kname_create("num_p_lights"));
+    state->standard_material_locations.use_pcf = shader_system_uniform_location(state->material_standard_shader, kname_create("use_pcf"));
+    state->standard_material_locations.bias = shader_system_uniform_location(state->material_standard_shader, kname_create("bias"));
+    state->standard_material_locations.clipping_plane = shader_system_uniform_location(state->material_standard_shader, kname_create("clipping_plane"));
+    state->standard_material_locations.view_index = shader_system_uniform_location(state->material_standard_shader, kname_create("view_index"));
+    state->standard_material_locations.ibl_index = shader_system_uniform_location(state->material_standard_shader, kname_create("ibl_index"));
 }
 
