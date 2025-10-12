@@ -64,20 +64,24 @@ b8 vulkan_renderer_texture_read_data(renderer_backend_interface* backend, khandl
 b8 vulkan_renderer_texture_read_pixel(renderer_backend_interface* backend, khandle texture_handle, u32 x, u32 y, u8** out_rgba);
 
 b8 vulkan_renderer_shader_create(renderer_backend_interface* backend, khandle shader, const shader_config* config);
-void vulkan_renderer_shader_destroy(renderer_backend_interface* backend, khandle kshader);
+void vulkan_renderer_shader_destroy(renderer_backend_interface* backend, khandle shader);
 
-b8 vulkan_renderer_shader_initialize(renderer_backend_interface* backend, struct kshader* kshader);
-b8 vulkan_renderer_shader_reload(renderer_backend_interface* plugin, struct kshader* s);
-b8 vulkan_renderer_shader_use(renderer_backend_interface* backend, struct kshader* s);
-b8 vulkan_renderer_shader_supports_wireframe(const renderer_backend_interface* plugin, const struct kshader* s);
-b8 vulkan_renderer_shader_apply_per_frame(renderer_backend_interface* backend, struct kshader* s, u64 renderer_frame_number);
-b8 vulkan_renderer_shader_apply_per_group(renderer_backend_interface* backend, struct kshader* s, u64 renderer_frame_number);
-b8 vulkan_renderer_shader_apply_per_draw(renderer_backend_interface* backend, struct kshader* s, u64 renderer_frame_number);
-b8 vulkan_renderer_shader_instance_resources_acquire(renderer_backend_interface* backend, struct kshader* s, const shader_texture_resource_config* config, u32* out_instance_id);
-b8 vulkan_renderer_shader_instance_resources_release(renderer_backend_interface* backend, struct kshader* s, u32 instance_id);
-b8 vulkan_renderer_shader_local_resources_acquire(renderer_backend_interface* backend, struct kshader* s, const shader_texture_resource_config* config, u32* out_local_id);
-b8 vulkan_renderer_shader_per_draw_resources_release(renderer_backend_interface* backend, struct kshader* s, u32 local_id);
-b8 vulkan_renderer_uniform_set(renderer_backend_interface* backend, struct kshader* frontend_shader, struct shader_uniform* uniform, u32 array_index, const void* value);
+b8 vulkan_renderer_shader_reload(renderer_backend_interface* plugin, khandle shader, u32 shader_stage_count, shader_stage_config* shader_stages);
+b8 vulkan_renderer_shader_use(renderer_backend_interface* backend,khandle shader);
+b8 vulkan_renderer_shader_supports_wireframe(const renderer_backend_interface* plugin, const khandle shader);
+b8 vulkan_renderer_shader_flag_get(const renderer_backend_interface* backend, khandle shader, shader_flags flag);
+void vulkan_renderer_shader_flag_set(renderer_backend_interface* backend, khandle shader, shader_flags flag, b8 enabled);
+b8 vulkan_renderer_shader_bind_per_frame(renderer_backend_interface* backend, khandle shader);
+b8 vulkan_renderer_shader_bind_per_group(renderer_backend_interface* backend, khandle shader, u32 group_id);
+b8 vulkan_renderer_shader_bind_per_draw(renderer_backend_interface* backend, khandle shader, u32 draw_id);
+b8 vulkan_renderer_shader_apply_per_frame(renderer_backend_interface* backend, khandle shader, u64 renderer_frame_number);
+b8 vulkan_renderer_shader_apply_per_group(renderer_backend_interface* backend, khandle shader, u64 renderer_frame_number);
+b8 vulkan_renderer_shader_apply_per_draw(renderer_backend_interface* backend, khandle shader, u64 renderer_frame_number);
+b8 vulkan_renderer_shader_per_group_resources_acquire(renderer_backend_interface* backend, khandle shader, u32* out_group_id);
+b8 vulkan_renderer_shader_per_group_resources_release(renderer_backend_interface* backend, khandle shader, u32 group_id);
+b8 vulkan_renderer_shader_per_draw_resources_acquire(renderer_backend_interface* backend, khandle shader, u32* out_draw_id);
+b8 vulkan_renderer_shader_per_draw_resources_release(renderer_backend_interface* backend, khandle shader, u32 local_id);
+b8 vulkan_renderer_shader_uniform_set(renderer_backend_interface* backend, khandle frontend_shader, struct shader_uniform* uniform, u32 array_index, const void* value);
 
 khandle vulkan_renderer_sampler_acquire(renderer_backend_interface* backend, texture_filter filter, texture_repeat repeat, f32 anisotropy);
 void vulkan_renderer_sampler_release(renderer_backend_interface* backend, khandle* sampler);

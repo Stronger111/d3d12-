@@ -52,7 +52,7 @@ static i32 find_memory_index(vulkan_context* context, u32 type_filter, u32 prope
 
 static void create_command_buffers(vulkan_context* context, kwindow* window);
 static b8 recreate_swapchain(renderer_backend_interface* backend, kwindow* window);
-static b8 create_shader_module(vulkan_context* context, kshader* s, shader_stage stage, const char* source, const char* filename, vulkan_shader_stage* out_stage);
+static b8 create_shader_module(vulkan_context* context,vulkan_shader* internal_shader, shader_stage stage, const char* source, const char* filename, vulkan_shader_stage* out_stage);
 static b8 vulkan_buffer_copy_range_internal(vulkan_context* context, VkBuffer source, u64 source_offset, VkBuffer dest, u64 dest_offset, u64 size, b8 queue_wait);
 
 static vulkan_command_buffer* get_current_command_buffer(vulkan_context* context);
@@ -63,8 +63,8 @@ static u32 get_image_count(vulkan_context* context);
 static b8 vulkan_graphics_pipeline_create(vulkan_context* context, const vulkan_pipeline_config* config, vulkan_pipeline* out_pipeline);
 static void vulkan_pipeline_destroy(vulkan_context* context, vulkan_pipeline* pipeline);
 static void vulkan_pipeline_bind(vulkan_command_buffer* command_buffer, VkPipelineBindPoint bind_point, vulkan_pipeline* pipeline);
-static b8 setup_frequency_state(vulkan_context* context, kshader* s, shader_update_frequency frequency, const shader_texture_resource_config* config, u32* out_frequency_id);
-static b8 release_frequency_state(vulkan_context* context, kshader* s, shader_update_frequency frequency, u32 frequency_id);
+static b8 setup_frequency_state(renderer_backend_interface* backend, vulkan_shader* internal_shader, shader_update_frequency frequency,u32* out_frequency_id);
+static b8 release_shader_frequency_state(vulkan_context* context, vulkan_shader* internal_shader, shader_update_frequency frequency, u32 frequency_id);
 
 // FIXME: May want to have this as a configurable option instead.
 // Forward declarations of custom vulkan allocator functions.
@@ -3027,12 +3027,12 @@ b8 vulkan_renderer_shader_per_draw_resources_acquire(renderer_backend_interface*
 
 b8 vulkan_renderer_shader_per_group_resources_release(renderer_backend_interface* backend, kshader* s, u32 per_group_id) {
     vulkan_context* context = (vulkan_context*)backend->internal_context;
-    return release_frequency_state(backend, s, SHADER_UPDATE_FREQUENCY_PER_GROUP, per_group_id);
+    return release_shader_frequency_state(backend, s, SHADER_UPDATE_FREQUENCY_PER_GROUP, per_group_id);
 }
 
 b8 vulkan_renderer_shader_per_draw_resources_release(renderer_backend_interface* backend, kshader* s, u32 per_draw_id) {
     vulkan_context* context = (vulkan_context*)backend->internal_context;
-    return release_frequency_state(backend, s, SHADER_UPDATE_FREQUENCY_PER_DRAW, per_draw_id);
+    return release_shader_frequency_state(backend, s, SHADER_UPDATE_FREQUENCY_PER_DRAW, per_draw_id);
 }
 
 static b8 texture_state_try_set(vulkan_uniform_texture_state* texture_uniforms, u32 texture_count, u16 uniform_location, u32 array_index, khandle value) {
@@ -4209,7 +4209,7 @@ static b8 setup_frequency_state(vulkan_context* context, kshader* s, shader_upda
     return final_result;
 }
 
-static b8 release_frequency_state(vulkan_context* context, kshader* s, shader_update_frequency frequency, u32 frequency_id) {
+static b8 release_shader_frequency_state(vulkan_context* context, kshader* s, shader_update_frequency frequency, u32 frequency_id) {
     vulkan_shader* internal = s->internal_data;
 
     vulkan_shader_frequency_state* frequency_state = 0;

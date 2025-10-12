@@ -690,78 +690,77 @@ typedef struct renderer_backend_interface {
      * @returns True on success; otherwise false.
      */
     b8 (*shader_bind_per_draw)(struct renderer_backend_interface* backend, khandle shader, u32 draw_id);
-    /**
+      /**
      * @brief Applies global data to the uniform buffer.
      *
-      * @param shader A handle to the shader to apply the global data for.
-     * @param s A pointer to the shader to apply the global data for.
+     * @param backend A pointer to the renderer backend interface.
+     * @param shader A handle to the shader to apply the global data for.
      * @param renderer_frame_number The current renderer frame number provided by the frontend.
      * @return True on success; otherwise false.
      */
     b8 (*shader_apply_per_frame)(struct renderer_backend_interface* backend, khandle shader, u64 renderer_frame_number);
 
-    /**
-      * @brief Applies data for the currently bound instance.
-      *
-      * @param backend A pointer to the renderer backend interface.
-      * @param s A pointer to the shader to apply the instance data for.
-      * @param renderer_frame_number The current renderer frame number provided by the frontend.
-      * @return True on success; otherwise false.
-      */
-    b8 (*shader_apply_per_group)(struct renderer_backend_interface* backend, khandle s, u64 renderer_frame_number);
-
-    /**
-     * @brief Applies local data to the uniform buffer.
+     /**
+     * @brief Applies data for the currently bound instance.
      *
      * @param backend A pointer to the renderer backend interface.
-     * @param s A pointer to the shader to apply the instance data for.
+     * @param shader A handle to the shader to apply the instance data for.
      * @param renderer_frame_number The current renderer frame number provided by the frontend.
      * @return True on success; otherwise false.
      */
-    b8 (*shader_apply_per_draw)(struct renderer_backend_interface* backend, khandle s, u64 renderer_frame_number);
+    b8 (*shader_apply_per_group)(struct renderer_backend_interface* backend, khandle shader, u64 renderer_frame_number);
 
-    /**
+       /**
+     * @brief Applies local data to the uniform buffer.
+     *
+     * @param backend A pointer to the renderer backend interface.
+     * @param shader A handle to the shader to apply the instance data for.
+     * @param renderer_frame_number The current renderer frame number provided by the frontend.
+     * @return True on success; otherwise false.
+     */
+    b8 (*shader_apply_per_draw)(struct renderer_backend_interface* backend, khandle shader, u64 renderer_frame_number);
+
+     /**
      * @brief Acquires internal instance-level resources and provides an instance id.
      *
      * @param backend A pointer to the renderer backend interface.
-     * @param s A pointer to the shader to acquire resources from.
-     * @param config A constant pointer to the configuration of the instance to be used while acquiring resources.
+     * @param shader A handle to the shader to acquire resources from.
      * @param out_instance_id A pointer to hold the new instance identifier.
      * @return True on success; otherwise false.
      */
-    b8(*shader_per_group_resources_acquire)(struct renderer_backend_interface* backend, khandle s, u32* out_instance_id);
+    b8(*shader_per_group_resources_acquire)(struct renderer_backend_interface* backend, khandle shader, u32* out_instance_id);
 
     /**
      * @brief Releases internal instance-level resources for the given instance id.
      *
      * @param backend A pointer to the renderer backend interface.
-     * @param s A pointer to the shader to release resources from.
+     * @param shader A handle to the shader to release resources from.
      * @param instance_id The instance identifier whose resources are to be released.
      * @return True on success; otherwise false.
      */
-    b8(*shader_per_group_resources_release)(struct renderer_backend_interface* backend, khandle s, u32 instance_id);
+    b8(*shader_per_group_resources_release)(struct renderer_backend_interface* backend, khandle shader, u32 instance_id);
 
-    /**
+     /**
      * @brief Acquires internal local-level resources and provides an instance id.
      *
      * @param backend A pointer to the renderer backend interface.
-     * @param s A pointer to the shader to acquire resources from.
+     * @param shader A handle to the shader to acquire resources from.
      * @param texture_map_count The number of texture maps used.
      * @param maps An array of pointers to texture maps. Must be one map per instance texture.
      * @param out_local_id A pointer to hold the new local identifier.
      * @return True on success; otherwise false.
      */
-    b8 (*shader_per_draw_resources_acquire)(struct renderer_backend_interface* backend, khandle s, u32* out_local_id);
+    b8 (*shader_per_draw_resources_acquire)(struct renderer_backend_interface* backend, khandle shader, u32* out_local_id);
 
-    /**
+     /**
      * @brief Releases internal local-level resources for the given instance id.
      *
      * @param backend A pointer to the renderer backend interface.
-     * @param s A pointer to the shader to release resources from.
+     * @param shader A handle to the shader to release resources from.
      * @param instance_id The local identifier whose resources are to be released.
      * @return True on success; otherwise false.
      */
-    b8 (*shader_per_draw_resources_release)(struct renderer_backend_interface* backend, khandle s, u32 local_id);
+    b8 (*shader_per_draw_resources_release)(struct renderer_backend_interface* backend, khandle shader, u32 local_id);
     /**
      * @brief Sets the uniform of the given shader to the provided value.
      *
