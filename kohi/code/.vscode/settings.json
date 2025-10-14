@@ -131,6 +131,13 @@
         "debug_box3d.h": "c",
         "debug_line3d.h": "c",
         "iosfwd": "c",
-        "xlocbuf": "c"
+        "xlocbuf": "c",
+        "frame_begin_rendergraph_node.h": "c",
+        "kmemory.h": "c",
+        "ksemaphore.h": "c",
+        "windows.h": "c",
+        "kmutex.h": "c",
+        "initializer_list": "c"
     },
+    "C_Cpp.default.compilerPath": "D:/SoftWare/LLVM/bin/clang.exe",
 }

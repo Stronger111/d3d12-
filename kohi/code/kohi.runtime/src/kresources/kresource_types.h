@@ -198,162 +198,95 @@ typedef struct kresource_texture_request_info {
     b8 flip_y;
 }kresource_texture_request_info;
 
-/**
- * @brief A structure which maps a texture, use and
- * other properties.
- * FIXME: This requires combined image/sampler... should we switch away from this?
- */
- // typedef struct kresource_texture_map {
- //     /**
- //      * @brief The cached generation of the assigned texture.
- //      * Used to determine when to regenerate this texture map's
- //      * resources when a texture's generation changes (as this could
- //      * be required if, say, a texture's mip levels change).
- //      * */
- //     u32 generation;
- //     /**
- //      * @brief Cached mip map levels. Should match assigned
- //      * texture. Must always be at least 1.
- //      */
- //     u32 mip_levels;
- //     /** @brief A constant pointer to a texture resource. */
- //     const kresource_texture* texture;
- //     /** @brief Texture filtering mode for minification. */
- //     texture_filter filter_minify;
- //     /** @brief Texture filtering mode for magnification. */
- //     texture_filter filter_magnify;
- //     /** @brief The repeat mode on the U axis (or X, or S) */
- //     texture_repeat repeat_u;
- //     /** @brief The repeat mode on the V axis (or Y, or T) */
- //     texture_repeat repeat_v;
- //     /** @brief The repeat mode on the W axis (or Z, or R) */
- //     texture_repeat repeat_w;
- //     /** @brief An identifier used for internal resource lookups/management. */
- //     // TODO: handle?
- //     u32 internal_id;
- // } kresource_texture_map;
+// typedef enum texture_channel {
+//     TEXTURE_CHANNEL_R,
+//     TEXTURE_CHANNEL_G,
+//     TEXTURE_CHANNEL_B,
+//     TEXTURE_CHANNEL_A
+// }texture_channel;
 
-typedef enum texture_channel {
-    TEXTURE_CHANNEL_R,
-    TEXTURE_CHANNEL_G,
-    TEXTURE_CHANNEL_B,
-    TEXTURE_CHANNEL_A
-}texture_channel;
+// typedef enum material_texture_filter {
+//     MATERIAL_TEXTURE_FILTER_NEAREST = 0,
+//     MATERIAL_TEXTURE_FILTER_LINEAR = 1
+// }material_texture_filter;
 
-typedef enum material_texture_filter {
-    MATERIAL_TEXTURE_FILTER_NEAREST = 0,
-    MATERIAL_TEXTURE_FILTER_LINEAR = 1
-}material_texture_filter;
+// typedef enum material_texture_mode {
+//     MATERIAL_TEXTURE_MODE_REPEAT,
+//     MATERIAL_TEXTURE_MODE_MIRROR,
+//     MATERIAL_TEXTURE_MODE_CLAMP
+// }material_texture_mode;
 
-typedef enum material_texture_mode {
-    MATERIAL_TEXTURE_MODE_REPEAT,
-    MATERIAL_TEXTURE_MODE_MIRROR,
-    MATERIAL_TEXTURE_MODE_CLAMP
-}material_texture_mode;
+// typedef enum material_flag_bits {
+//     // Material is marked as having transparency. If not set, alpha of albedo will not be used.
+//     MATERIAL_FLAG_HAS_TRANSPARENCY = 0x0001,
+//     // Material is double-sided.
+//     MATERIAL_FLAG_DOUBLE_SIDED_BIT = 0x0002,
+//     // Material recieves shadows.
+//     MATERIAL_FLAG_RECIEVES_SHADOWS_BIT = 0x0004,
+//     // Material casts shadows.
+//     MATERIAL_FLAG_CASTS_SHADOWS_BIT = 0x0008,
+//     // Material normal map enabled. A default z-up value will be used if not set.
+//     MATERIAL_FLAG_NORMAL_ENABLED_BIT = 0x0010,
+//     // Material AO map is enabled. A default of 1.0 (white) will be used if not set.
+//     MATERIAL_FLAG_AO_ENABLED_BIT = 0x0020,
+//     // Material emissive map is enabled. Emissive map is ignored if not set.
+//     MATERIAL_FLAG_EMISSIVE_ENABLED_BIT = 0x0040,
+//     // Material combined MRA (metallic/roughness/ao) map is enabled. MRA map is ignored if not set.
+//     MATERIAL_FLAG_MRA_ENABLED_BIT = 0x0080,
+//     // Material refraction map is enabled. Refraction map is ignored if not set.
+//     MATERIAL_FLAG_REFRACTION_ENABLED_BIT = 0x0100,
+//     // Material uses vertex colour data as the base colour.
+//     MATERIAL_FLAG_USE_VERTEX_COLOUR_AS_BASE_COLOUR = 0x0200
+// }material_flag_bits;
 
-typedef enum material_flag_bits {
-    // Material is marked as having transparency. If not set, alpha of albedo will not be used.
-    MATERIAL_FLAG_HAS_TRANSPARENCY = 0x0001,
-    // Material is double-sided.
-    MATERIAL_FLAG_DOUBLE_SIDED_BIT = 0x0002,
-    // Material recieves shadows.
-    MATERIAL_FLAG_RECIEVES_SHADOWS_BIT = 0x0004,
-    // Material casts shadows.
-    MATERIAL_FLAG_CASTS_SHADOWS_BIT = 0x0008,
-    // Material normal map enabled. A default z-up value will be used if not set.
-    MATERIAL_FLAG_NORMAL_ENABLED_BIT = 0x0010,
-    // Material AO map is enabled. A default of 1.0 (white) will be used if not set.
-    MATERIAL_FLAG_AO_ENABLED_BIT = 0x0020,
-    // Material emissive map is enabled. Emissive map is ignored if not set.
-    MATERIAL_FLAG_EMISSIVE_ENABLED_BIT = 0x0040,
-    // Material combined MRA (metallic/roughness/ao) map is enabled. MRA map is ignored if not set.
-    MATERIAL_FLAG_MRA_ENABLED_BIT = 0x0080,
-    // Material refraction map is enabled. Refraction map is ignored if not set.
-    MATERIAL_FLAG_REFRACTION_ENABLED_BIT = 0x0100,
-    // Material uses vertex colour data as the base colour.
-    MATERIAL_FLAG_USE_VERTEX_COLOUR_AS_BASE_COLOUR = 0x0200
-}material_flag_bits;
+// typedef u32 material_flags;
 
-typedef u32 material_flags;
-
-typedef enum kresource_material_type {
-    KRESOURCE_MATERIAL_TYPE_UNKNOWN = 0,
-    KRESOURCE_MATERIAL_TYPE_STANDARD,
-    KRESOURCE_MATERIAL_TYPE_WATER,
-    KRESOURCE_MATERIAL_TYPE_BLENDED,
-    KRESOURCE_MATERIAL_TYPE_COUNT,
-    KRESOURCE_MATERIAL_TYPE_CUSTOM = 99
-} kresource_material_type;
-
-typedef enum kresource_material_model {
-    KRESOURCE_MATERIAL_MODEL_UNLIT = 0,
-    KRESOURCE_MATERIAL_MODEL_PBR,
-    KRESOURCE_MATERIAL_MODEL_PHONG,
-    KRESOURCE_MATERIAL_MODEL_COUNT,
-    KRESOURCE_MATERIAL_MODEL_CUSTOM = 99
-} kresource_material_model;
-
-typedef enum kresource_material_texture_map_channel {
-    KRESOURCE_MATERIAL_TEXTURE_MAP_CHANNEL_R = 0,
-    KRESOURCE_MATERIAL_TEXTURE_MAP_CHANNEL_G = 1,
-    KRESOURCE_MATERIAL_TEXTURE_MAP_CHANNEL_B = 2,
-    KRESOURCE_MATERIAL_TEXTURE_MAP_CHANNEL_A = 3
-} kresource_material_texture_map_channel;
-
-typedef struct kresource_material_texture {
-    kname resource_name;
-    kname package_name;
-    kname sampler_name;
-    kresource_material_texture_map_channel channel;
-} kresource_material_texture;
-
-typedef struct kresource_material_sampler {
-    kname name;
-    texture_filter filter_min;
-    texture_filter filter_mag;
-    texture_repeat repeat_u;
-    texture_repeat repeat_v;
-    texture_repeat repeat_w;
-} kresource_material_sampler;
-
+// typedef enum kresource_material_type {
+//     KRESOURCE_MATERIAL_TYPE_UNKNOWN = 0,
+//     KRESOURCE_MATERIAL_TYPE_STANDARD,
+//     KRESOURCE_MATERIAL_TYPE_WATER,
+//     KRESOURCE_MATERIAL_TYPE_BLENDED,
+//     KRESOURCE_MATERIAL_TYPE_COUNT,
+//     KRESOURCE_MATERIAL_TYPE_CUSTOM = 99
+// } kresource_material_type;
 
 // typedef enum kresource_material_model {
-//     KRESOURCE_MATERIAL_MODEL_UNKNOWN,
-//     /** @brief A material which only contains colour information. Does not respond to light. */
-//     KRESOURCE_MATERIAL_MODEL_UNLIT,
-//     /** @brief The "default" shading model for materials. Ideal for solid objects. Responds to lighting. */
+//     KRESOURCE_MATERIAL_MODEL_UNLIT = 0,
 //     KRESOURCE_MATERIAL_MODEL_PBR,
-//     /** @brief Similar to PBR, but essentially contains multiple materials in one (i.e. in "layers") that are blended together in the kshader. Great for terrains. Expensive if overused. Responds to lighting. */
-//     KRESOURCE_MATERIAL_MODEL_LAYERED_PBR
-// }kresource_material_model;
+//     KRESOURCE_MATERIAL_MODEL_PHONG,
+//     KRESOURCE_MATERIAL_MODEL_COUNT,
+//     KRESOURCE_MATERIAL_MODEL_CUSTOM = 99
+// } kresource_material_model;
 
-// typedef enum kresource_material_blend_mode {
-//     /** @brief Material is fully opaque with no transparency. Recieves lighting. */
-//     KRESOURCE_MATERIAL_BLEND_MODE_OPAQUE,
-//     /** @brief Material has transparency via a mask. If opacity_mask <= opacity_mask_clip, fragment is discarded. Recieves lighting. */
-//     KRESOURCE_MATERIAL_BLEND_MODE_MASKED,
-//     /** @brief Material is blended with background (1 - opacity). Does NOT recieve lighting. */
-//     KRESOURCE_MATERIAL_BLEND_MODE_TRANSLUCENT,
-//     /** @brief Material is blended with background (colour + background). Does NOT recieve lighting. */
-//     KRESOURCE_MATERIAL_BLEND_MODE_ADDITIVE,
-//     /** @brief Material is blended with background (colour * background). Does NOT recieve lighting. */
-//     KRESOURCE_MATERIAL_BLEND_MODE_MULTIPLY
-// }kresource_material_blend_mode;
+// typedef enum kresource_material_texture_map_channel {
+//     KRESOURCE_MATERIAL_TEXTURE_MAP_CHANNEL_R = 0,
+//     KRESOURCE_MATERIAL_TEXTURE_MAP_CHANNEL_G = 1,
+//     KRESOURCE_MATERIAL_TEXTURE_MAP_CHANNEL_B = 2,
+//     KRESOURCE_MATERIAL_TEXTURE_MAP_CHANNEL_A = 3
+// } kresource_material_texture_map_channel;
 
-// typedef struct kresource_material_layer {
+// typedef struct kresource_material_texture {
+//     kname resource_name;
+//     kname package_name;
+//     kname sampler_name;
+//     kresource_material_texture_map_channel channel;
+// } kresource_material_texture;
+
+// typedef struct kresource_material_sampler {
 //     kname name;
-// }kresource_material_layer;
-/**
- * @brief A kresource_material is really nothing more than a configuration
- * of a material to hand off to the material system. Once a material is loaded,
- * this can just be released.
- */
+//     texture_filter filter_min;
+//     texture_filter filter_mag;
+//     texture_repeat repeat_u;
+//     texture_repeat repeat_v;
+//     texture_repeat repeat_w;
+// } kresource_material_sampler;
+
 typedef struct kresource_material {
     kresource base;
 
-    kresource_material_type type;
+    kmaterial_type type;
     //Shading model
-    kresource_material_model model;
+    kmaterial_model model;
 
     b8 has_transparency;
     b8 double_sided;
@@ -365,37 +298,37 @@ typedef struct kresource_material {
     kname custom_shader_name;
 
     vec4 base_colour;
-    kresource_material_texture base_colour_map;
+    kmaterial_texture_input base_colour_map;
 
     b8 normal_enabled;
     vec3 normal;
-    kresource_material_texture normal_map;
+    kmaterial_texture_input normal_map;
 
     f32 metallic;
-    kresource_material_texture metallic_map;
-    kresource_material_texture_map_channel metallic_map_source_channel;
+    kmaterial_texture_input metallic_map;
+    texture_channel metallic_map_source_channel;
 
     f32 roughness;
-    kresource_material_texture roughness_map;
-    kresource_material_texture_map_channel roughness_map_source_channel;
+    kmaterial_texture_input roughness_map;
+    texture_channel roughness_map_source_channel;
 
     b8 ambient_occlusion_enabled;
     f32 ambient_occlusion;
-    kresource_material_texture ambient_occlusion_map;
-    kresource_material_texture_map_channel ambient_occlusion_map_source_channel;
+    kmaterial_texture_input ambient_occlusion_map;
+    texture_channel ambient_occlusion_map_source_channel;
 
     // Combined metallic/roughness/ao value.
     vec3 mra;
-    kresource_material_texture mra_map;
+    kmaterial_texture_input mra_map;
     // Indicates if the mra combined value/map should be used instead of the separate ones.
     b8 use_mra;
 
     b8 emissive_enabled;
     vec4 emissive;
-    kresource_material_texture emissive_map;
+    kmaterial_texture_input emissive_map;
 
     u32 custom_sampler_count;
-    kresource_material_sampler* custom_samplers;
+    kmaterial_sampler_config* custom_samplers;
 }kresource_material;
 
 typedef struct kresource_material_request_info {

@@ -17,7 +17,7 @@
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
-#include <windowsx.h>  //param input extraction.
+#include <windowsx.h>  //param input extraction.%
 // NOTE: These must be included after above windows includes.
 #include <stdlib.h>
 #include <timeapi.h>

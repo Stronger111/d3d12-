@@ -12,6 +12,7 @@
 
 #pragma once
 
+#include "core_render_types.h"
 #include "identifiers/khandle.h"
 #include "kresources/kresource_types.h"
 #include <defines.h>
@@ -22,6 +23,7 @@
 #define MATERIAL_DEFAULT_NAME_BLENDED "Material.DefaultBlended"
 
 struct material_system_state;
+struct frame_data;
 
 /** @brief The configuration for the material system. */
 typedef struct material_system_config {
@@ -120,11 +122,11 @@ KAPI void material_roughness_texture_channel_set(struct material_system_state* s
 KAPI texture_channel material_ao_texture_channel_get(struct material_system_state* state, khandle material);
 KAPI void material_ao_texture_channel_set(struct material_system_state* state, khandle material, texture_channel value);
 
-KAPI material_texture_filter material_texture_filter_get(struct material_system_state* state, khandle material);
-KAPI void material_texture_filter_set(struct material_system_state* state, khandle material, material_texture_filter value);
+KAPI texture_filter material_texture_filter_get(struct material_system_state* state, khandle material);
+KAPI void material_texture_filter_set(struct material_system_state* state, khandle material, texture_filter value);
 
-KAPI material_texture_mode material_texture_mode_get(struct material_system_state* state, khandle material);
-KAPI void material_texture_mode_set(struct material_system_state* state, khandle material, material_texture_mode value);
+KAPI texture_repeat material_texture_mode_get(struct material_system_state* state, khandle material);
+KAPI void material_texture_mode_set(struct material_system_state* state, khandle material, texture_repeat value);
 
 KAPI b8 material_has_transparency_get(struct material_system_state* state, khandle material);
 KAPI void material_has_transparency_set(struct material_system_state* state, khandle material, b8 value);
@@ -165,7 +167,7 @@ KAPI void material_use_vertex_colour_as_albedo_set(struct material_system_state*
  * @param value The value of the flag.
  * @returns True if successfully set; otherwise false.
  */
-KAPI b8 material_flag_set(struct material_system_state* state, khandle material, material_flag_bits flag, b8 value);
+KAPI b8 material_flag_set(struct material_system_state* state, khandle material,kmaterial_flag_bits flag, b8 value);
 
 /**
  * @brief Gets value of the given material flag's state.
@@ -175,7 +177,7 @@ KAPI b8 material_flag_set(struct material_system_state* state, khandle material,
  * @param material_flag_bits The flag whose value to get.
  * @returns True if the flag is set; otherwise false.
  */
-KAPI b8 material_flag_get(struct material_system_state* state, khandle material, material_flag_bits flag);
+KAPI b8 material_flag_get(struct material_system_state* state, khandle material, kmaterial_flag_bits flag);
 // -------------------------------------------------
 // ------------- MATERIAL INSTANCE -----------------
 // -------------------------------------------------
@@ -198,6 +200,12 @@ KAPI b8 material_system_acquire(struct material_system_state* state, kname name,
  */
 KAPI void material_system_release(struct material_system_state* state, material_instance* instance);
 
+b8 material_system_prepare_frame(struct material_system_state* state,struct frame_data* p_frame_data);
+
+b8 material_system_apply(struct material_system_state* state,khandle material,struct frame_data* p_frame_data);
+
+b8 material_system_apply_instance(struct material_system_state* state,material_instance* instance,struct frame_data* p_frame_data);
+
 /**
  * @brief Sets the given material instance flag's state.
  *
@@ -207,7 +215,7 @@ KAPI void material_system_release(struct material_system_state* state, material_
  * @param value The value of the flag.
  * @returns True if successfully set; otherwise false.
  */
-KAPI b8 material_instance_set_flag(material_system_state* state, material_instance instance, material_flag_bits flag, b8 value);
+KAPI b8 material_instance_set_flag(struct material_system_state* state, material_instance instance, kmaterial_flag_bits flag, b8 value);
 /**
  * @brief Gets value of the given material instance flag's state.
  *

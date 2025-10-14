@@ -10,12 +10,12 @@
 #include "memory/kmemory.h"
 #include "platform/platform.h"
 #include "renderer/renderer_frontend.h"
-#include "renderer/renderer_utils.h"
 #include "resources/resource_types.h"
 #include "strings/kname.h"
 #include "strings/kstring.h"
 #include "systems/resource_system.h"
 #include "systems/texture_system.h"
+#include "utils/render_type_utils.h"
 
 /**
  * @brief Represents a shader on the frontend. This is internal to the shader system.
@@ -657,85 +657,17 @@ b8 shader_system_bind_draw_id(khandle shader, u32 draw_id) {
     return renderer_shader_bind_per_draw(state_ptr->renderer, shader, draw_id);
 }
 
-b8 shader_system_apply_per_frame(khandle shader) {
-    return renderer_shader_apply_per_frame(state_ptr->renderer, shader);
+b8 shader_system_apply_per_frame(khandle shader,u16 generation) {
+    return renderer_shader_apply_per_frame(state_ptr->renderer, shader,generation);
 }
 
-b8 shader_system_apply_per_group(khandle shader) {
-    return renderer_shader_apply_per_group(state_ptr->renderer, shader);
+b8 shader_system_apply_per_group(khandle shader,u16 generation) {
+    return renderer_shader_apply_per_group(state_ptr->renderer, shader,generation);
 }
 
-b8 shader_system_apply_per_draw(khandle shader) {
-    return renderer_shader_apply_per_draw(state_ptr->renderer, shader);
+b8 shader_system_apply_per_draw(khandle shader,u16 generation) {
+    return renderer_shader_apply_per_draw(state_ptr->renderer, shader,generation);
 }
-
-// static b8 per_group_or_per_draw_acquire(u32 shader_id, shader_update_frequency frequency, u32 map_count, kresource_texture_map** maps, u32* out_id) {
-//     kshader* selected_shader = shader_system_get_by_id(shader_id);
-
-//     //Ensure that configs are setup for required texturep maps.
-//     shader_texture_resource_config config = { 0 };
-//     u32 sampler_count = selected_shader->per_group.uniform_sampler_count;
-
-//     config.uniform_config_count = sampler_count;
-//     if (sampler_count > 0) {
-//         config.uniform_configs = kallocate(sizeof(shader_frequency_uniform_texture_config) * config.uniform_config_count, MEMORY_TAG_ARRAY);
-//     }
-//     else {
-//         config.uniform_configs = 0;
-//     }
-
-//     //Create a sampler config for each map.
-//     for (u32 i = 0;i < sampler_count;++i) {
-//         shader_uniform* u = &selected_shader->uniforms[selected_shader->per_group.sampler_indices[i]];
-//         shader_frequency_uniform_texture_config* uniform_config = &config.uniform_configs[i];
-//         /* uniform_config->uniform_location = u->location; */
-//         uniform_config->kresource_texture_map_count = KMAX(u->array_length, 1);
-//         uniform_config->kresource_texture_maps = kallocate(sizeof(kresource_texture_map*) * uniform_config->kresource_texture_map_count, MEMORY_TAG_ARRAY);
-//         for (u32 j = 0;j < uniform_config->kresource_texture_map_count;++j) {
-//             uniform_config->kresource_texture_maps[j] = maps[i];
-
-//             //Acquire resources for the map.but only if a texture is assigned.
-//             if (uniform_config->kresource_texture_maps[j]->texture) {
-//                 if (!renderer_kresource_texture_map_resources_acquire(state_ptr->renderer, uniform_config->kresource_texture_maps[j])) {
-//                     KERROR("Unable to acquire resources for texture map.");
-//                     return false;
-//                 }
-//             }
-//         }
-//     }
-
-//     //Acquire the instance resources for this shader.
-//     b8 result = false;
-//     if (frequency == SHADER_UPDATE_FREQUENCY_PER_GROUP) {
-//         // FIXME: rename these
-//         result = renderer_shader_per_group_resources_acquire(state_ptr->renderer, selected_shader, &config, out_id);
-//     }
-//     else if (frequency == SHADER_UPDATE_FREQUENCY_PER_DRAW) {
-//         result = renderer_shader_per_draw_resources_acquire(state_ptr->renderer, selected_shader, &config, out_id);
-//     }
-//     else {
-//         KASSERT_MSG(false, "Global scope does not require resource acquisition, ya dingus.");
-//         return false;
-//     }
-
-//     if (!result) {
-//         KERROR("Failed to acquire %s renderer resources for shader '%s'.", frequency == SHADER_UPDATE_FREQUENCY_PER_GROUP ? "group" : "per-draw", selected_shader->name);
-//     }
-
-//     //Clean up the uniform configs.
-//     if (config.uniform_configs) {
-//         for (u32 i = 0;i < config.uniform_config_count;++i) {
-//             shader_frequency_uniform_texture_config* ucfg = &config.uniform_configs[i];
-//             if (ucfg->kresource_texture_maps) {
-//                 kfree(ucfg->kresource_texture_maps, sizeof(shader_frequency_uniform_texture_config) * ucfg->kresource_texture_map_count, MEMORY_TAG_ARRAY);
-//                 ucfg->kresource_texture_maps = 0;
-//             }
-//         }
-//         kfree(config.uniform_configs, sizeof(shader_frequency_uniform_texture_config) * config.uniform_config_count, MEMORY_TAG_ARRAY);
-//     }
-
-//     return result;
-// }
 
 b8 shader_system_shader_group_acquire(khandle shader, u32 map_count, u32* out_group_id) {
     return renderer_shader_per_group_resources_acquire(state_ptr->renderer, shader, out_group_id);
@@ -744,33 +676,6 @@ b8 shader_system_shader_group_acquire(khandle shader, u32 map_count, u32* out_gr
 b8 shader_system_shader_per_draw_acquire(khandle shader, u32* out_per_draw_id) {
     return renderer_shader_per_draw_resources_acquire(state_ptr->renderer, shader, out_per_draw_id);
 }
-
-// static b8 per_group_or_per_draw_release(u32 shader_id, shader_update_frequency frequency, u32 id, u32 map_count, kresource_texture_map* maps) {
-//     kshader* selected_shader = shader_system_get_by_id(shader_id);
-
-//     //Release texture map resources.
-//     for (u32 i = 0;i < map_count;++i) {
-//         renderer_kresource_texture_map_resources_release(state_ptr->renderer, &maps[i]);
-//     }
-
-//     b8 result = false;
-//     if (frequency == SHADER_UPDATE_FREQUENCY_PER_GROUP) {
-//         // FIXME: rename these
-//         result = renderer_shader_per_group_resources_release(state_ptr->renderer, selected_shader, id);
-//     }
-//     else if (frequency == SHADER_UPDATE_FREQUENCY_PER_DRAW) {
-//         result = renderer_shader_per_draw_resources_release(state_ptr->renderer, selected_shader, id);
-//     }
-//     else {
-//         KASSERT_MSG(false, "Per-frame shader update frequency should not be used when releasing resources.");
-//     }
-
-//     if (!result) {
-//         KERROR("Failed to acquire %s renderer resources for shader '%s'.", frequency == SHADER_UPDATE_FREQUENCY_PER_GROUP ? "group" : "per-draw", selected_shader->name);
-//     }
-
-//     return result;
-// }
 
 b8 shader_system_shader_group_release(khandle shader, u32 group_id) {
     return renderer_shader_per_group_resources_release(state_ptr->renderer, shader, group_id);

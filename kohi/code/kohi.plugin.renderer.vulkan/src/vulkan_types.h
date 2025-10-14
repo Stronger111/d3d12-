@@ -21,7 +21,7 @@
 #include "renderer/renderer_types.h"
 #include "vulkan/vulkan_core.h"
 
-// Checks the given expression return value against VK_SUCCESS
+ // Checks the given expression return value against VK_SUCCESS
 #define VK_CHECK(expr) \
     {                  \
         KASSERT(expr == VK_SUCCESS)}
@@ -281,10 +281,12 @@ typedef struct vulkan_pipeline {
  * attributes, uniforms, etc. This is to maintain memory locality and avoid
  * dynamic allocations.
  */
-/** @brief The maximum number of stages (such as vertex, fragment, compute, etc.) allowed. */
+ /** @brief The maximum number of stages (such as vertex, fragment, compute, etc.) allowed. */
 #define VULKAN_SHADER_MAX_STAGES 8
 /** @brief The maximum number of textures bindings allowed at once. */
-#define VULKAN_SHADER_MAX_TEXTURE_BINDINGS 31
+#define VULKAN_SHADER_MAX_TEXTURE_BINDINGS 16
+/** @brief The maximum number of sampler bindings allowed at once. */
+#define VULKAN_SHADER_MAX_SAMPLER_BINDINGS 16
 /** @brief The maximum number of vertex input attributes allowed. */
 #define VULKAN_SHADER_MAX_ATTRIBUTES 16
 /**
@@ -294,8 +296,11 @@ typedef struct vulkan_pipeline {
  */
 #define VULKAN_SHADER_MAX_UNIFORMS 128
 
-/** @brief The maximum number of push constant ranges for a kshader. */
+ /** @brief The maximum number of push constant ranges for a kshader. */
 #define VULKAN_SHADER_MAX_PUSH_CONST_RANGES 32
+
+// Max number of descriptor sets based on frequency. (0=per-frame, 1=per-group, 2=per-draw)
+#define VULKAN_SHADER_DESCRIPTOR_SET_LAYOUT_COUNT 3
 
 /**
  * @brief Configuration for a kshader stage, such as vertex or fragment.
@@ -322,12 +327,8 @@ typedef struct vulkan_descriptor_set_config {
  * per frame (with a max of 3).
  */
 typedef struct vulkan_descriptor_state {
-    /** @brief The descriptor generation, per swapchain image. */
-    u8* generations;
-    /** @brief The identifier, per swapchain image. Typically used for texture ids. */
-    u32* ids;
-    /** @brief The frame number this descriptor was last updated on, per swapchain image. */
-    u64* frame_numbers;
+    /** @brief The descriptor generation, per swapchain image. INVALID_ID_U16 if never loaded. */
+    u16* generations;
 } vulkan_descriptor_state;
 
 typedef struct vulkan_uniform_sampler_state {
@@ -345,13 +346,12 @@ typedef struct vulkan_uniform_sampler_state {
 typedef struct vulkan_uniform_texture_state {
     shader_uniform uniform;
     /**
-     * @brief An array of handles to texture resources.
-     */
+  * @brief An array of sampler handles. Count matches uniform array_count.
+  */
     khandle* texture_handles;
     /**
-     * @brief A descriptor state per descriptor, which in turn handles frames.
-     * Count is managed in shader config.
-     */
+    * @brief A descriptor state per sampler. Count matches uniform array_count.
+    */
     vulkan_descriptor_state* descriptor_states;
 } vulkan_uniform_texture_state;
 
@@ -364,10 +364,10 @@ typedef struct vulkan_shader_frequency_state {
     /** @brief The offset in bytes in the frequency uniform buffer. */
     u64 offset;
 
-    /** @brief The descriptor sets for this frequency, one per frame. */
+    /** @brief The descriptor sets for this frequency, one per swapchain image. */
     VkDescriptorSet* descriptor_sets;
 
-    // UBO descriptor
+    // UBO descriptor state.
     vulkan_descriptor_state ubo_descriptor_state;
 
     // A mapping of sampler uniforms to descriptors.
@@ -426,11 +426,10 @@ typedef struct vulkan_shader {
     u16 max_descriptor_set_count;
     /**
      * @brief The total number of descriptor sets configured for this kshader.
-     * Is 1 if only using global uniforms/samplers; otherwise 2.
      */
     u8 descriptor_set_count;
     /** @brief Descriptor sets, max of 3. Index 0=per_frame, 1=per_group, 2=per_draw */
-    vulkan_descriptor_set_config descriptor_sets[3];
+    vulkan_descriptor_set_config descriptor_sets[VULKAN_SHADER_DESCRIPTOR_SET_LAYOUT_COUNT];
     /** @brief The number of vertex attributes in the shader. */
     u8 attribute_count;
     /** @brief An array of attribute descriptions for this kshader. */
@@ -467,8 +466,8 @@ typedef struct vulkan_shader {
     /** @brief The descriptor pool used for this kshader. */
     VkDescriptorPool descriptor_pool;
 
-    /** @brief Descriptor set layouts, max of 2. Index 0=per-frame, 1=per-group, 2=per-draw (samplers only). */
-    VkDescriptorSetLayout descriptor_set_layouts[3];
+    /** @brief Descriptor set layouts, max of 3. Index 0=per-frame, 1=per-group, 2=per-draw (samplers only). */
+    VkDescriptorSetLayout descriptor_set_layouts[VULKAN_SHADER_DESCRIPTOR_SET_LAYOUT_COUNT];
 
     /** @brief The uniform buffers used by this kshader, one per swapchain image. */
     renderbuffer* uniform_buffers;
@@ -561,6 +560,11 @@ typedef struct kwindow_renderer_backend_state {
 typedef struct vulkan_sampler_handle_data {
     // Used for handle validation.
     u64 handle_uniqueid;
+    // The generation of the internal sampler. Incremented every time the sampler is changed.
+    u16 generation;
+    // Sampler name for named lookups and serialization.
+    kname name;
+    // The underlying sampler handle.
     VkSampler sampler;
 } vulkan_sampler_handle_data;
 
@@ -572,7 +576,7 @@ typedef struct vulkan_texture_handle_data {
     u64 uniqueid;
 
     // The generation of the internal texture. Incremented every time the texture is changed.
-    u32 generation;
+    u16 generation;
 
     // Number of vulkan_images in the array. This is typically 1 unless the texture
     // requires the frame_count to be taken into account.
@@ -641,8 +645,8 @@ typedef struct vulkan_context {
     /** @brief Collection of textures. darray. */
     vulkan_texture_handle_data* textures;
 
-     /** @brief Collection of vulkan shaders (internal shader data). Matches size of shader array in shader system. */
-     vulkan_shader* shaders;
+    /** @brief Collection of vulkan shaders (internal shader data). Matches size of shader array in shader system. */
+    vulkan_shader* shaders;
 
     /**
      * @brief A function pointer to find a memory index of the given type and with the given properties.
@@ -663,7 +667,7 @@ typedef struct vulkan_context {
     PFN_vkCmdBeginRenderingKHR vkCmdBeginRenderingKHR;
     PFN_vkCmdEndRenderingKHR vkCmdEndRenderingKHR;
 
-     /** @brief A pointer to the currently bound vulkan shader. */
+    /** @brief A pointer to the currently bound vulkan shader. */
     vulkan_shader* bound_shader;
 
     /**

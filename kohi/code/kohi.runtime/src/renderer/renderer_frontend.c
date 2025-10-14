@@ -80,7 +80,7 @@ b8 renderer_system_deserialize_config(const char* config_str, renderer_system_co
         return false;
     }
 
-    kson_tree tree = {0};
+    kson_tree tree = { 0 };
     if (!kson_tree_from_string(config_str, &tree)) {
         KERROR("Failed to parse renderer system config.");
         return false;
@@ -191,8 +191,8 @@ b8 renderer_system_initialize(u64* memory_requirement, struct renderer_system_st
     }
 
     // Default dynamic state settings
-    state->dynamic_state.viewport = (vec4){0, 0, 1280, 720};
-    state->dynamic_state.scissor = (vec4){0, 0, 1280, 720};
+    state->dynamic_state.viewport = (vec4){ 0, 0, 1280, 720 };
+    state->dynamic_state.scissor = (vec4){ 0, 0, 1280, 720 };
     state->dynamic_state.depth_test_enabled = true;
     state->dynamic_state.depth_write_enabled = true;
     state->dynamic_state.stencil_test_enabled = false;
@@ -414,7 +414,7 @@ void renderer_set_stencil_op(renderer_stencil_op fail_op, renderer_stencil_op pa
 void renderer_begin_rendering(struct renderer_system_state* state, struct frame_data* p_frame_data, rect_2d render_area, u32 colour_target_count, khandle* colour_targets, khandle depth_stencil_target, u32 depth_stencil_layer) {
     KASSERT_MSG(render_area.width != 0 && render_area.height != 0, "renderer_begin_rendering must have a width and height.");
 
-// Verify handles in debug builds, but not release.
+    // Verify handles in debug builds, but not release.
 #ifdef KOHI_DEBUG
     // If colour targets are used, none should be invalid.
     if (colour_target_count) {
@@ -571,13 +571,13 @@ b8 renderer_texture_resize(struct renderer_system_state* state, khandle renderer
 renderbuffer* renderer_renderbuffer_get(renderbuffer_type type) {
     renderer_system_state* state_ptr = engine_systems_get()->renderer_system;
     switch (type) {
-        case RENDERBUFFER_TYPE_VERTEX:
-            return &state_ptr->geometry_vertex_buffer;
-        case RENDERBUFFER_TYPE_INDEX:
-            return &state_ptr->geometry_index_buffer;
-        default:
-            KERROR("Unsupported buffer type %u", type);
-            return 0;
+    case RENDERBUFFER_TYPE_VERTEX:
+        return &state_ptr->geometry_vertex_buffer;
+    case RENDERBUFFER_TYPE_INDEX:
+        return &state_ptr->geometry_index_buffer;
+    default:
+        KERROR("Unsupported buffer type %u", type);
+        return 0;
     }
 }
 
@@ -817,16 +817,16 @@ b8 renderer_shader_bind_per_draw(struct renderer_system_state* state, khandle sh
     return state->backend->shader_bind_per_draw(state->backend, shader, draw_id);
 }
 
-b8 renderer_shader_apply_per_frame(struct renderer_system_state* state, khandle shader) {
-    return state->backend->shader_apply_per_frame(state->backend, shader, state->frame_number);
+b8 renderer_shader_apply_per_frame(struct renderer_system_state* state, khandle shader, u16 generation) {
+    return state->backend->shader_apply_per_frame(state->backend, shader, generation);
 }
 
-b8 renderer_shader_apply_per_group(struct renderer_system_state* state, khandle shader) {
-    return state->backend->shader_apply_per_group(state->backend, shader, state->frame_number);
+b8 renderer_shader_apply_per_group(struct renderer_system_state* state, khandle shader, u16 generation) {
+    return state->backend->shader_apply_per_group(state->backend, shader, generation);
 }
 
-b8 renderer_shader_apply_per_draw(struct renderer_system_state* state, khandle shader) {
-    return state->backend->shader_apply_per_draw(state->backend, shader, state->frame_number);
+b8 renderer_shader_apply_per_draw(struct renderer_system_state* state, khandle shader, u16 generation) {
+    return state->backend->shader_apply_per_draw(state->backend, shader, generation);
 }
 
 b8 renderer_shader_per_group_resources_acquire(struct renderer_system_state* state, khandle shader, u32* out_group_id) {
@@ -869,6 +869,10 @@ b8 renderer_sampler_refresh(struct renderer_system_state* state, khandle* sample
     return state->backend->sampler_refresh(state->backend, sampler, filter, repeat, anisotropy, mip_levels);
 }
 
+kname renderer_sampler_name_get(struct renderer_system_state* state, khandle sampler) {
+    return state->backend->sampler_name_get(state->backend, sampler);
+}
+
 b8 renderer_is_multithreaded(void) {
     renderer_system_state* state_ptr = engine_systems_get()->renderer_system;
     return state_ptr->backend->is_multithreaded(state_ptr->backend);
@@ -898,7 +902,8 @@ b8 renderer_renderbuffer_create(const char* name, renderbuffer_type type, u64 to
 
     if (name) {
         out_buffer->name = string_duplicate(name);
-    } else {
+    }
+    else {
         out_buffer->name = string_format("renderbuffer_%s", "unnamed");
     }
 
@@ -909,7 +914,8 @@ b8 renderer_renderbuffer_create(const char* name, renderbuffer_type type, u64 to
         freelist_create(total_size, &out_buffer->freelist_memory_requirement, 0, 0);
         out_buffer->freelist_block = kallocate(out_buffer->freelist_memory_requirement, MEMORY_TAG_RENDERER);
         freelist_create(total_size, &out_buffer->freelist_memory_requirement, out_buffer->freelist_block, &out_buffer->buffer_freelist);
-    } else if (track_type == RENDERBUFFER_TRACK_TYPE_LINEAR) {
+    }
+    else if (track_type == RENDERBUFFER_TRACK_TYPE_LINEAR) {
         out_buffer->offset = 0;
     }
 
@@ -929,7 +935,8 @@ void renderer_renderbuffer_destroy(renderbuffer* buffer) {
             freelist_destroy(&buffer->buffer_freelist);
             kfree(buffer->freelist_block, buffer->freelist_memory_requirement, MEMORY_TAG_RENDERER);
             buffer->freelist_memory_requirement = 0;
-        } else if (buffer->track_type == RENDERBUFFER_TRACK_TYPE_LINEAR) {
+        }
+        else if (buffer->track_type == RENDERBUFFER_TRACK_TYPE_LINEAR) {
             buffer->offset = 0;
         }
 
@@ -1009,7 +1016,8 @@ b8 renderer_renderbuffer_resize(renderbuffer* buffer, u64 new_total_size) {
     b8 result = state_ptr->backend->renderbuffer_resize(state_ptr->backend, buffer, new_total_size);
     if (result) {
         buffer->total_size = new_total_size;
-    } else {
+    }
+    else {
         KERROR("Failed to resize internal renderbuffer resources.");
     }
     return result;
@@ -1025,7 +1033,8 @@ b8 renderer_renderbuffer_allocate(renderbuffer* buffer, u64 size, u64* out_offse
         KWARN("renderer_renderbuffer_allocate called on a buffer not using freelists. Offset will not be valid. Call renderer_renderbuffer_load_range instead.");
         *out_offset = 0;
         return true;
-    } else if (buffer->track_type == RENDERBUFFER_TRACK_TYPE_LINEAR) {
+    }
+    else if (buffer->track_type == RENDERBUFFER_TRACK_TYPE_LINEAR) {
         *out_offset = buffer->offset;
         buffer->offset += size;
         return true;
@@ -1054,7 +1063,8 @@ b8 renderer_renderbuffer_clear(renderbuffer* buffer, b8 zero_memory) {
 
     if (buffer->track_type == RENDERBUFFER_TRACK_TYPE_FREELIST) {
         freelist_clear(&buffer->buffer_freelist);
-    } else if (buffer->track_type == RENDERBUFFER_TRACK_TYPE_LINEAR) {
+    }
+    else if (buffer->track_type == RENDERBUFFER_TRACK_TYPE_LINEAR) {
         buffer->offset = 0;
     }
 
@@ -1086,10 +1096,10 @@ void renderer_active_viewport_set(viewport* v) {
     state_ptr->active_viewport = v;
 
     // rect_2d viewport_rect = (vec4){v->rect.x, v->rect.height - v->rect.y, v->rect.width, -v->rect.height};
-    rect_2d viewport_rect = (vec4){v->rect.x, v->rect.y + v->rect.height, v->rect.width, -v->rect.height};
+    rect_2d viewport_rect = (vec4){ v->rect.x, v->rect.y + v->rect.height, v->rect.width, -v->rect.height };
     state_ptr->backend->viewport_set(state_ptr->backend, viewport_rect);
 
-    rect_2d scissor_rect = (vec4){v->rect.x, v->rect.y, v->rect.width, v->rect.height};
+    rect_2d scissor_rect = (vec4){ v->rect.x, v->rect.y, v->rect.width, v->rect.height };
     state_ptr->backend->scissor_set(state_ptr->backend, scissor_rect);
 }
 
