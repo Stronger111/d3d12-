@@ -111,12 +111,12 @@ typedef enum system_event_code {
         ui z_delta=data.data.i8[0]
     */
     EVENT_CODE_MOUSE_WHEEL = 0x08,
-     /** @brief Resized/resolution of a window changed from the OS.
-     * Context usage:
-     * u16 width = data.data.u16[0];
-     * u16 height = data.data.u16[1];
-     * Sender is the window itself.
-     */
+    /** @brief Resized/resolution of a window changed from the OS.
+    * Context usage:
+    * u16 width = data.data.u16[0];
+    * u16 height = data.data.u16[1];
+    * Sender is the window itself.
+    */
     EVENT_CODE_WINDOW_RESIZED = 0x09,
     // Change the render mode for debugging purposes.
     /* Context usage:
@@ -160,17 +160,24 @@ typedef enum system_event_code {
     EVENT_CODE_KVAR_CHANGED = 0x22,
 
     /**
-     * @brief An event fired when a watched file has been written to.
-     * Context usage:
-     * u32 watch_id = context.data.u32[0];
-     */
-    EVENT_CODE_WATCHED_FILE_WRITTEN = 0x23,
+    * @brief An event fired when a watched asset file has been written to.
+    * Context usage:
+    * u32 watch_id = context.data.u32[0];
+    */
+    EVENT_CODE_ASSET_HOT_RELOADED = 0x23,
     /**
-     * @brief An event fired when a watched file has been removed.
-     * Context usage:
-     * u32 watch_id = context.data.u32[0];
-     */
-    EVENT_CODE_WATCHED_FILE_DELETED = 0x24,
+  * @brief An event fired when a watched asset file has been removed.
+  * Context usage:
+  * u32 watch_id = context.data.u32[0];
+  */
+    EVENT_CODE_ASSET_DELETED_FROM_DISK = 0x24,
+    /**
+ * @brief An event fired when one of a resource's assets has been hot-reloaded.
+ * Context usage:
+ * u32 watch_id = context.data.u32[0];
+ * The sender should be a pointer to the resource itself.
+ */
+    EVENT_CODE_RESOURCE_HOT_RELOADED = 0x25,
 
     /**
      * @brief An event fired while a button is being held down and the

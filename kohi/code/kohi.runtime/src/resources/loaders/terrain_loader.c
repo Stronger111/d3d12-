@@ -1,14 +1,14 @@
 #include "terrain_loader.h"
 
 #include "containers/darray.h"
-#include "memory/kmemory.h"
-#include "strings/kstring.h"
-#include "logger.h"
 #include "loader_utils.h"
+#include "logger.h"
 #include "math/kmath.h"
+#include "memory/kmemory.h"
 #include "platform/filesystem.h"
 #include "resources/resource_types.h"
 #include "resources/terrain.h"
+#include "strings/kstring.h"
 #include "systems/resource_system.h"
 
 static b8 terrain_loader_load(struct resource_loader *self, const char *name,
@@ -205,7 +205,7 @@ static b8 terrain_loader_load(struct resource_loader *self, const char *name,
         resource_data->vertex_datas = darray_reserve(terrain_vertex_data, resource_data->vertex_data_length);
     }
     out_resource->data = resource_data;
-    out_resource->data_size = sizeof(shader_config);
+    out_resource->data_size = sizeof(terrain_resource);
 
     return true;
 }

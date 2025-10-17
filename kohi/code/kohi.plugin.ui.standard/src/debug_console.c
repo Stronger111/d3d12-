@@ -37,7 +37,7 @@ b8 debug_console_consumer_write(void* inst, log_level level, const char* message
         // 注意：故意缺少清理字符串操作
         // 在这里，因为字符串需要继续存在，这样它们才能
         // 可以通过该调试控制台访问。一般情况下是清理
-        // 通过 string_cleanup_split_array 是有道理的。
+        // 通过 string_cleanup_split_darray 是有道理的。
         char** split_message = darray_create(char*);
         u32 count = string_split(message, '\n', &split_message, true, false);
         // 把每一个新行放入数组中

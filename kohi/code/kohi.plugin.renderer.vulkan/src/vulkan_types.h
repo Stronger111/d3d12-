@@ -253,7 +253,7 @@ typedef struct vulkan_pipeline_config {
     /** @brief The face cull mode. */
     face_cull_mode cull_mode;
     /** @brief The kshader flags used for creating the pipeline. */
-    u32 shader_flags;
+    u32 shader_flag_bits;
     /** @brief The number of push constant data ranges. */
     u32 push_constant_range_count;
     /** @brief An array of push constant data ranges. */
@@ -272,7 +272,7 @@ typedef struct vulkan_pipeline_config {
 typedef struct vulkan_pipeline {
     VkPipeline handle;
     VkPipelineLayout pipeline_layout;
-    /** @brief Indicates the topology types used by this pipeline. See primitive_topology_type.*/
+    /** @brief Indicates the topology types used by this pipeline. See primitive_topology_type_bits.*/
     u32 supported_topology_types;
 } vulkan_pipeline;
 
@@ -445,7 +445,7 @@ typedef struct vulkan_shader {
     /** @brief Face culling mode, provided by the front end. */
     face_cull_mode cull_mode;
 
-    /** @brief The topology types for the shader pipeline. See primitive_topology_type. Defaults to "triangle list" if unspecified. */
+    /** @brief The topology types for the shader pipeline. See primitive_topology_type_bits. Defaults to "triangle list" if unspecified. */
     u32 topology_types;
 
     u32 max_groups;
@@ -505,7 +505,7 @@ typedef struct vulkan_shader {
     vulkan_shader_frequency_info per_draw_info;
 
     // Shader flags
-    shader_flag_bits flags;
+    shader_flags flags;
 } vulkan_shader;
 
 // Forward declare kshader compiler

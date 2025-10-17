@@ -467,10 +467,10 @@ KAPI void renderer_texture_prepare_for_sampling(struct renderer_system_state* st
  *
  * @param state A pointer to the renderer state.
  * @param shader A handle to the shader.
- * @param config A constant pointer to the shader config.
+ * @param shader_resource A constant pointer to the shader shader_resource.
  * @return b8 True on success; otherwise false.
  */
-KAPI b8 renderer_shader_create(struct renderer_system_state* state, khandle shader, const shader_config* config);
+KAPI b8 renderer_shader_create(struct renderer_system_state* state, khandle shader, const kresource_shader* shader_resource);
 
 /**
  * @brief Destroys the given shader and releases any resources held by it.
@@ -519,7 +519,7 @@ KAPI b8 renderer_shader_supports_wireframe(struct renderer_system_state* state, 
  * @param flag The flag to check.
  * @return True if set; otherwise false.
  */
-KAPI b8 renderer_shader_flag_get(struct renderer_system_state* state, khandle shader, shader_flags flag);
+KAPI b8 renderer_shader_flag_get(struct renderer_system_state* state, khandle shader, shader_flag_bits flag);
 
 /**
  * @brief Sets the given shader flag.
@@ -529,7 +529,7 @@ KAPI b8 renderer_shader_flag_get(struct renderer_system_state* state, khandle sh
  * @param flag The flag to set.
  * @param enabled Indicates whether the flag should be set or unset.
  */
-KAPI void renderer_shader_flag_set(struct renderer_system_state* state, khandle shader, shader_flags flag, b8 enabled);
+KAPI void renderer_shader_flag_set(struct renderer_system_state* state, khandle shader, shader_flag_bits flag, b8 enabled);
 
 /**
  * @brief Binds the per-frame frequency.

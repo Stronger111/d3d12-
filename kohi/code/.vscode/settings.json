@@ -137,7 +137,13 @@
         "ksemaphore.h": "c",
         "windows.h": "c",
         "kmutex.h": "c",
-        "initializer_list": "c"
+        "initializer_list": "c",
+        "kname.h": "c",
+        "darray.h": "c",
+        "kstring.h": "c",
+        "kasset_material_serializer.h": "c",
+        "kresource_utils.h": "c",
+        "system_font_loader.h": "c"
     },
     "C_Cpp.default.compilerPath": "D:/SoftWare/LLVM/bin/clang.exe",
 }

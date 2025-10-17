@@ -601,10 +601,10 @@ typedef struct renderer_backend_interface {
      *
      * @param backend A pointer to the renderer backend interface.
      * @param shader A handle to the shader.
-     * @param config A constant pointer to the shader config.
+     * @param shader_resource A constant pointer to the shader shader_resource.
      * @return b8 True on success; otherwise false.
      */
-    b8 (*shader_create)(struct renderer_backend_interface* backend, khandle shader, const shader_config* config);
+    b8 (*shader_create)(struct renderer_backend_interface* backend, khandle shader, const kresource_shader* shader_resource);
     /**
      * @brief Destroys the given shader and releases any resources held by it.
      *
@@ -651,7 +651,7 @@ typedef struct renderer_backend_interface {
      * @param flag The flag to check.
      * @return True if set; otherwise false.
      */
-    b8 (*shader_flag_get)(const struct renderer_backend_interface* backend, khandle shader, shader_flags flag);
+    b8 (*shader_flag_get)(const struct renderer_backend_interface* backend, khandle shader, shader_flag_bits flag);
 
     /**
      * @brief Sets the given shader flag.
@@ -661,7 +661,7 @@ typedef struct renderer_backend_interface {
      * @param flag The flag to set.
      * @param enabled Indicates whether the flag should be set or unset.
      */
-    void (*shader_flag_set)(struct renderer_backend_interface* backend, khandle shader, shader_flags flag, b8 enabled);
+    void (*shader_flag_set)(struct renderer_backend_interface* backend, khandle shader, shader_flag_bits flag, b8 enabled);
 
     /**
      * @brief Binds the per-frame frequency.
