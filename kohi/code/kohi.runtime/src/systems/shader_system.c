@@ -249,11 +249,38 @@ khandle shader_system_get(kname name) {
     khandle shader_handle = shader_create(shader_resource);
 
     if (khandle_is_invalid(shader_handle)) {
-        KERROR("Failed to create shader '%s'.", name);
+        KERROR("Failed to create shader '%s'.", kname_string_get(name));
         KERROR("There is no shader available called '%s', and one by that name could also not be loaded.", kname_string_get(name));
         return shader_handle;
     }
 
+    return shader_handle;
+}
+
+khandle shader_system_get_from_source(kname name, const char* shader_config_source) {
+    if (name == INVALID_KNAME) {
+        return khandle_invalid();
+    }
+
+    // Not found, attempt to load the shader resource.
+    kresource_shader_request_info request_info = { 0 };
+    request_info.base.type = KRESOURCE_TYPE_SHADER;
+    request_info.base.synchronous = true;                                            // Shaders are needed immediately.
+    request_info.shader_config_source_text = string_duplicate(shader_config_source); // load from string source.
+
+    kresource_shader* shader_resource = (kresource_shader*)kresource_system_request(state_ptr->resource_state, name, (kresource_request_info*)&request_info);
+    if (!shader_resource) {
+        KERROR("Failed to load shader resource for shader '%s'.", name);
+        return khandle_invalid();
+    }
+
+    //Create a shader
+    khandle shader_handle = shader_create(shader_resource);
+
+    if (khandle_is_invalid(shader_handle)) {
+        KERROR("Failed to create shader '%s' from config source.", kname_string_get(name));
+        return shader_handle;
+    }
     return shader_handle;
 }
 
@@ -719,9 +746,11 @@ static khandle shader_create(const kresource_shader* shader_resource) {
         b8 uniform_add_result = false;
         if (uniform_type_is_sampler(uc->type)) {
             uniform_add_result = internal_sampler_add(out_shader, uc);
-        } else if (uniform_type_is_texture(uc->type)) {
+        }
+        else if (uniform_type_is_texture(uc->type)) {
             uniform_add_result = internal_texture_add(out_shader, uc);
-        } else {
+        }
+        else {
             uniform_add_result = internal_uniform_add(out_shader, uc, INVALID_ID);
         }
         if (!uniform_add_result) {
@@ -753,7 +782,8 @@ static khandle shader_create(const kresource_shader* shader_resource) {
                 out_shader->per_draw.sampler_indices[draw_samplers] = i;
                 break;
             }
-        } else if (uniform_type_is_texture(uc->type)) {
+        }
+        else if (uniform_type_is_texture(uc->type)) {
             switch (uc->frequency) {
             case SHADER_UPDATE_FREQUENCY_PER_FRAME:
                 out_shader->per_frame.texture_indices[frame_textures] = i;
