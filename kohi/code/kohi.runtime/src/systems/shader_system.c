@@ -375,12 +375,16 @@ b8 shader_system_texture_set(khandle shader, kname sampler_name, const kresource
     return shader_system_texture_set_arrayed(shader, sampler_name, 0, t);
 }
 
-b8 shader_system_texture_set_arrayed(khandle shader, const char* sampler_name, u32 array_index, const kresource_texture* t) {
-    return shader_system_uniform_set_arrayed(shader, sampler_name, array_index, t);
+b8 shader_system_texture_set_arrayed(khandle shader,kname uniform_name, u32 array_index, const kresource_texture* t) {
+    return shader_system_uniform_set_arrayed(shader, uniform_name, array_index, t);
 }
 // lcoation 函数
 b8 shader_system_texture_set_by_location(khandle shader, u16 location, const kresource_texture* t) {
     return shader_system_uniform_set_by_location_arrayed(shader, location, 0, t);
+}
+
+b8 shader_system_texture_set_by_location_arrayed(khandle shader, u16 location, u32 array_index, const kresource_texture* t) {
+    return shader_system_uniform_set_by_location_arrayed(shader, location, array_index, t);
 }
 
 b8 shader_system_uniform_set_by_location(khandle shader, u16 location, const void* value) {
@@ -419,8 +423,8 @@ b8 shader_system_bind_draw_id(khandle shader, u32 draw_id) {
     return renderer_shader_bind_per_draw(state_ptr->renderer, shader, draw_id);
 }
 
-b8 shader_system_apply_per_frame(khandle shader, u16 generation) {
-    return renderer_shader_apply_per_frame(state_ptr->renderer, shader, generation);
+b8 shader_system_apply_per_frame(khandle shader) {
+    return renderer_shader_apply_per_frame(state_ptr->renderer, shader);
 }
 
 b8 shader_system_apply_per_group(khandle shader, u16 generation) {
@@ -431,7 +435,7 @@ b8 shader_system_apply_per_draw(khandle shader, u16 generation) {
     return renderer_shader_apply_per_draw(state_ptr->renderer, shader, generation);
 }
 
-b8 shader_system_shader_group_acquire(khandle shader, u32 map_count, u32* out_group_id) {
+b8 shader_system_shader_group_acquire(khandle shader, u32* out_group_id) {
     return renderer_shader_per_group_resources_acquire(state_ptr->renderer, shader, out_group_id);
 }
 

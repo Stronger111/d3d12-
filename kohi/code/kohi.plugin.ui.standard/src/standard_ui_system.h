@@ -23,8 +23,8 @@
 #include "resources/resource_types.h"
 #include "systems/xform_system.h"
 
-// FIXME修复
-//  FIXME: Need to maintain a list of extension types somewhere and pull from there.
+ // FIXME修复
+ //  FIXME: Need to maintain a list of extension types somewhere and pull from there.
 #define K_SYSTEM_TYPE_STANDARD_UI_EXT 128
 
 struct frame_data;
@@ -38,15 +38,18 @@ typedef struct standard_ui_system_config {
 } standard_ui_system_config;
 
 typedef struct standard_ui_renderable {
-    u32* instance_id;
-    kresource_texture_map* atlas_override;
+    u32* group_id;
+    u16 group_generation;
+    u32* per_draw_id;
+    u16* per_draw_generation;
+    kresource_texture* atlas_override;
     geometry_render_data render_data;
     geometry_render_data* clip_mask_render_data;
 } standard_ui_renderable;
 
 typedef struct standard_ui_render_data {
     //UI 图集
-    kresource_texture_map* ui_atlas;
+    kresource_texture* ui_atlas;
     // darray
     standard_ui_renderable* renderables;
 } standard_ui_render_data;
@@ -70,7 +73,7 @@ typedef struct sui_keyboard_event {
 typedef struct sui_clip_mask {
     u32 reference_id;
     khandle clip_xform;
-    struct geometry* clip_geometry;
+    kgeometry clip_geometry;
     geometry_render_data render_data;
 } sui_clip_mask;
 
@@ -95,13 +98,13 @@ typedef struct sui_control {
     void* user_data;
     u64 user_data_size;
 
-    void (*destroy)(struct standard_ui_state* state,struct sui_control* self);
-    b8 (*load)(struct standard_ui_state* state,struct sui_control* self);
-    void (*unload)(struct standard_ui_state* state,struct sui_control* self);
+    void (*destroy)(struct standard_ui_state* state, struct sui_control* self);
+    b8 (*load)(struct standard_ui_state* state, struct sui_control* self);
+    void (*unload)(struct standard_ui_state* state, struct sui_control* self);
 
-    b8 (*update)(struct standard_ui_state* state,struct sui_control* self, struct frame_data* p_frame_data);
-    void (*render_prepare)(struct standard_ui_state* state,struct sui_control* self,const struct frame_data* p_frame_data);
-    b8 (*render)(struct standard_ui_state* state,struct sui_control* self, struct frame_data* p_frame_data, standard_ui_render_data* reneder_data);
+    b8 (*update)(struct standard_ui_state* state, struct sui_control* self, struct frame_data* p_frame_data);
+    void (*render_prepare)(struct standard_ui_state* state, struct sui_control* self, const struct frame_data* p_frame_data);
+    b8 (*render)(struct standard_ui_state* state, struct sui_control* self, struct frame_data* p_frame_data, standard_ui_render_data* reneder_data);
 
     //用户自己处理按钮事件
     /**
@@ -110,22 +113,22 @@ typedef struct sui_control {
      * @param event The mouse event.
      * @returns True if the event should be allowed to propagate to other controls; otherwise false.
      */
-    void (*on_click)(struct standard_ui_state* state,struct sui_control* self, struct sui_mouse_event event);
-    void (*on_mouse_down)(struct standard_ui_state* state,struct sui_control* self, struct sui_mouse_event event);
-    void (*on_mouse_up)(struct standard_ui_state* state,struct sui_control* self, struct sui_mouse_event event);
-    void (*on_mouse_over)(struct standard_ui_state* state,struct sui_control* self, struct sui_mouse_event event);
-    void (*on_mouse_out)(struct standard_ui_state* state,struct sui_control* self, struct sui_mouse_event event);
-    void (*on_mouse_move)(struct standard_ui_state* state,struct sui_control* self, struct sui_mouse_event event);
-    
-    //引擎内部处理事件状态
-    void (*internal_click)(struct standard_ui_state* state,struct sui_control* self, struct sui_mouse_event event);
-    void (*internal_mouse_over)(struct standard_ui_state* state,struct sui_control* self, struct sui_mouse_event event);
-    void (*internal_mouse_out)(struct standard_ui_state* state,struct sui_control* self, struct sui_mouse_event event);
-    void (*internal_mouse_down)(struct standard_ui_state* state,struct sui_control* self, struct sui_mouse_event event);
-    void (*internal_mouse_up)(struct standard_ui_state* state,struct sui_control* self, struct sui_mouse_event event);
-    void (*internal_mouse_move)(struct standard_ui_state* state,struct sui_control* self, struct sui_mouse_event event);
+    void (*on_click)(struct standard_ui_state* state, struct sui_control* self, struct sui_mouse_event event);
+    void (*on_mouse_down)(struct standard_ui_state* state, struct sui_control* self, struct sui_mouse_event event);
+    void (*on_mouse_up)(struct standard_ui_state* state, struct sui_control* self, struct sui_mouse_event event);
+    void (*on_mouse_over)(struct standard_ui_state* state, struct sui_control* self, struct sui_mouse_event event);
+    void (*on_mouse_out)(struct standard_ui_state* state, struct sui_control* self, struct sui_mouse_event event);
+    void (*on_mouse_move)(struct standard_ui_state* state, struct sui_control* self, struct sui_mouse_event event);
 
-    void (*on_key)(struct standard_ui_state* state,struct sui_control* self, struct sui_keyboard_event event);
+    //引擎内部处理事件状态
+    void (*internal_click)(struct standard_ui_state* state, struct sui_control* self, struct sui_mouse_event event);
+    void (*internal_mouse_over)(struct standard_ui_state* state, struct sui_control* self, struct sui_mouse_event event);
+    void (*internal_mouse_out)(struct standard_ui_state* state, struct sui_control* self, struct sui_mouse_event event);
+    void (*internal_mouse_down)(struct standard_ui_state* state, struct sui_control* self, struct sui_mouse_event event);
+    void (*internal_mouse_up)(struct standard_ui_state* state, struct sui_control* self, struct sui_mouse_event event);
+    void (*internal_mouse_move)(struct standard_ui_state* state, struct sui_control* self, struct sui_mouse_event event);
+
+    void (*on_key)(struct standard_ui_state* state, struct sui_control* self, struct sui_keyboard_event event);
 } sui_control;
 
 typedef struct standard_ui_state {
@@ -142,7 +145,6 @@ typedef struct standard_ui_state {
     //texture_map ui_atlas;
 
     kresource_texture* atlas_texture;
-    kresource_texture_map atlas;
 
     u64 focused_id;
 
@@ -158,7 +160,7 @@ typedef struct standard_ui_state {
  * @param config The configuration (standard_ui_system_config) for this system.
  * @return True on success; otherwise false.
  */
-KAPI b8 standard_ui_system_initialize(u64* memory_requirement,standard_ui_state* state, standard_ui_system_config* config);
+KAPI b8 standard_ui_system_initialize(u64* memory_requirement, standard_ui_state* state, standard_ui_system_config* config);
 
 /**
  * @brief Shuts down the standard UI system.
@@ -169,7 +171,7 @@ KAPI void standard_ui_system_shutdown(standard_ui_state* state);
 
 KAPI b8 standard_ui_system_update(standard_ui_state* state, struct frame_data* p_frame_data);
 
-KAPI void standard_ui_system_render_prepare_frame(standard_ui_state* state,const struct frame_data* p_frame_data);
+KAPI void standard_ui_system_render_prepare_frame(standard_ui_state* state, const struct frame_data* p_frame_data);
 
 KAPI b8 standard_ui_system_render(standard_ui_state* state, sui_control* root, struct frame_data* p_frame_data, standard_ui_render_data* render_data);
 
@@ -201,7 +203,7 @@ KAPI b8 sui_base_control_render(standard_ui_state* state, struct sui_control* se
  * @param self A pointer to the control whose position will be set.
  * @param position The position to be set.
  */
-KAPI void sui_control_position_set(standard_ui_state* state,struct sui_control* self, vec3 position);
+KAPI void sui_control_position_set(standard_ui_state* state, struct sui_control* self, vec3 position);
 
 /**
  * @brief Gets the position on the given control.
@@ -209,5 +211,5 @@ KAPI void sui_control_position_set(standard_ui_state* state,struct sui_control* 
  * @param u_text A pointer to the control whose position will be retrieved.
  * @param The position of the given control.
  */
-KAPI vec3 sui_control_position_get(standard_ui_state* state,struct sui_control* self);
+KAPI vec3 sui_control_position_get(standard_ui_state* state, struct sui_control* self);
 

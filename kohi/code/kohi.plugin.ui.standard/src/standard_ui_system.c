@@ -18,7 +18,6 @@
 #include <resources/resource_types.h>
 #include <strings/kstring.h>
 #include <systems/font_system.h>
-#include <systems/geometry_system.h>
 #include <systems/shader_system.h>
 #include <systems/texture_system.h>
 #include <systems/xform_system.h>
@@ -26,6 +25,7 @@
 #include "core/engine.h"
 #include "kohi.plugin.ui.standard_version.h"
 #include "kresources/kresource_types.h"
+#include "strings/kname.h"
 
 static b8 standard_ui_system_mouse_down(u16 code, void* sender, void* listener_inst, event_context context) {
     standard_ui_state* typed_state = (standard_ui_state*)listener_inst;
@@ -217,19 +217,8 @@ KAPI b8 standard_ui_system_initialize(u64* memory_requirement, standard_ui_state
         kname_create("PluginUiStandard"),
         state, texture_resource_loaded);
     if (!state->atlas_texture) {
-        // TODO: use default texture instead.
         KERROR("Failed to request atlas texture for standard UI.");
-        return false;
-    }
-
-    // Atlas texture map.
-    kresource_texture_map* map = &state->atlas;
-    map->repeat_u = map->repeat_v = map->repeat_w = TEXTURE_REPEAT_CLAMP_TO_EDGE;
-    map->filter_minify = map->filter_magnify = TEXTURE_FILTER_MODE_NEAREST;
-    map->texture = state->atlas_texture;
-    if (!renderer_kresource_texture_map_resources_acquire(state->renderer, map)) {
-        return false;
-        KERROR("Unable to acquire atlas texture map resources. StandardUI cannot be initialized.");
+        state->atlas_texture = texture_system_request(kname_create(DEFAULT_TEXTURE_NAME), 0, 0);
     }
 
     // Listen for input events.
@@ -268,13 +257,10 @@ void standard_ui_system_shutdown(standard_ui_state* state) {
             c->destroy(state, c);
         }
 
-        // Release texture map for UI atlas.
-        renderer_kresource_texture_map_resources_release(state->renderer, &state->atlas);
-
         //Release texture for UI data.
-        if (state->atlas.texture) {
-            texture_system_release_resource((kresource_texture*)state->atlas.texture);
-            state->atlas.texture = 0;
+        if (state->atlas_texture) {
+            texture_system_release_resource(state->atlas_texture);
+            state->atlas_texture = 0;
         }
     }
 }
@@ -311,7 +297,7 @@ b8 standard_ui_system_render(standard_ui_state* state, sui_control* root, struct
     }
 
     // 图集
-    render_data->ui_atlas = &state->atlas;
+    render_data->ui_atlas = &state->atlas_texture;
 
     if (!root) {
         root = &state->root;

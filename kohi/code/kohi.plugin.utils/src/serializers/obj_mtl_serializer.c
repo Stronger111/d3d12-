@@ -1,6 +1,6 @@
 #include "obj_mtl_serializer.h"
 
-#include "assets/kasset_types.h"
+#include "core_render_types.h"
 
 #include <containers/darray.h>
 #include <kdebug/kassert.h>
@@ -71,7 +71,7 @@ static b8 import_obj_material_library_file(const char* mtl_file_text, obj_mtl_so
                 // Ambient/Diffuse colour are treated the same at this level.
                 // ambient colour is determined by the level.
                 char t[2];
-                obj_mtl_source_property prop = {0};
+                obj_mtl_source_property prop = { 0 };
                 prop.name = kname_create("diffuse_colour");
                 prop.type = SHADER_UNIFORM_TYPE_FLOAT32_4;
                 prop.size = sizeof(vec4);
@@ -102,7 +102,7 @@ static b8 import_obj_material_library_file(const char* mtl_file_text, obj_mtl_so
                 // Specular exponent
                 char t[2];
 
-                obj_mtl_source_property prop = {0};
+                obj_mtl_source_property prop = { 0 };
                 prop.name = kname_create("shininess");
                 prop.type = SHADER_UNIFORM_TYPE_FLOAT32;
                 prop.size = sizeof(f32);
@@ -126,13 +126,10 @@ static b8 import_obj_material_library_file(const char* mtl_file_text, obj_mtl_so
 
             sscanf(line, "%s %s", substr, texture_file_name);
 
-            obj_mtl_source_texture_map map = {0};
-            // NOTE: Making some assumptions about filtering and repeat modes.
-            map.filter_min = map.filter_mag = TEXTURE_FILTER_MODE_LINEAR;
-            map.repeat_u = map.repeat_v = map.repeat_w = TEXTURE_REPEAT_REPEAT;
+            obj_mtl_source_texture_map map = { 0 };
 
             // Texture name
-            char tex_name_buf[512] = {0};
+            char tex_name_buf[512] = { 0 };
             string_filename_no_extension_from_path(tex_name_buf, texture_file_name);
             map.image_asset_name = kname_create(tex_name_buf);
 
@@ -141,31 +138,39 @@ static b8 import_obj_material_library_file(const char* mtl_file_text, obj_mtl_so
                 if (strings_nequali(substr, "map_Kd", 6)) {
                     map.name = kname_create("albedo");
                     map.channel = OBJ_TEXTURE_MAP_CHANNEL_PBR_ALBEDO;
-                } else if (strings_nequali(substr, "map_Pm", 6)) {
+                }
+                else if (strings_nequali(substr, "map_Pm", 6)) {
                     map.name = kname_create("metallic");
                     map.channel = OBJ_TEXTURE_MAP_CHANNEL_PBR_METALLIC;
-                } else if (strings_nequali(substr, "map_Pr", 6)) {
+                }
+                else if (strings_nequali(substr, "map_Pr", 6)) {
                     map.name = kname_create("rougness");
                     map.channel = OBJ_TEXTURE_MAP_CHANNEL_PBR_ROUGHNESS;
-                } else if (strings_nequali(substr, "map_Ke", 6)) {
+                }
+                else if (strings_nequali(substr, "map_Ke", 6)) {
                     map.name = kname_create("emissive");
                     map.channel = OBJ_TEXTURE_MAP_CHANNEL_PBR_EMISSIVE;
-                } else if (strings_nequali(substr, "map_bump", 8)) {
+                }
+                else if (strings_nequali(substr, "map_bump", 8)) {
                     map.name = kname_create("normal");
                     map.channel = OBJ_TEXTURE_MAP_CHANNEL_PBR_NORMAL;
-                } else {
+                }
+                else {
                     KERROR("Unrecognized token. Skipping.");
                     continue;
                 }
-            } else if (first_char == 'b') {
+            }
+            else if (first_char == 'b') {
                 if (strings_nequali(substr, "bump", 4)) {
                     map.name = kname_create("normal");
                     map.channel = OBJ_TEXTURE_MAP_CHANNEL_PBR_NORMAL;
-                } else {
+                }
+                else {
                     KERROR("Unrecognized token. Skipping.");
                     continue;
                 }
-            } else {
+            }
+            else {
                 KERROR("Unrecognized token. Skipping.");
                 continue;
             }
@@ -183,9 +188,11 @@ static b8 import_obj_material_library_file(const char* mtl_file_text, obj_mtl_so
                 // If there is already a material name, then this is a new material.
                 if (hit_name) {
                     // Push a new material to the collection and move on.
-                    obj_mtl_source_material new_material = {0};
+                    obj_mtl_source_material new_material = { 0 };
+                    // Assuming standard material type.
+                    new_material.type = KMATERIAL_TYPE_STANDARD;
                     // NOTE: forcing PBR on there.
-                    new_material.type = KMATERIAL_TYPE_PBR;
+                    new_material.model = KMATERIAL_MODEL_PBR;
                     // Take a copy of the properties array.
                     new_material.property_count = darray_length(current_properties);
                     new_material.properties = kallocate(sizeof(obj_mtl_source_property) * new_material.property_count, MEMORY_TAG_ARRAY);
@@ -197,7 +204,8 @@ static b8 import_obj_material_library_file(const char* mtl_file_text, obj_mtl_so
                     // Take a copy of the name.
                     if (current_name) {
                         new_material.name = kname_create(current_name);
-                    } else {
+                    }
+                    else {
                         // TODO: generate random name - maybe based on guid?
                         KASSERT_MSG(false, "Not yet implemented.");
                     }
@@ -221,9 +229,11 @@ static b8 import_obj_material_library_file(const char* mtl_file_text, obj_mtl_so
     }     // each line
 
     // Write out the remaining material.
-    obj_mtl_source_material new_material = {0};
+    obj_mtl_source_material new_material = { 0 };
+    // Assuming standard material type.
+    new_material.type = KMATERIAL_TYPE_STANDARD;
     // NOTE: forcing PBR on there.
-    new_material.type = KMATERIAL_TYPE_PBR;
+    new_material.model = KMATERIAL_MODEL_PBR;
     // Take a copy of the properties array.
     new_material.property_count = darray_length(current_properties);
     new_material.properties = kallocate(sizeof(obj_mtl_source_property) * new_material.property_count, MEMORY_TAG_ARRAY);
@@ -235,7 +245,8 @@ static b8 import_obj_material_library_file(const char* mtl_file_text, obj_mtl_so
     // Take a copy of the name.
     if (current_name) {
         new_material.name = kname_create(current_name);
-    } else {
+    }
+    else {
         // TODO: generate random name - maybe based on guid?
         KASSERT_MSG(false, "Not yet implemented.");
     }

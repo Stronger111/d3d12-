@@ -25,6 +25,8 @@ typedef struct skybox {
 
     kgeometry geometry;
     u32 group_id;
+    /** @brief The skybox shader's group data generation. */
+    u16 skybox_shader_group_generation;
     /** @brief Synced to the renderer's current frame number when the material has been applied that frame. */
     u64 render_frame_number;
     /** @brief Synced to the renderer's current draw index when the material has been applied that frame. */

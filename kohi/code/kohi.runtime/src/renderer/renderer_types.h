@@ -34,7 +34,13 @@ KDEPRECATED("geometry_render_data should be phased out.")
 typedef struct geometry_render_data {
     mat4 model;  // 模型矩阵
     material_instance material;
-    // geometry* geometry;  // 几何体
+
+    // The per-draw id to be used when applying this data. Used for draws that don't use materials.
+    u32 draw_id;
+    // The per-draw generation. This should be incremented by the owner of the data that is
+    // fed into this structure to indicate when an update is required. Used for draws that don't use materials.
+    u16 draw_generation;
+
     u64 unique_id;
     b8 winding_inverted;
     vec4 diffuse_colour;
@@ -689,34 +695,34 @@ typedef struct renderer_backend_interface {
      * @returns True on success; otherwise false.
      */
     b8 (*shader_bind_per_draw)(struct renderer_backend_interface* backend, khandle shader, u32 draw_id);
-    /**
-   * @brief Applies global data to the uniform buffer.
-   *
-   * @param backend A pointer to the renderer backend interface.
-   * @param shader A handle to the shader to apply the global data for.
-   * @param generation The current generation of the group's data. Used for synchronization by the backend.
-   * @return True on success; otherwise false.
-   */
-    b8 (*shader_apply_per_frame)(struct renderer_backend_interface* backend, khandle shader, u16 generation);
+     /**
+     * @brief Applies per-frame data to the uniform buffer.
+     *
+     * @param backend A pointer to the renderer backend interface.
+     * @param shader A handle to the shader to apply the global data for.
+     * @param renderer_frame_number The renderer's frame number, internally used as the generation of the per-frame data. Used for synchronization by the backend.
+     * @return True on success; otherwise false.
+     */
+    b8 (*shader_apply_per_frame)(struct renderer_backend_interface* backend, khandle shader, u16 renderer_frame_number);
 
     /**
-    * @brief Applies data for the currently bound instance.
-    *
-    * @param backend A pointer to the renderer backend interface.
-    * @param shader A handle to the shader to apply the instance data for.
-    * @param generation The current generation of the group's data. Used for synchronization by the backend.
-    * @return True on success; otherwise false.
-    */
+     * @brief Applies data for the currently bound group.
+     *
+     * @param backend A pointer to the renderer backend interface.
+     * @param shader A handle to the shader to apply the instance data for.
+     * @param generation The current generation of the group's data. Used for synchronization by the backend.
+     * @return True on success; otherwise false.
+     */
     b8 (*shader_apply_per_group)(struct renderer_backend_interface* backend, khandle shader, u16 generation);
 
     /**
-  * @brief Applies local data to the uniform buffer.
-  *
-  * @param backend A pointer to the renderer backend interface.
-  * @param shader A handle to the shader to apply the instance data for.
-  * @param generation The current generation of the group's data. Used for synchronization by the backend.
-  * @return True on success; otherwise false.
-  */
+     * @brief Applies per-draw data to the uniform buffer.
+     *
+     * @param backend A pointer to the renderer backend interface.
+     * @param shader A handle to the shader to apply the instance data for.
+     * @param generation The current generation of the per-draw data. Used for synchronization by the backend.
+     * @return True on success; otherwise false.
+     */
     b8 (*shader_apply_per_draw)(struct renderer_backend_interface* backend, khandle shader, u16 generation);
 
     /**

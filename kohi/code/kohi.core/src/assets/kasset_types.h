@@ -97,7 +97,7 @@ typedef enum asset_request_result {
  */
 typedef void (*PFN_kasset_on_result)(asset_request_result result, const struct kasset* asset, void* listener_inst);
 
-typedef void (*PFN_kasset_on_hot_reload)(asset_request_result result,const struct kasset* asset, void* listener_inst);
+typedef void (*PFN_kasset_on_hot_reload)(asset_request_result result, const struct kasset* asset, void* listener_inst);
 
 /**
  * @brief Imports an asset according to the provided params and the importer's internal logic.
@@ -321,8 +321,18 @@ typedef struct kasset_material {
     vec4 emissive;
     kmaterial_texture_input emissive_map;
 
+    // DUDV map - only used for water materials.
+    kmaterial_texture_input dudv_map;
+
     u32 custom_sampler_count;
     kmaterial_sampler_config* custom_samplers;
+
+    // Only used in water materials.
+    f32 tiling;
+    // Only used in water materials.
+    f32 wave_strength;
+    // Only used in water materials.
+    f32 wave_speed;
 }kasset_material;
 
 #define KASSET_TYPE_NAME_TEXT "Text"
@@ -481,7 +491,7 @@ typedef struct kasset_shader {
 
     u16 max_groups;
     u16 max_draw_ids;
-    
+
     u32 stage_count;
     kasset_shader_stage* stages;
 

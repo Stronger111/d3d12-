@@ -1,7 +1,9 @@
 #include "forward_rendergraph_node.h"
 
 #include "core/engine.h"
+#include "core_render_types.h"
 #include "defines.h"
+#include "identifiers/khandle.h"
 #include "kresources/kresource_types.h"
 #include "logger.h"
 #include "math/kmath.h"
@@ -9,14 +11,11 @@
 #include "renderer/camera.h"
 #include "renderer/renderer_types.h"
 #include "renderer/viewport.h"
+#include "strings/kname.h"
 #include "strings/kstring.h"
-
-// FIXME: Kinda dumb to have to include this to get MAX_SHADOW_CASCADE_COUNT...
-#include "renderer/rendergraph_nodes/shadow_rendergraph_node.h"
 
 #include "renderer/renderer_frontend.h"
 #include "renderer/rendergraph.h"
-#include "resources/resource_types.h"
 #include "resources/skybox.h"
 #include "resources/water_plane.h"
 #include "systems/light_system.h"
@@ -24,6 +23,7 @@
 #include "systems/shader_system.h"
 #include "systems/texture_system.h"
 #include "systems/timeline_system.h"
+
 
 #define UNIFORM_APPLY_OR_FAIL(expr)\
 if (!expr) {\
@@ -108,6 +108,7 @@ typedef struct skybox_shader_locations {
 typedef struct forward_rendergraph_node_internal_data {
     struct renderer_system_state* renderer;
     struct texture_system_state* texture_system;
+    struct material_system_state* material_system;
     /* forward_rendergraph_node_config config; */
 
     struct kresource_texture* colourbuffer_texture;
@@ -149,15 +150,18 @@ typedef struct forward_rendergraph_node_internal_data {
     const struct kresource_texture* irradiance_cube_texture;
     const struct directional_light* dir_light;
 
-    f32 cascade_splits[MAX_SHADOW_CASCADE_COUNT];
-    mat4 directional_light_views[MAX_SHADOW_CASCADE_COUNT];
-    mat4 directional_light_projections[MAX_SHADOW_CASCADE_COUNT];
+    f32 cascade_splits[MATERIAL_MAX_SHADOW_CASCADES];
+    mat4 directional_light_views[MATERIAL_MAX_SHADOW_CASCADES];
+    mat4 directional_light_projections[MATERIAL_MAX_SHADOW_CASCADES];
     //The multiplied view/projections
-    mat4 directional_light_spaces[MAX_SHADOW_CASCADE_COUNT];
+    mat4 directional_light_spaces[MATERIAL_MAX_SHADOW_CASCADES];
 
     //An array of global scene-wide set of ibl cube textures from probes.
     u32 ibl_cube_texture_count;
     kresource_texture** ibl_cube_textures;
+
+    // Skybox shader.
+    khandle skybox_shader;
 } forward_rendergraph_node_internal_data;
 
 b8 forward_rendergraph_node_create(struct rendergraph* graph, struct rendergraph_node* self, const struct rendergraph_node_config* config) {
@@ -280,54 +284,20 @@ b8 forward_rendergraph_node_initialize(struct rendergraph_node* self) {
     }
 
     forward_rendergraph_node_internal_data* internal_data = self->internal_data;
-
-    // Save off a pointer to the PBR shader as well as its uniform locations.
-
-    /*// Load Water plane shader and shader uniform locations.
-    // Get a pointer to the  shader.
-    internal_data->water_shader = shader_system_get("Runtime.Shader.Water");
-    internal_data->water_shader_id = internal_data->water_shader->id;
-    internal_data->water_shader_locations.projection = shader_system_uniform_location(internal_data->water_shader_id, "projection");
-    internal_data->water_shader_locations.view = shader_system_uniform_location(internal_data->water_shader_id, "view");
-    internal_data->water_shader_locations.light_space = shader_system_uniform_location(internal_data->water_shader_id, "light_space");
-    internal_data->water_shader_locations.cascade_splits = shader_system_uniform_location(internal_data->water_shader_id, "cascade_splits");
-    internal_data->water_shader_locations.view_position = shader_system_uniform_location(internal_data->water_shader_id, "view_position");
-    internal_data->water_shader_locations.mode = shader_system_uniform_location(internal_data->water_shader_id, "mode");
-    internal_data->water_shader_locations.use_pcf = shader_system_uniform_location(internal_data->water_shader_id, "use_pcf");
-    internal_data->water_shader_locations.bias = shader_system_uniform_location(internal_data->water_shader_id, "bias");
-    // instance uniforms
-    internal_data->water_shader_locations.dir_light = shader_system_uniform_location(internal_data->water_shader_id, "dir_light");
-    internal_data->water_shader_locations.p_lights = shader_system_uniform_location(internal_data->water_shader_id, "p_lights");
-    internal_data->water_shader_locations.tiling = shader_system_uniform_location(internal_data->water_shader_id, "tiling");
-    internal_data->water_shader_locations.wave_strength = shader_system_uniform_location(internal_data->water_shader_id, "wave_strength");
-    internal_data->water_shader_locations.move_factor = shader_system_uniform_location(internal_data->water_shader_id, "move_factor");
-    internal_data->water_shader_locations.num_p_lights = shader_system_uniform_location(internal_data->water_shader_id, "num_p_lights");
-    // instance samplers
-    internal_data->water_shader_locations.reflection_texture = shader_system_uniform_location(internal_data->water_shader_id, "reflection_texture");
-    internal_data->water_shader_locations.refraction_texture = shader_system_uniform_location(internal_data->water_shader_id, "refraction_texture");
-    internal_data->water_shader_locations.dudv_texture = shader_system_uniform_location(internal_data->water_shader_id, "dudv_texture");
-    internal_data->water_shader_locations.normal_texture = shader_system_uniform_location(internal_data->water_shader_id, "normal_texture");
-    internal_data->water_shader_locations.shadow_textures = shader_system_uniform_location(internal_data->water_shader_id, "shadow_textures");
-    internal_data->water_shader_locations.ibl_cube_texture = shader_system_uniform_location(internal_data->water_shader_id, "ibl_cube_texture");
-    internal_data->water_shader_locations.refract_depth_texture = shader_system_uniform_location(internal_data->water_shader_id, "refract_depth_texture");
-    // local
-    internal_data->water_shader_locations.model = shader_system_uniform_location(internal_data->water_shader_id, "model");
-
     // Load Skybox shader and get shader uniform locations.
-    internal_data->skybox_shader = shader_system_get("Shader.Builtin.Skybox");
-    internal_data->skybox_shader_id = internal_data->skybox_shader->id;
-    internal_data->skybox_shader_locations.projection_location = shader_system_uniform_location(internal_data->skybox_shader_id, "projection");
-    internal_data->skybox_shader_locations.views_location = shader_system_uniform_location(internal_data->skybox_shader_id, "views");
-    internal_data->skybox_shader_locations.cube_map_location = shader_system_uniform_location(internal_data->skybox_shader_id, "cube_texture");
-    internal_data->skybox_shader_locations.view_index = shader_system_uniform_location(internal_data->skybox_shader_id, "view_index");*/
+    internal_data->skybox_shader = shader_system_get(kname_create("Shader.Builtin.Skybox"));
+    internal_data->skybox_shader_locations.projection_location = shader_system_uniform_location(internal_data->skybox_shader, kname_create("projection"));
+    internal_data->skybox_shader_locations.views_location = shader_system_uniform_location(internal_data->skybox_shader, kname_create("views"));
+    internal_data->skybox_shader_locations.cube_map_location = shader_system_uniform_location(internal_data->skybox_shader, kname_create("cube_texture"));
+    internal_data->skybox_shader_locations.view_index = shader_system_uniform_location(internal_data->skybox_shader, kname_create("view_index"));
 
     internal_data->vertex_buffer = renderer_renderbuffer_get(RENDERBUFFER_TYPE_VERTEX);
     internal_data->index_buffer = renderer_renderbuffer_get(RENDERBUFFER_TYPE_INDEX);
 
     // Grab the default cubemap texture as the irradiance texture.
-    internal_data->irradiance_cube_texture = texture_system_get_default_kresource_cube_texture(internal_data->texture_system);
+    internal_data->irradiance_cube_texture = texture_system_request(kname_create(DEFAULT_CUBE_TEXTURE_NAME), INVALID_KNAME, 0, 0);
     // 设置一些默认值
-    for (u32 i = 0; i < MAX_SHADOW_CASCADE_COUNT; ++i) {
+    for (u32 i = 0; i < MATERIAL_MAX_SHADOW_CASCADES; ++i) {
         internal_data->directional_light_spaces[i] = mat4_identity();
     }
 

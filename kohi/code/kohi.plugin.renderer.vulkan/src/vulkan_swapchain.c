@@ -1,17 +1,18 @@
 #include "vulkan_swapchain.h"
 
-#include "defines.h"
-#include "logger.h"
-#include "memory/kmemory.h"
-#include "platform/platform.h"
-#include "renderer/renderer_frontend.h"
-#include "renderer/renderer_types.h"
-#include "resources/resource_types.h"
-#include "strings/kstring.h"
-#include "vulkan_device.h"
-#include "vulkan_types.h"
-#include "vulkan_utils.h"
 #include <vulkan/vulkan_core.h>
+
+#include <defines.h>
+#include <logger.h>
+#include <memory/kmemory.h>
+#include <platform/platform.h>
+#include <renderer/renderer_frontend.h>
+#include <renderer/renderer_types.h>
+#include <resources/resource_types.h>
+#include <strings/kstring.h>
+#include <vulkan_device.h>
+#include <vulkan_types.h>
+#include <vulkan_utils.h>
 
 static b8 create(renderer_backend_interface* backend, kwindow* window, renderer_config_flags flags, vulkan_swapchain* swapchain);
 static void destroy(renderer_backend_interface* backend, vulkan_swapchain* swapchain);
@@ -176,7 +177,7 @@ static b8 create(renderer_backend_interface* backend, kwindow* window, renderer_
         // the process for this varies greatly between backends.
         if (!renderer_kresource_texture_resources_acquire(
             backend->frontend_state,
-           kname_create("__window_colourbuffer_texture__"),
+            kname_create("__window_colourbuffer_texture__"),
             KRESOURCE_TEXTURE_TYPE_2D,
             swapchain_extent.width,
             swapchain_extent.height,
@@ -196,7 +197,7 @@ static b8 create(renderer_backend_interface* backend, kwindow* window, renderer_
 
     // Get the texture_internal_data based on the existing or newly-created handle above.
    // Use that to setup the internal images/views for the colourbuffer texture.
-    texture_internal_data* texture_data = renderer_texture_resources_get(backend->frontend_state, window_internal->colourbuffer->renderer_texture_handle);
+    vulkan_texture_handle_data* texture_data = &context->textures[window_internal->colourbuffer->renderer_texture_handle.handle_index];
     if (!texture_data) {
         KFATAL("Unable to get internal data for colourbuffer image. Swapchain creation failed.");
         return false;
@@ -266,9 +267,8 @@ static void destroy(renderer_backend_interface* backend, vulkan_swapchain* swapc
 
     kwindow* window = swapchain->owning_window;
     kwindow_renderer_state* window_internal = window->renderer_state;
-    //kwindow_renderer_backend_state* window_backend = window_internal->backend_state;
 
-    texture_internal_data* texture_data = renderer_texture_resources_get(backend->frontend_state, window_internal->colourbuffer->renderer_texture_handle);
+    vulkan_texture_handle_data* texture_data = &context->textures[window_internal->colourbuffer->renderer_texture_handle.handle_index];
 
     vkDeviceWaitIdle(context->device.logical_device);
 

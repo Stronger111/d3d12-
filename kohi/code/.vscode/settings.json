@@ -143,7 +143,12 @@
         "kstring.h": "c",
         "kasset_material_serializer.h": "c",
         "kresource_utils.h": "c",
-        "system_font_loader.h": "c"
+        "system_font_loader.h": "c",
+        "vulkan_core.h": "c",
+        "nine_slice.h": "c",
+        "kasset_binary_static_mesh_serializer.h": "c",
+        "editor_gizmo.h": "c",
+        "scene.h": "c"
     },
     "C_Cpp.default.compilerPath": "D:/SoftWare/LLVM/bin/clang.exe",
 }
