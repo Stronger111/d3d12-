@@ -62,11 +62,11 @@ const char* kasset_material_serialize(const kasset* asset) {
     kson_object_value_add_string(&tree.root, "model", kmaterial_model_to_string(material->model));
 
     //Various flags
-    kson_object_value_add_bool(&tree.root, "has_transparency", material->has_transparency);
-    kson_object_value_add_bool(&tree.root, "double_sided", material->double_sided);
-    kson_object_value_add_bool(&tree.root, "recieves_shadow", material->recieves_shadow);
-    kson_object_value_add_bool(&tree.root, "casts_shadow", material->casts_shadow);
-    kson_object_value_add_bool(&tree.root, "use_vertex_colour_as_base_colour", material->use_vertex_colour_as_base_colour);
+    kson_object_value_add_boolean(&tree.root, "has_transparency", material->has_transparency);
+    kson_object_value_add_boolean(&tree.root, "double_sided", material->double_sided);
+    kson_object_value_add_boolean(&tree.root, "recieves_shadow", material->recieves_shadow);
+    kson_object_value_add_boolean(&tree.root, "casts_shadow", material->casts_shadow);
+    kson_object_value_add_boolean(&tree.root, "use_vertex_colour_as_base_colour", material->use_vertex_colour_as_base_colour);
 
     //Material inputs
     kson_object inputs = kson_object_create();
@@ -189,8 +189,8 @@ const char* kasset_material_serialize(const kasset* asset) {
             kson_object sampler = kson_object_create();
             sampler.type = KSON_OBJECT_TYPE_OBJECT;
 
-            kson_object_value_add_string(&sampler, "filter_min", texture_filter_to_string(custom_sampler->filter_min));
-            kson_object_value_add_string(&sampler, "filter_mag", texture_filter_to_string(custom_sampler->filter_mag));
+            kson_object_value_add_string(&sampler, "filter_min", texture_filter_mode_to_string(custom_sampler->filter_min));
+            kson_object_value_add_string(&sampler, "filter_mag", texture_filter_mode_to_string(custom_sampler->filter_mag));
 
             kson_object_value_add_string(&sampler, "repeat_u", texture_repeat_to_string(custom_sampler->repeat_u));
             kson_object_value_add_string(&sampler, "repeat_v", texture_repeat_to_string(custom_sampler->repeat_v));
@@ -250,7 +250,6 @@ b8 kasset_material_deserialize(const char* file_text, kasset* out_asset) {
     else {
         out_material->model = string_to_kmaterial_model(model_str);
     }
-    out_material->model = string_to_kasset_material_model(model_str);
 
     //Format version.
     i64 file_format_version = 0;
@@ -386,7 +385,7 @@ b8 kasset_material_deserialize(const char* file_text, kasset* out_asset) {
                         kmaterial_sampler_config custom_sampler = { 0 };
 
                         // name
-                        if (!kson_object_property_value_get_kname(&sampler, "name", &custom_sampler.name)) {
+                        if (!kson_object_property_value_get_string_as_kname(&sampler, "name", &custom_sampler.name)) {
                             KERROR("name, a required map field, was not found. Skipping sampler.");
                             continue;
                         }
@@ -592,14 +591,14 @@ static void add_map_obj(kson_object* base_obj, const char* source_channel, kmate
 
     // Add map object.
     kson_object map_obj = kson_object_create();
-    kson_object_value_add_kname(&map_obj, INPUT_MAP_RESOURCE_NAME, texture->resource_name);
+    kson_object_value_add_kname_as_string(&map_obj, INPUT_MAP_RESOURCE_NAME, texture->resource_name);
     // Package name. Optional
     if (texture->package_name) {
-        kson_object_value_add_kname(&map_obj, INPUT_MAP_PACKAGE_NAME, texture->package_name);
+        kson_object_value_add_kname_as_string(&map_obj, INPUT_MAP_PACKAGE_NAME, texture->package_name);
     }
     // Sampler name. Optional.
     if (texture->sampler_name) {
-        kson_object_value_add_kname(&map_obj, INPUT_MAP_SAMPLER_NAME, texture->sampler_name);
+        kson_object_value_add_kname_as_string(&map_obj, INPUT_MAP_SAMPLER_NAME, texture->sampler_name);
     }
     // Source channel, if provided.
     if (source_channel) {
@@ -611,18 +610,18 @@ static void add_map_obj(kson_object* base_obj, const char* source_channel, kmate
 static b8 extract_map(const kson_object* map_obj, kmaterial_texture_input* out_texture, texture_channel* out_source_channel) {
 
     // Extract the resource_name. Required.
-    if (!kson_object_property_value_get_kname(map_obj, INPUT_MAP_RESOURCE_NAME, &out_texture->resource_name)) {
+    if (!kson_object_property_value_get_string_as_kname(map_obj, INPUT_MAP_RESOURCE_NAME, &out_texture->resource_name)) {
         KERROR("input map.resource_name is required.");
         return false;
     }
 
     // Attempt to extract package name, optional.
-    if (!kson_object_property_value_get_kname(map_obj, INPUT_MAP_PACKAGE_NAME, &out_texture->package_name)) {
+    if (!kson_object_property_value_get_string_as_kname(map_obj, INPUT_MAP_PACKAGE_NAME, &out_texture->package_name)) {
         out_texture->package_name = INVALID_KNAME;
     }
 
     // Optional property, so it doesn't matter if we get it or not.
-    if (!kson_object_property_value_get_kname(map_obj, INPUT_MAP_SAMPLER_NAME, &out_texture->sampler_name)) {
+    if (!kson_object_property_value_get_string_as_kname(map_obj, INPUT_MAP_SAMPLER_NAME, &out_texture->sampler_name)) {
         out_texture->sampler_name = INVALID_KNAME;
     }
 

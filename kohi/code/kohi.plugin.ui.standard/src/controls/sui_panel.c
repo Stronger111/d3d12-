@@ -2,6 +2,7 @@
 #include "standard_ui_defines.h"
 
 #include <containers/darray.h>
+#include <logger.h>
 #include <math/geometry.h>
 #include <math/kmath.h>
 #include <renderer/renderer_frontend.h>

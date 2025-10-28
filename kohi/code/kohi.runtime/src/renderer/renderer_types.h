@@ -545,9 +545,9 @@ typedef struct renderer_backend_interface {
     void (*colour_texture_prepare_for_present)(struct renderer_backend_interface* backend, khandle renderer_texture_handle);
     void (*texture_prepare_for_sampling)(struct renderer_backend_interface* backend, khandle renderer_texture_handle, texture_flag_bits flags);
 
-    b8 (*texture_resources_acquire)(struct renderer_backend_interface* backend, struct texture_internal_data* data, const char* name, kresource_texture_type type, u32 width, u32 height, u8 channel_count, u8 mip_levels, u16 array_size, kresource_texture_flag_bits flags);
+    b8 (*texture_resources_acquire)(struct renderer_backend_interface* backend,const char* name, kresource_texture_type type, u32 width, u32 height, u8 channel_count, u8 mip_levels, u16 array_size, kresource_texture_flag_bits flags,khandle* out_renderer_texture_handle);
 
-    void (*texture_resources_release)(struct renderer_backend_interface* backend, struct texture_internal_data* data);
+    void (*texture_resources_release)(struct renderer_backend_interface* backend,khandle* renderer_texture_handle);
 
 
     /**
@@ -785,10 +785,9 @@ typedef struct renderer_backend_interface {
    * @param filter The min/mag filter.
    * @param repeat The repeat mode.
    * @param anisotropy The anisotropy level, if needed; otherwise 0.
-   * @param mip_levels The mip levels, if used; otherwise 0.
    * @return A handle to the sampler on success; otherwise an invalid handle.
    */
-    khandle (*sampler_acquire)(struct renderer_backend_interface* backend, texture_filter filter, texture_repeat repeat, f32 anisotropy, u32 mip_levels);
+    khandle (*sampler_acquire)(struct renderer_backend_interface* backend, texture_filter filter, texture_repeat repeat, f32 anisotropy);
 
     /**
      * @brief Releases the internal sampler for the given handle.
@@ -843,6 +842,13 @@ typedef struct renderer_backend_interface {
      * @param enabled Indicates whether or not to enable the flag(s).
      */
     void (*flag_enabled_set)(struct renderer_backend_interface* backend, renderer_config_flags flag, b8 enabled);
+
+    /**
+     * @brief Obtains the max anisotropy level available from the renderer. 0 means not available.
+     * 
+     * @param backend A pointer to the renderer backend interface.
+     */
+    f32 (*max_anisotropy_get)(struct renderer_backend_interface* backend);
 
     /**
      * @brief Creates and assigns the renderer-backend-specific buffer.

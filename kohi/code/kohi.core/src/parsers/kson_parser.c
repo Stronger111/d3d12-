@@ -71,7 +71,10 @@ static void reset_current_token_and_mode(kson_token* current_token, kson_tokeniz
     current_token->type = KSON_TOKEN_TYPE_UNKNOWN;
     current_token->start = 0;
     current_token->end = 0;
-    *mode = KSON_TOKENIZE_MODE_UNKNOWN;
+#ifdef KOHI_DEBUG
+    current_token->content = 0;
+#endif
+    * mode = KSON_TOKENIZE_MODE_UNKNOWN;
 }
 
 #ifdef KOHI_DEBUG
@@ -90,7 +93,7 @@ static void _populate_token_content(kson_token* t, const char* source) {
 
 // Pushes the current token, if not of unknown type.
 static void push_token(kson_token* t, kson_parser* parser) {
-    if (t->type != KSON_TOKEN_TYPE_UNKNOWN) {
+    if (t->type != KSON_TOKEN_TYPE_UNKNOWN && (t->end - t->start) > 0) {
         POPULATE_TOKEN_CONTENT(t, parser->file_content);
         darray_push(parser->tokens, *t);
     }
@@ -172,7 +175,7 @@ b8 kson_parser_tokenize(kson_parser* parser, const char* source) {
             // Just create a new token and insert it.
             kson_token newline_token = { KSON_TOKEN_TYPE_NEWLINE, c, c + advance };
 
-            push_token(&newline_token, parser);  // old
+            push_token(&newline_token, parser);
             reset_current_token_and_mode(&current_token, &mode);
             break;
         case '\t':
@@ -437,13 +440,14 @@ b8 kson_parser_tokenize(kson_parser* parser, const char* source) {
         current_token = &parser->tokens[index]; \
     }
 
-#define ENSURE_IDENTIFIER(token_string)                                                                          \
-    {                                                                                                            \
-        if (expect_identifier) {                                                                                 \
-            KERROR("Expected identifier, instead found '%s'. Position: %u", token_string, current_token->start); \
-            return false;                                                                                        \
-        }                                                                                                        \
+static b8  ensure_identifier(b8 expect_identifier, kson_token* current_token, const char* token_string)                                                                          \
+{
+    if (expect_identifier) {
+        KERROR("Expected identifier, instead found '%s'. Position: %u", token_string, current_token->start);
+        return false;
     }
+    return true;
+}
 
 static kson_token* get_last_non_whitespace_token(kson_parser* parser, u32 current_index) {
     if (current_index == 0) {
@@ -665,7 +669,9 @@ b8 kson_parser_parse(kson_parser* parser, kson_tree* out_tree) {
             return false;
         }
         case KSON_TOKEN_TYPE_OPERATOR_EQUAL: {
-            ENSURE_IDENTIFIER("=");
+            if (!ensure_identifier(expect_identifier, current_token, "=")) {
+                return false;
+            }
             // Previous token must be an identifier.
             kson_token* t = get_last_non_whitespace_token(parser, index);
             if (!t) {
@@ -962,7 +968,7 @@ static void kson_tree_object_to_string(const kson_object* obj, char* out_source,
             // If named, it is a property being defined. Otherwise it is an array element.
             if (p->name) {
                 // Write the name, then a space, the = , then another space.
-                write_string(out_source, position, kname_string_get(p->name));
+                write_string(out_source, position, kstring_id_string_get(p->name));
                 write_spaces(out_source, position, 1);
                 write_string(out_source, position, "=");
                 write_spaces(out_source, position, 1);
@@ -1211,10 +1217,20 @@ b8 kson_array_value_add_vec2(kson_array* array, vec2 value) {
     return result;
 }
 
-b8 kson_array_value_add_kname(kson_array* array, kname value) {
+b8 kson_array_value_add_kname_as_string(kson_array* array, kname value) {
     const char* temp_str = kname_string_get(value);
     if (!temp_str) {
-        KWARN("kson_array_value_add_kname failed to convert value to string.");
+        KWARN("kson_array_value_add_kname_as_string failed to convert value to string.");
+        return false;
+    }
+    b8 result = kson_array_value_add_string(array, temp_str);
+    return result;
+}
+
+b8 kson_array_value_add_kstring_id_as_string(kson_array* array, kstring_id value) {
+    const char* temp_str = kstring_id_string_get(value);
+    if (!temp_str) {
+        KWARN("kson_array_value_add_kstring_id_as_string failed to convert value to string.");
         return false;
     }
     b8 result = kson_array_value_add_string(array, temp_str);
@@ -1336,10 +1352,20 @@ b8 kson_object_value_add_vec2(kson_object* object, const char* name, vec2 value)
     return result;
 }
 
-b8 kson_object_value_add_kname(kson_object* object, const char* name, kname value) {
+b8 kson_object_value_add_kname_as_string(kson_object* object, const char* name, kname value) {
     const char* temp_str = kname_string_get(value);
     if (!temp_str) {
-        KWARN("kson_object_value_add_kname failed to convert value to string.");
+        KWARN("kson_object_value_add_kname_as_string failed to convert value to string.");
+        return false;
+    }
+    b8 result = kson_object_value_add_string(object, name, temp_str);
+    return result;
+}
+
+b8 kson_object_value_add_kstring_id_as_string(kson_object* object, const char* name, kstring_id value) {
+    const char* temp_str = kstring_id_string_get(value);
+    if (!temp_str) {
+        KWARN("kson_object_value_add_kstring_id_as_string failed to convert value to string.");
         return false;
     }
     b8 result = kson_object_value_add_string(object, name, temp_str);
@@ -1473,7 +1499,11 @@ b8 kson_array_element_value_get_string(const kson_array* array, u32 index, const
         return false;
     }
 
-    KASSERT_MSG(array->properties[index].type != KSON_PROPERTY_TYPE_STRING, "Array element is not a string.");
+    kson_property* p = &array->properties[index];
+    if (p->type != KSON_PROPERTY_TYPE_STRING) {
+        KERROR("Error parsing array element value as '%s' - it is instead stored as (type='%s').", kson_property_type_to_string(KSON_PROPERTY_TYPE_STRING), kson_property_type_to_string(p->type));
+        return false;
+    }
 
     *out_value = array->properties[index].value.s;
     return true;
@@ -1523,7 +1553,7 @@ b8 kson_array_element_value_get_vec2(const kson_array* array, u32 index, vec2* o
     return string_to_vec2(str, out_value);
 }
 
-b8 kson_array_element_value_get_kname(const kson_array* array, u32 index, kname* out_value) {
+b8 kson_array_element_value_get_string_as_kname(const kson_array* array, u32 index, kname* out_value) {
     if (!out_value || !kson_array_index_in_range(array, index)) {
         return false;
     }
@@ -1535,16 +1565,47 @@ b8 kson_array_element_value_get_kname(const kson_array* array, u32 index, kname*
     return true;
 }
 
+b8 kson_array_element_value_get_string_as_kstring_id(const kson_array* array, u32 index, kstring_id* out_value) {
+    if (!out_value || !kson_array_index_in_range(array, index)) {
+        return false;
+    }
+
+    KASSERT_MSG(array->properties[index].type != KSON_PROPERTY_TYPE_STRING, "Array element is not stored as a string.");
+
+    const char* str = array->properties[index].value.s;
+    *out_value = kstring_id_create(str);
+    return true;
+}
+
+
 b8 kson_array_element_value_get_object(const kson_array* array, u32 index, kson_object* out_value) {
     if (!out_value || !kson_array_index_in_range(array, index)) {
         return false;
     }
 
-    KASSERT_MSG(
-        array->properties[index].type == KSON_PROPERTY_TYPE_OBJECT || array->properties[index].type == KSON_PROPERTY_TYPE_ARRAY,
-        "Array element is not an object or array.");
+    kson_property* p = &array->properties[index];
 
-    *out_value = array->properties[index].value.o;
+    if (p->type != KSON_PROPERTY_TYPE_OBJECT) {
+        KERROR("Error parsing array element value as '%s' - property is instead stored as (type='%s').", kson_property_type_to_string(KSON_PROPERTY_TYPE_OBJECT), kson_property_type_to_string(p->type));
+        return false;
+    }
+
+    *out_value = p->value.o;
+    return true;
+}
+
+b8 kson_array_element_value_get_array(const kson_array* array, u32 index, kson_array* out_value) {
+    if (!out_value || !kson_array_index_in_range(array, index)) {
+        return false;
+    }
+
+    kson_property* p = &array->properties[index];
+    if (p->type != KSON_PROPERTY_TYPE_ARRAY) {
+        KERROR("Error parsing array element value as '%s' - property is instead stored as (type='%s').", kson_property_type_to_string(KSON_PROPERTY_TYPE_ARRAY), kson_property_type_to_string(p->type));
+        return false;
+    }
+
+    *out_value = p->value.o;
     return true;
 }
 
@@ -1564,7 +1625,7 @@ b8 kson_object_property_type_get(const kson_object* object, const char* name, ks
     u32 count = darray_length(object->properties);
     kstring_id search_name = kstring_id_create(name);
     for (u32 i = 0; i < count; ++i) {
-        if (object->properties[i].name == name) {
+        if (object->properties[i].name == search_name) {
             *out_type = object->properties[i].type;
             return true;
         }
@@ -1603,7 +1664,7 @@ static i32 kson_object_property_index_get(const kson_object* object, const char*
     u32 count = darray_length(object->properties);
     kstring_id search_name = kstring_id_create(name);
     for (u32 i = 0; i < count; ++i) {
-        if (object->properties[i].name == name) {
+        if (object->properties[i].name == search_name) {
             return i;
         }
     }
@@ -1748,7 +1809,7 @@ static const char* kson_object_property_value_get_string_reference(const kson_ob
     //These should always be stored as a string.
     kson_property* p = &object->properties[index];
     if (p->type != KSON_PROPERTY_TYPE_STRING) {
-        KERROR("Error parsing value as '%s' - property not stored as string (type='%s').", kson_property_type_to_string(KSON_PROPERTY_TYPE_STRING), kson_property_type_to_string(p->type));
+        KERROR("Error parsing value as '%s' - property is instead stored as string (type='%s').", kson_property_type_to_string(KSON_PROPERTY_TYPE_STRING), kson_property_type_to_string(p->type));
         return 0;
     }
     return p->value.s;
@@ -1790,7 +1851,7 @@ b8 kson_object_property_value_get_vec2(const kson_object* object, const char* na
     return string_to_vec2(str, out_value);
 }
 
-b8 kson_object_property_value_get_kname(const kson_object* object, const char* name, kname* out_value) {
+b8 kson_object_property_value_get_string_as_kname(const kson_object* object, const char* name, kname* out_value) {
     if (!out_value) {
         return false;
     }
@@ -1804,6 +1865,20 @@ b8 kson_object_property_value_get_kname(const kson_object* object, const char* n
     return true;
 }
 
+b8 kson_object_property_value_get_string_as_kstring_id(const kson_object* object, const char* name, kstring_id* out_value) {
+    if (!out_value) {
+        return false;
+    }
+
+    const char* str = kson_object_property_value_get_string_reference(object, name, "kstring_id");
+    if (!str) {
+        return false;
+    }
+
+    *out_value = kstring_id_create(str);
+    return true;
+}
+
 b8 kson_object_property_value_get_object(const kson_object* object, const char* name, kson_object* out_value) {
     i32 index = kson_object_property_index_get(object, name);
     if (index == -1) {
@@ -1811,8 +1886,26 @@ b8 kson_object_property_value_get_object(const kson_object* object, const char* 
     }
 
     kson_property* p = &object->properties[index];
+    // Allow both object and array here.
     if (p->type != KSON_PROPERTY_TYPE_OBJECT) {
-        KERROR("Error parsing value as '%s' - property not stored as string (type='%s').", kson_property_type_to_string(KSON_PROPERTY_TYPE_OBJECT), kson_property_type_to_string(p->type));
+        KERROR("Error parsing value as '%s' - property is instead stored as string (type='%s').", kson_property_type_to_string(KSON_PROPERTY_TYPE_OBJECT), kson_property_type_to_string(p->type));
+        return false;
+    }
+
+    *out_value = p->value.o;
+    return true;
+}
+
+b8 kson_object_property_value_get_array(const kson_object* object, const char* name, kson_array* out_value) {
+    i32 index = kson_object_property_index_get(object, name);
+    if (index == -1) {
+        return false;
+    }
+
+    kson_property* p = &object->properties[index];
+    // Allow both object and array here.
+    if (p->type != KSON_PROPERTY_TYPE_ARRAY) {
+        KERROR("Error parsing value as '%s' - property is instead stored as (type='%s').", kson_property_type_to_string(KSON_PROPERTY_TYPE_ARRAY), kson_property_type_to_string(p->type));
         return false;
     }
 

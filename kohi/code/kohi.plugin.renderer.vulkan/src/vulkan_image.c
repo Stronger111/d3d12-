@@ -590,7 +590,7 @@ typedef enum vulkan_access{
   VULKAN_ACCESS_COPY_DEST,
   VULKAN_ACCESS_READ_DEST,
   VULKAN_ACCESS_WRITE_DEST,
-}vulkan_access
+}vulkan_access;
 
 /* VkImageLayout get_default_layout(vulkan_command_buffer* command_buffer, vulkan_image* image, vulkan_access requested_access) {
     switch (requested_access) {

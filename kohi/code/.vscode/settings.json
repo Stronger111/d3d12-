@@ -148,7 +148,10 @@
         "nine_slice.h": "c",
         "kasset_binary_static_mesh_serializer.h": "c",
         "editor_gizmo.h": "c",
-        "scene.h": "c"
+        "scene.h": "c",
+        "env.h": "c",
+        "texture_system.h": "c",
+        "kresource_handler_text.h": "c"
     },
     "C_Cpp.default.compilerPath": "D:/SoftWare/LLVM/bin/clang.exe",
 }

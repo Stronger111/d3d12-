@@ -44,15 +44,16 @@ b8 kresource_handler_shader_request(kresource_handler* self, kresource* resource
     if (info->assets.base.length != 1) {
         if (info->assets.base.length == 0 && typed_request->shader_config_source_text) {
             // Deserialize shader asset from provided source.
-            kasset shader_from_source = {0};
-            if (!kasset_shader_deserialize(typed_request->shader_config_source_text, &shader_from_source)) {
+            kasset_shader shader_from_source = { 0 };
+            if (!kasset_shader_deserialize(typed_request->shader_config_source_text, (kasset*)&shader_from_source)) {
                 KERROR("Failed to deserialize shader from direct source upon resource request.");
                 return false;
             }
 
-            asset_to_resource((kasset_shader*)&shader_from_source, typed_resource);
+            asset_to_resource(&shader_from_source, typed_resource);
             return true;
-        } else {
+        }
+        else {
             KERROR("kresource_handler_shader_request requires exactly one asset OR zero assets and shader source text.");
             return false;
         }
@@ -72,7 +73,7 @@ b8 kresource_handler_shader_request(kresource_handler* self, kresource* resource
     typed_resource->base.state = KRESOURCE_STATE_LOADING;
 
     // Request the shader config asset.
-    asset_request_info request_info = {0};
+    asset_request_info request_info = { 0 };
     request_info.type = KASSET_TYPE_SHADER;
     request_info.asset_name = resource->name;
     request_info.package_name = INVALID_KNAME;
@@ -117,7 +118,8 @@ static void shader_kasset_on_result(asset_request_result result, const struct ka
         listener->asset = (kasset_shader*)asset;
 
         asset_to_resource(listener->asset, listener->typed_resource);
-    } else {
+    }
+    else {
         KERROR("Failed to load a required asset for shader resource '%s'. Resource may be correct.", kname_string_get(listener->typed_resource->base.name));
     }
 
@@ -154,7 +156,12 @@ static void asset_to_resource(const kasset_shader* asset, kresource_shader* out_
         kasset_shader_uniform* u = &asset->uniforms[i];
         shader_uniform_config* config = &out_shader_resource->uniforms[i];
         config->type = u->type;
-        config->size = size_from_shader_uniform_type(u->type);
+        if (config->type == SHADER_UNIFORM_TYPE_STRUCT || config->type == SHADER_UNIFORM_TYPE_CUSTOM) {
+            config->size = u->size;
+        }
+        else {
+            config->size = size_from_shader_uniform_type(u->type);
+        }
         config->name = kname_create(u->name);
         config->array_length = u->array_size;
         config->frequency = u->frequency;
@@ -172,7 +179,7 @@ static void asset_to_resource(const kasset_shader* asset, kresource_shader* out_
         target->package_name = kname_create(a->package_name);
 
         // Request the shader stage text resource from the resource system. Shader source files should be loaded as text.
-        kresource_request_info request = {0};
+        kresource_request_info request = { 0 };
         request.type = KRESOURCE_TYPE_TEXT;
         request.listener_inst = 0;
         request.user_callback = 0;
@@ -193,7 +200,12 @@ static void asset_to_resource(const kasset_shader* asset, kresource_shader* out_
             target->source = 0;
             return;
         }
-        target->source = string_duplicate(text_resource->text);
+        if (text_resource->text) {
+            target->source = string_duplicate(text_resource->text);
+        }
+        else {
+            KWARN("Loaded shader source asset '%s' has no source.", kname_string_get(text_resource->base.name));
+        }
 
         // Keep track of the watch ids if they exist.
         if (text_resource->base.asset_file_watch_ids) {

@@ -85,7 +85,7 @@ void static_mesh_system_instance_release(struct static_mesh_system_state* state,
     }
 
     //Cleanup the instance itself.
-    KFREE_TYPE_CARRY(instance->material_instances, material_instance, instance->mesh_resource->submesh_count);
+    KFREE_TYPE_CARRAY(instance->material_instances, material_instance, instance->mesh_resource->submesh_count);
     instance->mesh_resource = 0;
     instance->instance_id = INVALID_ID_U64;
     instance->tint = vec4_zero();
@@ -106,7 +106,7 @@ b8 static_mesh_system_render_data_generate(const static_mesh_instance* instance,
     out_render_data->ibl_probe_index = 0; // TODO: This should be provided elsewhere.
     // FIXME: Need a way to filter down this list by view frustum if we want that granular control.
     // For now though either every submesh gets rendered when this is called, or this isn't called and nothing is rendered.
-    out_render_data->submeshes = KALLOC_TYPE_CARRY(static_mesh_submesh_render_data, out_render_data->submesh_count);
+    out_render_data->submeshes = KALLOC_TYPE_CARRAY(static_mesh_submesh_render_data, out_render_data->submesh_count);
     for (u32 i = 0;i < out_render_data->submesh_count;++i) {
         static_mesh_submesh* submesh = &instance->mesh_resource->submeshes[i];
         static_mesh_submesh_render_data* submesh_rd = &out_render_data->submeshes[i];
@@ -126,7 +126,7 @@ b8 static_mesh_system_render_data_generate(const static_mesh_instance* instance,
 void static_mesh_system_render_data_destroy(static_mesh_render_data* render_data) {
     if (render_data) {
         if (render_data->submeshes) {
-            KFREE_TYPE_CARRY(render_data->submeshes, static_mesh_submesh_render_data, render_data->submesh_count);
+            KFREE_TYPE_CARRAY(render_data->submeshes, static_mesh_submesh_render_data, render_data->submesh_count);
         }
     }
     kzero_memory(render_data, sizeof(static_mesh_submesh_render_data));
@@ -142,7 +142,7 @@ static void static_mesh_on_resource_loaded(kresource* resource, void* listener) 
     }
 
     //Request material instances for this static mesh instance.
-    typed_listener->instance->material_instances = KALLOC_TYPE_CARRY(material_instance, typed_listener->instance->mesh_resource->submesh_count);
+    typed_listener->instance->material_instances = KALLOC_TYPE_CARRAY(material_instance, typed_listener->instance->mesh_resource->submesh_count);
 
     //Process submeshes.
     for (u32 i = 0;i < typed_resource->submesh_count;++i) {

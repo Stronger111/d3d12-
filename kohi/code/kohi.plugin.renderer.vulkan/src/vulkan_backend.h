@@ -69,8 +69,8 @@ void vulkan_renderer_shader_destroy(renderer_backend_interface* backend, khandle
 b8 vulkan_renderer_shader_reload(renderer_backend_interface* plugin, khandle shader, u32 shader_stage_count, shader_stage_config* shader_stages);
 b8 vulkan_renderer_shader_use(renderer_backend_interface* backend,khandle shader);
 b8 vulkan_renderer_shader_supports_wireframe(const renderer_backend_interface* plugin, const khandle shader);
-b8 vulkan_renderer_shader_flag_get(const renderer_backend_interface* backend, khandle shader, shader_flag_bits flag);
-void vulkan_renderer_shader_flag_set(renderer_backend_interface* backend, khandle shader, shader_flag_bits flag, b8 enabled);
+b8 vulkan_renderer_shader_flag_get(const renderer_backend_interface* backend, khandle shader, shader_flags flag);
+void vulkan_renderer_shader_flag_set(renderer_backend_interface* backend, khandle shader, shader_flags flag, b8 enabled);
 b8 vulkan_renderer_shader_bind_per_frame(renderer_backend_interface* backend, khandle shader);
 b8 vulkan_renderer_shader_bind_per_group(renderer_backend_interface* backend, khandle shader, u32 group_id);
 b8 vulkan_renderer_shader_bind_per_draw(renderer_backend_interface* backend, khandle shader, u32 draw_id);
@@ -92,6 +92,8 @@ b8 vulkan_renderer_is_multithreaded(renderer_backend_interface* backend);
 
 b8 vulkan_renderer_flag_enabled_get(renderer_backend_interface* backend, renderer_config_flags flag);
 void vulkan_renderer_flag_enabled_set(renderer_backend_interface* backend, renderer_config_flags flag, b8 enabled);
+
+f32 vulkan_renderer_max_anisotropy_get(renderer_backend_interface* backend);
 
 b8 vulkan_buffer_create_internal(renderer_backend_interface* backend, renderbuffer* buffer);
 void vulkan_buffer_destroy_internal(renderer_backend_interface* backend, renderbuffer* buffer);

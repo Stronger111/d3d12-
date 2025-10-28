@@ -270,12 +270,12 @@ static void node_release(hierarchy_graph* graph, khandle* node_handle, b8 releas
             if (release_transform) {
                 xform_destroy(&graph->xform_handles[node_handle->handle_index]);
             }
-            k_handle_invalidate(&graph->xform_handles[node_handle->handle_index]);
+            khandle_invalidate(&graph->xform_handles[node_handle->handle_index]);
 
             // Finally, invalidate the node handle itself.
-            k_handle_invalidate(&graph->node_handles[node_handle->handle_index]);
+            khandle_invalidate(&graph->node_handles[node_handle->handle_index]);
             // Also hit the one passed in.
-            k_handle_invalidate(node_handle);
+            khandle_invalidate(node_handle);
         }
     }
 }

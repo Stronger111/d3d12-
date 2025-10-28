@@ -536,7 +536,7 @@ static b8 create_default_textures(texture_system_state* state) {
         }
 
         // Request new resource texture.
-        u32 pixel_array_size = sizeof(u8) * pixel_count * channels;
+        u32 pixel_array_size = image_size;
         state->default_kresource_cube_texture = create_default_kresource_texture(state, kname_create(DEFAULT_CUBE_TEXTURE_NAME), KRESOURCE_TEXTURE_TYPE_CUBE, tex_dimension, 6, channels, pixel_array_size, pixels);
         if (!state->default_kresource_cube_texture) {
             KERROR("Failed to request resources for default cube texture");
@@ -582,13 +582,13 @@ static b8 create_default_textures(texture_system_state* state) {
 static void release_default_textures(texture_system_state* state) {
     if (state) {
         // New
-        kresource_system_release(state->kresource_system, (kresource*)state->default_kresource_texture->base.name);
-        kresource_system_release(state->kresource_system, (kresource*)state->default_kresource_base_colour_texture->base.name);
-        kresource_system_release(state->kresource_system, (kresource*)state->default_kresource_specular_texture->base.name);
-        kresource_system_release(state->kresource_system, (kresource*)state->default_kresource_normal_texture->base.name);
-        kresource_system_release(state->kresource_system, (kresource*)state->default_kresource_mra_texture->base.name);
-        kresource_system_release(state->kresource_system, (kresource*)state->default_kresource_cube_texture->base.name);
-        kresource_system_release(state->kresource_system, (kresource*)state->default_kresource_water_normal_texture->base.name);
+        kresource_system_release(state->kresource_system, state->default_kresource_texture->base.name);
+        kresource_system_release(state->kresource_system, state->default_kresource_base_colour_texture->base.name);
+        kresource_system_release(state->kresource_system, state->default_kresource_specular_texture->base.name);
+        kresource_system_release(state->kresource_system, state->default_kresource_normal_texture->base.name);
+        kresource_system_release(state->kresource_system, state->default_kresource_mra_texture->base.name);
+        kresource_system_release(state->kresource_system, state->default_kresource_cube_texture->base.name);
+        kresource_system_release(state->kresource_system, state->default_kresource_water_normal_texture->base.name);
         kresource_system_release(state->kresource_system, state->default_kresource_water_dudv_texture->base.name);
     }
 }

@@ -102,7 +102,8 @@ typedef struct material_data {
 
     vec4 base_colour;
     kresource_texture* base_colour_texture;
-
+    
+    vec3 normal;
     kresource_texture* normal_texture;
 
     f32 metallic;
@@ -357,7 +358,7 @@ static b8 create_default_blended_material(material_system_state* state);
 static void on_material_system_dump(console_command_context context);
 static khandle get_shader_for_material_type(const material_system_state* state, kmaterial_type type);
 static khandle material_handle_create(material_system_state* state, kname name);
-static b8 material_instance_handle_create(material_system_state* state, khandle material_handle);
+static khandle material_instance_handle_create(material_system_state* state, khandle material_handle);
 static b8 material_create(material_system_state* state, khandle material_handle, const kresource_material* typed_resource);
 static void material_destroy(material_system_state* state, khandle* material_handle);
 static b8 material_instance_create(material_system_state* state, khandle base_material, khandle* out_instance_handle);
@@ -365,7 +366,7 @@ static void material_instance_destroy(material_system_state* state, khandle base
 static void material_resource_loaded(kresource* resource, void* listener);
 static material_instance default_material_instance_get(material_system_state* state, khandle base_material);
 static material_instance_data* get_instance_data(material_system_state* state, material_instance instance);
-static void increment_generation(material_system_state* state);
+static void increment_generation(u16* generation);
 static b8 material_on_event(u16 code, void* sender, void* listener_inst, event_context data);
 
 b8 material_system_initialize(u64* memory_requirement, material_system_state* state, const material_system_config* config) {
@@ -856,7 +857,7 @@ b8 material_flag_get(struct material_system_state* state, khandle material, kmat
 
     material_data* data = &state->materials[material.handle_index];
 
-    return FLAG_GET(data->flags, flag);
+    return FLAG_GET(data->flags, (u32)flag);
 }
 
 b8 material_system_acquire(material_system_state* state, kname name, material_instance* out_instance) {
@@ -1382,7 +1383,7 @@ b8 material_instance_flag_get(struct material_system_state* state, material_inst
         return false;
     }
 
-    return FLAG_GET(data->flags, flag);
+    return FLAG_GET(data->flags, (u32)flag);
 }
 
 b8 material_instance_base_colour_get(struct material_system_state* state, material_instance instance, vec4* out_value) {

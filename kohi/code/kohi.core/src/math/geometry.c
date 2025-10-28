@@ -130,7 +130,7 @@ void generate_uvs_from_image_coords(u32 img_width, u32 img_height, u32 px_x, u32
 
 kgeometry geometry_generate_quad(f32 width, f32 height, f32 tx_min, f32 tx_max, f32 ty_min, f32 ty_max, kname name) {
     kgeometry out_geometry = { 0 };
-    out_geometry.name = kname_create(name);
+    out_geometry.name = name;
     out_geometry.type = KGEOMETRY_TYPE_2D_STATIC;
     out_geometry.generation = 0;// NOTE: generation is 0 because this is technically the first "update"
     out_geometry.extents.min = (vec3){ -width * 0.5f, -height * 0.5f, 0.0f };
@@ -391,51 +391,51 @@ void geometry_recalculate_line_box3d_by_extents(kgeometry* geometry, extents_3d 
     // Front lines
     {
         // top
-        ((vertex_3d*)geometry->vertices)[0].position = (vec3){extents.min.x, extents.min.y, extents.min.z};
-        ((vertex_3d*)geometry->vertices)[1].position = (vec3){extents.max.x, extents.min.y, extents.min.z};
+        ((vertex_3d*)geometry->vertices)[0].position = (vec3){ extents.min.x, extents.min.y, extents.min.z };
+        ((vertex_3d*)geometry->vertices)[1].position = (vec3){ extents.max.x, extents.min.y, extents.min.z };
         // right
-        ((vertex_3d*)geometry->vertices)[2].position = (vec3){extents.max.x, extents.min.y, extents.min.z};
-        ((vertex_3d*)geometry->vertices)[3].position = (vec3){extents.max.x, extents.max.y, extents.min.z};
+        ((vertex_3d*)geometry->vertices)[2].position = (vec3){ extents.max.x, extents.min.y, extents.min.z };
+        ((vertex_3d*)geometry->vertices)[3].position = (vec3){ extents.max.x, extents.max.y, extents.min.z };
         // bottom
-        ((vertex_3d*)geometry->vertices)[4].position = (vec3){extents.max.x, extents.max.y, extents.min.z};
-        ((vertex_3d*)geometry->vertices)[5].position = (vec3){extents.min.x, extents.max.y, extents.min.z};
+        ((vertex_3d*)geometry->vertices)[4].position = (vec3){ extents.max.x, extents.max.y, extents.min.z };
+        ((vertex_3d*)geometry->vertices)[5].position = (vec3){ extents.min.x, extents.max.y, extents.min.z };
         // left
-        ((vertex_3d*)geometry->vertices)[6].position = (vec3){extents.min.x, extents.min.y, extents.min.z};
-        ((vertex_3d*)geometry->vertices)[7].position = (vec3){extents.min.x, extents.max.y, extents.min.z};
+        ((vertex_3d*)geometry->vertices)[6].position = (vec3){ extents.min.x, extents.min.y, extents.min.z };
+        ((vertex_3d*)geometry->vertices)[7].position = (vec3){ extents.min.x, extents.max.y, extents.min.z };
     }
     // back lines
     {
         // top
-        ((vertex_3d*)geometry->vertices)[8].position = (vec3){extents.min.x, extents.min.y, extents.max.z};
-        ((vertex_3d*)geometry->vertices)[9].position = (vec3){extents.max.x, extents.min.y, extents.max.z};
+        ((vertex_3d*)geometry->vertices)[8].position = (vec3){ extents.min.x, extents.min.y, extents.max.z };
+        ((vertex_3d*)geometry->vertices)[9].position = (vec3){ extents.max.x, extents.min.y, extents.max.z };
         // right
-        ((vertex_3d*)geometry->vertices)[10].position = (vec3){extents.max.x, extents.min.y, extents.max.z};
-        ((vertex_3d*)geometry->vertices)[11].position = (vec3){extents.max.x, extents.max.y, extents.max.z};
+        ((vertex_3d*)geometry->vertices)[10].position = (vec3){ extents.max.x, extents.min.y, extents.max.z };
+        ((vertex_3d*)geometry->vertices)[11].position = (vec3){ extents.max.x, extents.max.y, extents.max.z };
         // bottom
-        ((vertex_3d*)geometry->vertices)[12].position = (vec3){extents.max.x, extents.max.y, extents.max.z};
-        ((vertex_3d*)geometry->vertices)[13].position = (vec3){extents.min.x, extents.max.y, extents.max.z};
+        ((vertex_3d*)geometry->vertices)[12].position = (vec3){ extents.max.x, extents.max.y, extents.max.z };
+        ((vertex_3d*)geometry->vertices)[13].position = (vec3){ extents.min.x, extents.max.y, extents.max.z };
         // left
-        ((vertex_3d*)geometry->vertices)[14].position = (vec3){extents.min.x, extents.min.y, extents.max.z};
-        ((vertex_3d*)geometry->vertices)[15].position = (vec3){extents.min.x, extents.max.y, extents.max.z};
+        ((vertex_3d*)geometry->vertices)[14].position = (vec3){ extents.min.x, extents.min.y, extents.max.z };
+        ((vertex_3d*)geometry->vertices)[15].position = (vec3){ extents.min.x, extents.max.y, extents.max.z };
     }
 
     // top connecting lines
     {
         // left
-        ((vertex_3d*)geometry->vertices)[16].position = (vec3){extents.min.x, extents.min.y, extents.min.z};
-        ((vertex_3d*)geometry->vertices)[17].position = (vec3){extents.min.x, extents.min.y, extents.max.z};
+        ((vertex_3d*)geometry->vertices)[16].position = (vec3){ extents.min.x, extents.min.y, extents.min.z };
+        ((vertex_3d*)geometry->vertices)[17].position = (vec3){ extents.min.x, extents.min.y, extents.max.z };
         // right
-        ((vertex_3d*)geometry->vertices)[18].position = (vec3){extents.max.x, extents.min.y, extents.min.z};
-        ((vertex_3d*)geometry->vertices)[19].position = (vec3){extents.max.x, extents.min.y, extents.max.z};
+        ((vertex_3d*)geometry->vertices)[18].position = (vec3){ extents.max.x, extents.min.y, extents.min.z };
+        ((vertex_3d*)geometry->vertices)[19].position = (vec3){ extents.max.x, extents.min.y, extents.max.z };
     }
     // bottom connecting lines
     {
         // left
-        ((vertex_3d*)geometry->vertices)[20].position = (vec3){extents.min.x, extents.max.y, extents.min.z};
-        ((vertex_3d*)geometry->vertices)[21].position = (vec3){extents.min.x, extents.max.y, extents.max.z};
+        ((vertex_3d*)geometry->vertices)[20].position = (vec3){ extents.min.x, extents.max.y, extents.min.z };
+        ((vertex_3d*)geometry->vertices)[21].position = (vec3){ extents.min.x, extents.max.y, extents.max.z };
         // right
-        ((vertex_3d*)geometry->vertices)[22].position = (vec3){extents.max.x, extents.max.y, extents.min.z};
-        ((vertex_3d*)geometry->vertices)[23].position = (vec3){extents.max.x, extents.max.y, extents.max.z};
+        ((vertex_3d*)geometry->vertices)[22].position = (vec3){ extents.max.x, extents.max.y, extents.min.z };
+        ((vertex_3d*)geometry->vertices)[23].position = (vec3){ extents.max.x, extents.max.y, extents.max.z };
     }
 }
 
@@ -445,12 +445,12 @@ kgeometry geometry_generate_line_box3d(vec3 size, kname name) {
     f32 half_height = size.y * 0.5f;
     f32 half_depth = size.z * 0.5f;
 
-    kgeometry out_geometry = {0};
+    kgeometry out_geometry = { 0 };
     out_geometry.name = name;
     out_geometry.type = KGEOMETRY_TYPE_3D_STATIC;
     out_geometry.generation = 0; // NOTE: generation is 0 because this is technically the first "update"
-    out_geometry.extents.min = (vec3){-half_width, -half_height, -half_depth};
-    out_geometry.extents.max = (vec3){half_width, half_height, half_depth};
+    out_geometry.extents.min = (vec3){ -half_width, -half_height, -half_depth };
+    out_geometry.extents.max = (vec3){ half_width, half_height, half_depth };
     // Always 0 since min/max of each axis are -/+ half of the size.
     out_geometry.center = vec3_zero();
     out_geometry.vertex_element_size = sizeof(vertex_3d);
@@ -462,7 +462,7 @@ kgeometry geometry_generate_line_box3d(vec3 size, kname name) {
     out_geometry.indices = KALLOC_TYPE_CARRAY(u32, out_geometry.index_count);
     out_geometry.index_buffer_offset = INVALID_ID_U64;
 
-    extents_3d extents = {0};
+    extents_3d extents = { 0 };
     extents.min.x = -half_width;
     extents.min.y = -half_height;
     extents.min.z = -half_depth;
@@ -501,12 +501,12 @@ kgeometry geometry_generate_cube(f32 width, f32 height, f32 depth, f32 tile_x, f
     f32 half_height = height * 0.5f;
     f32 half_depth = depth * 0.5f;
 
-    kgeometry out_geometry = {0};
+    kgeometry out_geometry = { 0 };
     out_geometry.name = name;
     out_geometry.type = KGEOMETRY_TYPE_3D_STATIC;
     out_geometry.generation = 0; // NOTE: generation is 0 because this is technically the first "update"
-    out_geometry.extents.min = (vec3){-half_width, -half_height, -half_depth};
-    out_geometry.extents.max = (vec3){half_width, half_height, half_depth};
+    out_geometry.extents.min = (vec3){ -half_width, -half_height, -half_depth };
+    out_geometry.extents.max = (vec3){ half_width, half_height, half_depth };
     // Always 0 since min/max of each axis are -/+ half of the size.
     out_geometry.center = vec3_zero();
     out_geometry.vertex_element_size = sizeof(vertex_3d);
@@ -532,88 +532,88 @@ kgeometry geometry_generate_cube(f32 width, f32 height, f32 depth, f32 tile_x, f
     vertex_3d verts[24];
 
     // Front face
-    verts[(0 * 4) + 0].position = (vec3){min_x, min_y, max_z};
-    verts[(0 * 4) + 1].position = (vec3){max_x, max_y, max_z};
-    verts[(0 * 4) + 2].position = (vec3){min_x, max_y, max_z};
-    verts[(0 * 4) + 3].position = (vec3){max_x, min_y, max_z};
-    verts[(0 * 4) + 0].texcoord = (vec2){min_uvx, min_uvy};
-    verts[(0 * 4) + 1].texcoord = (vec2){max_uvx, max_uvy};
-    verts[(0 * 4) + 2].texcoord = (vec2){min_uvx, max_uvy};
-    verts[(0 * 4) + 3].texcoord = (vec2){max_uvx, min_uvy};
-    verts[(0 * 4) + 0].normal = (vec3){0.0f, 0.0f, 1.0f};
-    verts[(0 * 4) + 1].normal = (vec3){0.0f, 0.0f, 1.0f};
-    verts[(0 * 4) + 2].normal = (vec3){0.0f, 0.0f, 1.0f};
-    verts[(0 * 4) + 3].normal = (vec3){0.0f, 0.0f, 1.0f};
+    verts[(0 * 4) + 0].position = (vec3){ min_x, min_y, max_z };
+    verts[(0 * 4) + 1].position = (vec3){ max_x, max_y, max_z };
+    verts[(0 * 4) + 2].position = (vec3){ min_x, max_y, max_z };
+    verts[(0 * 4) + 3].position = (vec3){ max_x, min_y, max_z };
+    verts[(0 * 4) + 0].texcoord = (vec2){ min_uvx, min_uvy };
+    verts[(0 * 4) + 1].texcoord = (vec2){ max_uvx, max_uvy };
+    verts[(0 * 4) + 2].texcoord = (vec2){ min_uvx, max_uvy };
+    verts[(0 * 4) + 3].texcoord = (vec2){ max_uvx, min_uvy };
+    verts[(0 * 4) + 0].normal = (vec3){ 0.0f, 0.0f, 1.0f };
+    verts[(0 * 4) + 1].normal = (vec3){ 0.0f, 0.0f, 1.0f };
+    verts[(0 * 4) + 2].normal = (vec3){ 0.0f, 0.0f, 1.0f };
+    verts[(0 * 4) + 3].normal = (vec3){ 0.0f, 0.0f, 1.0f };
 
     // Back face
-    verts[(1 * 4) + 0].position = (vec3){max_x, min_y, min_z};
-    verts[(1 * 4) + 1].position = (vec3){min_x, max_y, min_z};
-    verts[(1 * 4) + 2].position = (vec3){max_x, max_y, min_z};
-    verts[(1 * 4) + 3].position = (vec3){min_x, min_y, min_z};
-    verts[(1 * 4) + 0].texcoord = (vec2){min_uvx, min_uvy};
-    verts[(1 * 4) + 1].texcoord = (vec2){max_uvx, max_uvy};
-    verts[(1 * 4) + 2].texcoord = (vec2){min_uvx, max_uvy};
-    verts[(1 * 4) + 3].texcoord = (vec2){max_uvx, min_uvy};
-    verts[(1 * 4) + 0].normal = (vec3){0.0f, 0.0f, -1.0f};
-    verts[(1 * 4) + 1].normal = (vec3){0.0f, 0.0f, -1.0f};
-    verts[(1 * 4) + 2].normal = (vec3){0.0f, 0.0f, -1.0f};
-    verts[(1 * 4) + 3].normal = (vec3){0.0f, 0.0f, -1.0f};
+    verts[(1 * 4) + 0].position = (vec3){ max_x, min_y, min_z };
+    verts[(1 * 4) + 1].position = (vec3){ min_x, max_y, min_z };
+    verts[(1 * 4) + 2].position = (vec3){ max_x, max_y, min_z };
+    verts[(1 * 4) + 3].position = (vec3){ min_x, min_y, min_z };
+    verts[(1 * 4) + 0].texcoord = (vec2){ min_uvx, min_uvy };
+    verts[(1 * 4) + 1].texcoord = (vec2){ max_uvx, max_uvy };
+    verts[(1 * 4) + 2].texcoord = (vec2){ min_uvx, max_uvy };
+    verts[(1 * 4) + 3].texcoord = (vec2){ max_uvx, min_uvy };
+    verts[(1 * 4) + 0].normal = (vec3){ 0.0f, 0.0f, -1.0f };
+    verts[(1 * 4) + 1].normal = (vec3){ 0.0f, 0.0f, -1.0f };
+    verts[(1 * 4) + 2].normal = (vec3){ 0.0f, 0.0f, -1.0f };
+    verts[(1 * 4) + 3].normal = (vec3){ 0.0f, 0.0f, -1.0f };
 
     // Left
-    verts[(2 * 4) + 0].position = (vec3){min_x, min_y, min_z};
-    verts[(2 * 4) + 1].position = (vec3){min_x, max_y, max_z};
-    verts[(2 * 4) + 2].position = (vec3){min_x, max_y, min_z};
-    verts[(2 * 4) + 3].position = (vec3){min_x, min_y, max_z};
-    verts[(2 * 4) + 0].texcoord = (vec2){min_uvx, min_uvy};
-    verts[(2 * 4) + 1].texcoord = (vec2){max_uvx, max_uvy};
-    verts[(2 * 4) + 2].texcoord = (vec2){min_uvx, max_uvy};
-    verts[(2 * 4) + 3].texcoord = (vec2){max_uvx, min_uvy};
-    verts[(2 * 4) + 0].normal = (vec3){-1.0f, 0.0f, 0.0f};
-    verts[(2 * 4) + 1].normal = (vec3){-1.0f, 0.0f, 0.0f};
-    verts[(2 * 4) + 2].normal = (vec3){-1.0f, 0.0f, 0.0f};
-    verts[(2 * 4) + 3].normal = (vec3){-1.0f, 0.0f, 0.0f};
+    verts[(2 * 4) + 0].position = (vec3){ min_x, min_y, min_z };
+    verts[(2 * 4) + 1].position = (vec3){ min_x, max_y, max_z };
+    verts[(2 * 4) + 2].position = (vec3){ min_x, max_y, min_z };
+    verts[(2 * 4) + 3].position = (vec3){ min_x, min_y, max_z };
+    verts[(2 * 4) + 0].texcoord = (vec2){ min_uvx, min_uvy };
+    verts[(2 * 4) + 1].texcoord = (vec2){ max_uvx, max_uvy };
+    verts[(2 * 4) + 2].texcoord = (vec2){ min_uvx, max_uvy };
+    verts[(2 * 4) + 3].texcoord = (vec2){ max_uvx, min_uvy };
+    verts[(2 * 4) + 0].normal = (vec3){ -1.0f, 0.0f, 0.0f };
+    verts[(2 * 4) + 1].normal = (vec3){ -1.0f, 0.0f, 0.0f };
+    verts[(2 * 4) + 2].normal = (vec3){ -1.0f, 0.0f, 0.0f };
+    verts[(2 * 4) + 3].normal = (vec3){ -1.0f, 0.0f, 0.0f };
 
     // Right face
-    verts[(3 * 4) + 0].position = (vec3){max_x, min_y, max_z};
-    verts[(3 * 4) + 1].position = (vec3){max_x, max_y, min_z};
-    verts[(3 * 4) + 2].position = (vec3){max_x, max_y, max_z};
-    verts[(3 * 4) + 3].position = (vec3){max_x, min_y, min_z};
-    verts[(3 * 4) + 0].texcoord = (vec2){min_uvx, min_uvy};
-    verts[(3 * 4) + 1].texcoord = (vec2){max_uvx, max_uvy};
-    verts[(3 * 4) + 2].texcoord = (vec2){min_uvx, max_uvy};
-    verts[(3 * 4) + 3].texcoord = (vec2){max_uvx, min_uvy};
-    verts[(3 * 4) + 0].normal = (vec3){1.0f, 0.0f, 0.0f};
-    verts[(3 * 4) + 1].normal = (vec3){1.0f, 0.0f, 0.0f};
-    verts[(3 * 4) + 2].normal = (vec3){1.0f, 0.0f, 0.0f};
-    verts[(3 * 4) + 3].normal = (vec3){1.0f, 0.0f, 0.0f};
+    verts[(3 * 4) + 0].position = (vec3){ max_x, min_y, max_z };
+    verts[(3 * 4) + 1].position = (vec3){ max_x, max_y, min_z };
+    verts[(3 * 4) + 2].position = (vec3){ max_x, max_y, max_z };
+    verts[(3 * 4) + 3].position = (vec3){ max_x, min_y, min_z };
+    verts[(3 * 4) + 0].texcoord = (vec2){ min_uvx, min_uvy };
+    verts[(3 * 4) + 1].texcoord = (vec2){ max_uvx, max_uvy };
+    verts[(3 * 4) + 2].texcoord = (vec2){ min_uvx, max_uvy };
+    verts[(3 * 4) + 3].texcoord = (vec2){ max_uvx, min_uvy };
+    verts[(3 * 4) + 0].normal = (vec3){ 1.0f, 0.0f, 0.0f };
+    verts[(3 * 4) + 1].normal = (vec3){ 1.0f, 0.0f, 0.0f };
+    verts[(3 * 4) + 2].normal = (vec3){ 1.0f, 0.0f, 0.0f };
+    verts[(3 * 4) + 3].normal = (vec3){ 1.0f, 0.0f, 0.0f };
 
     // Bottom face
-    verts[(4 * 4) + 0].position = (vec3){max_x, min_y, max_z};
-    verts[(4 * 4) + 1].position = (vec3){min_x, min_y, min_z};
-    verts[(4 * 4) + 2].position = (vec3){max_x, min_y, min_z};
-    verts[(4 * 4) + 3].position = (vec3){min_x, min_y, max_z};
-    verts[(4 * 4) + 0].texcoord = (vec2){min_uvx, min_uvy};
-    verts[(4 * 4) + 1].texcoord = (vec2){max_uvx, max_uvy};
-    verts[(4 * 4) + 2].texcoord = (vec2){min_uvx, max_uvy};
-    verts[(4 * 4) + 3].texcoord = (vec2){max_uvx, min_uvy};
-    verts[(4 * 4) + 0].normal = (vec3){0.0f, -1.0f, 0.0f};
-    verts[(4 * 4) + 1].normal = (vec3){0.0f, -1.0f, 0.0f};
-    verts[(4 * 4) + 2].normal = (vec3){0.0f, -1.0f, 0.0f};
-    verts[(4 * 4) + 3].normal = (vec3){0.0f, -1.0f, 0.0f};
+    verts[(4 * 4) + 0].position = (vec3){ max_x, min_y, max_z };
+    verts[(4 * 4) + 1].position = (vec3){ min_x, min_y, min_z };
+    verts[(4 * 4) + 2].position = (vec3){ max_x, min_y, min_z };
+    verts[(4 * 4) + 3].position = (vec3){ min_x, min_y, max_z };
+    verts[(4 * 4) + 0].texcoord = (vec2){ min_uvx, min_uvy };
+    verts[(4 * 4) + 1].texcoord = (vec2){ max_uvx, max_uvy };
+    verts[(4 * 4) + 2].texcoord = (vec2){ min_uvx, max_uvy };
+    verts[(4 * 4) + 3].texcoord = (vec2){ max_uvx, min_uvy };
+    verts[(4 * 4) + 0].normal = (vec3){ 0.0f, -1.0f, 0.0f };
+    verts[(4 * 4) + 1].normal = (vec3){ 0.0f, -1.0f, 0.0f };
+    verts[(4 * 4) + 2].normal = (vec3){ 0.0f, -1.0f, 0.0f };
+    verts[(4 * 4) + 3].normal = (vec3){ 0.0f, -1.0f, 0.0f };
 
     // Top face
-    verts[(5 * 4) + 0].position = (vec3){min_x, max_y, max_z};
-    verts[(5 * 4) + 1].position = (vec3){max_x, max_y, min_z};
-    verts[(5 * 4) + 2].position = (vec3){min_x, max_y, min_z};
-    verts[(5 * 4) + 3].position = (vec3){max_x, max_y, max_z};
-    verts[(5 * 4) + 0].texcoord = (vec2){min_uvx, min_uvy};
-    verts[(5 * 4) + 1].texcoord = (vec2){max_uvx, max_uvy};
-    verts[(5 * 4) + 2].texcoord = (vec2){min_uvx, max_uvy};
-    verts[(5 * 4) + 3].texcoord = (vec2){max_uvx, min_uvy};
-    verts[(5 * 4) + 0].normal = (vec3){0.0f, 1.0f, 0.0f};
-    verts[(5 * 4) + 1].normal = (vec3){0.0f, 1.0f, 0.0f};
-    verts[(5 * 4) + 2].normal = (vec3){0.0f, 1.0f, 0.0f};
-    verts[(5 * 4) + 3].normal = (vec3){0.0f, 1.0f, 0.0f};
+    verts[(5 * 4) + 0].position = (vec3){ min_x, max_y, max_z };
+    verts[(5 * 4) + 1].position = (vec3){ max_x, max_y, min_z };
+    verts[(5 * 4) + 2].position = (vec3){ min_x, max_y, min_z };
+    verts[(5 * 4) + 3].position = (vec3){ max_x, max_y, max_z };
+    verts[(5 * 4) + 0].texcoord = (vec2){ min_uvx, min_uvy };
+    verts[(5 * 4) + 1].texcoord = (vec2){ max_uvx, max_uvy };
+    verts[(5 * 4) + 2].texcoord = (vec2){ min_uvx, max_uvy };
+    verts[(5 * 4) + 3].texcoord = (vec2){ max_uvx, min_uvy };
+    verts[(5 * 4) + 0].normal = (vec3){ 0.0f, 1.0f, 0.0f };
+    verts[(5 * 4) + 1].normal = (vec3){ 0.0f, 1.0f, 0.0f };
+    verts[(5 * 4) + 2].normal = (vec3){ 0.0f, 1.0f, 0.0f };
+    verts[(5 * 4) + 3].normal = (vec3){ 0.0f, 1.0f, 0.0f };
 
     kcopy_memory(out_geometry.vertices, verts, out_geometry.vertex_element_size * out_geometry.vertex_count);
 
@@ -635,7 +635,7 @@ kgeometry geometry_generate_cube(f32 width, f32 height, f32 depth, f32 tile_x, f
 
 kgeometry geometry_generate_grid(grid_orientation orientation, u32 segment_count_dim_0, u32 segment_count_dim_1, f32 segment_scale, b8 use_third_axis, kname name) {
 
-    kgeometry out_geometry = {0};
+    kgeometry out_geometry = { 0 };
     out_geometry.name = name;
     out_geometry.type = KGEOMETRY_TYPE_3D_STATIC;
     out_geometry.generation = 0; // NOTE: generation is 0 because this is technically the first "update"
@@ -742,7 +742,7 @@ kgeometry geometry_generate_grid(grid_orientation orientation, u32 segment_count
         ((vertex_3d*)out_geometry.vertices)[5].colour.a = 1.0f;
     }
 
-    vec4 alt_line_colour = (vec4){1.0f, 1.0f, 1.0f, 0.5f};
+    vec4 alt_line_colour = (vec4){ 1.0f, 1.0f, 1.0f, 0.5f };
     // calculate 4 lines at a time, 2 in each direction, min/max.
     i32 j = 1;
 

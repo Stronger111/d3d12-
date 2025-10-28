@@ -382,7 +382,7 @@ typedef struct vulkan_shader_frequency_state {
 typedef struct vulkan_shader_frequency_info {
     /** @brief The actual size of the uniform buffer object for this frequency. */
     u64 ubo_size;
-    /** @brief The stride of the uniform buffer object for this frequency. */
+    /** @brief. */
     u64 ubo_stride;
     /**
      * @brief The offset in bytes for the UBO from the beginning

@@ -522,7 +522,7 @@ static void handle_destroy(xform_system_state* state, khandle* t) {
         state->ids[t->handle_index].uniqueid = INVALID_ID_U64;
     }
 
-    k_handle_invalidate(t);
+    khandle_invalidate(t);
 }
 
 static b8 validate_handle(xform_system_state* state, khandle handle) {

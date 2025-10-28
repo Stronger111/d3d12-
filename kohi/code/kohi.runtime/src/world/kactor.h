@@ -81,7 +81,7 @@ KAPI b8 kactor_comp_staticmesh_name_set(struct kactor_staticmesh_comp_system_sta
  * @param comp_id The component identifier.
  * @returns The component tint on success; otherwise a default of vec4_one (white).
  */
-KAPI vec4 kactor_comp_staticmesh_tint_get(struct kactor_staticmesh_comp_system_state* state, u32 comp_id)
+KAPI vec4 kactor_comp_staticmesh_tint_get(struct kactor_staticmesh_comp_system_state* state, u32 comp_id);
 /**
  * Attempts to set the tint of a static mesh component with the given id.
  *
@@ -90,7 +90,7 @@ KAPI vec4 kactor_comp_staticmesh_tint_get(struct kactor_staticmesh_comp_system_s
  * @param name The tint to be set.
  * @returns True on success; otherwise false.
  */
-KAPI b8 kactor_comp_staticmesh_tint_set(struct kactor_staticmesh_comp_system_state* state, u32 comp_id, vec4 tint)
+KAPI b8 kactor_comp_staticmesh_tint_set(struct kactor_staticmesh_comp_system_state* state, u32 comp_id, vec4 tint);
 /**
  * @brief Obtains a list of static mesh component ids for a given actor.
  *

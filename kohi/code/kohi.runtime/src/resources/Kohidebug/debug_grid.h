@@ -6,7 +6,7 @@
 #include "resources/resource_types.h"
 
 typedef struct debug_grid_config {
-    char* name;
+    kname name;
     grid_orientation orientation;
     /** @brief The space count in the first dimension of the orientation from both directions outward from origin. */
     u32 segment_count_dim_0;
@@ -21,7 +21,7 @@ typedef struct debug_grid_config {
 
 typedef struct debug_grid {
     identifier id;
-    char* name;
+    kname name;
     grid_orientation orientation;
     /** @brief The space count in the first dimension of the orientation from both directions outward from origin. */
     u32 segment_count_dim_0;

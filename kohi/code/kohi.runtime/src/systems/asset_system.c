@@ -151,7 +151,7 @@ void asset_system_request(struct asset_system_state* state, asset_request_info i
     KASSERT(state);
     //Lookup the asset by fully-qualified name.
     u32 lookup_index = INVALID_ID;
-    const bt_node* node = u64_bst_find(state->lookup_tree, infoinfo.asset_name);
+    const bt_node* node = u64_bst_find(state->lookup_tree, info.asset_name);
     if (node) {
         lookup_index = node->value.u32;
     }
@@ -160,7 +160,7 @@ void asset_system_request(struct asset_system_state* state, asset_request_info i
         asset_lookup* lookup = &state->lookups[lookup_index];
         lookup->reference_count++;
         if (info.callback) {
-            callback(ASSET_REQUEST_RESULT_SUCCESS, &lookup->asset, info.listener_inst);
+            info.callback(ASSET_REQUEST_RESULT_SUCCESS, &lookup->asset, info.listener_inst);
         }
     }
     else {

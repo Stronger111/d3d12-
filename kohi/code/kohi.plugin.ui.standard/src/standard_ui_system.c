@@ -179,7 +179,7 @@ static void texture_resource_loaded(kresource* resource, void* listener) {
     // }
 }
 
-KAPI b8 standard_ui_system_initialize(u64* memory_requirement, standard_ui_state* state, standard_ui_system_config* config) {
+b8 standard_ui_system_initialize(u64* memory_requirement, standard_ui_state* state, standard_ui_system_config* config) {
     if (!memory_requirement) {
         KERROR("standard_ui_system_initialize requires a vaild pointer to memory_requirement.");
         return false;
@@ -218,7 +218,7 @@ KAPI b8 standard_ui_system_initialize(u64* memory_requirement, standard_ui_state
         state, texture_resource_loaded);
     if (!state->atlas_texture) {
         KERROR("Failed to request atlas texture for standard UI.");
-        state->atlas_texture = texture_system_request(kname_create(DEFAULT_TEXTURE_NAME), 0, 0);
+        state->atlas_texture = texture_system_request(kname_create(DEFAULT_TEXTURE_NAME), INVALID_KNAME, 0, 0);
     }
 
     // Listen for input events.
@@ -297,7 +297,7 @@ b8 standard_ui_system_render(standard_ui_state* state, sui_control* root, struct
     }
 
     // 图集
-    render_data->ui_atlas = &state->atlas_texture;
+    render_data->ui_atlas = state->atlas_texture;
 
     if (!root) {
         root = &state->root;

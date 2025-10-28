@@ -64,8 +64,6 @@ typedef struct kgeometry {
     void* indices;
     /** @brief The offset from the beginning of the index buffer. */
     u64 index_buffer_offset;
-
-    char name[GEOMETRY_NAME_MAX_LENGTH];
 } kgeometry;
 
 typedef enum grid_orientation {

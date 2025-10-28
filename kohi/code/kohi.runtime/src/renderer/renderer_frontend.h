@@ -355,28 +355,13 @@ KAPI khandle renderer_default_texture_get(struct renderer_system_state* state,re
 KAPI renderbuffer* renderer_renderbuffer_get(renderbuffer_type type);
 
 /**
- * @brief Creates geometry, taking a copy of the provided data and setting up the data structure.
- *
- * @param g A pointer to the geometry to create.
- * @param vertex_size The size of each vertex.
- * @param vertex_count The number of vertices.
- * @param vertices The vertex array.
- * @param index_size The size of each index.
- * @param index_count The number of indices.
- * @param indices The index array.
- * @return True on success; otherwise false.
- */
-KDEPRECATED("The renderer frontend geometry functions will be removed in a future pass. Upload directly to renderbuffers instead.")
-KAPI b8 renderer_geometry_create(struct geometry* g, u32 vertex_size, u32 vertex_count, const void* vertices, u32 index_size, u32 index_count, const void* indices);
-
-/**
  * @brief Acquires GPU resources and uploads geometry data.
  *
  * @param geometry A pointer to the geometry to upload.
  * @return True on success; otherwise false.
  */
 KDEPRECATED("The renderer frontend geometry functions will be removed in a future pass. Upload directly to renderbuffers instead.")
-KAPI b8 renderer_geometry_upload(struct geometry* geometry);
+KAPI b8 renderer_geometry_upload(kgeometry* geometry);
 
 /**
  * @brief Updates vertex data in the given geometry with the provided data in the given range.
@@ -387,14 +372,14 @@ KAPI b8 renderer_geometry_upload(struct geometry* geometry);
  * @param vertices The vertex data.
  */
 KDEPRECATED("The renderer frontend geometry functions will be removed in a future pass. Upload directly to renderbuffers instead.")
-KAPI void renderer_geometry_vertex_update(struct geometry* g, u32 offset, u32 vertex_count, void* vertices, b8 include_in_frame_workload);
+KAPI void renderer_geometry_vertex_update(kgeometry* g, u32 offset, u32 vertex_count, void* vertices, b8 include_in_frame_workload);
 /**
  * @brief Destroys the given geometry, releasing GPU resources.
  *
  * @param geometry A pointer to the geometry to be destroyed.
  */
 KDEPRECATED("The renderer frontend geometry functions will be removed in a future pass. Upload directly to renderbuffers instead.")
-KAPI void renderer_geometry_destroy(struct geometry* geometry);
+KAPI void renderer_geometry_destroy(kgeometry* geometry);
 
 /**
  * @brief Draws the given geometry. Should only be called inside a renderpass, within a frame.
@@ -600,7 +585,7 @@ KAPI b8 renderer_shader_apply_per_draw(struct renderer_system_state* state, khan
  * @param out_group_id A pointer to hold the new per-group identifier.
  * @return True on success; otherwise false.
  */
-KAPI b8 renderer_shader_per_group_resources_acquire(struct renderer_system_state* state, khandle shader, const shader_texture_resource_config* config, u32* out_group_id);
+KAPI b8 renderer_shader_per_group_resources_acquire(struct renderer_system_state* state, khandle shader, u32* out_group_id);
 
 /**
  * @brief Releases internal per-group resources for the given group id.
@@ -622,7 +607,7 @@ KAPI b8 renderer_shader_per_group_resources_release(struct renderer_system_state
  * @param out_draw_id A pointer to hold the new per-draw identifier.
  * @return True on success; otherwise false.
  */
-KAPI b8 renderer_shader_per_draw_resources_acquire(struct renderer_system_state* state, khandle shader, const shader_texture_resource_config* config, u32* out_draw_id);
+KAPI b8 renderer_shader_per_draw_resources_acquire(struct renderer_system_state* state, khandle shader,u32* out_draw_id);
 
 /**
  * @brief Releases internal per-draw resources for the given per-draw id.
@@ -662,10 +647,9 @@ KAPI khandle renderer_generic_sampler_get(struct renderer_system_state* state, s
  * @param filter The min/mag filter.
  * @param repeat The repeat mode.
  * @param anisotropy The anisotropy level, if needed; otherwise 0.
- * @param mip_levels The mip levels, if used; otherwise 0.
  * @return A handle to the sampler on success; otherwise an invalid handle.
  */
-KAPI khandle renderer_sampler_acquire(struct renderer_system_state* state, texture_filter filter, texture_repeat repeat, f32 anisotropy, u32 mip_levels);
+KAPI khandle renderer_sampler_acquire(struct renderer_system_state* state, texture_filter filter, texture_repeat repeat, f32 anisotropy);
 
 /**
  * @brief Releases the internal sampler for the given handle.
@@ -718,6 +702,11 @@ KAPI b8 renderer_flag_enabled_get(renderer_config_flags flag);
  * @param enabled Indicates whether or not to enable the flag(s).
  */
 KAPI void renderer_flag_enabled_set(renderer_config_flags flag, b8 enabled);
+
+/**
+ * @brief Obtains the max anisotropy level available from the renderer. 0 means not available.
+ */
+KAPI f32 renderer_max_anisotropy_get(void);
 
 /**
  * @brief Creates a new renderbuffer to hold data for a given purpose/use. Backed by a

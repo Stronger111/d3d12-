@@ -437,14 +437,12 @@ void scene_node_initialize(scene* s, khandle parent_handle, scene_node_config* n
                                 s->point_light_attachments[i].resource_handle = khandle_create(index);
                                 s->point_light_attachments[i].hierarchy_node_handle = node_handle;
                                 s->point_light_attachments[i].attachment_type = SCENE_NODE_ATTACHMENT_TYPE_POINT_LIGHT;
-                                s->point_light_attachment_indices[i] = index;
                                 break;
                             }
                         }
                         if (index == INVALID_ID) {
                             darray_push(s->point_lights, new_light);
                             index = point_light_count;
-                            darray_push(s->point_light_attachment_indices, index);
                             scene_attachment point_light_attachment = { 0 };
                             point_light_attachment.resource_handle = khandle_create(index);
                             point_light_attachment.hierarchy_node_handle = node_handle;
@@ -486,7 +484,6 @@ void scene_node_initialize(scene* s, khandle parent_handle, scene_node_config* n
                                 s->water_plane_attachments[i].resource_handle = khandle_create(index);
                                 s->water_plane_attachments[i].hierarchy_node_handle = node_handle;
                                 s->water_plane_attachments[i].attachment_type = SCENE_NODE_ATTACHMENT_TYPE_WATER_PLANE;
-                                s->water_plane_attachment_indices[i] = index;
                                 // For "edit" mode, retain metadata.
                                 if (!is_readonly) {
                                     s->water_plane_metadata[i].reserved = typed_attachment->reserved;
@@ -497,7 +494,6 @@ void scene_node_initialize(scene* s, khandle parent_handle, scene_node_config* n
                         if (index == INVALID_ID) {
                             darray_push(s->water_planes, wp);
                             index = water_plane_count;
-                            darray_push(s->water_plane_attachment_indices, index);
                             scene_attachment water_plane_attachment = { 0 };
                             water_plane_attachment.resource_handle = khandle_create(index);
                             water_plane_attachment.hierarchy_node_handle = node_handle;
@@ -715,7 +711,7 @@ b8 scene_update(scene* scene, const struct frame_data* p_frame_data) {
             for (u32 i = 0; i < point_light_count; ++i) {
                 // Update the point light's data position (world position) to take into account
                 // the owning node's transform.
-                scene_attachment* point_light_attachment = &scene->point_light_attachments[scene->point_light_attachment_indices[i]];
+                scene_attachment* point_light_attachment = &scene->point_light_attachments[i];
                 khandle xform_handle = scene->hierarchy.xform_handles[point_light_attachment->hierarchy_node_handle.handle_index];
 
                 mat4 world;
@@ -882,7 +878,7 @@ void scene_update_lod_from_view_position(scene* scene, const frame_data* p_frame
 
             // Perform a lookup into the attachments array to get the hierarchy node.
             // TODO: simplify the lookup process.
-            scene_attachment* attachment = &scene->terrain_attachments[scene->terrain_attachment_indices[i]];
+            scene_attachment* attachment = &scene->terrain_attachments[i];
             khandle xform_handle = scene->hierarchy.xform_handles[attachment->hierarchy_node_handle.handle_index];
             mat4 model = xform_world_get(xform_handle);
 
@@ -1208,7 +1204,7 @@ b8 scene_terrain_render_data_query_from_line(const scene* scene, vec3 direction,
     u32 terrain_count = darray_length(scene->terrains);
     for (u32 i = 0; i < terrain_count; ++i) {
         terrain* t = &scene->terrains[i];
-        scene_attachment* attachment = &scene->terrain_attachments[scene->terrain_attachment_indices[i]];
+        scene_attachment* attachment = &scene->terrain_attachments[i];
         khandle xform_handle = scene->hierarchy.xform_handles[attachment->hierarchy_node_handle.handle_index];
         mat4 model = xform_world_get(xform_handle);
 
@@ -1388,7 +1384,7 @@ b8 scene_terrain_render_data_query(const scene* scene, const frustum* f, vec3 ce
     u32 terrain_count = darray_length(scene->terrains);
     for (u32 i = 0; i < terrain_count; ++i) {
         terrain* t = &scene->terrains[i];
-        scene_attachment* attachment = &scene->terrain_attachments[scene->terrain_attachment_indices[i]];
+        scene_attachment* attachment = &scene->terrain_attachments[i];
         khandle xform_handle = scene->hierarchy.xform_handles[attachment->hierarchy_node_handle.handle_index];
         mat4 model = xform_world_get(xform_handle);
 

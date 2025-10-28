@@ -32,6 +32,7 @@ b8 vfs_initialize(u64* memory_requirement, vfs_state* state, const vfs_config* c
     }
 
     state->packages = darray_create(kpackage);
+    state->watched_assets = darray_create(vfs_asset_data);
 
     // TODO: For release builds, look at binary file.
     //FIXME:hardcord rubbish. Add to app config, pass to config and read in here.
@@ -204,8 +205,8 @@ vfs_asset_data vfs_request_asset_sync(vfs_state* state, vfs_request_info info) {
                     out_data.path = kpackage_path_for_asset(package, info.asset_name);
                 }
             }
-            
-             // If set to watch, add to the list and watch.
+
+            // If set to watch, add to the list and watch.
             if (result == KPACKAGE_RESULT_SUCCESS && info.watch_for_hot_reload) {
 
                 // Watch the asset.
@@ -214,7 +215,8 @@ vfs_asset_data vfs_request_asset_sync(vfs_state* state, vfs_request_info info) {
                     KTRACE("Watching asset for hot reload: package='%s', name='%s', file_watch_id=%u, path='%s'", package_name_str, kname_string_get(info.asset_name), out_data.file_watch_id, out_data.path);
 
                     darray_push(state->watched_assets, out_data);
-                } else {
+                }
+                else {
                     KERROR("Asset set to watch for hot reloading but not asset path is available.");
                 }
             }
@@ -392,13 +394,17 @@ static b8 process_manifest_refs(vfs_state* state, const asset_manifest* manifest
                     exists = true;
                     break;
                 }
+                // TODO: Should probably also check the reference maifest's path agaainst existing in case the name is wrong.
             }
             if (exists) {
                 continue;
             }
 
             asset_manifest new_manifest = { 0 };
-            if (!kpackage_parse_manifest_file_content(ref->path, &new_manifest)) {
+            const char* manifest_file_path = string_format("%sasset_manifest.kson", ref->path);
+            b8 manifest_result = kpackage_parse_manifest_file_content(manifest_file_path, &new_manifest);
+            string_free(manifest_file_path);
+            if (!manifest_result) {
                 KERROR("Failed to parse asset manifest. See logs for details.");
                 return false;
             }
@@ -466,7 +472,8 @@ static void vfs_watcher_written_callback(u32 watcher_id, void* context) {
                     kfree((void*)asset_data->bytes, asset_data->size, MEMORY_TAG_ASSET);
                     asset_data->bytes = 0;
                 }
-            } else {
+            }
+            else {
                 if (asset_data->text && asset_data->size) {
                     kfree((void*)asset_data->text, asset_data->size, MEMORY_TAG_ASSET);
                     asset_data->text = 0;

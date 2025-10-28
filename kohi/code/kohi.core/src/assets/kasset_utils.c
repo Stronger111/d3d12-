@@ -126,6 +126,10 @@ void asset_handler_base_on_asset_loaded(struct vfs_state* vfs, vfs_asset_data as
                 }
                 result = ASSET_REQUEST_RESULT_SUCCESS;
             }
+            else {
+                //Every handler must have some sort of serializer, even if it's not much more than a passthough.
+                KERROR("No serializer configured for asset type '%s'.", kasset_type_to_string(context.asset->type));
+            }
 
         from_source_cleanup:
             if (extension) {
@@ -158,6 +162,10 @@ void asset_handler_base_on_asset_loaded(struct vfs_state* vfs, vfs_asset_data as
                     result = ASSET_REQUEST_RESULT_SUCCESS;
                 }
             }
+            else {
+                // Every handler must have some sort of deserializer, even if it's not much more than a passthough.
+                KERROR("No deserializer configured for asset type '%s'.", kasset_type_to_string(context.asset->type));
+            }
         }
 
         //Take a copy of the file watch id
@@ -184,7 +192,7 @@ void asset_handler_base_on_asset_loaded(struct vfs_state* vfs, vfs_asset_data as
             request_info.vfs_callback = asset_handler_base_on_asset_loaded;
             // FIXME: If the original request was synchronous, this probably should be too.
             // Request the source asset. Can reuse the passed-in context.
-            vfs_request_asset(vfs,request_info);
+            vfs_request_asset(vfs, request_info);
         }
         else if (asset_data.result == VFS_REQUEST_RESULT_SOURCE_FILE_DOES_NOT_EXIST) {
             KERROR("Source file does not exist to be imported. Asset handler failed to load anything for asset '%s'", kname_string_get(asset_data.asset_name));

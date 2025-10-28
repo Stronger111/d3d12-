@@ -188,7 +188,7 @@ b8 sui_label_control_render(standard_ui_state* state, sui_control* self, struct 
         // NOTE: Override the default UI atlas use that and use that of the loaded font instead.
         // TODO: At this point, should probably have a separate font shader anyway, since
         // the future will require things like SDF, etc.
-        renderable.atlas_override = &typed_data->data->atlas_texture;
+        renderable.atlas_override = typed_data->data->atlas_texture;
 
         renderable.render_data.model = xform_world_get(self->xform);
         renderable.render_data.diffuse_colour = typed_data->colour;

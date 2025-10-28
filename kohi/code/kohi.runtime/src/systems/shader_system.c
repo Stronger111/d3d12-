@@ -60,11 +60,6 @@ typedef struct kshader {
     kresource_text** stage_source_text_resources;
     // Array of generations of stage source text resources. Matches size of stage_source_text_resources;
     u32* stage_source_text_generations;
-
-#ifdef _DEBUG
-    u32* module_watch_ids;
-#endif
-
 } kshader;
 
 // The internal shader system state.
@@ -115,7 +110,7 @@ static b8 file_watch_event(u16 code, void* sender, void* listener_inst, event_co
             kshader* shader = &typed_state->shaders[i];
             for (u32 w = 0; w < shader->shader_stage_count; ++w) {
                 // If the generation is out of sync, reload the shader.
-                if (shader->stage_source_text_generation[w] != shader->stage_source_text_resources[w]->base.generation) {
+                if (shader->stage_source_text_generations[w] != shader->stage_source_text_resources[w]->base.generation) {
                     khandle handle = khandle_create_with_u64_identifier(i, shader->uniqueid);
                     if (!shader_system_reload(handle)) {
                         KWARN("Shader hot-reload failed for shader '%s'. See logs for details.", shader->name);
@@ -375,7 +370,7 @@ b8 shader_system_texture_set(khandle shader, kname sampler_name, const kresource
     return shader_system_texture_set_arrayed(shader, sampler_name, 0, t);
 }
 
-b8 shader_system_texture_set_arrayed(khandle shader,kname uniform_name, u32 array_index, const kresource_texture* t) {
+b8 shader_system_texture_set_arrayed(khandle shader, kname uniform_name, u32 array_index, const kresource_texture* t) {
     return shader_system_uniform_set_arrayed(shader, uniform_name, array_index, t);
 }
 // lcoation 函数
@@ -448,7 +443,7 @@ b8 shader_system_shader_group_release(khandle shader, u32 group_id) {
 }
 
 b8 shader_system_shader_per_draw_release(khandle shader, u32 per_draw_id) {
-    return per_group_or_per_draw_release(state_ptr->renderer, shader, per_draw_id);
+    return renderer_shader_per_draw_resources_release(state_ptr->renderer, shader, per_draw_id);
 }
 
 static b8 internal_attribute_add(kshader* shader, const shader_attribute_config* config) {
@@ -620,18 +615,28 @@ static b8 internal_uniform_add(kshader* shader, const shader_uniform_config* con
     //Count regular uniforms only,as the others are counted in the functions called before this for
     //textures and samplers.
     if (!is_sampler_or_texture) {
+        shader_frequency_data* frequency = 0;
         if (entry.frequency == SHADER_UPDATE_FREQUENCY_PER_FRAME) {
-            shader->per_frame.ubo_size += (entry.size * entry.array_length);
-            shader->per_frame.uniform_count++;
+            frequency = &shader->per_frame;
+            // shader->per_frame.ubo_size += (entry.size * entry.array_length);
+            // shader->per_frame.uniform_count++;
         }
         else if (entry.frequency == SHADER_UPDATE_FREQUENCY_PER_GROUP) {
-            shader->per_group.ubo_size += (entry.size * entry.array_length);
-            shader->per_group.uniform_count++;
+            frequency = &shader->per_group;
+            // shader->per_group.ubo_size += (entry.size * entry.array_length);
+            // shader->per_group.uniform_count++;
         }
         else if (entry.frequency == SHADER_UPDATE_FREQUENCY_PER_DRAW) {
-            shader->per_draw.ubo_size += (entry.size * entry.array_length);  // local_ubo_size PushConstant shader类型
-            shader->per_draw.uniform_count++;
+            frequency = &shader->per_draw;
+            // shader->per_draw.ubo_size += (entry.size * entry.array_length);  // local_ubo_size PushConstant shader类型
+            // shader->per_draw.uniform_count++;
         }
+        if (!frequency) {
+            KFATAL("No frequency found - investigate this!");
+            return false;
+        }
+        frequency->ubo_size += (entry.size * (entry.array_length ? entry.array_length : 1));
+        frequency->uniform_count++;
     }
 
     return true;
@@ -766,9 +771,24 @@ static khandle shader_create(const kresource_shader* shader_resource) {
 
     // Now that uniforms are processed, take note of the indices of textures and samplers.
     // These are used for fast lookups later by type.
-    out_shader->per_frame.sampler_indices = KALLOC_TYPE_CARRAY(u32, out_shader->per_frame.uniform_sampler_count);
-    out_shader->per_group.sampler_indices = KALLOC_TYPE_CARRAY(u32, out_shader->per_group.uniform_sampler_count);
-    out_shader->per_draw.sampler_indices = KALLOC_TYPE_CARRAY(u32, out_shader->per_draw.uniform_sampler_count);
+    if (out_shader->per_frame.uniform_sampler_count) {
+        out_shader->per_frame.sampler_indices = KALLOC_TYPE_CARRAY(u32, out_shader->per_frame.uniform_sampler_count);
+    }
+    if (out_shader->per_group.uniform_sampler_count) {
+        out_shader->per_group.sampler_indices = KALLOC_TYPE_CARRAY(u32, out_shader->per_group.uniform_sampler_count);
+    }
+    if (out_shader->per_draw.uniform_sampler_count) {
+        out_shader->per_draw.sampler_indices = KALLOC_TYPE_CARRAY(u32, out_shader->per_draw.uniform_sampler_count);
+    }
+    if (out_shader->per_frame.uniform_texture_count) {
+        out_shader->per_frame.texture_indices = KALLOC_TYPE_CARRAY(u32, out_shader->per_frame.uniform_texture_count);
+    }
+    if (out_shader->per_group.uniform_texture_count) {
+        out_shader->per_group.texture_indices = KALLOC_TYPE_CARRAY(u32, out_shader->per_group.uniform_texture_count);
+    }
+    if (out_shader->per_draw.uniform_texture_count) {
+        out_shader->per_draw.texture_indices = KALLOC_TYPE_CARRAY(u32, out_shader->per_draw.uniform_texture_count);
+    }
     u32 frame_textures = 0, frame_samplers = 0;
     u32 group_textures = 0, group_samplers = 0;
     u32 draw_textures = 0, draw_samplers = 0;
