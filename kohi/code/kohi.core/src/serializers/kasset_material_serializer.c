@@ -48,7 +48,7 @@ const char* kasset_material_serialize(const kasset* asset) {
 
     kson_tree tree = { 0 };
     //The root of the tree.
-    tree.root.type = KSON_OBJECT_TYPE_OBJECT;
+    tree.root = kson_object_create();
 
     kasset_material* material = (kasset_material*)asset;
 
@@ -74,93 +74,97 @@ const char* kasset_material_serialize(const kasset* asset) {
     //Properties and maps used in all material types.
 
     //Base colour
-    kson_object base_colour = kson_object_create();
-    if (material->base_colour_map.resource_name) {
-        add_map_obj(&base_colour, 0, &material->base_colour_map);
+    {
+        kson_object base_colour = kson_object_create();
+        if (material->base_colour_map.resource_name) {
+            add_map_obj(&base_colour, 0, &material->base_colour_map);
+        }
+        else {
+            kson_object_value_add_vec4(&base_colour, INPUT_VALUE, material->base_colour);
+        }
+        kson_object_value_add_object(&inputs, INPUT_BASE_COLOUR, base_colour);
     }
-    else {
-        kson_object_value_add_vec4(&base_colour, INPUT_VALUE, material->base_colour);
-    }
-    kson_object_value_add_object(&inputs, INPUT_BASE_COLOUR, base_colour);
 
     // Normal
-    kson_object normal = kson_object_create();
-    if (material->normal_map.resource_name) {
-        add_map_obj(&normal, 0, &material->normal_map);
+    {
+        kson_object normal = kson_object_create();
+        if (material->normal_map.resource_name) {
+            add_map_obj(&normal, 0, &material->normal_map);
+        }
+        else {
+            kson_object_value_add_vec3(&normal, INPUT_VALUE, material->normal);
+        }
+        kson_object_value_add_boolean(&normal, INPUT_ENABLED, material->normal_enabled);
+        kson_object_value_add_object(&inputs, INPUT_NORMAL, normal);
     }
-    else {
-        kson_object_value_add_vec3(&normal, INPUT_VALUE, material->normal);
-    }
-    kson_object_value_add_boolean(&normal, INPUT_ENABLED, material->normal_enabled);
-    kson_object_value_add_object(&inputs, INPUT_NORMAL, base_colour);
 
-    // Metallic
-    kson_object metallic = kson_object_create();
-    if (material->metallic_map.resource_name) {
-        const char* channel = texture_channel_to_string(material->metallic_map_source_channel);
-        add_map_obj(&base_colour, channel, &material->metallic_map);
-    }
-    else {
-        kson_object_value_add_float(&metallic, INPUT_VALUE, material->metallic);
-    }
-    kson_object_value_add_object(&inputs, INPUT_METALLIC, metallic);
-
-    // Properties and maps only used in standard materials.
+    //Properties and maps only used in standard materials.
     if (material->type == KMATERIAL_TYPE_STANDARD) {
         // Metallic
-        kson_object metallic = kson_object_create();
-        if (material->metallic_map.resource_name) {
-            const char* channel = texture_channel_to_string(material->metallic_map_source_channel);
-            add_map_obj(&metallic, channel, &material->metallic_map);
+        {
+            kson_object metallic = kson_object_create();
+            if (material->metallic_map.resource_name) {
+                const char* channel = texture_channel_to_string(material->metallic_map_source_channel);
+                add_map_obj(&metallic, channel, &material->metallic_map);
+            }
+            else {
+                kson_object_value_add_float(&metallic, INPUT_VALUE, material->metallic);
+            }
+            kson_object_value_add_object(&inputs, INPUT_METALLIC, metallic);
         }
-        else {
-            kson_object_value_add_float(&metallic, INPUT_VALUE, material->metallic);
-        }
-        kson_object_value_add_object(&inputs, INPUT_METALLIC, metallic);
 
         // Roughness
-        kson_object roughness = kson_object_create();
-        if (material->roughness_map.resource_name) {
-            const char* channel = texture_channel_to_string(material->roughness_map_source_channel);
-            add_map_obj(&roughness, channel, &material->roughness_map);
+        {
+            kson_object roughness = kson_object_create();
+            if (material->roughness_map.resource_name) {
+                const char* channel = texture_channel_to_string(material->roughness_map_source_channel);
+                add_map_obj(&roughness, channel, &material->roughness_map);
+            }
+            else {
+                kson_object_value_add_float(&roughness, INPUT_VALUE, material->roughness);
+            }
+            kson_object_value_add_object(&inputs, INPUT_ROUGHNESS, roughness);
         }
-        else {
-            kson_object_value_add_float(&roughness, INPUT_VALUE, material->roughness);
-        }
-        kson_object_value_add_object(&inputs, INPUT_ROUGHNESS, roughness);
 
-        // Roughness
-        kson_object ao = kson_object_create();
-        if (material->ambient_occlusion_map.resource_name) {
-            const char* channel = texture_channel_to_string(material->ambient_occlusion_map_source_channel);
-            add_map_obj(&ao, channel, &material->ambient_occlusion_map);
+        // Ao
+        {
+            kson_object ao = kson_object_create();
+            if (material->ambient_occlusion_map.resource_name) {
+                const char* channel = texture_channel_to_string(material->ambient_occlusion_map_source_channel);
+                add_map_obj(&ao, channel, &material->ambient_occlusion_map);
+            }
+            else {
+                kson_object_value_add_float(&ao, INPUT_VALUE, material->ambient_occlusion);
+            }
+            kson_object_value_add_boolean(&ao, INPUT_ENABLED, material->ambient_occlusion_enabled);
+            kson_object_value_add_object(&inputs, INPUT_AO, ao);
         }
-        else {
-            kson_object_value_add_float(&ao, INPUT_VALUE, material->ambient_occlusion);
-        }
-        kson_object_value_add_boolean(&ao, INPUT_ENABLED, material->ambient_occlusion_enabled);
-        kson_object_value_add_object(&inputs, INPUT_AO, ao);
 
         // Metallic/roughness/ao combined value (mra)
-        kson_object mra = kson_object_create();
-        if (material->mra_map.resource_name) {
-            add_map_obj(&mra, 0, &material->mra_map);
+        {
+            kson_object mra = kson_object_create();
+            if (material->mra_map.resource_name) {
+                add_map_obj(&mra, 0, &material->mra_map);
+            }
+            else {
+                kson_object_value_add_vec3(&mra, INPUT_VALUE, material->mra);
+            }
+            kson_object_value_add_object(&inputs, INPUT_MRA, mra);
         }
-        else {
-            kson_object_value_add_vec3(&mra, INPUT_VALUE, material->mra);
-        }
-        kson_object_value_add_object(&inputs, INPUT_MRA, mra);
+
 
         // Emissive
-        kson_object emissive = kson_object_create();
-        if (material->emissive_map.resource_name) {
-            add_map_obj(&emissive, 0, &material->emissive_map);
+        {
+            kson_object emissive = kson_object_create();
+            if (material->emissive_map.resource_name) {
+                add_map_obj(&emissive, 0, &material->emissive_map);
+            }
+            else {
+                kson_object_value_add_vec4(&emissive, INPUT_VALUE, material->emissive);
+            }
+            kson_object_value_add_boolean(&emissive, INPUT_ENABLED, material->emissive_enabled);
+            kson_object_value_add_object(&inputs, INPUT_EMISSIVE, emissive);
         }
-        else {
-            kson_object_value_add_vec4(&emissive, INPUT_VALUE, material->emissive);
-        }
-        kson_object_value_add_boolean(&emissive, INPUT_ENABLED, material->emissive_enabled);
-        kson_object_value_add_object(&inputs, INPUT_EMISSIVE, emissive);
     }
 
     // Properties only used in water materials.
@@ -171,17 +175,20 @@ const char* kasset_material_serialize(const kasset* asset) {
         kson_object_value_add_float(&tree.root, "wave_speed", material->wave_speed);
 
         // Besides normal, DUDV is also configurable.
-        kson_object dudv = kson_object_create();
-        if (material->dudv_map.resource_name) {
-            add_map_obj(&base_colour, 0, &material->dudv_map);
-            kson_object_value_add_object(&inputs, INPUT_DUDV, dudv);
+        {
+            kson_object dudv = kson_object_create();
+            if (material->dudv_map.resource_name) {
+                add_map_obj(&dudv, 0, &material->dudv_map);
+                kson_object_value_add_object(&inputs, INPUT_DUDV, dudv);
+            }
         }
     }
 
+    kson_object_value_add_object(&tree.root, "inputs", inputs);
+
     //Samplers
     if (material->custom_samplers && material->custom_sampler_count) {
-        kson_array samplers_array = { 0 };
-        samplers_array.type = KSON_OBJECT_TYPE_ARRAY;
+        kson_array samplers_array = kson_array_create();
 
         //Each sampler
         for (u32 i = 0;i < material->custom_sampler_count;++i) {
@@ -201,12 +208,13 @@ const char* kasset_material_serialize(const kasset* asset) {
         }
 
         //Add samplers array to the root object.
-        kson_object_value_add_object(&tree.root, SAMPLERS, samplers_array);
+        kson_object_value_add_array(&tree.root, SAMPLERS, samplers_array);
     }
 
     // Tree is built, output it to a string.
     const char* serialized = kson_tree_to_string(&tree);
 
+    // KTRACE("Serialized material:\n%s", serialized);
     // Cleanup the tree.
     kson_tree_cleanup(&tree);
 

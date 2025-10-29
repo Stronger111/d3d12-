@@ -151,7 +151,9 @@
         "scene.h": "c",
         "env.h": "c",
         "texture_system.h": "c",
-        "kresource_handler_text.h": "c"
+        "kresource_handler_text.h": "c",
+        "kohi.plugin.ui.standard_version.h": "c",
+        "geometry.h": "c"
     },
     "C_Cpp.default.compilerPath": "D:/SoftWare/LLVM/bin/clang.exe",
 }

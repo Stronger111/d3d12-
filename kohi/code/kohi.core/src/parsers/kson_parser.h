@@ -108,6 +108,10 @@ typedef struct kson_property {
     kson_property_type type;
     // The name of the property. If this belongs to an array, it should be INVALID_KSTRING_ID.
     kstring_id name;
+#ifdef KOHI_DEBUG
+    // The original named string. Only used in debug builds.
+    const char* name_str;
+#endif
     // The property value.
     kson_property_value value;
 } kson_property;
@@ -747,7 +751,7 @@ KAPI b8 kson_object_property_value_get_string_as_kname(const kson_object* object
  * @param out_value A pointer to hold the object property's value.
  * @return True on success; otherwise false.
  */
-KAPI b8 kson_object_property_value_get_string_as_kstring_id(const kson_object* object,const char* name, kstring_id* out_value);
+KAPI b8 kson_object_property_value_get_string_as_kstring_id(const kson_object* object, const char* name, kstring_id* out_value);
 
 /**
  * @brief Attempts to retrieve the given object's property value by name as an object. Fails if not found
@@ -768,7 +772,7 @@ KAPI b8 kson_object_property_value_get_object(const kson_object* object, const c
  * @param out_value A pointer to hold a copy of the object property's value.
  * @return True on success; otherwise false.
  */
-KAPI b8 kson_object_property_value_get_array(const kson_object* object,const char* name,kson_array* out_value);
+KAPI b8 kson_object_property_value_get_array(const kson_object* object, const char* name, kson_array* out_value);
 /**
  * Creates and returns a new property of the object type.
  * @param name The name of the property. Pass 0 if later adding to an array.

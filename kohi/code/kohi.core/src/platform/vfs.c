@@ -96,8 +96,11 @@ void vfs_request_asset(vfs_state* state, vfs_request_info info) {
     vfs_asset_data data = vfs_request_asset_sync(state, info);
 
     //TODO: This should be the job result
-    //Issue the callback with the data.
-    info.vfs_callback(state, data);
+    //
+    //Issue the callback with the data.if present.
+    if (info.vfs_callback) {
+        info.vfs_callback(state, data);
+    }
 
     //Cleanup the context and import params if _not_ watching
     if (!info.watch_for_hot_reload) {

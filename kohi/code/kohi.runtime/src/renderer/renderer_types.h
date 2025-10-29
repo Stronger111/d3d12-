@@ -315,6 +315,8 @@ typedef struct renderer_backend_config {
     const char* application_name;
     /** @brief Various configuration flags for renderer backend setup. */
     renderer_config_flags flags;
+    /** @brief The max number of shaders that be be held. Should match shader system config. */
+    u16 max_shader_count;
 } renderer_backend_config;
 
 /** @brief The winding order of vertices, used to determine what is the front-face of a triangle. */
@@ -545,9 +547,9 @@ typedef struct renderer_backend_interface {
     void (*colour_texture_prepare_for_present)(struct renderer_backend_interface* backend, khandle renderer_texture_handle);
     void (*texture_prepare_for_sampling)(struct renderer_backend_interface* backend, khandle renderer_texture_handle, texture_flag_bits flags);
 
-    b8 (*texture_resources_acquire)(struct renderer_backend_interface* backend,const char* name, kresource_texture_type type, u32 width, u32 height, u8 channel_count, u8 mip_levels, u16 array_size, kresource_texture_flag_bits flags,khandle* out_renderer_texture_handle);
+    b8 (*texture_resources_acquire)(struct renderer_backend_interface* backend, const char* name, kresource_texture_type type, u32 width, u32 height, u8 channel_count, u8 mip_levels, u16 array_size, kresource_texture_flag_bits flags, khandle* out_renderer_texture_handle);
 
-    void (*texture_resources_release)(struct renderer_backend_interface* backend,khandle* renderer_texture_handle);
+    void (*texture_resources_release)(struct renderer_backend_interface* backend, khandle* renderer_texture_handle);
 
 
     /**
@@ -695,14 +697,14 @@ typedef struct renderer_backend_interface {
      * @returns True on success; otherwise false.
      */
     b8 (*shader_bind_per_draw)(struct renderer_backend_interface* backend, khandle shader, u32 draw_id);
-     /**
-     * @brief Applies per-frame data to the uniform buffer.
-     *
-     * @param backend A pointer to the renderer backend interface.
-     * @param shader A handle to the shader to apply the global data for.
-     * @param renderer_frame_number The renderer's frame number, internally used as the generation of the per-frame data. Used for synchronization by the backend.
-     * @return True on success; otherwise false.
-     */
+    /**
+    * @brief Applies per-frame data to the uniform buffer.
+    *
+    * @param backend A pointer to the renderer backend interface.
+    * @param shader A handle to the shader to apply the global data for.
+    * @param renderer_frame_number The renderer's frame number, internally used as the generation of the per-frame data. Used for synchronization by the backend.
+    * @return True on success; otherwise false.
+    */
     b8 (*shader_apply_per_frame)(struct renderer_backend_interface* backend, khandle shader, u16 renderer_frame_number);
 
     /**
@@ -845,7 +847,7 @@ typedef struct renderer_backend_interface {
 
     /**
      * @brief Obtains the max anisotropy level available from the renderer. 0 means not available.
-     * 
+     *
      * @param backend A pointer to the renderer backend interface.
      */
     f32 (*max_anisotropy_get)(struct renderer_backend_interface* backend);

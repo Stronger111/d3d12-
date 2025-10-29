@@ -11,7 +11,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#define K_USE_CUSTOM_MEMORY_ALLOCATOR 1
+#define K_USE_CUSTOM_MEMORY_ALLOCATOR 0
 
 #if !K_USE_CUSTOM_MEMORY_ALLOCATOR
 #if _MSC_VER
@@ -114,7 +114,7 @@ b8 memory_system_initialize(memory_system_configuration config) {
     state_ptr = kaligned_alloc(sizeof(memory_system_state), 16);
     state_ptr->config = config;
     state_ptr->alloc_count = 0;
-    state_ptr->allocatror_memory_requirement = 0;
+    state_ptr->allocator_memory_requirement = 0;
 #endif
 
     // Create allocation mutex
@@ -169,7 +169,7 @@ void* kallocate_aligned(u64 size, u16 alignment, memory_tag tag) {
 #if K_USE_CUSTOM_MEMORY_ALLOCATOR
         block = dynamic_allocator_allocate_aligned(&state_ptr->allocator, size, alignment);
 #else
-        block = kaligned_free(size, alignment);
+        block = kaligned_alloc(size, alignment);
 #endif
         kmutex_unlock(&state_ptr->allocation_mutex);
     }
