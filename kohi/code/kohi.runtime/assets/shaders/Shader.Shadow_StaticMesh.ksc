@@ -3,17 +3,18 @@ depth_test=true
 depth_write=true
 colour_write=false
 cull_mode="none"
+max_groups=256
 
 stages = [
     {
         type = "vertex"
-        source_asset_name = "Shadow_Terrain_vert"
-        package_name = "Runtime"
+        source_asset_name = "Shader.Shadow_StaticMesh_vert"
+        package_name = "Kohi.Runtime"
     }
     {
         type = "fragment"
-        source_asset_name = "Shadow_Terrain_frag"
-        package_name = "Runtime"
+        source_asset_name = "Shader.Shadow_StaticMesh_frag"
+        package_name = "Kohi.Runtime"
     }
 ]
 
@@ -36,11 +37,7 @@ attributes = [
     }
     {
         name = "in_tangent"
-        type = "vec4"
-    }
-    {
-        name = "in_mat_weights"
-        type = "vec4"
+        type = "vec3"
     }
 ]
 
@@ -58,6 +55,14 @@ uniforms = {
         }
     ]
     per_group = [
+        {
+            name = "base_colour_texture"
+            type = "texture2D"
+        }
+        {
+            name = "base_colour_sampler"
+            type = "sampler"
+        }
     ]
     per_draw = [
         {

@@ -10,4 +10,4 @@
  * @returns A block of memory containing the serialized asset on success; 0 on failure.
  */
 KAPI void* kasset_bitmap_font_serialize(const kasset* asset,u64* out_size);
-KAPI b8 kasset_bitmap_font_deserialize(const char* file_text, kasset* out_asset);
+KAPI b8 kasset_bitmap_font_deserialize(u64 size, const void* data, kasset* out_asset);

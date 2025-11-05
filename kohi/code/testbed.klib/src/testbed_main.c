@@ -552,14 +552,36 @@ b8 application_initialize(struct application* game_inst) {
     //editor_rendergraph_gizmo_set(&state->editor_graph, &state->gizmo);
 
     // World meshes
-    // Invalidate all meshes.
-    for (u32 i = 0; i < 10; ++i) {
-        state->meshes[i].generation = INVALID_ID_U8;
-        state->ui_meshes[i].generation = INVALID_ID_U8;
-    }
 
     // Create test ui text objects
-    if (!sui_label_control_create(sui_state, "testbed_mono_test_text", FONT_TYPE_BITMAP, "Ubuntu Mono 21px", 21, "Some test text 123,\n\tyo!", &state->test_text)) {
+    //black background text
+    if (!sui_label_control_create(sui_state, "testbed_mono_test_text_black", FONT_TYPE_BITMAP, kname_create("Ubuntu Mono 21px"), 21, "test text 123,\n\tyo!", &state->test_text_black)) {
+        KERROR("Failed to load basic ui bitmap text.");
+        return false;
+    }
+    else {
+        sui_label_colour_set(sui_state, &state->test_text_black, (vec4) { 0, 0, 0, 1 });
+        if (!sui_label_control_load(sui_state, &state->test_text_black)) {
+            KERROR("Failed to load test text.");
+        }
+        else {
+            if (!standard_ui_system_register_control(sui_state, &state->test_text_black)) {
+                KERROR("Unable to register control.");
+            }
+            else {
+                if (!standard_ui_system_control_add_child(sui_state, 0, &state->test_text_black)) {
+                    KERROR("Failed to parent test text.");
+                }
+                else {
+                    state->test_text_black.is_active = true;
+                    if (!standard_ui_system_update_active(sui_state, &state->test_text_black)) {
+                        KERROR("Unable to update active state.");
+                    }
+                }
+            }
+        }
+    }
+    if (!sui_label_control_create(sui_state, "testbed_mono_test_text", FONT_TYPE_BITMAP, kname_create("Ubuntu Mono 21px"), 21, "test text 123,\n\tyo!", &state->test_text)) {
         KERROR("Failed to load basic ui bitmap text.");
     }
     else {
@@ -644,7 +666,7 @@ b8 application_initialize(struct application* game_inst) {
         }
     }
 
-    if (!sui_label_control_create(sui_state, "testbed_UTF_test_sys_text", FONT_TYPE_SYSTEM, "Noto Sans CJK JP", 31, "Press 'L' to load a \n\tscene!\n\n\tこんにちは 한", &state->test_sys_text)) {
+    if (!sui_label_control_create(sui_state, "testbed_UTF_test_sys_text", FONT_TYPE_SYSTEM,kname_create("Noto Sans CJK JP"), 31, "Press 'L' to load a \n\tscene!\n\n\tこんにちは 한", &state->test_sys_text)) {
         KERROR("Failed to load basic ui system text.");
         return false;
     }
@@ -1093,7 +1115,7 @@ b8 application_prepare_frame(struct application* app_inst, struct frame_data* p_
                 mat4 cam_view_proj = mat4_transposed(mat4_mul(camera_view_get(current_camera), shadow_dist_projection));
 
                 // Pass over shadow map "camera" view and projection matrices (one per cascade).
-                for (u32 c = 0; c <  MATERIAL_MAX_SHADOW_CASCADES; c++) {
+                for (u32 c = 0; c < MATERIAL_MAX_SHADOW_CASCADES; c++) {
                     // NOTE: Each pass for cascades will need to do the following process.
                     // The only real difference will be that the near/far clips will be adjusted for each.
 
@@ -1117,7 +1139,7 @@ b8 application_prepare_frame(struct application* app_inst, struct frame_data* p_
                         center = vec3_add(center, vec3_from_vec4(corners[i]));
                     }
                     center = vec3_div_scalar(center, 8.0f); // size
-                    if (c ==  MATERIAL_MAX_SHADOW_CASCADES - 1) {
+                    if (c == MATERIAL_MAX_SHADOW_CASCADES - 1) {
                         culling_center = center;
                     }
 
@@ -1127,7 +1149,7 @@ b8 application_prepare_frame(struct application* app_inst, struct frame_data* p_
                         f32 distance = vec3_distance(vec3_from_vec4(corners[i]), center);
                         radius = KMAX(radius, distance);
                     }
-                    if (c ==  MATERIAL_MAX_SHADOW_CASCADES - 1) {
+                    if (c == MATERIAL_MAX_SHADOW_CASCADES - 1) {
                         culling_radius = radius;
                     }
 

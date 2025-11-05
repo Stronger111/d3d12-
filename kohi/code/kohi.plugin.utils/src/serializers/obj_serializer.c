@@ -1,5 +1,4 @@
 #include "obj_serializer.h"
-#include "assets/kasset_types.h"
 
 #include <containers/darray.h>
 #include <kdebug/kassert.h>
@@ -51,9 +50,9 @@ b8 obj_serializer_deserialize(const char* obj_file_text, obj_source_asset* out_s
     //Groups
     mesh_group_data* groups = darray_reserve(mesh_group_data, 4);
 
-    obj_source_geometry* geometries_darray=darray_create(obj_source_geometry);
+    obj_source_geometry* geometries_darray = darray_create(obj_source_geometry);
 
-     char material_file_name[512] = "";
+    char material_file_name[512] = "";
 
     char name[512];
     kzero_memory(name, sizeof(char) * 512);
@@ -63,13 +62,14 @@ b8 obj_serializer_deserialize(const char* obj_file_text, obj_source_asset* out_s
     char line_buf[512] = "";
     char* p = &line_buf[0];
     u32 line_length = 0;
+    u8 addl_advance = 0;
 
     // index 0 is previous, 1 is previous before that.
-    char prev_first_chars[2] = {0, 0};
+    char prev_first_chars[2] = { 0, 0 };
     u32 start_from = 0;
     while (true) {
-        start_from += line_length;  // todo: might need +1 for \n?
-        if (!string_line_get(obj_file_text, 511, start_from, &p, &line_length)) {
+        start_from += line_length + addl_advance;  // todo: might need +1 for \n?
+        if (!string_line_get(obj_file_text, 511, start_from, &p, &line_length, &addl_advance)) {
             /* if (!filesystem_read_line(obj_file, 511, &p, &line_length)) { */
             break;
         }
@@ -129,19 +129,20 @@ b8 obj_serializer_deserialize(const char* obj_file_text, obj_source_asset* out_s
 
             if (normal_count == 0 || tex_coord_count == 0) {
                 sscanf(line_buf, "%s %d %d %d", t, &face.vertices[0].position_index,
-                       &face.vertices[1].position_index,
-                       &face.vertices[2].position_index);
-            } else {
+                    &face.vertices[1].position_index,
+                    &face.vertices[2].position_index);
+            }
+            else {
                 sscanf(line_buf, "%s %d/%d/%d %d/%d/%d %d/%d/%d", t,
-                       &face.vertices[0].position_index,
-                       &face.vertices[0].texcoord_index, &face.vertices[0].normal_index,
+                    &face.vertices[0].position_index,
+                    &face.vertices[0].texcoord_index, &face.vertices[0].normal_index,
 
-                       &face.vertices[1].position_index,
-                       &face.vertices[1].texcoord_index, &face.vertices[1].normal_index,
+                    &face.vertices[1].position_index,
+                    &face.vertices[1].texcoord_index, &face.vertices[1].normal_index,
 
-                       &face.vertices[2].position_index,
-                       &face.vertices[2].texcoord_index,
-                       &face.vertices[2].normal_index);
+                    &face.vertices[2].position_index,
+                    &face.vertices[2].texcoord_index,
+                    &face.vertices[2].normal_index);
             }
             u64 group_index = darray_length(groups) - 1;
             darray_push(groups[group_index].faces, face);
@@ -179,7 +180,8 @@ b8 obj_serializer_deserialize(const char* obj_file_text, obj_source_asset* out_s
                 obj_source_geometry new_data = {};
                 if (i == 0) {
                     new_data.name = string_duplicate(name);
-                } else if (i > 0) {
+                }
+                else if (i > 0) {
                     new_data.name = string_format("%s%u", name, i);
                 }
                 new_data.material_asset_name = string_duplicate(material_names[i]);
@@ -218,7 +220,8 @@ b8 obj_serializer_deserialize(const char* obj_file_text, obj_source_asset* out_s
         obj_source_geometry new_data = {};
         if (i == 0) {
             new_data.name = string_duplicate(name);
-        } else if (i > 0) {
+        }
+        else if (i > 0) {
             new_data.name = string_format("%s%u", new_data.name, i);
         }
 
@@ -349,13 +352,15 @@ static void process_subobject(
 
             if (skip_normals) {
                 vert.normal = vec3_create(0, 0, 1);
-            } else {
+            }
+            else {
                 vert.normal = normals[index_data.normal_index - 1];
             }
 
             if (skip_tex_coords) {
                 vert.texcoord = vec2_zero();
-            } else {
+            }
+            else {
                 vert.texcoord = tex_coords[index_data.texcoord_index - 1];
             }
 
@@ -369,7 +374,7 @@ static void process_subobject(
     // Calculate the center based on the extents.
     for (u8 i = 0; i < 3; ++i) {
         out_data->center.elements[i] = (out_data->extents.min.elements[i] +
-                                        out_data->extents.max.elements[i]) /
-                                       2.0f;
+            out_data->extents.max.elements[i]) /
+            2.0f;
     }
 }

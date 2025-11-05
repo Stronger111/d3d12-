@@ -253,7 +253,7 @@ typedef struct vulkan_pipeline_config {
     /** @brief The face cull mode. */
     face_cull_mode cull_mode;
     /** @brief The kshader flags used for creating the pipeline. */
-    u32 shader_flag_bits;
+    u32 shader_flags;
     /** @brief The number of push constant data ranges. */
     u32 push_constant_range_count;
     /** @brief An array of push constant data ranges. */
@@ -374,6 +374,10 @@ typedef struct vulkan_shader_frequency_state {
     vulkan_uniform_sampler_state* sampler_states;
     // A mapping of texture uniforms to descriptors.
     vulkan_uniform_texture_state* texture_states;
+#ifdef KOHI_DEBUG
+    u32 descriptor_set_index;
+    shader_update_frequency frequency;
+#endif
 } vulkan_shader_frequency_state;
 
 /**

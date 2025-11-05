@@ -1,17 +1,19 @@
 version = 1
-depth_test = true
-depth_write = true
+depth_test=true
+depth_write=true
+colour_write=false
+cull_mode="none"
 
 stages = [
     {
         type = "vertex"
-        source_asset_name = "Pick_StaticMesh_vert"
-        package_name = "Runtime"
+        source_asset_name = "Shader.Shadow_Terrain_vert"
+        package_name = "Kohi.Runtime"
     }
     {
         type = "fragment"
-        source_asset_name = "Pick_StaticMesh_frag"
-        package_name = "Runtime"
+        source_asset_name = "Shader.Shadow_Terrain_frag"
+        package_name = "Kohi.Runtime"
     }
 ]
 
@@ -34,31 +36,37 @@ attributes = [
     }
     {
         name = "in_tangent"
-        type = "vec3"
+        type = "vec4"
+    }
+    {
+        name = "in_mat_weights"
+        type = "vec4"
     }
 ]
 
 uniforms = {
-    global = [
+    per_frame = [
         {
-            name = "projection"
+            name = "projections"
             type = "mat4"
+            array_size = 4
         }
         {
-            name = "view"
+            name = "views"
             type = "mat4"
+            array_size = 4
         }
     ]
-    instance = [
-        {
-            name = "id_colour"
-            type = "vec3"
-        }
+    per_group = [
     ]
-    local = [
+    per_draw = [
         {
             name = "model"
             type = "mat4"
+        }
+        {
+            name = "cascade_index"
+            type = "u32"
         }
     ]
 }

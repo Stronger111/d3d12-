@@ -1,20 +1,17 @@
 version = 1
-depth_test=true
-depth_write=true
-colour_write=false
-cull_mode="none"
-max_instances=256
+depth_test = true
+depth_write = true
 
 stages = [
     {
         type = "vertex"
-        source_asset_name = "Shadow_StaticMesh_vert"
-        package_name = "Runtime"
+        source_asset_name = "Shader.Pick_StaticMesh_vert"
+        package_name = "Kohi.Runtime"
     }
     {
         type = "fragment"
-        source_asset_name = "Shadow_StaticMesh_frag"
-        package_name = "Runtime"
+        source_asset_name = "Shader.Pick_StaticMesh_frag"
+        package_name = "Kohi.Runtime"
     }
 ]
 
@@ -44,34 +41,24 @@ attributes = [
 uniforms = {
     per_frame = [
         {
-            name = "projections"
+            name = "projection"
             type = "mat4"
-            array_size = 4
         }
         {
-            name = "views"
+            name = "view"
             type = "mat4"
-            array_size = 4
         }
     ]
     per_group = [
         {
-            name = "base_colour_texture"
-            type = "texture2D"
-        }
-        {
-            name = "base_colour_sampler"
-            type = "sampler"
+            name = "id_colour"
+            type = "vec3"
         }
     ]
-    local = [
+    per_draw = [
         {
             name = "model"
             type = "mat4"
-        }
-        {
-            name = "cascade_index"
-            type = "u32"
         }
     ]
 }

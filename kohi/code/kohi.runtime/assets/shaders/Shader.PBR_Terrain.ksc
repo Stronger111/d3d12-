@@ -9,13 +9,13 @@ cull_mode = "back"
 stages = [
     {
         type = "vertex"
-        source_asset_name = "PBR_Terrain_vert"
-        package_name = "Runtime"
+        source_asset_name = "Shader.PBR_Terrain_vert"
+        package_name = "Kohi.Runtime"
     }
     {
         type = "fragment"
-        source_asset_name = "PBR_Terrain_frag"
-        package_name = "Runtime"
+        source_asset_name = "Shader.PBR_Terrain_frag"
+        package_name = "Kohi.Runtime"
     }
 ]
 
@@ -47,7 +47,7 @@ attributes = [
 ]
 
 uniforms = {
-    global = [
+    per_frame = [
         {
             name = "projection"
             type = "mat4"
@@ -89,7 +89,7 @@ uniforms = {
             type = "f32"
         }
     ]
-    instance = [
+    per_group = [
         {
             name = "material_textures"
             type = "sampler2D[3]"
@@ -100,7 +100,7 @@ uniforms = {
         }
         {
             name = "ibl_cube_texture"
-            type = "samplerCube"
+            type = "sampler"
         }
         {
             name = "properties"
@@ -119,7 +119,7 @@ uniforms = {
             type = "i32"
         }
     ]
-    local = [
+    per_draw = [
         {
             name = "model"
             type = "mat4"

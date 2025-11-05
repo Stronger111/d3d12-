@@ -285,7 +285,7 @@ b8 strings_equali(const char* str0, const char* str1) {
     return kstr_ncmpi(str0, str1, U32_MAX) == 0;
 }
 
-b8 strings_nequal(const char* str0, const char* str1,u32 max_len) {
+b8 strings_nequal(const char* str0, const char* str1, u32 max_len) {
     return kstr_ncmp(str0, str1, max_len) == 0;
 }
 
@@ -818,6 +818,10 @@ KAPI b8 string_to_bool(const char* str, b8* b) {
     return true;
 }
 
+const char* bool_to_string(b8 b) {
+    return string_duplicate(b == false ? "false" : "true");
+}
+
 KAPI u32 string_split(const char* str, char delimiter, char*** str_darray, b8 trim_entries, b8 include_empty) {
     if (!str || !str_darray) {
         return 0;
@@ -1130,7 +1134,7 @@ void string_to_upper(char* str) {
     }
 }
 
-b8 string_line_get(const char* source_str, u16 max_line_length, u32 start_from, char** out_buffer, u32* out_line_length) {
+b8 string_line_get(const char* source_str, u16 max_line_length, u32 start_from, char** out_buffer, u32* out_line_length, u8* out_addl_advance) {
     if (!source_str || !max_line_length || !out_line_length || !out_buffer) {
         return false;
     }
@@ -1138,17 +1142,37 @@ b8 string_line_get(const char* source_str, u16 max_line_length, u32 start_from, 
         return false;
     }
 
-    u32 i = 0;
-    for (u32 c = start_from;source_str[c] && i < max_line_length;c++, ++i) {
-        if (source_str[c] == '\n') {
-            *out_line_length = i;
+    *out_addl_advance = 0;
+
+    u32 length = 0;
+    for (u32 c = start_from;source_str[c] && length < max_line_length;c++, ++length) {
+        if (length == max_line_length - 1) {
+            // TODO: remove debug
+            KTRACE("hitting max length");
+            *out_addl_advance = 0;
+        }
+        if (source_str[c] == '\r' && source_str[c + 1] != '\n') {
+            KTRACE("rogue \\r!");
+        }
+
+        if (source_str[c] == '\n' || source_str[c] == '\r') {
+            if (source_str[c] == '\r' && source_str[c + 1] == '\n') {
+                *out_addl_advance = 2;
+            }
+            else {
+                *out_addl_advance = 1;
+            }
+            *out_line_length = length;
+            (*out_buffer)[length] = 0;
             return true;
         }
         else {
-            (*out_buffer)[i] = source_str[c];
+            (*out_buffer)[length] = source_str[c];
         }
     }
-    *out_line_length = i;
+
+    *out_line_length = length;
+    (*out_buffer)[length] = 0;
     return true;
 }
 

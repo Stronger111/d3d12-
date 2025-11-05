@@ -17,6 +17,7 @@
 #include "strings/kstring.h"
 #include "systems/shader_system.h"
 #include "systems/texture_system.h"
+#include <runtime_defines.h>
 
 // Locations of uniforms within the static mesh shader.
 typedef struct shadow_staticmesh_shader_locations {
@@ -140,7 +141,7 @@ b8 shadow_rendergraph_node_initialize(rendergraph_node* self) {
     shadow_rendergraph_node_internal_data* internal_data = self->internal_data;
 
     // Load static mesh shadowmap shader.
-    internal_data->shadow_staticmesh_shader = shader_system_get(kname_create("Shadow_StaticMesh"));
+    internal_data->shadow_staticmesh_shader = shader_system_get(kname_create(SHADER_NAME_RUNTIME_SHADOW_STATICMESH),kname_create(PACKAGE_NAME_RUNTIME));
     if (khandle_is_invalid(internal_data->shadow_staticmesh_shader)) {
         KERROR("Static mesh shadow shader for shadow rendergraph node failed to load. See logs for details.");
         return false;
@@ -154,7 +155,7 @@ b8 shadow_rendergraph_node_initialize(rendergraph_node* self) {
     internal_data->staticmesh_shader_locations.base_colour_sampler = shader_system_uniform_location(internal_data->shadow_staticmesh_shader, kname_create("base_colour_sampler"));
 
     // Load terrain shadowmap shader.
-    internal_data->shadow_terrain_shader = shader_system_get(kname_create("Shadow_Terrain"));
+    internal_data->shadow_terrain_shader = shader_system_get(kname_create(SHADER_NAME_RUNTIME_SHADOW_TERRAIN),kname_create(PACKAGE_NAME_RUNTIME));
     if (khandle_is_invalid(internal_data->shadow_terrain_shader)) {
         KERROR("Failed to load shader for shadowmap rendergraph node (terrain)");
         return false;

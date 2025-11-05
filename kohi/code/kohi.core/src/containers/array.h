@@ -67,11 +67,13 @@ KAPI void array_iterator_prev(array_iterator* it);
         return arr;                                                                                                      \
     }                                                                                                                    \
                                                                                                                           \
-    KINLINE void array_##name##_destroy(array_##name* arr) {                                                             \
-        _karray_free(&arr->base.length, &arr->base.stride, (void**)&arr->data);                                          \
-        arr->begin=0;                                                                                                    \
-        arr->rbegin=0;                                                                                                   \
-    }                                                                                                                                  
+    KINLINE void array_##name##_destroy(array_##name* arr) {   \
+        if(arr){                                               \
+            _karray_free(&arr->base.length, &arr->base.stride, (void**)&arr->data);                                          \
+            arr->begin=0;                                                                                                    \
+            arr->rbegin=0;                                                                                                   \
+        }                                                                                                         \
+    }                                                                                                                        \
 
 /**
  * @brief Create an array type of the given type. For advanced types or pointers,

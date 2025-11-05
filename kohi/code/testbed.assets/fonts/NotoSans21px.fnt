@@ -1,6 +1,6 @@
 info face="Noto Sans CJK HK" size=21 bold=0 italic=0 charset="" unicode=1 stretchH=100 smooth=1 aa=1 padding=0,0,0,0 spacing=1,1 outline=0
 common lineHeight=21 base=17 scaleW=4096 scaleH=4096 pages=1 packed=0 alphaChnl=1 redChnl=0 greenChnl=0 blueChnl=0
-page id=0 file="NotoSans21px_0.png"
+page id=0 file="Texture.BitmapFont.NotoSans21px_0"
 chars count=44813
 char id=-1   x=3962  y=1568  width=13    height=15    xoffset=1     yoffset=4     xadvance=15    page=0  chnl=15
 char id=32   x=2327  y=2526  width=9     height=1     xoffset=-3    yoffset=20    xadvance=3     page=0  chnl=15

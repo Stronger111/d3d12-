@@ -3,20 +3,22 @@
 #include "containers/darray.h"
 #include "loader_utils.h"
 #include "logger.h"
-#include "math/kmath.h"
 #include "memory/kmemory.h"
-#include "platform/filesystem.h"
 #include "resources/resource_types.h"
 #include "resources/terrain.h"
 #include "strings/kstring.h"
 #include "systems/resource_system.h"
 
-static b8 terrain_loader_load(struct resource_loader *self, const char *name,
-                              void *params, resource *out_resource) {
+static b8 terrain_loader_load(struct resource_loader *self, const char *name,void *params, resource *out_resource) {
     if (!self || !name || !out_resource) {
         return false;
     }
 
+    // FIXME: This won't work until the asset/resource loaders are completed, plus
+    // blended materials are implemented. Half the types in here no longer exist.
+    // Blocking this out for now and failing instead.
+    return false;
+    /*
     // TODO: binary format
     char *format_str = "%s/%s/%s%s";
     char full_file_path[512];
@@ -207,7 +209,7 @@ static b8 terrain_loader_load(struct resource_loader *self, const char *name,
     out_resource->data = resource_data;
     out_resource->data_size = sizeof(terrain_resource);
 
-    return true;
+    return true;*/
 }
 
 static void terrain_loader_unload(struct resource_loader *self,

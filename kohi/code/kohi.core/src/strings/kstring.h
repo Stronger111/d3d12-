@@ -435,6 +435,15 @@ KAPI b8 string_to_u64(const char* str, u64* u);
  * @return True if parsed successfully; otherwise false.
  */
 KAPI b8 string_to_bool(const char* str, b8* b);
+/**
+ * @brief Creates a string representation of the provided boolean, i.e. "false" for false/0 and
+ * "true" for everything else.
+ * NOTE: string is dynamically allocated, so the caller should free it.
+ *
+ * @param b The boolean to create a string from.
+ * @return The string representation of the provided boolean.
+ */
+KAPI const char* bool_to_string(b8 b);
 
 /**
  * @brief Splits the given string by the delimiter provided and stores in the
@@ -568,7 +577,7 @@ KAPI const char* string_extension_from_path(const char* path, b8 include_dot);
  */
 KAPI b8 string_parse_array_length(const char* str, u32* out_length);
 
-KAPI b8 string_line_get(const char* source_str, u16 max_line_length, u32 start_from, char** out_buffer, u32* out_line_length);
+KAPI b8 string_line_get(const char* source_str, u16 max_line_length, u32 start_from, char** out_buffer, u32* out_line_length,u8* out_addl_advance);
 
 /** Indicates if provided codepoint is lower-case. Regular ASCII and western European high-ascii characters only. */
 KAPI b8 codepoint_is_lower(i32 codepoint);

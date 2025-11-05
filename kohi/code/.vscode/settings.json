@@ -153,7 +153,9 @@
         "texture_system.h": "c",
         "kresource_handler_text.h": "c",
         "kohi.plugin.ui.standard_version.h": "c",
-        "geometry.h": "c"
+        "geometry.h": "c",
+        "kasset_bitmap_font_serializer.h": "c",
+        "kresource_handler_bitmap_font.h": "c"
     },
     "C_Cpp.default.compilerPath": "D:/SoftWare/LLVM/bin/clang.exe",
 }
