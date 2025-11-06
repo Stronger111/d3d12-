@@ -109,6 +109,7 @@ b8 shadow_rendergraph_node_create(struct rendergraph* graph, struct rendergraph_
     shadow_rendergraph_node_internal_data* internal_data = self->internal_data;
     internal_data->renderer = engine_systems_get()->renderer_system;
     internal_data->texture_system = engine_systems_get()->texture_system;
+    internal_data->material_system = engine_systems_get()->material_system;
     if (!deserialize_config(config->config_str, &internal_data->config)) {
         KERROR("Failed to deserialize configuration for shadow_rendergraph_node. Node creation failed.");
         return false;
@@ -130,6 +131,10 @@ b8 shadow_rendergraph_node_create(struct rendergraph* graph, struct rendergraph_
     self->destroy = shadow_rendergraph_node_destroy;
     self->load_resources = shadow_rendergraph_node_load_resources;
     self->execute = shadow_rendergraph_node_execute;
+
+    internal_data->staticmesh_groups=darray_create(shadow_shader_group_data);
+    internal_data->staticmesh_per_draw_data=darray_create(shader_per_draw_data);
+    internal_data->terrain_per_draw_data=darray_create(shader_per_draw_data);
     return true;
 }
 

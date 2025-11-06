@@ -42,7 +42,7 @@ const char* kasset_shader_serialize(const kasset* asset) {
     }
 
     // max_groups
-    kson_object_value_add_int(&tree.root, "max_instances", typed_asset->max_groups);
+    kson_object_value_add_int(&tree.root, "max_groups", typed_asset->max_groups);
 
     kson_object_value_add_int(&tree.root, "max_draw_ids", typed_asset->max_draw_ids);
 

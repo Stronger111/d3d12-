@@ -135,7 +135,7 @@ static void asset_handler_system_font_on_asset_loaded(struct vfs_state* vfs, vfs
             request_info.import_params_size = 0;
             request_info.vfs_callback = asset_handler_system_font_on_asset_loaded;
             request_info.watch_for_hot_reload = false; // Fonts don't need hot reloading.
-            vfs_request_asset_sync(vfs, request_info);
+            font_file_data=vfs_request_asset_sync(vfs, request_info);
             if (font_file_data.result == VFS_REQUEST_RESULT_SUCCESS) {
                 // Take a copy of the font binary data.
                 typed_asset->font_binary_size = font_file_data.size;

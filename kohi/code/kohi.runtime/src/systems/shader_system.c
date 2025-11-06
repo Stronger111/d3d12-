@@ -513,7 +513,7 @@ static b8 internal_texture_add(kshader* shader, const shader_uniform_config* con
     u32 tex_samp_index = 0;
     if (config->frequency == SHADER_UPDATE_FREQUENCY_PER_FRAME) {
         tex_samp_index = shader->per_frame.uniform_texture_count;
-        shader->per_draw.uniform_texture_count++;
+        shader->per_frame.uniform_texture_count++;
     }
     else if (config->frequency == SHADER_UPDATE_FREQUENCY_PER_GROUP) {
         tex_samp_index = shader->per_group.uniform_texture_count;
@@ -550,7 +550,7 @@ static b8 internal_sampler_add(kshader* shader, const shader_uniform_config* con
     u32 tex_samp_index = 0;
     if (config->frequency == SHADER_UPDATE_FREQUENCY_PER_FRAME) {
         tex_samp_index = shader->per_frame.uniform_sampler_count;
-        shader->per_draw.uniform_sampler_count++;
+        shader->per_frame.uniform_sampler_count++;
     }
     else if (config->frequency == SHADER_UPDATE_FREQUENCY_PER_GROUP) {
         tex_samp_index = shader->per_group.uniform_sampler_count;

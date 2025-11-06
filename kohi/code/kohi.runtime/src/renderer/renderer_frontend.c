@@ -108,6 +108,13 @@ b8 renderer_system_deserialize_config(const char* config_str, renderer_system_co
         out_config->power_saving = true;
     }
 
+    i64 max_shader_count = 0;
+    if (!kson_object_property_value_get_int(&tree.root, "max_shader_count", &max_shader_count)) {
+        max_shader_count = 1024;
+    }
+
+    out_config->max_shader_count = max_shader_count;
+
     kson_tree_cleanup(&tree);
 
     return true;
@@ -149,6 +156,7 @@ b8 renderer_system_initialize(u64* memory_requirement, struct renderer_system_st
     renderer_backend_config renderer_config = {};
     renderer_config.application_name = config->application_name;
     renderer_config.flags = 0;
+    renderer_config.max_shader_count = config->max_shader_count;
     if (config->vsync) {
         renderer_config.flags |= RENDERER_CONFIG_FLAG_VSYNC_ENABLED_BIT;
     }

@@ -2067,7 +2067,7 @@ b8 vulkan_renderer_shader_create(renderer_backend_interface* backend, khandle sh
     }
 
     // Process attributes
-    internal_shader->attribute_count = darray_length(shader_resource->attributes);
+    internal_shader->attribute_count = shader_resource->attribute_count;
     u32 offset = 0;
     for (u32 i = 0; i < internal_shader->attribute_count; ++i) {
         // Setup the new attribute.
@@ -3011,6 +3011,8 @@ static b8 create_shader_module(vulkan_context* context, vulkan_shader* internal_
     }
 
     KDEBUG("Compiling stage '%s' for kshader '%s'... ", shader_stage_to_string(stage), kname_string_get(internal_shader->name));
+
+    KTRACE("Source:\n%s", source);
 
     // Attempt to compile the kshader.
     shaderc_compile_options_t options = shaderc_compile_options_initialize();
@@ -4023,6 +4025,7 @@ static b8 setup_frequency_state(renderer_backend_interface* backend, vulkan_shad
 
         //NOTE: really only matters where there are instance uniforms, but set them anyway.
         frequency_state->ubo_descriptor_state.generations = KALLOC_TYPE_CARRAY(u16, image_count);
+        frequency_state->descriptor_sets = KALLOC_TYPE_CARRAY(VkDescriptorSet, image_count);
 
         //Temp array for descriptor set layouts
         layouts = KALLOC_TYPE_CARRAY(VkDescriptorSetLayout, image_count);
@@ -4046,20 +4049,18 @@ static b8 setup_frequency_state(renderer_backend_interface* backend, vulkan_shad
             KERROR("Error allocating %s descriptor sets in kshader: '%s'.", frequency_text, vulkan_result_string(result, true));
             final_result = false;
         }
-    }
-
 #ifdef KOHI_DEBUG
-    // Assign a debug name to the descriptor set.
-    for (u32 i = 0; i < image_count; ++i) {
-        u32 fid = (frequency == SHADER_UPDATE_FREQUENCY_PER_FRAME ? INVALID_ID : *out_frequency_id);
-        char* desc_set_object_name = string_format("desc_set_shader_%s_per_%s_id_%u_set_idx_%u_img_idx_%u", shader_name, frequency_text, fid, descriptor_set_index, i);
-        VK_SET_DEBUG_OBJECT_NAME(context, VK_OBJECT_TYPE_DESCRIPTOR_SET, frequency_state->descriptor_sets[i], desc_set_object_name);
-        string_free(desc_set_object_name);
-    }
+        // Assign a debug name to the descriptor set.
+        for (u32 i = 0; i < image_count; ++i) {
+            u32 fid = (frequency == SHADER_UPDATE_FREQUENCY_PER_FRAME ? INVALID_ID : *out_frequency_id);
+            char* desc_set_object_name = string_format("desc_set_shader_%s_per_%s_id_%u_set_idx_%u_img_idx_%u", shader_name, frequency_text, fid, descriptor_set_index, i);
+            VK_SET_DEBUG_OBJECT_NAME(context, VK_OBJECT_TYPE_DESCRIPTOR_SET, frequency_state->descriptor_sets[i], desc_set_object_name);
+            string_free(desc_set_object_name);
+        }
 #endif
-
-    // Clean up temp array.
-    KFREE_TYPE_CARRAY(layouts, VkDescriptorSetLayout, image_count);
+        // Clean up temp array.
+        KFREE_TYPE_CARRAY(layouts, VkDescriptorSetLayout, image_count);
+    }
 
     // Report failures.
     if (!final_result) {

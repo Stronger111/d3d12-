@@ -405,7 +405,7 @@ static b8 create_default_textures(texture_system_state* state) {
         KTRACE("Creating default resource texture...");
         // Request new resource texture.
         u32 pixel_array_size = sizeof(u8) * pixel_count * channels;
-        state->default_kresource_texture = create_default_kresource_texture(state, kname_create(DEFAULT_TEXTURE_NAME), KRESOURCE_TEXTURE_TYPE_2D, tex_dimension, channels, 1, pixel_array_size, pixels);
+        state->default_kresource_texture = create_default_kresource_texture(state, kname_create(DEFAULT_TEXTURE_NAME), KRESOURCE_TEXTURE_TYPE_2D, tex_dimension,1, channels, pixel_array_size, pixels);
         if (!state->default_kresource_texture) {
             KERROR("Failed to request resources for default texture");
             return false;
@@ -421,7 +421,7 @@ static b8 create_default_textures(texture_system_state* state) {
 
         // Request new resource texture.
         u32 pixel_array_size = sizeof(u8) * pixel_count * channels;
-        state->default_kresource_base_colour_texture = create_default_kresource_texture(state, kname_create(DEFAULT_BASE_COLOUR_TEXTURE_NAME), KRESOURCE_TEXTURE_TYPE_2D, tex_dimension, channels, 1, pixel_array_size, diff_pixels);
+        state->default_kresource_base_colour_texture = create_default_kresource_texture(state, kname_create(DEFAULT_BASE_COLOUR_TEXTURE_NAME), KRESOURCE_TEXTURE_TYPE_2D, tex_dimension,1, channels, pixel_array_size, diff_pixels);
         if (!state->default_kresource_base_colour_texture) {
             KERROR("Failed to request resources for default base colour texture");
             return false;
@@ -437,7 +437,7 @@ static b8 create_default_textures(texture_system_state* state) {
 
         // Request new resource texture.
         u32 pixel_array_size = sizeof(u8) * pixel_count * channels;
-        state->default_kresource_specular_texture = create_default_kresource_texture(state, kname_create(DEFAULT_SPECULAR_TEXTURE_NAME), KRESOURCE_TEXTURE_TYPE_2D, tex_dimension, channels, 1, pixel_array_size, spec_pixels);
+        state->default_kresource_specular_texture = create_default_kresource_texture(state, kname_create(DEFAULT_SPECULAR_TEXTURE_NAME), KRESOURCE_TEXTURE_TYPE_2D, tex_dimension,1,channels, pixel_array_size, spec_pixels);
         if (!state->default_kresource_specular_texture) {
             KERROR("Failed to request resources for default specular texture");
             return false;
@@ -463,7 +463,7 @@ static b8 create_default_textures(texture_system_state* state) {
 
         // Request new resource texture.
         u32 pixel_array_size = sizeof(u8) * pixel_count * channels;
-        state->default_kresource_normal_texture = create_default_kresource_texture(state, kname_create(DEFAULT_NORMAL_TEXTURE_NAME), KRESOURCE_TEXTURE_TYPE_2D, tex_dimension, channels, 1, pixel_array_size, normal_pixels);
+        state->default_kresource_normal_texture = create_default_kresource_texture(state, kname_create(DEFAULT_NORMAL_TEXTURE_NAME), KRESOURCE_TEXTURE_TYPE_2D, tex_dimension,1, channels, pixel_array_size, normal_pixels);
         if (!state->default_kresource_normal_texture) {
             KERROR("Failed to request resources for default normal texture");
             return false;

@@ -405,7 +405,8 @@ KAPI char* string_trim(char* str) {
         while (*p) {
             p++;  // 找到最后一个非空字符
         }
-        while ((unsigned char)(*(--p)));
+        while (codepoint_is_space(*(--p)))
+        ;
         p[1] = '\0';
     }
 
