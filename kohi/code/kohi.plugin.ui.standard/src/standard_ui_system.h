@@ -20,7 +20,6 @@
 #include "input_types.h"
 #include "kresources/kresource_types.h"
 #include "renderer/renderer_types.h"
-#include "resources/resource_types.h"
 #include "systems/xform_system.h"
 
  // FIXME修复

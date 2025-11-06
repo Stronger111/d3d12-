@@ -448,8 +448,11 @@ b8 application_initialize(struct application* game_inst) {
     state->sui_state = state->sui_plugin_state->state;
 
     standard_ui_state* sui_state = state->sui_state;
-    // debug_console 保存到游戏状态中
-    debug_console_create(state->sui_state, &((testbed_game_state*)game_inst->state)->debug_console);
+#ifdef KOHI_DEBUG
+    if (!debug_console_create(state->sui_state, &((testbed_game_state*)game_inst->state)->debug_console)) {
+        KERROR("Failed to create debug console.");
+    }
+#endif
 
     application_register_events(game_inst);
 
@@ -666,7 +669,7 @@ b8 application_initialize(struct application* game_inst) {
         }
     }
 
-    if (!sui_label_control_create(sui_state, "testbed_UTF_test_sys_text", FONT_TYPE_SYSTEM,kname_create("Noto Sans CJK JP"), 31, "Press 'L' to load a \n\tscene!\n\n\tこんにちは 한", &state->test_sys_text)) {
+    if (!sui_label_control_create(sui_state, "testbed_UTF_test_sys_text", FONT_TYPE_SYSTEM, kname_create("Noto Sans CJK JP"), 31, "Press 'L' to load a \n\tscene!\n\n\tこんにちは 한", &state->test_sys_text)) {
         KERROR("Failed to load basic ui system text.");
         return false;
     }

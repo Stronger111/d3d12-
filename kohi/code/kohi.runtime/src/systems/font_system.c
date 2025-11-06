@@ -311,7 +311,7 @@ void font_system_shutdown(font_system_state* state) {
             bitmap_font_release(state, lookup);
         }
     }
-    KFREE_TYPE_CARRAY(state->bitmap_fonts, bitmap_font_lookup, state->config.max_bitmap_font_count);
+    // Allocated as part of the state block, so won't need freeing here.
     state->bitmap_fonts = 0;
 
     // Cleanup system fonts.
@@ -321,7 +321,7 @@ void font_system_shutdown(font_system_state* state) {
             system_font_release(state, lookup);
         }
     }
-    KFREE_TYPE_CARRAY(state->system_fonts, system_font_lookup, state->config.max_system_font_count);
+    // Allocated as part of the state block, so won't need freeing here.
     state->system_fonts = 0;
 }
 
@@ -381,7 +381,13 @@ b8 font_system_bitmap_font_load(font_system_state* state, kname resource_name, k
 
     KTRACE("Loading bitmap font '%s'...", kname_string_get(font_resource->face));
 
+    // Take base properties.
     lookup->data.face_name = font_resource->face;
+    lookup->data.baseline = font_resource->baseline;
+    lookup->data.line_height = font_resource->line_height;
+    lookup->data.size = font_resource->size;
+    lookup->data.atlas_size_x = font_resource->atlas_size_x;
+    lookup->data.atlas_size_y = font_resource->atlas_size_y;
 
     // Take a copy of the glyphs.
     lookup->data.glyph_count = font_resource->glyphs.base.length;
@@ -1252,7 +1258,8 @@ static b8 generate_font_geometry(const font_data* data, font_type type, const ch
             y += data->line_height;
             // No further processing needed.
             continue;
-        } else if (codepoint == '\t') {
+        }
+        else if (codepoint == '\t') {
             // Manually move over by the configured tab advance amount.
             x += data->tab_x_advance;
             // No further processing needed.
@@ -1294,10 +1301,10 @@ static b8 generate_font_geometry(const font_data* data, font_type type, const ch
                 tmaxy = 1.0f - tmaxy;
             }
 
-            vertex_2d p0 = (vertex_2d){vec2_create(minx, miny), vec2_create(tminx, tminy)};
-            vertex_2d p1 = (vertex_2d){vec2_create(maxx, miny), vec2_create(tmaxx, tminy)};
-            vertex_2d p2 = (vertex_2d){vec2_create(maxx, maxy), vec2_create(tmaxx, tmaxy)};
-            vertex_2d p3 = (vertex_2d){vec2_create(minx, maxy), vec2_create(tminx, tmaxy)};
+            vertex_2d p0 = (vertex_2d){ vec2_create(minx, miny), vec2_create(tminx, tminy) };
+            vertex_2d p1 = (vertex_2d){ vec2_create(maxx, miny), vec2_create(tmaxx, tminy) };
+            vertex_2d p2 = (vertex_2d){ vec2_create(maxx, maxy), vec2_create(tmaxx, tmaxy) };
+            vertex_2d p3 = (vertex_2d){ vec2_create(minx, maxy), vec2_create(tminx, tmaxy) };
 
             // Vertex data
             out_geometry->vertex_buffer_data[(q_idx * 4) + 0] = p0; // 0    3
