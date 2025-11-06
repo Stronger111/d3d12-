@@ -663,11 +663,9 @@ b8 platform_dynamic_library_load(const char* name, dynamic_library* out_library)
         return false;
     }
 
-    char filename[MAX_PATH];
-    kzero_memory(filename, sizeof(char) * MAX_PATH);
-    string_format_unsafe(filename, "%s.dll", name);
+    out_library->filename = string_format("%s.dll", name);
 
-    LPCWSTR wfilename = cstr_to_wcstr(filename);
+    LPCWSTR wfilename = cstr_to_wcstr(out_library->filename);
     HMODULE library = LoadLibraryW(wfilename);
     wcstr_free(wfilename);
     if (!library) {
