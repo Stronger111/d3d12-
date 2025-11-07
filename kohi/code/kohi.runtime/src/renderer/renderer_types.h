@@ -659,7 +659,7 @@ typedef struct renderer_backend_interface {
      * @param flag The flag to check.
      * @return True if set; otherwise false.
      */
-    b8 (*shader_flag_get)(const struct renderer_backend_interface* backend, khandle shader, shader_flag_bits flag);
+    b8 (*shader_flag_get)(const struct renderer_backend_interface* backend, khandle shader, shader_flags flag);
 
     /**
      * @brief Sets the given shader flag.
@@ -669,7 +669,7 @@ typedef struct renderer_backend_interface {
      * @param flag The flag to set.
      * @param enabled Indicates whether the flag should be set or unset.
      */
-    void (*shader_flag_set)(struct renderer_backend_interface* backend, khandle shader, shader_flag_bits flag, b8 enabled);
+    void (*shader_flag_set)(struct renderer_backend_interface* backend, khandle shader, shader_flags flag, b8 enabled);
 
     /**
      * @brief Binds the per-frame frequency.

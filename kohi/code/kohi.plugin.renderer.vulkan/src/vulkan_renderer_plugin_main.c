@@ -73,10 +73,10 @@ b8 kplugin_create(kruntime_plugin* out_plugin) {
     backend->shader_reload = vulkan_renderer_shader_reload;
     backend->shader_use = vulkan_renderer_shader_use;
     backend->shader_supports_wireframe = vulkan_renderer_shader_supports_wireframe;
-    
-    backend->shader_bind_per_frame=vulkan_renderer_shader_bind_per_frame;
-    backend->shader_bind_per_group=vulkan_renderer_shader_bind_per_group;
-    backend->shader_bind_per_draw=vulkan_renderer_shader_bind_per_draw;
+
+    backend->shader_bind_per_frame = vulkan_renderer_shader_bind_per_frame;
+    backend->shader_bind_per_group = vulkan_renderer_shader_bind_per_group;
+    backend->shader_bind_per_draw = vulkan_renderer_shader_bind_per_draw;
 
     backend->shader_apply_per_frame = vulkan_renderer_shader_apply_per_frame;
     backend->shader_apply_per_group = vulkan_renderer_shader_apply_per_group;
@@ -86,6 +86,9 @@ b8 kplugin_create(kruntime_plugin* out_plugin) {
     backend->shader_per_draw_resources_acquire = vulkan_renderer_shader_per_draw_resources_acquire;
     backend->shader_per_draw_resources_release = vulkan_renderer_shader_per_draw_resources_release;
     backend->shader_uniform_set = vulkan_renderer_shader_uniform_set;
+
+    backend->shader_flag_get = vulkan_renderer_shader_flag_get;
+    backend->shader_flag_set = vulkan_renderer_shader_flag_set;
 
     backend->is_multithreaded = vulkan_renderer_is_multithreaded;
     backend->flag_enabled_get = vulkan_renderer_flag_enabled_get;

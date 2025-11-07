@@ -49,7 +49,7 @@ b8 skybox_load(skybox* sb) {
 
     sb->cubemap = texture_system_request_cube(sb->cubemap_name, true, false, 0, 0);
 
-    sb->skybox_shader_group_generation = INVALID_ID_U16;
+    sb->skybox_shader_group_data_generation = INVALID_ID_U16;
 
     khandle skybox_shader = shader_system_get(kname_create(SHADER_NAME_RUNTIME_SKYBOX),kname_create(PACKAGE_NAME_RUNTIME));  // TODO: allow configurable shader.
     if (!renderer_shader_per_group_resources_acquire(engine_systems_get()->renderer_system, skybox_shader, &sb->group_id)) {
@@ -73,7 +73,7 @@ b8 skybox_unload(skybox* sb) {
         return false;
 }
 
-    sb->skybox_shader_group_generation = INVALID_ID_U16;
+    sb->skybox_shader_group_data_generation = INVALID_ID_U16;
 
     renderer_geometry_destroy(&sb->geometry);
     if (sb->cubemap_name) {
