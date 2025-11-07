@@ -2661,6 +2661,11 @@ b8 vulkan_renderer_shader_apply_per_group(renderer_backend_interface* backend, k
     vulkan_shader* internal_shader = &context->shaders[shader.handle_index];
     vulkan_shader_frequency_info* frequency_info = &internal_shader->per_group_info;
 
+    if (frequency_info->bound_id == INVALID_ID) {
+        KERROR("Cannot apply per-group uniforms without having first bound a group.");
+        return false;
+    }
+
     // Bleat if there are no groups for this kshader.
     if (frequency_info->uniform_count < 1 && frequency_info->uniform_sampler_count < 1) {
         KERROR("This kshader does not use groups.");
@@ -2971,7 +2976,7 @@ b8 vulkan_renderer_shader_uniform_set(renderer_backend_interface* backend, khand
 
     if (uniform_type_is_texture(uniform->type)) {
         kresource_texture* tex_value = (kresource_texture*)value;
-        return texture_state_try_set(frequency_state->texture_states, frequency_info->uniform_texture_count, uniform->location, array_index, tex_value->renderer_texture_handle);
+        return texture_state_try_set(frequency_state->texture_states, frequency_info->uniform_texture_count, uniform->tex_samp_index, array_index, tex_value->renderer_texture_handle);
     }
     else if (uniform_type_is_sampler(uniform->type)) {
         // TODO: Should be able to set a custom sampler by khandle.
@@ -4533,7 +4538,7 @@ static b8 vulkan_descriptorset_update_and_bind(
                     resource_handle = binding_texture_state->texture_handles[d];
                     descriptor_state = &binding_texture_state->descriptor_states[d];
 
-                    if (khandle_is_valid(resource_handle)) {
+                    if (khandle_is_invalid(resource_handle)) {
                         KERROR("Invalid texture handle found while trying to update/bind descriptor set.");
                         return false;
                     }
@@ -4562,7 +4567,7 @@ static b8 vulkan_descriptorset_update_and_bind(
                     vulkan_uniform_sampler_state* binding_sampler_state = &frequency_state->sampler_states[sampler_binding_index];
                     resource_handle = binding_sampler_state->sampler_handles[d];
                     descriptor_state = &binding_sampler_state->descriptor_states[d];
-                    if (khandle_is_valid(resource_handle)) {
+                    if (khandle_is_invalid(resource_handle)) {
                         KERROR("Invalid sampler handle found while trying to update/bind descriptor set.");
                         return false;
                     }
