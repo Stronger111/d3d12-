@@ -1,7 +1,6 @@
 #include "kasset_binary_static_mesh_serializer.h"
 
 #include "assets/kasset_types.h"
-#include "containers/darray.h"
 #include "logger.h"
 #include "memory/kmemory.h"
 #include "strings/kname.h"
@@ -51,55 +50,52 @@ void* kasset_binary_static_mesh_serialize(const kasset* asset, u64* out_size) {
     header.center = typed_asset->center;
 
     //Calculate the total required size first (for everything after the header).
-    for (u32 i = 0;i < typed_asset->geometry_count;++i) {
-        kasset_static_mesh_geometry* g = &typed_asset->geometries[i];
+    {
+        for (u32 i = 0;i < typed_asset->geometry_count;++i) {
+            kasset_static_mesh_geometry* g = &typed_asset->geometries[i];
 
-        //Keep a reference to the point in memory where size will be written.
-        header.base.data_block_size += sizeof(u64);
+            //Center and extents
+            header.base.data_block_size += sizeof(g->center);
+            header.base.data_block_size += sizeof(g->extents);
 
-        //Center and extents
-        header.base.data_block_size += sizeof(g->center);
-        header.base.data_block_size += sizeof(g->extents);
-
-        //Name + null terminator
-        if (g->name) {
-            const char* gname = kname_string_get(g->name);
-            u64 len = string_length(gname + 1);
-            header.base.data_block_size += len;
-        }
-
-        if (g->material_asset_name) {
-            const char* gmat_asset_name = kname_string_get(g->material_asset_name);
-            u64 len = string_length(gmat_asset_name) + 1;
-            header.base.data_block_size += len;
-        }
-
-        //Indices
-        if (g->index_count && g->indices) {
-            //index count.
+            //Name length.
             header.base.data_block_size += sizeof(u32);
 
-            //indices.
-            u64 index_array_size = sizeof(u32) * g->index_count;
-            header.base.data_block_size += index_array_size;
-        }
-        else {
-            //Only write a zero size. Serialization will see this and skip it in this case.
-            header.base.data_block_size += sizeof(u32);
-        }
+            //Name + null terminator
+            if (g->name) {
+                const char* gname = kname_string_get(g->name);
+                u64 len = string_length(gname + 1);
+                header.base.data_block_size += len;
+            }
 
-        //Vertices
-        if (g->vertex_count && g->indices) {
+            //Material asset name length.
+            header.base.data_block_size += sizeof(u32);
+
+            //Material asset name string (no null terminator)
+            if (g->material_asset_name) {
+                const char* gmat_asset_name = kname_string_get(g->material_asset_name);
+                u64 len = string_length(gmat_asset_name) + 1;
+                header.base.data_block_size += len;
+            }
+
+            //Index count.
+            header.base.data_block_size += sizeof(u32);
+
+            //Indices
+            if (g->index_count && g->indices) {
+                //indices.
+                u64 index_array_size = sizeof(u32) * g->index_count;
+                header.base.data_block_size += index_array_size;
+            }
+
             //Write vertex count.
             header.base.data_block_size += sizeof(u32);
-
-            //Wrtite vertices.
-            u64 vertex_array_size = sizeof(vertex_3d) * g->vertex_count;
-            header.base.data_block_size += vertex_array_size;
-        }
-        else {
-            //Only write a zero size. Serialization will see this and skip it in this case.
-            header.base.data_block_size += sizeof(u32);
+            //Vertices
+            if (g->vertex_count && g->indices) {
+                //Wrtite vertices.
+                u64 vertex_array_size = sizeof(vertex_3d) * g->vertex_count;
+                header.base.data_block_size += vertex_array_size;
+            }
         }
     }
 
@@ -107,8 +103,8 @@ void* kasset_binary_static_mesh_serialize(const kasset* asset, u64* out_size) {
     *out_size = sizeof(binary_static_mesh_header) + header.base.data_block_size;
 
     //Allocate said block.
-    void* block = kallocate(*out_size, MEMORY_TAG_SERIALIZER);
-    //Write the header.
+    u8* block = kallocate(*out_size, MEMORY_TAG_SERIALIZER);
+    //Write the header block.
     kcopy_memory(block, &header, sizeof(binary_static_mesh_header));
 
     // For this asset, it's not quite a simple manner of just using the byte block.
@@ -117,14 +113,8 @@ void* kasset_binary_static_mesh_serialize(const kasset* asset, u64* out_size) {
 
     // Iterate the geometries, writing first the size of the block it takes, followed
    // by the actual block of data itself.
-    for (u32 i = 0;i < typed_asset->geometry_count;++i) {
+    for (u32 i = 0;i < header.geometry_count;++i) {
         kasset_static_mesh_geometry* g = &typed_asset->geometries[i];
-
-        //Keep a reference to the point in memory where size will be written.
-        u64* size = block + offset;
-        offset += sizeof(u64);
-
-        u64 geometry_start = offset;
 
         //copy center and extents.
         kcopy_memory(block + offset, &g->center, sizeof(g->center));
@@ -132,73 +122,84 @@ void* kasset_binary_static_mesh_serialize(const kasset* asset, u64* out_size) {
         kcopy_memory(block + offset, &g->extents, sizeof(g->extents));
         offset += sizeof(g->extents);
 
-        // Name + null terminator.
-        if (g->name) {
-            const char* str = kname_string_get(g->name);
-            u64 len = string_length(str + 1);
-            kcopy_memory(block + offset, str, len);
-            offset += len;
-        }
+        // Name 
+        {
+            u32 name_len = 0;
+            const char* str = 0;
 
-        if (g->material_asset_name) {
-            const char* str = kname_string_get(g->material_asset_name);
-            u64 len = string_length(str) + 1;
-            kcopy_memory(block + offset, str, len);
-            offset += len;
-        }
+            if (g->name) {
+                str = kname_string_get(g->name);
+                name_len = string_length(str);
+            }
 
-        // Indices
-        if (g->index_count && g->indices) {
-            // Write index count.
-            kcopy_memory(block + offset, &g->index_count, sizeof(u32));
+            //Store name length
+            kcopy_memory(block + offset, &name_len, sizeof(u32));
             offset += sizeof(u32);
 
+            //Store the name string if one exists.
+            if (name_len) {
+                kcopy_memory(block + offset, str, name_len);
+                offset += name_len;
+            }
+        }
+
+        //Asset material name.
+        {
+            u32 mat_asset_name_len = 0;
+            const char* str = 0;
+            if (g->material_asset_name) {
+                str = kname_string_get(g->material_asset_name);
+                mat_asset_name_len = string_length(str);
+            }
+
+            // Store material asset name length.
+            kcopy_memory(block + offset, &mat_asset_name_len, sizeof(u32));
+            offset += sizeof(u32);
+
+            // Store the material_asset_name string if one exists.
+            if (mat_asset_name_len) {
+                kcopy_memory(block + offset, str, mat_asset_name_len);
+                offset += mat_asset_name_len;
+            }
+        }
+
+        // Write index count.
+        kcopy_memory(block + offset, &g->index_count, sizeof(u32));
+        offset += sizeof(u32);
+        // Indices
+        if (g->index_count && g->indices) {
             // Write indices.
             u64 index_array_size = sizeof(u32) * g->index_count;
             kcopy_memory(block + offset, g->indices, index_array_size);
             offset += index_array_size;
         }
-        else {
-            // Only write a zero size. Serialization will see this and skip it in this case.
-            u32 zero_size = 0;
-            kcopy_memory(block + offset, &zero_size, sizeof(u32));
-            offset += sizeof(u32);
-        }
 
+        // Write vertex count.
+        kcopy_memory(block + offset, &g->vertex_count, sizeof(u32));
+        offset += sizeof(u32);
         // Vertices
         if (g->vertex_count && g->indices) {
-            // Write vertex count.
-            kcopy_memory(block + offset, &g->vertex_count, sizeof(u32));
-            offset += sizeof(u32);
-
             // Write vertices.
             u64 vertex_array_size = sizeof(vertex_3d) * g->vertex_count;
             kcopy_memory(block + offset, g->vertices, vertex_array_size);
             offset += vertex_array_size;
         }
-        else {
-            // Only write a zero size. Serialization will see this and skip it in this case.
-            u32 zero_size = 0;
-            kcopy_memory(block + offset, &zero_size, sizeof(u32));
-            offset += sizeof(u32);
-        }
-
-        // Write the diff in pointer position (i.e. the size) in the earlier saved pointer.
-        u64 geometry_size = offset - geometry_start;
-        *size = geometry_size;
     }
 
     //Return the serialized block of memory
     return block;
 }
 
-b8 kasset_binary_static_mesh_deserialize(u64 size, const void* block, kasset* out_asset) {
-    if (!size || !block || !out_asset) {
+b8 kasset_binary_static_mesh_deserialize(u64 size, const void* in_block, kasset* out_asset) {
+    if (!size || !in_block || !out_asset) {
         KERROR("Cannot deserialize without a nonzero size, block of memory and an static_mesh to write to.");
         return false;
     }
 
-    const binary_static_mesh_header* header = block;
+    const u8* block = in_block;
+
+    // Extract header info by casting the first bits of the block to the header.
+    const binary_static_mesh_header* header = (const binary_static_mesh_header*)block;
     if (header->base.magic != ASSET_MAGIC) {
         KERROR("Memory is not a Kohi binary asset.");
         return false;
@@ -225,68 +226,78 @@ b8 kasset_binary_static_mesh_deserialize(u64 size, const void* block, kasset* ou
         // Get geometry data.
         for (u32 i = 0; i < typed_asset->geometry_count; ++i) {
             kasset_static_mesh_geometry* g = &typed_asset->geometries[i];
-
-            // Get the size of the next block.
-            u64 geometry_block_size = 0;
-            kcopy_memory(&geometry_block_size, block + offset, sizeof(u64));
-            offset += sizeof(u64);
-
             // Copy center and extents.
             kcopy_memory(&g->center, block + offset, sizeof(g->center));
             offset += sizeof(g->center);
             kcopy_memory(&g->extents, block + offset, sizeof(g->extents));
             offset += sizeof(g->extents);
 
-            // Name + null terminator.
-            if (g->name) {
-                // Extracting this requires moving ahead until a \0 is found (the null terminator).
-                u64 len = 0;
-                const char* cblock = block + offset;
-                for (len = 0; cblock[len]; ++len)
-                    ;
+            // Name
+            {
+                // Name length first.
+                u32 name_len = 0;
+                kcopy_memory(&name_len, block + offset, sizeof(u32));
+                offset += sizeof(u32);
 
-                // Now copy all the string at once.
-                kcopy_memory((void*)g->name, block + offset, sizeof(char) * len);
-                // +1 more to account for null terminator.
-                offset += len + 1;
+                // Name if it exists.
+                if (name_len) {
+                    // Allocate 1 extra byte for a null-terminator here.
+                    char* name_buffer = kallocate(sizeof(char) * (name_len + 1), MEMORY_TAG_STRING);
+                    kcopy_memory(name_buffer, block + offset, sizeof(char) * name_len);
+                    name_buffer[name_len] = 0;
+                    offset += name_len;
+                    g->name = kname_create(name_buffer);
+                    string_free(name_buffer);
+                }
             }
 
-            // Asset name + null terminator.
-            if (g->material_asset_name) {
-                // Extracting this requires moving ahead until a \0 is found (the null terminator).
-                u64 len = 0;
-                const char* cblock = block + offset;
-                for (len = 0; cblock[len]; ++len)
-                    ;
+            // Material asset name
+            {
+                // length
+                u32 mat_asset_name_len = 0;
+                kcopy_memory(&mat_asset_name_len, block + offset, sizeof(u32));
+                offset += sizeof(u32);
 
-                // Now copy all the string at once.
-                kcopy_memory((void*)g->material_asset_name, block + offset, sizeof(char) * len);
-                // +1 more to account for null terminator.
-                offset += len + 1;
+                // Asset if it exists.
+                if (mat_asset_name_len) {
+                    // Allocate 1 extra byte for a null-terminator here.
+                    char* mat_name_buffer = kallocate(sizeof(char) * (mat_asset_name_len + 1), MEMORY_TAG_STRING);
+                    kcopy_memory(mat_name_buffer, block + offset, sizeof(char) * mat_asset_name_len);
+                    mat_name_buffer[mat_asset_name_len] = 0;
+                    offset += mat_asset_name_len;
+                    g->material_asset_name = kname_create(mat_name_buffer);
+                    string_free(mat_name_buffer);
+                }
             }
 
-            // Indices - read count first.
-            kcopy_memory(&g->index_count, block + offset, sizeof(u32));
-            offset += sizeof(u32);
+            // Indices
+            {
+                // read count first.
+                kcopy_memory(&g->index_count, block + offset, sizeof(u32));
+                offset += sizeof(u32);
 
-            // Read indices if there are any.
-            if (g->index_count) {
-                u64 index_array_size = sizeof(u32) * g->index_count;
-                g->indices = kallocate(index_array_size, MEMORY_TAG_ARRAY);
-                kcopy_memory(g->indices, block + offset, index_array_size);
-                offset += index_array_size;
+                // Read indices if there are any.
+                if (g->index_count) {
+                    u64 index_array_size = sizeof(u32) * g->index_count;
+                    g->indices = kallocate(index_array_size, MEMORY_TAG_ARRAY);
+                    kcopy_memory(g->indices, block + offset, index_array_size);
+                    offset += index_array_size;
+                }
             }
 
-            // Vertices - read count first.
-            kcopy_memory(&g->vertex_count, block + offset, sizeof(u32));
-            offset += sizeof(u32);
+            // Vertices
+            {
+                // read count first.
+                kcopy_memory(&g->vertex_count, block + offset, sizeof(u32));
+                offset += sizeof(u32);
 
-            // Read vertices if there are any.
-            if (g->vertex_count) {
-                u64 vertex_array_size = sizeof(vertex_3d) * g->vertex_count;
-                g->vertices = kallocate(vertex_array_size, MEMORY_TAG_ARRAY);
-                kcopy_memory(g->vertices, block + offset, vertex_array_size);
-                offset += vertex_array_size;
+                // Read vertices if there are any.
+                if (g->vertex_count) {
+                    u64 vertex_array_size = sizeof(vertex_3d) * g->vertex_count;
+                    g->vertices = kallocate(vertex_array_size, MEMORY_TAG_ARRAY);
+                    kcopy_memory(g->vertices, block + offset, vertex_array_size);
+                    offset += vertex_array_size;
+                }
             }
         }
     } // end geometries.

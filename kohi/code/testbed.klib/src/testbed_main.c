@@ -610,7 +610,8 @@ b8 application_initialize(struct application* game_inst) {
     }
 
     // Move debug text to new bottom of screen.
-    sui_control_position_set(sui_state, &state->test_text, vec3_create(20, state->height - 75, 0));
+    sui_control_position_set(sui_state, &state->test_text_black, vec3_create(20, state->height - 75, 0));
+    sui_control_position_set(sui_state, &state->test_text, vec3_create(21, state->height - 74, 0));
 
     // Standard ui stuff.
     if (!sui_panel_control_create(sui_state, "test_panel", (vec2) { 300.0f, 300.0f }, (vec4) { 0.0f, 0.0f, 0.0f, 0.5f }, & state->test_panel)) {
@@ -1371,6 +1372,7 @@ void application_on_window_resize(struct application* game_inst, const struct kw
     // Move debug text to new bottom of screen.
     // FIXME: This should be handled by the standard ui system resize event handler (that doesn't exist yet).
     sui_control_position_set(state->sui_state, &state->test_text, vec3_create(20, state->height - 95, 0));
+    sui_control_position_set(state->sui_state, &state->test_text_black, vec3_create(21, state->height - 94, 0));
 
     //  TODO: end temp
 }
