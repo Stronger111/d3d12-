@@ -213,9 +213,7 @@ b8 sui_label_control_render(standard_ui_state* state, sui_control* self, struct 
         renderable.render_data.diffuse_colour = typed_data->colour;
 
         renderable.group_id = &typed_data->group_id;
-        renderable.group_generation = &typed_data->group_generation;
         renderable.per_draw_id = &typed_data->draw_id;
-        renderable.per_draw_generation = &typed_data->draw_generation;
 
         darray_push(render_data->renderables, renderable);
     }
