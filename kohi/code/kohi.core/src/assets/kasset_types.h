@@ -236,48 +236,6 @@ typedef struct kasset_static_mesh {
 
 #define KASSET_TYPE_NAME_MATERIAL "Material"
 
-// typedef enum kasset_material_type {
-//     KASSET_MATERIAL_TYPE_UNKNOWN = 0,
-//     KASSET_MATERIAL_TYPE_STANDARD,
-//     KASSET_MATERIAL_TYPE_WATER,
-//     KASSET_MATERIAL_TYPE_BLENDED,
-//     KASSET_MATERIAL_TYPE_COUNT,
-//     KASSET_MATERIAL_TYPE_CUSTOM = 99
-// }kasset_material_type;
-
-// typedef enum kasset_material_model {
-//     KASSET_MATERIAL_MODEL_UNLIT = 0,
-//     KASSET_MATERIAL_MODEL_PBR,
-//     KASSET_MATERIAL_MODEL_PHONG,
-//     KASSET_MATERIAL_MODEL_COUNT,
-//     KASSET_MATERIAL_MODEL_CUSTOM = 99
-// }kasset_material_model;
-
-// typedef enum kasset_material_texture_map_channel {
-//     KASSET_MATERIAL_TEXTURE_MAP_CHANNEL_R = 0,
-//     KASSET_MATERIAL_TEXTURE_MAP_CHANNEL_G = 1,
-//     KASSET_MATERIAL_TEXTURE_MAP_CHANNEL_B = 2,
-//     KASSET_MATERIAL_TEXTURE_MAP_CHANNEL_A = 3
-// } kasset_material_texture_map_channel;
-
-// typedef struct kasset_material_texture {
-//     kname resource_name;
-//     kname package_name;
-//     kname sampler_name;
-
-//     kasset_material_texture_map_channel channel;
-// }kasset_material_texture;
-
-// typedef struct kasset_material_sampler {
-//     // Material map name..
-//     kname name;
-//     texture_filter filter_min;
-//     texture_filter filter_mag;
-//     texture_repeat repeat_u;
-//     texture_repeat repeat_v;
-//     texture_repeat repeat_w;
-// }kasset_material_sampler;
-
 typedef struct kasset_material {
     kasset base;
     kmaterial_type type;
@@ -295,6 +253,9 @@ typedef struct kasset_material {
 
     vec4 base_colour;
     kmaterial_texture_input base_colour_map;
+
+    vec4 specular_colour;
+    kmaterial_texture_input specular_colour_map;
 
     b8 normal_enabled;
     vec3 normal;
