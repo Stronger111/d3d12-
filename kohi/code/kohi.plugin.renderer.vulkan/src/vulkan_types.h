@@ -165,11 +165,6 @@ typedef struct vulkan_renderpass {
 typedef struct vulkan_swapchain {
     /** @brief The swapchain image format. */
     VkSurfaceFormatKHR image_format;
-    /**
-     * @brief The maximum number of "images in flight" (images simultaneously being rendered to).
-     * Typically one less than the total number of images available.
-     */
-    u8 max_frames_in_flight;
 
     /** @brief Indicates various flags used for swapchain instantiation. */
     renderer_config_flags flags;
@@ -199,6 +194,10 @@ typedef enum vulkan_command_buffer_state {
 
 typedef struct vulkan_command_buffer {
     VkCommandBuffer handle;
+#ifdef KOHI_DEBUG
+    //Name, kept for debugging purposes.
+    const char* name;
+#endif
 
     // Command buffer state.
     vulkan_command_buffer_state state;
@@ -212,8 +211,8 @@ typedef struct vulkan_command_buffer {
     struct vulkan_command_buffer* secondary_buffers;
     /** @brief The currently selected secondary buffer index. */
     u16 secondary_buffer_index;
-    /** @brief Indicates if the command buffer selected secondary buffer index. */
-    b8 in_render;
+    /** @brief Indicates if a secondary command buffer is currently being recorded to. */
+    b8 in_secondary;
     /** A pointer to the parent (primary) command buffer, if there is one. Only applies to secondary buffers. */
     struct vulkan_command_buffer* parent;
 } vulkan_command_buffer;
@@ -536,6 +535,8 @@ typedef struct kwindow_renderer_backend_state {
     u32 image_index;
     /** @brief The current frame index ( % by max_frames_in_flight). */
     u32 current_frame;
+    /** @brief Indicates the max number of frames in flight. 1 for double-buffering, 2 for triple-buffering. */
+    u8 max_frames_in_flight;
 
     /** @brief Indicates if the swapchain is currently being recreated. */
     b8 recreating_swapchain;
@@ -647,6 +648,8 @@ typedef struct vulkan_context {
 
     /** @brief Indicates if multi-threading is supported by this device. */
     b8 multithreading_enabled;
+    /** @brief Indicates if triple-buffering is enabled (requested) */
+    b8 triple_buffering_enabled;
 
     /** @brief Collection of samplers. darray */
     vulkan_sampler_handle_data* samplers;

@@ -155,7 +155,8 @@
         "kohi.plugin.ui.standard_version.h": "c",
         "geometry.h": "c",
         "kasset_bitmap_font_serializer.h": "c",
-        "kresource_handler_bitmap_font.h": "c"
+        "kresource_handler_bitmap_font.h": "c",
+        "vulkan_utils.h": "c"
     },
     "C_Cpp.default.compilerPath": "D:/SoftWare/LLVM/bin/clang.exe",
 }

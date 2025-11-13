@@ -78,7 +78,7 @@ layout(set = 0, binding = 0) uniform per_frame_ubo {
     uint use_pcf;
     float delta_time;
     float game_time;
-    vec3 padding;
+    vec2 padding;
 } material_frame_ubo;
 layout(set = 0, binding = 1) uniform texture2DArray shadow_texture;
 layout(set = 0, binding = 2) uniform textureCube irradiance_textures[MATERIAL_MAX_IRRADIANCE_CUBEMAP_COUNT];
