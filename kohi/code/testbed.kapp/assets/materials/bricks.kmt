@@ -3,19 +3,19 @@ type = "standard"
 model = "pbr"
 has_transparency = false
 double_sided = false
-recieves_shadow = false
-casts_shadow = false
+recieves_shadow = true
+casts_shadow = true
 use_vertex_colour_as_base_colour = false
 inputs = {
     base_colour = {
         map = {
-            resource_name = "spnza_bricks_a_diff"
+            resource_name = "sponza_bricks_a_diff"
             package_name = "Testbed"
         }
     }
     normal = {
         map = {
-            resource_name = "spnza_bricks_a_ddn"
+            resource_name = "sponza_bricks_a_ddn"
             package_name = "Testbed"
         }
         enabled = true
@@ -29,9 +29,6 @@ inputs = {
     ao = {
         value = 1.000000
         enabled = false
-    }
-    mra = {
-        value = "0.000000 0.000000 0.000000"
     }
     emissive = {
         value = "0.000000 0.000000 0.000000 1.000000"
