@@ -230,7 +230,7 @@ b8 kasset_shader_deserialize(const char* file_text, kasset* out_asset) {
         kson_object_property_value_get_int(&tree.root, "max_groups", &max_groups);
         typed_asset->max_groups = (u16)max_groups;
 
-         // max_draw_ids
+        // max_draw_ids
         i64 max_draw_ids = 0;
         kson_object_property_value_get_int(&tree.root, "max_draw_ids", &max_draw_ids);
         typed_asset->max_draw_ids = (u16)max_draw_ids;
@@ -251,7 +251,7 @@ b8 kasset_shader_deserialize(const char* file_text, kasset* out_asset) {
         typed_asset->stencil_write = false;
         kson_object_property_value_get_bool(&tree.root, "stencil_write", &typed_asset->stencil_write);
 
-         // Supports wireframe
+        // Supports wireframe
         typed_asset->supports_wireframe = false;
         kson_object_property_value_get_bool(&tree.root, "supports_wireframe", &typed_asset->supports_wireframe);
 
@@ -267,19 +267,22 @@ b8 kasset_shader_deserialize(const char* file_text, kasset* out_asset) {
         const char* cull_mode = 0;
         if (kson_object_property_value_get_string(&tree.root, "cull_mode", &cull_mode) && cull_mode) {
             typed_asset->cull_mode = string_to_face_cull_mode(cull_mode);
-        } else {
+        }
+        else {
             // Defaults to backface culling when not provided.
             typed_asset->cull_mode = FACE_CULL_MODE_BACK;
         }
 
         // Topology type flags
+        //Defaults to triangle list.
+        typed_asset->topology_types = PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE_LIST_BIT;
+
         kson_array topology_types_array;
         if (kson_object_property_value_get_array(&tree.root, "topology_types", &topology_types_array)) {
             u32 topology_type_count = 0;
-            if (!kson_array_element_count_get(&topology_types_array, &topology_type_count) || topology_type_count == 0) {
-                // If nothing exists, default to triangle list
-                typed_asset->topology_types = PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE_LIST_BIT;
-            } else {
+            if (kson_array_element_count_get(&topology_types_array, &topology_type_count) || topology_type_count == 0) {
+                // If specified, clear it and process each one.
+                typed_asset->topology_types = PRIMITIVE_TOPOLOGY_TYPE_NONE_BIT;
                 for (u32 i = 0; i < topology_type_count; ++i) {
                     const char* topology_type_str = 0;
                     if (!kson_array_element_value_get_string(&topology_types_array, i, &topology_type_str)) {
@@ -295,7 +298,8 @@ b8 kasset_shader_deserialize(const char* file_text, kasset* out_asset) {
                     typed_asset->topology_types = FLAG_SET(typed_asset->topology_types, topology_type, true);
                 }
             }
-        } else {
+        }
+        else {
             // If nothing exists, default to triangle list
             typed_asset->topology_types = PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE_LIST_BIT;
         }

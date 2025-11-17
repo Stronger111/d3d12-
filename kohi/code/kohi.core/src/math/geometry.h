@@ -21,12 +21,14 @@ typedef enum kgeometry_type {
     KGEOMETRY_TYPE_2D_DYNAMIC = 0x02,
     /** @brief Used for 3d geometry that doesn't change. */
     KGEOMETRY_TYPE_3D_STATIC = 0x03,
+    /** @brief Used for 3d geometry that doesn't change, and only contains colour data. */
+    KGEOMETRY_TYPE_3D_STATIC_COLOUR_ONLY = 0x04,
     /** @brief Used for 3d geometry that changes often. */
-    KGEOMETRY_TYPE_3D_DYNAMIC = 0x04,
+    KGEOMETRY_TYPE_3D_DYNAMIC = 0x05,
     /** @brief Used for skinned 3d geometry that changes potentially every frame, and includes bone/weight data. */
-    KGEOMETRY_TYPE_3D_SKINNED = 0x05,
+    KGEOMETRY_TYPE_3D_SKINNED = 0x06,
     /** @brief Used for heightmap terrain-specific geometry that rarely (if ever) changes - includes material index/weight data. */
-    KGEOMETRY_TYPE_3D_HEIGHTMAP_TERRAIN = 0x06,
+    KGEOMETRY_TYPE_3D_HEIGHTMAP_TERRAIN = 0x07,
     /** @brief User-defined geometry type. Vertex/index size will only be looked at for this type. */
     KGEOMETRY_TYPE_CUSTOM = 0xFF
 }kgeometry_type;
@@ -140,7 +142,7 @@ KAPI void generate_uvs_from_image_coords(u32 img_width, u32 img_height, u32 px_x
  * @param name The name of the geometry.
  * @returns The newly-created geometry.
  */
-KAPI kgeometry geometry_generate_quad(f32 width, f32 height, f32 tx_min, f32 tx_max, f32 ty_min, f32 ty_max,kname name);
+KAPI kgeometry geometry_generate_quad(f32 width, f32 height, f32 tx_min, f32 tx_max, f32 ty_min, f32 ty_max, kname name);
 /**
  * @brief Generates a two-dimensional line of geometry. Note that the memory for the
  * vertex array is dynamically allocated, so this should be cleaned up with
