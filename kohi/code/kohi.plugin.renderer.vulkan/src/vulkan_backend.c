@@ -1128,7 +1128,7 @@ void vulkan_renderer_end_rendering(struct renderer_backend_interface* backend, s
     vulkan_context* context = (vulkan_context*)backend->internal_context;
     // Since ending a rendering, will be in a secondary buffer.
     vulkan_command_buffer* secondary = get_current_command_buffer(context);
-    
+
     //End rendering
     if (context->device.support_flags & VULKAN_DEVICE_SUPPORT_FLAG_NATIVE_DYNAMIC_STATE_BIT) {
         vkCmdEndRendering(secondary->handle);
@@ -1410,7 +1410,7 @@ static b8 recreate_swapchain(renderer_backend_interface* backend, kwindow* windo
 
     // Mark as recreating if the dimensions are valid
     window_backend->recreating_swapchain = true;
-    
+
     // FIXME: remove this? // nocheckin
     //Use the old swapchain count to free swapchain-image-count related items.
     //u32 old_swapchain_image_count = window_backend->swapchain.image_count;
@@ -1792,6 +1792,31 @@ b8 vulkan_renderer_texture_read_pixel(renderer_backend_interface* backend, khand
     return  texture_read_offset_range(backend, texture_data, 0, 0, x, y, 1, 1, out_rgba);
 }
 
+static void calculate_sorted_indices(vulkan_shader_frequency_info* frequency_info) {
+    //Sort sampler/texture uniform indices and store them in a list
+    u32 sampler_and_image_count = frequency_info->uniform_sampler_count + frequency_info->uniform_texture_count;
+    if (!sampler_and_image_count) {
+        return;
+    }
+
+    frequency_info->sorted_indices = KALLOC_TYPE_CARRAY(u32, sampler_and_image_count);
+
+    //Add all indices, unsorted.
+    u32 count = 0;
+    for (u32 i = 0; i < frequency_info->uniform_sampler_count; ++i) {
+        frequency_info->sorted_indices[count] = frequency_info->sampler_indices[i];
+        count++;
+    }
+    for (u32 i = 0; i < frequency_info->uniform_texture_count; ++i) {
+        frequency_info->sorted_indices[count] = frequency_info->texture_indices[i];
+        count++;
+    }
+    KASSERT_DEBUG(count == sampler_and_image_count);
+
+    //Sort them
+    kquick_sort(sizeof(u32), frequency_info->sorted_indices, 0, count - 1, kquicksort_compare_u32);
+}
+
 b8 vulkan_renderer_shader_create(renderer_backend_interface* backend, khandle shader, const kresource_shader* shader_resource) {
     // Verify stage support. before anything else.
     for (u8 i = 0; i < shader_resource->stage_count; ++i) {
@@ -1890,6 +1915,11 @@ b8 vulkan_renderer_shader_create(renderer_backend_interface* backend, khandle sh
 
         info->ubo_size += uniform_size;
     }
+
+    calculate_sorted_indices(&internal_shader->per_frame_info);
+    calculate_sorted_indices(&internal_shader->per_group_info);
+    calculate_sorted_indices(&internal_shader->per_draw_info);
+
     // NOTE: The Vulkan spec only guarantees 128 bytes of data. Therefore we align the "UBO"
    // a.k.a. push constant stride to that, and only ever use one.
     internal_shader->per_draw_info.ubo_stride = get_aligned(internal_shader->per_draw_info.ubo_size, 128);
@@ -4359,28 +4389,10 @@ static void setup_frequency_descriptors(b8 do_ubo, vulkan_shader_frequency_info*
     // Need to iterate these in uniform order, which can mix the order between samplers and images if configured that way.
     // This means a combined list of both types is required, which should then be iterated (checking the type along the way).
     if (sampler_and_image_count) {
-        u32* sorted_list = KALLOC_TYPE_CARRAY(u32, sampler_and_image_count);
-
-        //Add all indices, unsorted.
-        u32 count = 0;
-        for (u32 i = 0; i < frequency_info->uniform_sampler_count; ++i) {
-            sorted_list[count] = frequency_info->sampler_indices[i];
-            count++;
-        }
-        for (u32 i = 0; i < frequency_info->uniform_texture_count; ++i) {
-            sorted_list[count] = frequency_info->texture_indices[i];
-            count++;
-        }
-
-        KASSERT_DEBUG(count == sampler_and_image_count);
-
-        //Sort them
-        kquick_sort(sizeof(u32), sorted_list, 0, count - 1, kquicksort_compare_u32);
-
         //Traverse the sorted list.
-        for (u32 i = 0; i < count; ++i) {
+        for (u32 i = 0; i < sampler_and_image_count; ++i) {
             // Look up by the texture indices collected above.
-            shader_uniform_config* u = &config->uniforms[sorted_list[i]];
+            shader_uniform_config* u = &config->uniforms[frequency_info->sorted_indices[i]];
             VkDescriptorType type = uniform_type_is_texture(u->type) ? VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE : VK_DESCRIPTOR_TYPE_SAMPLER;
             set_config->bindings[frequency_binding_index].binding = frequency_binding_index;
             set_config->bindings[frequency_binding_index].descriptorCount = KMAX(u->array_length, 1); // Either treat as an array or a single texture, depending on what is passed in.
@@ -4388,9 +4400,6 @@ static void setup_frequency_descriptors(b8 do_ubo, vulkan_shader_frequency_info*
             set_config->bindings[frequency_binding_index].stageFlags = VK_SHADER_STAGE_ALL;
             frequency_binding_index++;
         }
-
-        //Clean up.
-        KFREE_TYPE_CARRAY(sorted_list, u32, count);
     }
 }
 
@@ -4419,7 +4428,7 @@ static b8 vulkan_descriptorset_update_and_bind(
     // Update UBO, if needed.UBO is always first.
     VkDescriptorBufferInfo ubo_buffer_info = { 0 };
     if (info->uniform_count > 0) {
-
+        //LEFTOFF: Descriptors should be per frame in flight, not per swapchain image!
         u16* freq_gen = &frequency_state->ubo_descriptor_state.renderer_frame_number[image_index];
         if ((*freq_gen) == INVALID_ID_U16 || (*freq_gen) != renderer_frame_number) {
             // Only do this if the descriptor has not yet been updated.
@@ -4445,42 +4454,21 @@ static b8 vulkan_descriptorset_update_and_bind(
         binding_index++;
     }
 
-    /* } */
-
-    // TODO: Should probably cache this count and sorted array when done the first time.
-    //
     // Need to iterate these in uniform order, which can mix the order between samplers and images if configured that way.
     // This means a combined list of both types is required, which should then be iterated (checking the type along the way)
     u32 sampler_and_image_count = info->uniform_sampler_count + info->uniform_texture_count;
     if (sampler_and_image_count) {
-        //Use frame allocator for speed and avoiding cleanup.
-        u32* sorted_list = p_frame_data->allocator.allocate(sizeof(u32) * sampler_and_image_count);
-
-        //Add all indices, unsorted.
-        u32 count = 0;
-        for (u32 i = 0; i < info->uniform_sampler_count; ++i) {
-            sorted_list[count] = info->sampler_indices[i];
-            count++;
-        }
-        for (u32 i = 0; i < info->uniform_texture_count; ++i) {
-            sorted_list[count] = info->texture_indices[i];
-            count++;
-        }
-        KASSERT_DEBUG(count == sampler_and_image_count);
-
-        //Sort them
-        kquick_sort(sizeof(u32), sorted_list, 0, count - 1, kquicksort_compare_u32);
         // Allocate enough space to hold all the descriptor image infos needed for this scope (one array per sampler/image binding).
        // NOTE: Using the frame allocator, so this does not have to be freed as it's handled automatically at the end of the frame on allocator reset.
-        VkDescriptorImageInfo** binding_image_infos = p_frame_data->allocator.allocate(sizeof(VkDescriptorImageInfo*) * count);
+        VkDescriptorImageInfo** binding_image_infos = p_frame_data->allocator.allocate(sizeof(VkDescriptorImageInfo*) * sampler_and_image_count);
 
         //Traverse the sorted list of sampler/texture uniforms. Each of thest is one binding.
         u32 sampler_binding_index = 0;
         u32 texture_binding_index = 0;
-        for (u32 i = 0; i < count; ++i) {
+        for (u32 i = 0; i < sampler_and_image_count; ++i) {
             u32 binding_descriptor_count = set_config.bindings[binding_index].descriptorCount;
             u32 update_count = 0;
-            shader_uniform* u = &internal_shader->uniforms[sorted_list[i]];
+            shader_uniform* u = &internal_shader->uniforms[info->sorted_indices[i]];
             b8 is_texture = uniform_type_is_texture(u->type);
             VkDescriptorType type = is_texture ? VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE : VK_DESCRIPTOR_TYPE_SAMPLER;
 
