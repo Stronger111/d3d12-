@@ -378,7 +378,7 @@ b8 vulkan_renderer_on_window_created(renderer_backend_interface* backend, struct
     //Start with a zero frame index.
     window_backend->current_frame = 0;
 
-    //create swapchain. this also handles colourbuffer creation.
+    //create swapchain. 
     if (!vulkan_swapchain_create(backend, window, context->flags, &window_backend->swapchain)) {
         KERROR("Failed to create Vulkan swapchain during creation of window '%s'. See logs for details.", window->name);
         return false;
@@ -1162,7 +1162,7 @@ void vulkan_renderer_set_stencil_op(struct renderer_backend_interface* backend, 
 void vulkan_renderer_begin_rendering(struct renderer_backend_interface* backend, struct frame_data* p_frame_data, rect_2d render_area, u32 colour_target_count, khandle* colour_targets, khandle depth_stencil_target, u32 depth_stencil_layer) {
     vulkan_context* context = (vulkan_context*)backend->internal_context;
     vulkan_command_buffer* primary = get_current_command_buffer(context);
-    u32 image_index = context->current_window->renderer_state->backend_state->image_index;
+    u32 image_index = get_current_image_index(context);
 
     // Anytime we "begin" a render, update the "in-secondary" state and get the appropriate secondary buffer.
     primary->in_secondary = true;
@@ -1295,9 +1295,10 @@ void vulkan_renderer_clear_colour_texture(renderer_backend_interface* backend, k
     vulkan_context* context = (vulkan_context*)backend->internal_context;
     vulkan_command_buffer* command_buffer = get_current_command_buffer(context);
     vulkan_texture_handle_data* tex_internal = &context->textures[renderer_texture_handle.handle_index];
+    u32 image_index = get_current_image_index(context);
 
     //If a per-frame texture,get the appropriate image index, Otherwise it's just the first one
-    vulkan_image* image = tex_internal->image_count == 1 ? &tex_internal->images[0] : &tex_internal->images[get_current_image_index(context)];
+    vulkan_image* image = tex_internal->image_count == 1 ? &tex_internal->images[0] : &tex_internal->images[image_index];
 
     //Transition the layout.
     VkImageMemoryBarrier barrier = { 0 };
@@ -1334,9 +1335,10 @@ void vulkan_renderer_clear_depth_stencil(renderer_backend_interface* backend, kh
     vulkan_context* context = (vulkan_context*)backend->internal_context;
     vulkan_command_buffer* command_buffer = get_current_command_buffer(context);
     vulkan_texture_handle_data* tex_internal = &context->textures[renderer_texture_handle.handle_index];
+    u32 image_index = get_current_image_index(context);
 
     //If a per-frame texture,get the appropriate image index, Otherwise it's just the first one
-    vulkan_image* image = tex_internal->image_count == 1 ? &tex_internal->images[0] : &tex_internal->images[get_current_image_index(context)];
+    vulkan_image* image = tex_internal->image_count == 1 ? &tex_internal->images[0] : &tex_internal->images[image_index];
 
     // Transition the layout
     VkImageMemoryBarrier barrier = { 0 };
@@ -1381,9 +1383,10 @@ void vulkan_renderer_colour_texture_prepare_for_present(renderer_backend_interfa
     vulkan_context* context = (vulkan_context*)backend->internal_context;
     vulkan_command_buffer* command_buffer = get_current_command_buffer(context);
     vulkan_texture_handle_data* tex_internal = &context->textures[renderer_texture_handle.handle_index];
+    u32 image_index = get_current_image_index(context);
 
     // If a per-frame texture, get the appropriate image index. Otherwise it's just the first one.
-    vulkan_image* image = tex_internal->image_count == 1 ? &tex_internal->images[0] : &tex_internal->images[get_current_image_index(context)];
+    vulkan_image* image = tex_internal->image_count == 1 ? &tex_internal->images[0] : &tex_internal->images[image_index];
 
     // Transition the layout
     VkImageMemoryBarrier barrier = { 0 };
@@ -1422,9 +1425,10 @@ void vulkan_renderer_texture_prepare_for_sampling(renderer_backend_interface* ba
     vulkan_context* context = (vulkan_context*)backend->internal_context;
     vulkan_command_buffer* command_buffer = get_current_command_buffer(context);
     vulkan_texture_handle_data* tex_internal = &context->textures[renderer_texture_handle.handle_index];
+    u32 image_index = get_current_image_index(context);
 
     // If a per-frame texture, get the appropriate image index. Otherwise it's just the first one.
-    vulkan_image* image = tex_internal->image_count == 1 ? &tex_internal->images[0] : &tex_internal->images[get_current_image_index(context)];
+    vulkan_image* image = tex_internal->image_count == 1 ? &tex_internal->images[0] : &tex_internal->images[image_index];
 
     b8 is_depth = (flags & TEXTURE_FLAG_DEPTH) != 0;
 
@@ -1558,7 +1562,8 @@ b8 vulkan_renderer_texture_resources_acquire(renderer_backend_interface* backend
     vulkan_context* context = (vulkan_context*)backend->internal_context;
 
     if (!context->textures) {
-        context->textures = darray_create(vulkan_texture_handle_data);
+        //FIXME: Should be max textures in config.
+        context->textures = darray_reserve(vulkan_texture_handle_data,512);
     }
 
     // Get an entry into the lookup table.
@@ -1614,7 +1619,8 @@ b8 vulkan_renderer_texture_resources_acquire(renderer_backend_interface* backend
         image_format = channel_count_to_format(channel_count, VK_FORMAT_R8G8B8A8_UNORM);
     }
 
-    // Create one image per swapchain image  (or just one image)
+    // Create the required number of images.
+    texture_data->images=KALLOC_TYPE_CARRAY(vulkan_image, texture_data->image_count);
     for (u32 i = 0; i < texture_data->image_count; ++i) {
         char* image_name = string_format("%s_vkimage_%d", name, i);
         vulkan_image_create(
@@ -1645,6 +1651,9 @@ void vulkan_renderer_texture_resources_release(renderer_backend_interface* backe
     for (u32 i = 0; i < texture_data->image_count; ++i) {
         vulkan_image_destroy(context, &texture_data->images[i]);
     }
+    KFREE_TYPE_CARRAY(texture_data->images, vulkan_image, texture_data->image_count);
+    texture_data->images = 0;
+    texture_data->image_count = 0;
 }
 
 b8 vulkan_renderer_texture_resize(renderer_backend_interface* backend, khandle renderer_texture_handle, u32 new_width, u32 new_height) {

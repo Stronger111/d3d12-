@@ -465,7 +465,7 @@ void renderer_begin_rendering(struct renderer_system_state* state, struct frame_
     if (colour_target_count) {
         for (u32 i = 0; i < colour_target_count; ++i) {
             // Optimization: Skip array allocation and just pass through the address of it.
-            if (khandle_is_invalid(colour_targets[0])) {
+            if (khandle_is_invalid(colour_targets[i])) {
                 KFATAL("Passed invalid handle to texture target (index=%u) when beginning rendering. Null is used, and will likely cause a failure.", i);
             }
         }
