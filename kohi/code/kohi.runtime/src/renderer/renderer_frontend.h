@@ -41,15 +41,15 @@ struct frame_data;
 struct viewport;
 
 typedef struct renderer_system_config {
-    const  char* application_name;
-    const char* backend_plugin_name;
-    b8 vsync;
-    b8 enable_validation;
-    b8 power_saving;
-    b8 triple_buffering_enabled;
+  const  char* application_name;
+  const char* backend_plugin_name;
+  b8 vsync;
+  b8 enable_validation;
+  b8 power_saving;
+  b8 triple_buffering_enabled;
 
-    //The max number of shaders that can be held. Must match the shader system's count.
-    u16 max_shader_count;
+  //The max number of shaders that can be held. Must match the shader system's count.
+  u16 max_shader_count;
 } renderer_system_config;
 
 struct renderer_system_state;
@@ -341,7 +341,7 @@ KAPI b8 renderer_texture_read_pixel(struct renderer_system_state* state, khandle
  * @param default_texture The texture slot to register to.
  * @param renderer_texture_handle A handle to the texture to be registered.
  */
-KAPI void renderer_default_texture_register(struct renderer_system_state* state,renderer_default_texture default_texture,khandle renderer_texture_handle);
+KAPI void renderer_default_texture_register(struct renderer_system_state* state, renderer_default_texture default_texture, khandle renderer_texture_handle);
 
 /**
  * @brief Gets a texture handle with the default texture slot specified.
@@ -350,7 +350,7 @@ KAPI void renderer_default_texture_register(struct renderer_system_state* state,
  * @param default_texture The texture slot to register to.
  * @returns A handle to the default texture.
  */
-KAPI khandle renderer_default_texture_get(struct renderer_system_state* state,renderer_default_texture default_texture);
+KAPI khandle renderer_default_texture_get(struct renderer_system_state* state, renderer_default_texture default_texture);
 /**
  * @brief Attempts retrieve the renderer's internal buffer of the given type.
  * @param type The type of buffer to retrieve.
@@ -480,7 +480,7 @@ KAPI void renderer_shader_destroy(struct renderer_system_state* state, khandle s
  * @param shader_stages An array of shader stages configs.
  * @return True on success; otherwise false.
  */
-KAPI b8 renderer_shader_reload(struct renderer_system_state* state, khandle shader,u32 shader_stage_count,shader_stage_config* shader_stages);
+KAPI b8 renderer_shader_reload(struct renderer_system_state* state, khandle shader, u32 shader_stage_count, shader_stage_config* shader_stages);
 
 /**
  * @brief Uses the given shader, activating it for updates to attributes, uniforms and such,
@@ -609,7 +609,7 @@ KAPI b8 renderer_shader_per_group_resources_release(struct renderer_system_state
  * @param out_draw_id A pointer to hold the new per-draw identifier.
  * @return True on success; otherwise false.
  */
-KAPI b8 renderer_shader_per_draw_resources_acquire(struct renderer_system_state* state, khandle shader,u32* out_draw_id);
+KAPI b8 renderer_shader_per_draw_resources_acquire(struct renderer_system_state* state, khandle shader, u32* out_draw_id);
 
 /**
  * @brief Releases internal per-draw resources for the given per-draw id.
@@ -646,12 +646,13 @@ KAPI khandle renderer_generic_sampler_get(struct renderer_system_state* state, s
  * @brief Acquires a internal sampler and returns a handle to it.
  *
  * @param state A pointer to the renderer state.
+ * @param name The name of the sampler.
  * @param filter The min/mag filter.
  * @param repeat The repeat mode.
  * @param anisotropy The anisotropy level, if needed; otherwise 0.
  * @return A handle to the sampler on success; otherwise an invalid handle.
  */
-KAPI khandle renderer_sampler_acquire(struct renderer_system_state* state, texture_filter filter, texture_repeat repeat, f32 anisotropy);
+KAPI khandle renderer_sampler_acquire(struct renderer_system_state* state, kname name, texture_filter filter, texture_repeat repeat, f32 anisotropy);
 
 /**
  * @brief Releases the internal sampler for the given handle.

@@ -21,6 +21,16 @@
 #include "renderer/renderer_types.h"
 #include "vulkan/vulkan_core.h"
 
+ // Frames in flight can differ for double-buffering (1) or triple-buffering (2), but will never exceed this amount.
+#define VULKAN_MAX_FRAMES_IN_FLIGHT 2
+// The colour buffer count can differ for double-buffering (2) or triple-buffering (3), but will never exceed this amount.
+#define VULKAN_MAX_COLOUR_BUFFER_COUNT 3
+
+// The array size for resources created per-image. Regardless of whether double- or
+// triple-buffering is used, this should always be used for resource array sizes so that
+// triple buffering can be toggled in settings.
+#define VULKAN_RESOURCE_IMAGE_COUNT 3
+
  // Checks the given expression return value against VK_SUCCESS
 #define VK_CHECK(expr) \
     {                  \
@@ -131,36 +141,36 @@ typedef struct vulkan_image {
 } vulkan_image;
 
 // Struct definition for renderer-specific framebuffer data.
-typedef struct framebuffer_internal_data {
-    // The number of VkFramebuffers in the array. Typically 1 unless the attachment
-    // requires the frame_count to be taken into account.
-    u32 framebuffer_count;
-    // Arrat of framebuffers.
-    VkFramebuffer* framebuffers;
-} framebuffer_internal_data;
+// typedef struct framebuffer_internal_data {
+//     // The number of VkFramebuffers in the array. Typically 1 unless the attachment
+//     // requires the frame_count to be taken into account.
+//     u32 framebuffer_count;
+//     // Arrat of framebuffers.
+//     VkFramebuffer* framebuffers;
+// } framebuffer_internal_data;
 
-typedef enum vulkan_render_pass_state {
-    READY,
-    RECORDING,
-    IN_RENDER_PASS,
-    RECORDING_ENDED,
-    SUBMITTED,
-    NOT_ALLOCATED
-} vulkan_render_pass_state;
+// typedef enum vulkan_render_pass_state {
+//     READY,
+//     RECORDING,
+//     IN_RENDER_PASS,
+//     RECORDING_ENDED,
+//     SUBMITTED,
+//     NOT_ALLOCATED
+// } vulkan_render_pass_state;
 
 /**
  * @brief A representation of the Vulkan renderpass.
  */
-typedef struct vulkan_renderpass {
-    /** @brief The internal renderpass handle. */
-    VkRenderPass handle;
-    /** @brief Indicates renderpass state. */
-    vulkan_render_pass_state state;
+ // typedef struct vulkan_renderpass {
+ //     /** @brief The internal renderpass handle. */
+ //     VkRenderPass handle;
+ //     /** @brief Indicates renderpass state. */
+ //     vulkan_render_pass_state state;
 
-    // darray
-    VkClearValue* clear_values;
-    /* u32 clear_value_count; */
-} vulkan_renderpass;
+ //     // darray
+ //     VkClearValue* clear_values;
+ //     /* u32 clear_value_count; */
+ // } vulkan_renderpass;
 
 typedef struct vulkan_swapchain {
     /** @brief The swapchain image format. */
@@ -175,12 +185,17 @@ typedef struct vulkan_swapchain {
     u32 image_count;
 
     /** @brief Track the owning window in case something is needed from it. */
-    struct kwindow* owning_window;
+    // struct kwindow* owning_window;
 
     /** @brief Supports being used as a blit destination. */
     b8 supports_blit_dest;
     /** @brief Supports being used as a blit source. */
     b8 supports_blit_src;
+
+    kresource_texture* swapchain_colour_texture;
+
+    /** @brief The swapchain image index (i.e. the swapchain image index that will be blitted to). */
+    u32 image_index;
 } vulkan_swapchain;
 
 typedef enum vulkan_command_buffer_state {
@@ -331,8 +346,8 @@ typedef struct vulkan_descriptor_set_config {
  * per frame (with a max of 3).
  */
 typedef struct vulkan_descriptor_state {
-    /** @brief The renderer frame number on which this descriptor was last updated. One per swapchain image. INVALID_ID_U16 if never loaded. */
-    u16* renderer_frame_number;
+    /** @brief The renderer frame number on which this descriptor was last updated. One per colour image. INVALID_ID_U16 if never loaded. */
+    u16 renderer_frame_number[VULKAN_RESOURCE_IMAGE_COUNT];
 } vulkan_descriptor_state;
 
 typedef struct vulkan_uniform_sampler_state {
@@ -424,8 +439,8 @@ typedef struct vulkan_shader_frequency_info {
 typedef struct vulkan_shader {
     // The name of the shader (mostly kept for debugging purposes).
     kname name;
-    /** @brief The block of memory mapped to the uniform buffer. */
-    void** mapped_uniform_buffer_blocks;
+    /** @brief The block of memory mapped to the each per-colourbuffer-image uniform buffer. */
+    void* mapped_uniform_buffer_blocks[VULKAN_RESOURCE_IMAGE_COUNT];
     /** @brief The block of memory used for push constants,128B */
     void* per_draw_push_constant_block;
     /** @brief The kshader identifier. */
@@ -480,9 +495,8 @@ typedef struct vulkan_shader {
     /** @brief Descriptor set layouts, max of 3. Index 0=per-frame, 1=per-group, 2=per-draw (samplers only). */
     VkDescriptorSetLayout descriptor_set_layouts[VULKAN_SHADER_DESCRIPTOR_SET_LAYOUT_COUNT];
 
-    /** @brief The uniform buffers used by this kshader, one per swapchain image. */
-    renderbuffer* uniform_buffers;
-    u32 uniform_buffer_count;
+    /** @brief The uniform buffers used by this shader, one per colourbuffer image. */
+    renderbuffer uniform_buffers[VULKAN_RESOURCE_IMAGE_COUNT];
 
     /** @brief An array of pointers to pipelines associated with this kshader. */
     vulkan_pipeline** pipelines;
@@ -595,7 +609,7 @@ typedef struct vulkan_texture_handle_data {
     // requires the frame_count to be taken into account.
     u32 image_count;
     // Array of images. See image_count.
-    vulkan_image* images;
+    vulkan_image images[VULKAN_RESOURCE_IMAGE_COUNT];
 } vulkan_texture_handle_data;
 
 /**
