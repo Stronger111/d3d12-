@@ -45,7 +45,7 @@ void debug_box3d_colour_set(debug_box3d* box, vec4 colour) {
             colour.a = 1.0f;
         }
         box->colour = colour;
-        if (box->geometry.generation != INVALID_ID_U16 && box->geometry.vertex_count && ((colour_vertex_3d*)box->geometry.vertices)) {
+        if (box->geometry.generation != INVALID_ID_U16 && box->geometry.vertex_count && box->geometry.vertices) {
             update_vert_colour(box);
             box->is_dirty = true;
         }
@@ -54,7 +54,7 @@ void debug_box3d_colour_set(debug_box3d* box, vec4 colour) {
 
 void debug_box3d_extents_set(debug_box3d* box, extents_3d extents) {
     if (box) {
-        if (box->geometry.generation != INVALID_ID_U16 && box->geometry.vertex_count && ((colour_vertex_3d*)box->geometry.vertices)) {
+        if (box->geometry.generation != INVALID_ID_U16 && box->geometry.vertex_count && box->geometry.vertices) {
             geometry_recalculate_line_box3d_by_extents(&box->geometry, extents);
             box->is_dirty = true;
         }
@@ -125,8 +125,9 @@ b8 debug_box3d_update(debug_box3d* box) {
 static void update_vert_colour(debug_box3d* box) {
     if (box) {
         if (box->geometry.vertex_count && box->geometry.vertices) {
+            colour_vertex_3d* vert = (colour_vertex_3d*)box->geometry.vertices;
             for (u32 i = 0; i < box->geometry.vertex_count; ++i) {
-                ((colour_vertex_3d*)box->geometry.vertices)[i].colour = box->colour;
+                vert[i].colour = box->colour;
             }
         }
     }
