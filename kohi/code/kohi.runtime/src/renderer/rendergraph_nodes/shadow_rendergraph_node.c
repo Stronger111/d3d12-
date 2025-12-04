@@ -209,7 +209,7 @@ b8 shadow_rendergraph_node_load_resources(rendergraph_node* self) {
         kname_create("__shadow_rg_node_shadowmap__"),
         internal_data->config.resolution,
         internal_data->config.resolution,
-        MAX_SHADOW_CASCADE_COUNT,
+        MAX_SHADOW_CASCADE_COUNT,false,
         true
     );
     if (!internal_data->depth_texture) {

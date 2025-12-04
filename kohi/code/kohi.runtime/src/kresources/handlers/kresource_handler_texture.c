@@ -44,17 +44,17 @@ b8 kresource_handler_texture_request(struct kresource_handler* self, kresource* 
     b8 assets_required = true;
 
     //Assets are not required for these texture types.
-    if (typed_request->flags & KRESOURCE_TEXTURE_FLAG_IS_WRITEABLE || typed_request->flags & KRESOURCE_TEXTURE_FLAG_DEPTH) {
+    if (typed_request->flags & TEXTURE_FLAG_IS_WRITEABLE || typed_request->flags & TEXTURE_FLAG_DEPTH) {
         assets_required = false;
     }
 
     // Some type-specific validation.
     if (assets_required) {
-        if (typed_request->texture_type == KRESOURCE_TEXTURE_TYPE_2D && typed_request->base.assets.base.length != 1) {
+        if (typed_request->texture_type == TEXTURE_TYPE_2D && typed_request->base.assets.base.length != 1) {
             KERROR("Non-writeable 2d textures must have exactly one texture asset. Instead, %u was provided.", typed_request->base.assets.base.length);
             return false;
         }
-        else if (typed_request->texture_type == KRESOURCE_TEXTURE_TYPE_CUBE && typed_request->base.assets.base.length != 6) {
+        else if (typed_request->texture_type == TEXTURE_TYPE_CUBE && typed_request->base.assets.base.length != 6) {
             KERROR("Non-writeable cube textures must have exactly 6 texture assets. Instead, %u was provided.", typed_request->base.assets.base.length);
             return false;
         }
@@ -184,7 +184,7 @@ b8 kresource_handler_texture_request(struct kresource_handler* self, kresource* 
         typed_resource->format = typed_request->format;
         typed_resource->mip_levels = typed_request->mip_levels;
         typed_resource->array_size = typed_request->array_size;
-        typed_resource->renderer_texture_handle=khandle_invalid();
+        typed_resource->renderer_texture_handle = khandle_invalid();
 
         // Acquire the resources for the texture.
         b8 acquisition_result = renderer_kresource_texture_resources_acquire(
@@ -255,7 +255,7 @@ static void texture_kasset_on_result(asset_request_result result, const struct k
             // in use. The proper way to do this would be to wait at least x + 1 frames after GPU load completion notification (where x
             // is the number of frames-in-flight) and more importantly after the reference is switched in the renderer backend. Suspect
             // this will require extensive testing, especially when jobifyed/multithreaded.
-            
+
             listener->typed_resource->renderer_texture_handle = khandle_invalid();
             //Acquire GPU resources for the texture resource.
             b8 result = renderer_kresource_texture_resources_acquire(

@@ -60,12 +60,12 @@ typedef _Bool b8;
 #define UINT32_MAX_T       0xffffffffull
 
 /** @brief A range, typically of memory */
-typedef struct range {
+typedef struct krange {
     /** @brief The offset in bytes. */
     u64 offset;
     /** @brief The size in bytes. */
     u64 size;
-} range;
+} krange;
 
 /** @brief A range, typically of memory */
 typedef struct range32 {
@@ -258,8 +258,8 @@ KINLINE u64 get_aligned(u64 operand, u64 granularity) {
     return ((operand + (granularity - 1)) & ~(granularity - 1));
 }
 
-KINLINE range get_aligned_range(u64 offset, u64 size, u64 granularity) {
-    return (range){get_aligned(offset, granularity), get_aligned(size, granularity)};
+KINLINE krange get_aligned_range(u64 offset, u64 size, u64 granularity) {
+    return (krange){get_aligned(offset, granularity), get_aligned(size, granularity)};
 }
 
 #define KMIN(x, y) (x < y ? x : y)

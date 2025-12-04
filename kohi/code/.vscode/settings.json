@@ -156,7 +156,8 @@
         "geometry.h": "c",
         "kasset_bitmap_font_serializer.h": "c",
         "kresource_handler_bitmap_font.h": "c",
-        "vulkan_utils.h": "c"
+        "vulkan_utils.h": "c",
+        "vulkan_types.h": "c"
     },
     "C_Cpp.default.compilerPath": "D:/SoftWare/LLVM/bin/clang.exe",
 }

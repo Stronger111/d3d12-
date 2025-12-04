@@ -135,6 +135,8 @@ typedef struct vulkan_image {
     u16 layer_count;
     /** @brief The name of the image. */
     char* name;
+    /** @brief texture flag bits */
+    texture_flag_bits flags;
     /** The number of mipmaps to be generated for this image. Must always be at least 1. */
     u32 mip_levels;
     b8 has_view;
@@ -276,7 +278,7 @@ typedef struct vulkan_pipeline_config {
     /** @brief The number of push constant data ranges. */
     u32 push_constant_range_count;
     /** @brief An array of push constant data ranges. */
-    range* push_constant_ranges;
+    krange* push_constant_ranges;
     /** @brief Collection of topology types to be supported on this pipeline. */
     u32 topology_types;
     /** @brief The vertex winding order used to determine the front face of triangles. */
@@ -455,7 +457,7 @@ typedef struct vulkan_shader {
      */
     u8 descriptor_set_count;
     /** @brief Descriptor sets, max of 3. Index 0=per_frame, 1=per_group, 2=per_draw */
-    vulkan_descriptor_set_config descriptor_sets[VULKAN_SHADER_DESCRIPTOR_SET_LAYOUT_COUNT];
+    vulkan_descriptor_set_config descriptor_set_configs[VULKAN_SHADER_DESCRIPTOR_SET_LAYOUT_COUNT];
     /** @brief The number of vertex attributes in the shader. */
     u8 attribute_count;
     /** @brief An array of attribute descriptions for this kshader. */
@@ -492,7 +494,7 @@ typedef struct vulkan_shader {
     /** @brief The descriptor pool used for this kshader. */
     VkDescriptorPool descriptor_pool;
 
-    /** @brief Descriptor set layouts, max of 3. Index 0=per-frame, 1=per-group, 2=per-draw (samplers only). */
+    /** @brief Descriptor set layouts, max of 3. */
     VkDescriptorSetLayout descriptor_set_layouts[VULKAN_SHADER_DESCRIPTOR_SET_LAYOUT_COUNT];
 
     /** @brief The uniform buffers used by this shader, one per colourbuffer image. */
@@ -688,6 +690,7 @@ typedef struct vulkan_context {
 
     PFN_vkCmdSetPrimitiveTopologyEXT vkCmdSetPrimitiveTopologyEXT;
     PFN_vkCmdSetFrontFaceEXT vkCmdSetFrontFaceEXT;
+    PFN_vkCmdSetCullModeEXT vkCmdSetCullModeEXT;
     PFN_vkCmdSetStencilTestEnable vkCmdSetStencilTestEnableEXT;
     PFN_vkCmdSetDepthTestEnableEXT vkCmdSetDepthTestEnableEXT;
     PFN_vkCmdSetDepthWriteEnable vkCmdSetDepthWriteEnableEXT;
