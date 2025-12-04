@@ -363,7 +363,7 @@ typedef struct kresource_binary {
     kresource base;
 
     u32 size;
-    const void* bytes;
+    void* bytes;
 }kresource_binary;
 
 #define KRESOURCE_TYPE_NAME_FONT "Font"
