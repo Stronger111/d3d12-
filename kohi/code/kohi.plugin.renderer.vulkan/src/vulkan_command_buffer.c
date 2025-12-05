@@ -125,6 +125,10 @@ b8 vulkan_command_buffer_submit(
     submit_info.signalSemaphoreCount = signal_semaphore_count;
     submit_info.pSignalSemaphores = signal_semaphores;
 
+    // Wait semaphore ensures that the operation cannot begin until the image is available
+    submit_info.waitSemaphoreCount = wait_semaphore_count;
+    submit_info.pWaitSemaphores = wait_semaphores;
+
     // Each semaphore waits on the corresponding pipeline stage to complete. 1:1
     // ratio. VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT prevents subsequent
    // colour attachment writes from executing until the semaphore signals (i.e.

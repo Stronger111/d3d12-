@@ -385,8 +385,8 @@ typedef struct vulkan_shader_frequency_state {
     /** @brief The offset in bytes in the frequency uniform buffer. */
     u64 offset;
 
-    /** @brief The descriptor sets for this frequency, one per swapchain image. */
-    VkDescriptorSet* descriptor_sets;
+    /** @brief The descriptor sets for this frequency, one per colour image. */
+    VkDescriptorSet descriptor_sets[VULKAN_RESOURCE_IMAGE_COUNT];
 
     // UBO descriptor state.
     vulkan_descriptor_state ubo_descriptor_state;

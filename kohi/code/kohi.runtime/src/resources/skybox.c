@@ -56,6 +56,10 @@ b8 skybox_load(skybox* sb) {
         KFATAL("Unable to acquire shader resources for skybox.");
         return false;
     }
+    if (!renderer_shader_per_draw_resources_acquire(engine_systems_get()->renderer_system, skybox_shader, &sb->draw_id)) {
+        KFATAL("Unable to acquire shader per-draw resources for skybox.");
+        return false;
+    }
     sb->state = SKYBOX_STATE_LOADED;
     return true;
 }

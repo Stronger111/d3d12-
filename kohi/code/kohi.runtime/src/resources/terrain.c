@@ -298,6 +298,7 @@ b8 terrain_load(terrain* t) {
     resource terr_resource;
     if (!resource_system_load(t->resource_name, RESOURCE_TYPE_TERRAIN, 0, &terr_resource)) {
         KWARN("Failed to load terrain resource.");
+        return false;
     }
 
     terrain_resource* typed_resource = (terrain_resource*)terr_resource.data;

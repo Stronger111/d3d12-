@@ -4400,9 +4400,9 @@ static void destroy_shader_frequency_states(shader_update_frequency frequency, v
     // Free arrays and, if needed, the frequency states array itself.
     for (u32 i = 0; i < state_count; ++i) {
         vulkan_shader_frequency_state* frequency_state = &states[i];
-        if (frequency_state->descriptor_sets) {
-            kzero_memory(frequency_state->descriptor_sets, sizeof(VkDescriptorSet) * VULKAN_RESOURCE_IMAGE_COUNT);
-        }
+
+        kzero_memory(frequency_state->descriptor_sets, sizeof(VkDescriptorSet) * VULKAN_RESOURCE_IMAGE_COUNT);
+
         if (frequency_state->sampler_states) {
             kfree(frequency_state->sampler_states, sizeof(vulkan_uniform_sampler_state) * info->uniform_sampler_count, MEMORY_TAG_ARRAY);
             frequency_state->sampler_states = 0;
@@ -4996,7 +4996,7 @@ void vulkan_alloc_internal_free(void* pUserData, size_t size, VkInternalAllocati
 * @param callbacks A pointer to the allocation callbacks structure to be filled out.
 * @return b8 True on success; otherwise false.
 */
-b8 create_vulkan_allocator(vulkan_context * context, VkAllocationCallbacks * callbacks) {
+b8 create_vulkan_allocator(vulkan_context* context, VkAllocationCallbacks* callbacks) {
     if (callbacks) {
         callbacks->pfnAllocation = vulkan_alloc_allocation;
         callbacks->pfnReallocation = vulkan_alloc_reallocation;
