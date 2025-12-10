@@ -87,7 +87,7 @@ void static_mesh_system_instance_release(struct static_mesh_system_state* state,
 
     //Cleanup the instance itself.
     KFREE_TYPE_CARRAY(instance->material_instances, material_instance, instance->mesh_resource->submesh_count);
-    instance->mesh_resource = 0;
+    instance->material_instances = 0;
     instance->instance_id = INVALID_ID_U64;
     instance->tint = vec4_zero();
 
