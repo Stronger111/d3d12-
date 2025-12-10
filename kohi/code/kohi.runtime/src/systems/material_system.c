@@ -356,7 +356,7 @@ typedef struct material_system_state {
     kresource_texture* default_ibl_cubemap;
 
     // Pointer to use for material texture inputs _not_ using a texture map (because something has to be bound).
-    kresource_texture* default_texture;
+    kresource_texture* default_texture; //这个textureHandle为0吗
 
     // Keep a pointer to the renderer state for quick access.
     struct renderer_system_state* renderer;

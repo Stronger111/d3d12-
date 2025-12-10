@@ -2686,194 +2686,6 @@ b8 vulkan_renderer_shader_bind_per_draw(renderer_backend_interface* backend, kha
     return true;
 }
 
-// static b8 vulkan_descriptorset_update_and_bind(
-//     renderer_backend_interface* backend,
-//     u64 renderer_frame_number,
-//     kshader* s,
-//     VkDescriptorSet descriptor_set,
-//     u32 descriptor_set_index,
-//     vulkan_descriptor_state* descriptor_state,
-//     u64 ubo_offset,
-//     u64 ubo_stride,
-//     u32 uniform_count,
-//     vulkan_uniform_sampler_state* samplers,
-//     u32 sampler_count,
-//     vulkan_uniform_texture_state* textures,
-//     u32 texture_count) {
-
-//     vulkan_context* context = (vulkan_context*)backend->internal_context;
-//     u32 image_index = get_current_image_index(context);
-//     vulkan_shader* internal = s->internal_data;
-
-//     const frame_data* p_frame_data = engine_frame_data_get();
-
-//     // The descriptor_state holds frame number, which is compared against the current
-//     // renderer frame number. If no match, it gets an update. Otherwise, it's bind-only.
-//     b8 needs_update = descriptor_state->frame_numbers[image_index] != renderer_frame_number;
-
-//     if (needs_update) {
-//         // Alocate enough descriptor writes to handle the max allowed bound textures.
-//         VkWriteDescriptorSet descriptor_writes[1 + VULKAN_SHADER_MAX_TEXTURE_BINDINGS];
-//         kzero_memory(descriptor_writes, sizeof(VkWriteDescriptorSet) * (1 + VULKAN_SHADER_MAX_TEXTURE_BINDINGS));
-
-//         u32 descriptor_write_count = 0;
-//         u32 binding_index = 0;
-
-//         VkDescriptorBufferInfo ubo_buffer_info = { 0 };
-
-//         // Descriptor 0 - Uniform buffer
-//         if (uniform_count > 0) {
-//             // Only do this if the descriptor has not yet been updated.
-//             u8* ubo_generation = &(descriptor_state->generations[image_index]);
-//             if (*ubo_generation == INVALID_ID_U8) {
-//                 ubo_buffer_info.buffer = ((vulkan_buffer*)internal->uniform_buffers[image_index].internal_data)->handle;
-//                 KASSERT_MSG((ubo_offset % context->device.properties.limits.minUniformBufferOffsetAlignment) == 0, "ubo offset must be a multiple of device.properties.limits.minUniformBufferOffsetAlignment.");
-//                 ubo_buffer_info.offset = ubo_offset;
-//                 ubo_buffer_info.range = ubo_stride;
-
-//                 VkWriteDescriptorSet ubo_descriptor = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
-//                 ubo_descriptor.dstSet = descriptor_set;
-//                 ubo_descriptor.dstBinding = binding_index;
-//                 ubo_descriptor.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-//                 ubo_descriptor.descriptorCount = 1;
-//                 ubo_descriptor.pBufferInfo = &ubo_buffer_info;
-
-//                 descriptor_writes[descriptor_write_count] = ubo_descriptor;
-//                 descriptor_write_count++;
-
-//                 // Update the frame generation. In this case it is only needed once since this is a buffer.
-//                 *ubo_generation = 1;
-//             }
-//             binding_index++;
-//         }
-
-//         // TODO: Iterate sampler uniforms, then texture uniforms separately. Binding order should always be
-//        // UBO, then samplers (if they exist) and finally textures (if they exist).
-
-//         // Iterate samplers.
-//         if (sampler_count > 0) {
-//             vulkan_descriptor_set_config set_config = internal->descriptor_sets[descriptor_set_index];
-//             // Allocate enough space to hold all the descriptor image infos needed for this scope (one array per binding).
-//             // NOTE: Using the frame allocator, so this does not have to be freed as it's handled automatically at the end of the frame on allocator reset.
-//             VkDescriptorImageInfo** binding_image_infos = p_frame_data->allocator.allocate(sizeof(VkDescriptorImageInfo*) * sampler_count);
-
-//             // Iterate each sampler binding.
-//             for (u32 k = 0; k < sampler_count; ++k) {
-//                 vulkan_uniform_sampler_state* binding_sampler_state = &samplers[k];
-
-//                 u32 binding_descriptor_count = set_config.bindings[binding_index].descriptorCount;
-
-//                 u32 update_sampler_count = 0;
-
-//                 // Allocate enough space to build all image infos.
-//                 binding_image_infos[k] = p_frame_data->allocator.allocate(sizeof(VkDescriptorImageInfo) * binding_descriptor_count);
-
-//                 // Each sampler descriptor within the binding.
-//                 for (u32 d = 0; d < binding_descriptor_count; ++d) {
-//                     khandle* sampler_handle = &binding_sampler_state->sampler_handles[d];
-//                     vulkan_sampler_handle_data* sampler = &context->samplers[sampler_handle->handle_index];
-
-//                     //Not using image.
-//                     binding_image_infos[k][d].imageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-//                     binding_image_infos[k][d].imageView = 0;
-//                     binding_image_infos[k][d].sampler = sampler->sampler;
-
-//                     update_sampler_count++;
-
-
-//                 }
-//                 // 把Texture 资源绑定到 Sampler描述符上
-//                 VkWriteDescriptorSet sampler_descriptor = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
-//                 sampler_descriptor.dstSet = descriptor_set;
-//                 sampler_descriptor.dstBinding = binding_index;
-//                 sampler_descriptor.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
-//                 sampler_descriptor.descriptorCount = update_sampler_count;
-//                 sampler_descriptor.pImageInfo = binding_image_infos[k];
-
-//                 descriptor_writes[descriptor_write_count] = sampler_descriptor;
-//                 descriptor_write_count++;
-
-//                 binding_index++;
-//             }
-//         }
-
-//         // Iterate textures.
-//         if (texture_count > 0) {
-//             vulkan_descriptor_set_config set_config = internal->descriptor_sets[descriptor_set_index];
-
-//             // Allocate enough space to hold all the descriptor image infos needed for this scope (one array per binding).
-//            // NOTE: Using the frame allocator, so this does not have to be freed as it's handled automatically at the end of the frame on allocator reset.
-//             VkDescriptorImageInfo** binding_image_infos = p_frame_data->allocator.allocate(sizeof(VkDescriptorImageInfo*) * texture_count);
-
-//             //Iterate each texture binding.
-//             for (u32 tb = 0;tb < texture_count;++tb) {
-//                 vulkan_uniform_texture_state* binding_texture_state = &textures[tb];
-
-//                 u32 binding_descriptor_count = set_config.bindings[binding_index].descriptorCount;
-
-//                 u32 update_texture_count = 0;
-
-//                 //Allocate enough space to build all image infos.
-//                 binding_image_infos[tb] = p_frame_data->allocator.allocate(sizeof(VkDescriptorImageInfo) * binding_descriptor_count);
-
-//                 //Each texture descriptor within the binding.
-//                 for (u32 d = 0;d < binding_descriptor_count;++d) {
-//                     // TODO: only update in the list if actually needing an update.
-//                     khandle t = binding_texture_state->texture_handles[d];
-//                     vulkan_texture_handle_data* texture_data = &context->textures[t.handle_index];
-
-//                     if (khandle_is_invalid(t)) {
-//                         KERROR("Invalid handle found while trying to update/bind descriptor set.");
-//                         return false;
-//                     }
-//                     u32 image_index = texture_data->image_count > 1 ? get_current_image_index(context) : 0;
-//                     vulkan_image* image = &texture_data->images[image_index];
-
-//                     binding_image_infos[tb][d].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-//                     binding_image_infos[tb][d].imageView = image->view;
-//                     // NOTE: Not using sampler in this descriptor.
-//                     binding_image_infos[tb][d].sampler = 0;
-
-//                     update_texture_count++;
-//                 }
-
-//                 VkWriteDescriptorSet sampler_descriptor = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
-//                 sampler_descriptor.dstSet = descriptor_set;
-//                 sampler_descriptor.dstBinding = binding_index;
-//                 sampler_descriptor.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-//                 sampler_descriptor.descriptorCount = update_texture_count;
-//                 sampler_descriptor.pImageInfo = binding_image_infos[tb];
-
-//                 descriptor_writes[descriptor_write_count] = sampler_descriptor;
-//                 descriptor_write_count++;
-
-//                 binding_index++;
-//             }
-//         }
-
-//         // Immediately update the descriptor set's data.
-//         if (descriptor_write_count > 0) {
-//             // TODO: This can (and probaby should be) split out to a separate frame_prepare step from the
-//             // bind below. This is a prime candidate for jobification during that stage that could be
-//             // muti-thread.
-//             vkUpdateDescriptorSets(context->device.logical_device, descriptor_write_count, descriptor_writes, 0, 0);
-//         }
-
-//         //Sync the frame number.
-//         descriptor_state->frame_numbers[image_index] = renderer_frame_number;
-//     }
-
-//     // Pick the correct pipeline.
-//     vulkan_pipeline** pipeline_array = s->is_wireframe ? internal->wireframe_pipelines : internal->pipelines;
-
-//     VkCommandBuffer command_buffer = get_current_command_buffer(context)->handle;
-//     // Bind the descriptor set to be updated, or in case the kshader changed.
-//     vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-//         pipeline_array[internal->bound_pipeline_index]->pipeline_layout, descriptor_set_index, 1,
-//         &descriptor_set, 0, 0);
-//     return true;
-// }
-
 b8 vulkan_renderer_shader_apply_per_frame(renderer_backend_interface* backend, khandle shader, u16 renderer_frame_number) {
     vulkan_context* context = (vulkan_context*)backend->internal_context;
     vulkan_shader* internal_shader = &context->shaders[shader.handle_index];
@@ -4744,6 +4556,17 @@ static b8 vulkan_descriptorset_update_and_bind(
                     vulkan_texture_handle_data* texture = &context->textures[resource_handle.handle_index];
                     u32 image_index = texture->image_count > 1 ? get_current_image_index(context) : 0;
                     vulkan_image* image = &texture->images[image_index];
+                    
+                    if(strings_equali("__internal_vulkan_swapchain_image_2__",image->name)){
+                        KERROR("Swapchain image found while trying to update/bind descriptor set.");
+                    }
+
+                    if(strings_equali("__internal_vulkan_swapchain_image_1__",image->name)){
+                        KERROR("Swapchain image found while trying to update/bind descriptor set.");
+                    }
+                    if(strings_equali("__internal_vulkan_swapchain_image_0__",image->name)){
+                        KERROR("Swapchain image found while trying to update/bind descriptor set.");
+                    }
 
                     // Only update if the descriptor has not been updated this frame.
                     u16* desc_gen = &descriptor_state->renderer_frame_number[image_index];
