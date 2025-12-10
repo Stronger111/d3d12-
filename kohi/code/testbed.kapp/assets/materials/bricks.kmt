@@ -9,13 +9,13 @@ use_vertex_colour_as_base_colour = false
 inputs = {
     base_colour = {
         map = {
-            resource_name = "spnza_bricks_a_diff"
+            resource_name = "sponza_bricks_a_diff"
             package_name = "Testbed"
         }
     }
     normal = {
         map = {
-            resource_name = "spnza_bricks_a_ddn"
+            resource_name = "sponza_bricks_a_ddn"
             package_name = "Testbed"
         }
         enabled = true

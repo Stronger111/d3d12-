@@ -9,7 +9,7 @@ use_vertex_colour_as_base_colour = false
 inputs = {
     base_colour = {
         map = {
-            resource_name = "vase_hanging"
+            resource_name = "vase_hanging_bc"
             package_name = "Testbed"
         }
     }
