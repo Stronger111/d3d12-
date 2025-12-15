@@ -38,12 +38,42 @@ typedef struct darray_header {
  * @returns A pointer representing the block of memory containing the array.
  */
 KAPI void* _darray_create(u64 length, u64 stride, struct frame_allocator_int* frame_allocator);
-
+/**
+ * @brief Resizes the given array using internal resizing amounts.
+ * Causes a new allocation.
+ * @note This is an internal implementation detail and should not be called directly.
+ * @param array The array to be resized.
+ * @returns A pointer to the resized array block.
+ */
 KAPI void* _darray_resize(void* array);
-
+/**
+ * @brief Pushes a new entry to the given array. Resizes if necessary.
+ * @note Avoid using this directly; call the darray_push macro instead.
+ * @param array The array to be pushed to.
+ * @param value_ptr A pointer to the value to be pushed. A copy of this value is taken.
+ * @returns A pointer to the array block.
+ */
 KAPI void* _darray_push(void* array, const void* value_ptr);
-
+/**
+ * @brief Inserts a copy of the given value into the supplied array at the given index.
+ * Triggers an array resize if required.
+ * @note Avoid using this directly; call the darray_insert_at macro instead.
+ * @param array The array to insert into.
+ * @param index The index to insert at.
+ * @param value_ptr A pointer holding the value to be inserted.
+ * @returns The array block.
+ */
 KAPI void* _darray_insert_at(void* array, u64 index, void* value_ptr);
+/**
+ * @brief Duplicates the given array to a completely fresh copy, including
+ * header data as well as actual data contained within.
+ *
+ * Performs a dynamic memory allocation.
+ * @param type The type to be used to duplicate the darray. Used for size verification.
+ * @param array The array to be duplicated.
+ * @returns A pointer to the array's memory block.
+ */
+KAPI void* _darray_duplicate(u64 stride,void* array);
 
 /** @brief The default darray capacity. */
 #define DARRAY_DEFAULT_CAPACITY 1

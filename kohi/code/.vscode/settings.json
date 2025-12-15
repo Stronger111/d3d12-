@@ -157,7 +157,12 @@
         "kasset_bitmap_font_serializer.h": "c",
         "kresource_handler_bitmap_font.h": "c",
         "vulkan_utils.h": "c",
-        "vulkan_types.h": "c"
+        "vulkan_types.h": "c",
+        "audio_system.h": "c",
+        "core_resource_types.h": "c",
+        "asset_system.h": "c",
+        "skybox.h": "c",
+        "terrain.h": "c"
     },
     "C_Cpp.default.compilerPath": "D:/SoftWare/LLVM/bin/clang.exe",
 }

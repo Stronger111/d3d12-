@@ -1,14 +1,14 @@
-properties = {
-    name = "test_scene"
-    description = "A simple test scene, yo."
-}
+version = 2
+name = "test_scene"
+description = "A simple test scene, yo."
 nodes = [
     {
         name = "environment"
         attachments = [
             {
                 type = "skybox"
-                cubemap_name = "skybox"
+                cubemap_image_asset_name = "skybox"
+                package_name = "Testbed"
             }
             {
                 type = "directional_light"
@@ -26,7 +26,8 @@ nodes = [
         attachments = [
             {
                 type = "static_mesh"
-                resource_name = "sponza"
+                asset_name = "sponza"
+                package_name = "Testbed"
             }
         ]
         children = [
@@ -36,7 +37,8 @@ nodes = [
                 attachments = [
                     {
                         type = "static_mesh"
-                        resource_name = "Tree"
+                        asset_name = "Tree"
+                        package_name = "Testbed"
                     }
                 ]
             }
@@ -48,7 +50,8 @@ nodes = [
         attachments = [
             {
                 type = "static_mesh"
-                resource_name = "v_simple_hut_LOD0"
+                asset_name = "v_simple_hut_LOD0"
+                package_name = "Testbed"
             }
         ]
     }
@@ -58,7 +61,8 @@ nodes = [
         attachments = [
             {
                 type = "static_mesh"
-                resource_name = "Tree"
+                asset_name = "Tree"
+                package_name = "Testbed"
             }
         ]
     }
@@ -68,7 +72,8 @@ nodes = [
         attachments = [
             {
                 type = "static_mesh"
-                resource_name = "falcon"
+                asset_name = "falcon"
+                package_name = "Testbed"
             }
             {
                 type = "point_light"
@@ -85,9 +90,10 @@ nodes = [
         xform = "-50.000000 -3.900000 -50.000000 0.000000 0.000000 0.000000 1.000000 1.000000 1.000000 1.000000"
         attachments = [
             {
-                type = "terrain"
+                type = "heightmap_terrain"
                 name = "test_terrain"
-                resource_name = "test_terrain"
+                asset_name = "test_terrain"
+                package_name = "Testbed"
             }
         ]
     }

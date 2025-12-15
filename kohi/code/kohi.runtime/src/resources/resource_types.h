@@ -57,112 +57,82 @@ typedef struct resource {
     void* data;
 } resource;
 
-// typedef enum texture_flag {
-//     /** @brief Indicates if the texture has transparency. */
-//     TEXTURE_FLAG_HAS_TRANSPARENCY = 0x01,
-//     /** @brief Indicates if the texture can be written (rendered) to. */
-//     TEXTURE_FLAG_IS_WRITEABLE = 0x02,
-//     /** @brief Indicates if the texture was created via wrapping vs traditional creation. */
-//     TEXTURE_FLAG_IS_WRAPPED = 0x04,
-//     /** @brief Indicates the texture is a depth texture. */
-//     TEXTURE_FLAG_DEPTH = 0x08,
-//     /** @brief Indicates that this texture should account for renderer buffering (i.e. double/triple buffering) */
-//     TEXTURE_FLAG_RENDERER_BUFFERING = 0x10,
-// } texture_flag;
+// typedef enum scene_node_attachment_type {
+//     SCENE_NODE_ATTACHMENT_TYPE_UNKNOWN,
+//     SCENE_NODE_ATTACHMENT_TYPE_STATIC_MESH,
+//     SCENE_NODE_ATTACHMENT_TYPE_TERRAIN,
+//     SCENE_NODE_ATTACHMENT_TYPE_SKYBOX,
+//     SCENE_NODE_ATTACHMENT_TYPE_DIRECTIONAL_LIGHT,
+//     SCENE_NODE_ATTACHMENT_TYPE_POINT_LIGHT,
+//     SCENE_NODE_ATTACHMENT_TYPE_WATER_PLANE
+// } scene_node_attachment_type;
 
-// /** @brief Holds bit flags for textures.. */
-// typedef u8 texture_flag_bits;
+// // Static mesh attachment
+// typedef struct scene_node_attachment_static_mesh {
+//     char* resource_name;
+// } scene_node_attachment_static_mesh;
 
-// /**
-//  * @brief Represents various types of textures.
-//  */
-// typedef enum texture_type {
-//     /** @brief A standard two-dimensional texture. */
-//     TEXTURE_TYPE_2D,
-//     /** @brief A 2d array texture. */
-//     TEXTURE_TYPE_2D_ARRAY,
-//     /** @brief A cube texture, used for cubemaps. */
-//     TEXTURE_TYPE_CUBE,
-//     TEXTURE_TYPE_CUBE_ARRAY,
-//     TEXTURE_TYPE_COUNT
-// } texture_type;
+// // Terrain attachment
+// typedef struct scene_node_attachment_terrain {
+//     char* name;
+//     char* resource_name;
+// } scene_node_attachment_terrain;
 
-typedef enum scene_node_attachment_type {
-    SCENE_NODE_ATTACHMENT_TYPE_UNKNOWN,
-    SCENE_NODE_ATTACHMENT_TYPE_STATIC_MESH,
-    SCENE_NODE_ATTACHMENT_TYPE_TERRAIN,
-    SCENE_NODE_ATTACHMENT_TYPE_SKYBOX,
-    SCENE_NODE_ATTACHMENT_TYPE_DIRECTIONAL_LIGHT,
-    SCENE_NODE_ATTACHMENT_TYPE_POINT_LIGHT,
-    SCENE_NODE_ATTACHMENT_TYPE_WATER_PLANE
-} scene_node_attachment_type;
+// // Skybox attachment
+// typedef struct scene_node_attachment_skybox {
+//     char* cubemap_name;
+// } scene_node_attachment_skybox;
 
-// Static mesh attachment
-typedef struct scene_node_attachment_static_mesh {
-    char* resource_name;
-} scene_node_attachment_static_mesh;
+// // Directional light attachment
+// typedef struct scene_node_attachment_directional_light {
+//     vec4 colour;
+//     vec4 direction;
+//     f32 shadow_distance;
+//     f32 shadow_fade_distance;
+//     f32 shadow_split_mult;
+// } scene_node_attachment_directional_light;
 
-// Terrain attachment
-typedef struct scene_node_attachment_terrain {
-    char* name;
-    char* resource_name;
-} scene_node_attachment_terrain;
+// typedef struct scene_node_attachment_point_light {
+//     vec4 colour;
+//     vec4 position;
+//     f32 constant_f;
+//     f32 linear;
+//     f32 quadratic;
+// } scene_node_attachment_point_light;
 
-// Skybox attachment
-typedef struct scene_node_attachment_skybox {
-    char* cubemap_name;
-} scene_node_attachment_skybox;
+// //Plane attachment
+// typedef struct scene_node_attachment_water_plane {
+//     u32 reserved;
+// } scene_node_attachment_water_plane;
 
-// Directional light attachment
-typedef struct scene_node_attachment_directional_light {
-    vec4 colour;
-    vec4 direction;
-    f32 shadow_distance;
-    f32 shadow_fade_distance;
-    f32 shadow_split_mult;
-} scene_node_attachment_directional_light;
+// typedef struct scene_node_attachment_config {
+//     scene_node_attachment_type type;
+//     void* attachment_data;
+// } scene_node_attachment_config;
 
-typedef struct scene_node_attachment_point_light {
-    vec4 colour;
-    vec4 position;
-    f32 constant_f;
-    f32 linear;
-    f32 quadratic;
-} scene_node_attachment_point_light;
+// typedef struct scene_xform_config {
+//     vec3 position;
+//     quat rotation;
+//     vec3 scale;
+// } scene_xform_config;
 
-//Plane attachment
-typedef struct scene_node_attachment_water_plane {
-    u32 reserved;
-} scene_node_attachment_water_plane;
+// typedef struct scene_node_config {
+//     char* name;
+//     // pointer to a config if one exists, otherwise 0
+//     scene_xform_config* xform;
+//     // darray
+//     scene_node_attachment_config* attachments;
+//     // darray
+//     struct scene_node_config* children;
+// } scene_node_config;
 
-typedef struct scene_node_attachment_config {
-    scene_node_attachment_type type;
-    void* attachment_data;
-} scene_node_attachment_config;
+// typedef struct scene_config {
+//     u32 version;
+//     char* name;
+//     char* description;
+//     char* resource_name;
+//     char* resource_full_path;
 
-typedef struct scene_xform_config {
-    vec3 position;
-    quat rotation;
-    vec3 scale;
-} scene_xform_config;
-
-typedef struct scene_node_config {
-    char* name;
-    // pointer to a config if one exists, otherwise 0
-    scene_xform_config* xform;
-    // darray
-    scene_node_attachment_config* attachments;
-    // darray
-    struct scene_node_config* children;
-} scene_node_config;
-
-typedef struct scene_config {
-    u32 version;
-    char* name;
-    char* description;
-    char* resource_name;
-    char* resource_full_path;
-
-    // darray
-    scene_node_config* nodes;
-} scene_config;
+//     // darray
+//     scene_node_config* nodes;
+// } scene_config;
