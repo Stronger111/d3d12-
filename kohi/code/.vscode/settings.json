@@ -162,7 +162,9 @@
         "core_resource_types.h": "c",
         "asset_system.h": "c",
         "skybox.h": "c",
-        "terrain.h": "c"
+        "terrain.h": "c",
+        "job_system.h": "c",
+        "xlocmes": "c"
     },
     "C_Cpp.default.compilerPath": "D:/SoftWare/LLVM/bin/clang.exe",
 }

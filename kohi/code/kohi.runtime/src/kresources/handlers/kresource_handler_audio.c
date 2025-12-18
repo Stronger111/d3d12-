@@ -24,7 +24,6 @@ typedef struct audio_resource_handler_info {
 } audio_resource_handler_info;
 
 static void audio_kasset_on_result(asset_request_result result, const struct kasset* asset, void* listener_inst);
-static void audio_kasset_on_hot_reload(asset_request_result result, const struct kasset* asset, void* listener_inst);
 
 kresource* kresource_handler_audio_allocate(void) {
     return (kresource*)kallocate(sizeof(kresource_audio), MEMORY_TAG_RESOURCE);
@@ -62,7 +61,7 @@ b8 kresource_handler_audio_request(struct kresource_handler* self, kresource* re
     // Load the asset.
     kresource_asset_info* asset_info = &info->assets.data[0];
     if (asset_info->type == KASSET_TYPE_AUDIO) {
-        asset_request_info request_info = {0};
+        asset_request_info request_info = { 0 };
         request_info.type = asset_info->type;
         request_info.asset_name = asset_info->asset_name;
         request_info.package_name = asset_info->package_name;
@@ -76,7 +75,8 @@ b8 kresource_handler_audio_request(struct kresource_handler* self, kresource* re
         request_info.import_params = 0;
 
         asset_system_request(self->asset_system, request_info);
-    } else {
+    }
+    else {
         KERROR("kresource_handler_audio asset must be of audio type");
         return false;
     }
@@ -86,14 +86,16 @@ b8 kresource_handler_audio_request(struct kresource_handler* self, kresource* re
 
 void kresource_handler_audio_release(struct kresource_handler* self, kresource* resource) {
     if (resource) {
-        if (resource->type != KRESOURCE_TYPE_audio) {
+        if (resource->type != KRESOURCE_TYPE_AUDIO) {
             KERROR("Attempted to release non-audio resource '%s' via audio resource handler. Resource not released.");
             return;
         }
-        // Release GPU resources
-        kresource_audio* t = (kresource_audio*)resource;
-        renderer_audio_resources_release(engine_systems_get()->renderer_system, &t->renderer_audio_handle);
 
+        kresource_audio* t = (kresource_audio*)resource;
+        if (t->pcm_data_size && t->pcm_data) {
+            kfree(t->pcm_data, t->pcm_data_size, MEMORY_TAG_AUDIO);
+        }
+        // TODO: release backend data
         kfree(resource, sizeof(kresource_audio), MEMORY_TAG_RESOURCE);
     }
 }
@@ -101,14 +103,15 @@ void kresource_handler_audio_release(struct kresource_handler* self, kresource* 
 static void audio_kasset_on_result(asset_request_result result, const struct kasset* asset, void* listener_inst) {
     audio_resource_handler_info* listener = (audio_resource_handler_info*)listener_inst;
     if (result == ASSET_REQUEST_RESULT_SUCCESS) {
+        // TODO: send to audio system to get resources, etc.
         // Release the asset reference as we are done with it.
-        asset_system_release(asset_system, image->base.name, image->base.package_name);
+        asset_system_release(engine_systems_get()->asset_state, asset->name, asset->package_name);
         // Boot out so the request isn't destroyed.
         return;
-    } else {
-        KERROR("Failed to load a required asset for audio resource '%s'. Resource may not appear correctly when rendered.", kname_string_get(listener->typed_resource->base.name));
     }
-
+    else {
+        KERROR("Failed to load a required asset for audio resource '%s'. Resource may not work correctly when used.", kname_string_get(listener->typed_resource->base.name));
+    }
 destroy_request:
     // Destroy the request.
     array_kimage_ptr_destroy(&listener->assets);
@@ -118,6 +121,3 @@ destroy_request:
     kfree(listener, sizeof(audio_resource_handler_info), MEMORY_TAG_RESOURCE);
 }
 
-static void audio_kasset_on_hot_reload(asset_request_result result, const struct kasset* asset, void* listener_inst) {
-    KASSERT_MSG(false, "Not yet implemented.");
-}
