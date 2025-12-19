@@ -579,18 +579,19 @@ static b8 stream_resource_data(kaudio_backend_interface* backend, ALuint buffer,
 
     // Figure out how many samples can be taken.
     // TODO: This might be _way_ too much between chunk size and samples (maybe samples left * channels?)
-    u64 samples = KMIN(resource->total_samples_left, state->chunk_size);
-    u64 size = samples;   // audio->load_samples(audio, state->chunk_size, state->chunk_size);
+    u64 sample_count = KMIN(resource->total_samples_left, state->chunk_size);
 
     //0 means the end of the file has been reached, and either stops or needs to start over.
-    if (size == 0) {
+    if (sample_count == 0) {
+        KTRACE("End of file reached. Returning false.");
         return false;
     }
     openal_backend_check_error();
     //Load the data into the buffer.Just a pointer into the pcm_data at on offset.
-    void* streamed_data = resource->resource->pcm_data + (resource->resource->total_sample_count - size);// audio->stream_buffer_data(audio);
+    u64 pos = resource->resource->total_sample_count - resource->total_samples_left; // - sample_count;
+    i16* streamed_data = resource->resource->pcm_data + pos;// audio->stream_buffer_data(audio);
     if (streamed_data) {
-        alBufferData(buffer, resource->format, streamed_data, size * sizeof(ALshort), resource->resource->sample_rate);
+        alBufferData(buffer, resource->format, streamed_data, sample_count * sizeof(ALshort), resource->resource->sample_rate);
         openal_backend_check_error();
     }
     else {
@@ -599,7 +600,7 @@ static b8 stream_resource_data(kaudio_backend_interface* backend, ALuint buffer,
     }
 
     //Update the samples remaining.
-    resource->total_samples_left -= size;
+    resource->total_samples_left -= sample_count;
     return true;
 }
 
@@ -627,10 +628,12 @@ static b8 openal_backend_stream_update(kaudio_backend_interface* backend, kaudio
 
         //If this return false,there was nothing further to read (i.e at the end of the file).
         if (!stream_resource_data(backend, buffer_id, resource)) {
+            KTRACE("stream_resource_data returned false");
             b8 done = true;
 
             //If set to loop,start over at the beginning.
             if (resource->is_looping) {
+                KTRACE("Resource set to loop. Rewinding and starting over.");
                 //Loop around.
                 resource->total_samples_left = resource->resource->total_sample_count;
                 /* audio->rewind(audio); */
@@ -639,6 +642,7 @@ static b8 openal_backend_stream_update(kaudio_backend_interface* backend, kaudio
 
             //If not set to loop,the sound is done playing.
             if (done) {
+                KTRACE("Sound is done playing.");
                 return false;
             }
         }

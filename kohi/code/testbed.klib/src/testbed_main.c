@@ -213,8 +213,10 @@ b8 game_on_debug_event(u16 code, void* sender, void* listener_inst, event_contex
             playing = !playing;
             if (playing) {
                 // Play on channel 6
-                 // TODO: pipe this through an emitter node in the scene.
+                // TODO: pipe this through an emitter node in the scene.
                 kaudio_play(engine_systems_get()->audio_system, state->test_loop_sound, 6);
+                //Set this to loop.
+                kaudio_looping_set(engine_systems_get()->audio_system, state->test_loop_sound, true);
             }
             else {
                 // Stop channel 6
@@ -755,6 +757,9 @@ b8 application_initialize(struct application* game_inst) {
     /*if (!audio_system_channel_emitter_play(6, &state->test_emitter)) {
         KERROR("Failed to play test emitter.");
     }*/
+    //TODO:pipe this through an emitter node in the scene.
+    kaudio_play(engine_systems_get()->audio_system, state->test_loop_sound, 6);
+    kaudio_looping_set(engine_systems_get()->audio_system, state->test_loop_sound, true);
     // Play the test music on channel 7.
     kaudio_play(engine_systems_get()->audio_system, state->test_music, 7);
 
