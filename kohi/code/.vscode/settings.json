@@ -164,7 +164,9 @@
         "skybox.h": "c",
         "terrain.h": "c",
         "job_system.h": "c",
-        "xlocmes": "c"
+        "xlocmes": "c",
+        "kaudio_types.h": "c",
+        "kohi.plugin.audio.openal_version.h": "c"
     },
     "C_Cpp.default.compilerPath": "D:/SoftWare/LLVM/bin/clang.exe",
 }

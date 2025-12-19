@@ -20,7 +20,7 @@ b8 openal_backend_channel_gain_set(kaudio_backend_interface* backend, u8 channel
 b8 openal_backend_channel_pitch_set(kaudio_backend_interface* backend, u8 channel_id, f32 pitch);
 b8 openal_backend_channel_position_set(kaudio_backend_interface* backend, u8 channel_id, vec3 position);
 b8 openal_backend_channel_looping_set(kaudio_backend_interface* backend, u8 channel_id, b8 looping);
-b8 openal_backend_play(kaudio_backend_interface* backend,u8 channel_id);
+b8 openal_backend_channel_play(kaudio_backend_interface* backend,u8 channel_id);
 b8 openal_backend_channel_play_resource(kaudio_backend_interface* backend,khandle resource_handle,u8 channel_id);
 b8 openal_backend_channel_stop(kaudio_backend_interface* backend,u8 channel_id);
 b8 openal_backend_channel_pause(kaudio_backend_interface* backend,u8 channel_id);
