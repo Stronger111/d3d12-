@@ -3,9 +3,12 @@
 #include "core/engine.h"
 #include "kdebug/kassert.h"
 #include "defines.h"
+#include "kresources/handlers/kresource_handler_audio.h"
 #include "kresources/handlers/kresource_handler_binary.h"
 #include "kresources/handlers/kresource_handler_bitmap_font.h"
+#include "kresources/handlers/kresource_handler_heightmap_terrain.h"
 #include "kresources/handlers/kresource_handler_material.h"
+#include "kresources/handlers/kresource_handler_scene.h"
 #include "kresources/handlers/kresource_handler_shader.h"
 #include "kresources/handlers/kresource_handler_static_mesh.h"
 #include "kresources/handlers/kresource_handler_system_font.h"
@@ -72,14 +75,14 @@ b8 kresource_system_initialize(u64* memory_requirement, struct kresource_system_
 
     //Binary handler
     {
-       kresource_handler handler = { 0 };
-       handler.allocate = kresource_handler_binary_allocate;
-       handler.release = kresource_handler_binary_release;
-       handler.request = kresource_handler_binary_request;
-       if (!kresource_system_handler_register(state, KRESOURCE_TYPE_BINARY, handler)) {
-           KERROR("Failed to register binary resource handler");
-           return false;
-       }
+        kresource_handler handler = { 0 };
+        handler.allocate = kresource_handler_binary_allocate;
+        handler.release = kresource_handler_binary_release;
+        handler.request = kresource_handler_binary_request;
+        if (!kresource_system_handler_register(state, KRESOURCE_TYPE_BINARY, handler)) {
+            KERROR("Failed to register binary resource handler");
+            return false;
+        }
     }
 
     //Texture handler
@@ -154,6 +157,41 @@ b8 kresource_system_initialize(u64* memory_requirement, struct kresource_system_
         }
     }
 
+    // Scene handler.
+    {
+        kresource_handler handler = { 0 };
+        handler.allocate = kresource_handler_scene_allocate;
+        handler.release = kresource_handler_scene_release;
+        handler.request = kresource_handler_scene_request;
+        if (!kresource_system_handler_register(state, KRESOURCE_TYPE_SCENE, handler)) {
+            KERROR("Failed to register scene resource handler");
+            return false;
+        }
+    }
+
+    // Heightmap terrain handler.
+    {
+        kresource_handler handler = { 0 };
+        handler.allocate = kresource_handler_heightmap_terrain_allocate;
+        handler.release = kresource_handler_heightmap_terrain_release;
+        handler.request = kresource_handler_heightmap_terrain_request;
+        if (!kresource_system_handler_register(state, KRESOURCE_TYPE_HEIGHTMAP_TERRAIN, handler)) {
+            KERROR("Failed to register heightmap terrain resource handler");
+            return false;
+        }
+    }
+
+    // Audio handler.
+    {
+        kresource_handler handler = { 0 };
+        handler.allocate = kresource_handler_audio_allocate;
+        handler.release = kresource_handler_audio_release;
+        handler.request = kresource_handler_audio_request;
+        if (!kresource_system_handler_register(state, KRESOURCE_TYPE_AUDIO, handler)) {
+            KERROR("Failed to register audio resource handler");
+            return false;
+        }
+    }
     KINFO("Resource system (new) initialized.");
 
     return true;

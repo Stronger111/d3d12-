@@ -88,21 +88,21 @@ typedef struct testbed_game_state {
     b8 using_gizmo;
 
     u32 render_mode;
-    
+
     struct kruntime_plugin* sui_plugin;
     struct standard_ui_plugin_state* sui_plugin_state;
     struct standard_ui_state* sui_state;
 
-    struct audio_file* test_audio_file;
-    struct audio_file* test_loop_audio_file;
-    struct audio_file* test_music;
-    audio_emitter test_emitter;
+    struct sui_control test_panel;
+    struct sui_control test_button;
+
+    khandle test_sound;
+    khandle test_loop_sound;
+    khandle test_music;
 
     u32 proj_box_index;
     u32 cam_proj_line_indices[24];
 
-    struct sui_control test_panel;
-    struct sui_control test_button;
     // TODO: end temp
 } testbed_game_state;
 

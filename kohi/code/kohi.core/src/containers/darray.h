@@ -73,7 +73,7 @@ KAPI void* _darray_insert_at(void* array, u64 index, void* value_ptr);
  * @param array The array to be duplicated.
  * @returns A pointer to the array's memory block.
  */
-KAPI void* _darray_duplicate(u64 stride,void* array);
+KAPI void* _darray_duplicate(u64 stride, void* array);
 
 /** @brief The default darray capacity. */
 #define DARRAY_DEFAULT_CAPACITY 1
@@ -200,8 +200,19 @@ KAPI u64 darray_stride(void* array);
 KAPI void darray_length_set(void* array, u64 value);
 
 /**
- * NEW DARRAY
+ * @brief Duplicates the given array to a completely fresh copy, including
+ * header data as well as actual data contained within.
+ *
+ * Performs a dynamic memory allocation.
+ * @param type The type to be used to duplicate the darray. Used for size verification.
+ * @param array The array to be duplicated.
+ * @returns A pointer to the array's memory block.
  */
+#define darray_duplicate(type,array)(type*)_darray_duplicate(sizeof(type),array)
+
+ /**
+  * NEW DARRAY
+  */
 
 KAPI void _kdarray_init(u32 length, u32 stride, u32 capacity, struct frame_allocator_int* allocator, u32* out_length, u32* out_stride, u32* out_capacity, void** block, struct frame_allocator_int** out_allocator);
 KAPI void _kdarray_free(u32* length, u32* capacity, u32* stride, void** block, struct frame_allocator_int** out_allocator);

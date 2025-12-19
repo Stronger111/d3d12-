@@ -37,7 +37,7 @@ typedef enum kresource_type {
     KRESOURCE_TYPE_HEIGHTMAP_TERRAIN,
     /** @brief Voxel-based terrain resource type. */
     KRESOURCE_TYPE_VOXEL_TERRAIN,
-   /** @brief Audio resource type, used for both sound effects and music. */
+    /** @brief Audio resource type, used for both sound effects and music. */
     KRESOURCE_TYPE_AUDIO,
     KRESOURCE_TYPE_COUNT,
     // Anything beyond 128 is user-defined types.
@@ -472,14 +472,13 @@ typedef struct kresource_audio {
     i32 channels;
     // The sample rate of the sound/music (i.e. 44100)
     u32 sample_rate;
+    // Total samples in the audio resource.
     u32 total_sample_count;
+    // The size of the pcm data.
     u64 pcm_data_size;
     /** Pulse-code modulation buffer, or raw data to be fed into a buffer. */
     i16* pcm_data;
 
-    // Used to track samples in streaming type files.
-   // FIXME: Should be tracked internally by the audio system.
-    u32 total_samples_left;
     /** @brief A handle to the audio internal resource. */
     khandle internal_resource;
 }kresource_audio;

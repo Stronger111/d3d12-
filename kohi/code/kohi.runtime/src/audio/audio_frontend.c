@@ -10,6 +10,7 @@
 #include "memory/kmemory.h"
 #include "parsers/kson_parser.h"
 #include "plugins/plugin_types.h"
+#include "strings/kname.h"
 #include "systems/kresource_system.h"
 #include "systems/plugin_system.h"
 
@@ -243,22 +244,22 @@ f32 kaudio_system_master_volume_get(struct kaudio_system_state* state) {
 
 void kaudio_system_channel_volume_set(struct kaudio_system_state* state, u8 channel_index, f32 volume) {
     if (state) {
-        if (channel_index < state->audio_channel_count) {
-            // Clamp volume to a sane range.
-            state->channels[channel_index].volume = KCLAMP(volume, 0.0f, 1.0f);
+        if (channel_index >= state->audio_channel_count) {
+            KERROR("kaudio_system_channel_volume_set - channel_index %u is out of range (0-%u). Nothing will be done.", channel_index, state->audio_channel_count);
+            return;
         }
-        KERROR("kaudio_system_channel_volume_set - channel_index %u is out of range (0-%u). Nothing will be done.", channel_index, state->audio_channel_count);
+        // Clamp volume to a sane range.
+        state->channels[channel_index].volume = KCLAMP(volume, 0.0f, 1.0f);
     }
 }
 f32 kaudio_system_channel_volume_get(struct kaudio_system_state* state, u8 channel_index) {
     if (state) {
-        if (channel_index < state->audio_channel_count) {
-            return state->channels[channel_index].volume;
+        if (channel_index >= state->audio_channel_count) {
+            KERROR("kaudio_system_channel_volume_get - channel_index %u is out of range (0-%u). 0 will be returned.", channel_index, state->audio_channel_count);
+            return 0.0f;
         }
-        KERROR("kaudio_system_channel_volume_get - channel_index %u is out of range (0-%u). 0 will be returned.", channel_index, state->audio_channel_count);
-        return 0.0f;
+        return state->channels[channel_index].volume;
     }
-
     return 0.0f;
 }
 
@@ -330,7 +331,6 @@ b8 kaudio_play(struct kaudio_system_state* state, khandle audio, u8 channel_inde
         return false;
     }
 
-    kaudio_resource_handle_data* data = &state->resources[audio.handle_index];
     return state->backend->channel_play_resource(state->backend, audio, channel_index);
 }
 
@@ -399,11 +399,70 @@ b8 kaudio_channel_play(struct kaudio_system_state* state, u8 channel_index) {
     }
     return false;
 }
-b8 kaudio_channel_pause(struct kaudio_system_state* state, u8 channel_index) {}
-b8 kaudio_channel_resume(struct kaudio_system_state* state, u8 channel_index) {}
-b8 kaudio_channel_stop(struct kaudio_system_state* state, u8 channel_index) {}
+b8 kaudio_channel_pause(struct kaudio_system_state* state, u8 channel_index) {
+    if (!state) {
+        return false;
+    }
+    if (channel_index >= state->audio_channel_count) {
+        KERROR("%s called with channel_index %hhu out of range (range = 0-%u)", __FUNCTION__, channel_index, state->audio_channel_count);
+        return false;
+    }
+    return state->backend->channel_pause(state->backend, channel_index);
+}
+
+b8 kaudio_channel_resume(struct kaudio_system_state* state, u8 channel_index) {
+    if (!state) {
+        return false;
+    }
+    if (channel_index >= state->audio_channel_count) {
+        KERROR("%s called with channel_index %hhu out of range (range = 0-%u)", __FUNCTION__, channel_index, state->audio_channel_count);
+        return false;
+    }
+    return state->backend->channel_resume(state->backend, channel_index);
+}
+
+b8 kaudio_channel_stop(struct kaudio_system_state* state, u8 channel_index) {
+    if (!state) {
+        return false;
+    }
+    if (channel_index >= state->audio_channel_count) {
+        KERROR("%s called with channel_index %hhu out of range (range = 0-%u)", __FUNCTION__, channel_index, state->audio_channel_count);
+        return false;
+    }
+    return state->backend->channel_stop(state->backend, channel_index);
+}
+
 b8 kaudio_channel_is_playing(struct kaudio_system_state* state, u8 channel_index) {
-    // LEFTOFF: Implement these and the above
+    if (!state) {
+        return false;
+    }
+    if (channel_index >= state->audio_channel_count) {
+        KERROR("%s called with channel_index %hhu out of range (range = 0-%u)", __FUNCTION__, channel_index, state->audio_channel_count);
+        return false;
+    }
+    return state->backend->channel_is_playing(state->backend, channel_index);
+}
+
+b8 kaudio_channel_is_paused(struct kaudio_system_state* state, u8 channel_index) {
+    if (!state) {
+        return false;
+    }
+    if (channel_index >= state->audio_channel_count) {
+        KERROR("%s called with channel_index %hhu out of range (range = 0-%u)", __FUNCTION__, channel_index, state->audio_channel_count);
+        return false;
+    }
+    return state->backend->channel_is_paused(state->backend, channel_index);
+}
+
+b8 kaudio_channel_is_stopped(struct kaudio_system_state* state, u8 channel_index) {
+    if (!state) {
+        return false;
+    }
+    if (channel_index >= state->audio_channel_count) {
+        KERROR("%s called with channel_index %hhu out of range (range = 0-%u)", __FUNCTION__, channel_index, state->audio_channel_count);
+        return false;
+    }
+    return state->backend->channel_is_stopped(state->backend, channel_index);
 }
 
 b8 kaudio_channel_looping_get(struct kaudio_system_state* state, u8 channel_index) {
@@ -525,4 +584,43 @@ static b8 deserialize_config(const char* config_str, kaudio_system_config* out_c
     kson_tree_cleanup(&tree);
 
     return true;
+}
+
+static khandle get_new_handle(kaudio_system_state* state) {
+    for (u32 i = 0; i < state->max_resource_count; ++i) {
+        kaudio_resource_handle_data* data = &state->resources[i];
+        if (data->uniqueid == INVALID_ID_U64) {
+            // Found one.
+            khandle h = khandle_create(i);
+            data->uniqueid = h.unique_id.uniqueid;
+            return h;
+        }
+    }
+    KFATAL("No more room to allocate a new handle for a sound. Expand the max_resource_count in configuration to load more at once.");
+    return khandle_invalid();
+}
+
+static void on_audio_asset_loaded(kresource* resource, void* listener) {
+    audio_asset_request_listener* listener_inst = listener;
+    KTRACE("Audio resource loaded: '%s'.", kname_string_get(resource->name));
+
+    kaudio_resource_handle_data* data = &listener_inst->state->resources[listener_inst->audio.handle_index];
+    data->resource = (kresource_audio*)resource;
+
+    // Send over to the backend to be loaded.
+    if (!listener_inst->state->backend->resource_load(listener_inst->state->backend, data->resource, data->is_streaming, listener_inst->audio)) {
+        KERROR("Failed to load audio resource into audio system backend. Resource will be released and handle unusable.");
+
+        kresource_system_release(engine_systems_get()->kresource_state, resource->name);
+        data->is_streaming = false;
+        data->resource = 0;
+        data->uniqueid = INVALID_ID_U64;
+    }
+
+    // Cleanup the listener.
+    KFREE_TYPE(listener, audio_asset_request_listener, MEMORY_TAG_RESOURCE);
+}
+
+static b8 handle_is_valid_and_pristine(kaudio_system_state* state, khandle handle) {
+    return state && khandle_is_valid(handle) && handle.handle_index < state->max_resource_count && khandle_is_pristine(handle, state->resources[handle.handle_index].uniqueid);
 }
