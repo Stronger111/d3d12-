@@ -14,6 +14,7 @@
 #include "defines.h"
 
 #include "math/math_types.h"
+#include "strings/kname.h"
 
 typedef struct directional_light_data {
     /** @brief The light colour. */
@@ -32,7 +33,7 @@ typedef struct directional_light_data {
  */
 typedef struct directional_light {
     /** @brief The name of the directional light. */
-    char* name;
+    kname name;
      /** @bried The generation of the light, incremented on change. Can be used to tell when a kshader upload is required. */
      u32 generation;
     /** @brief The directional light kshader data. */
@@ -59,7 +60,7 @@ typedef struct point_light_data {
  */
 typedef struct point_light {
     /** @brief The name of the light. */
-    char* name;
+    kname name;
      /** @brief The generation of the light, incremented on every update. Can be used to detect when a kshader upload is required. */
      u32 generation;
     /** @brief The kshader data for the point light. */

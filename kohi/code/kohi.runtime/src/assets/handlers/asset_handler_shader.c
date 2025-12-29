@@ -18,7 +18,7 @@ void asset_handler_shader_create(struct asset_handler* self, struct vfs_state* v
     KASSERT_MSG(self && vfs, "Valid pointers are required for 'self' and 'vfs'.");
 
     self->vfs = vfs;
-    self->is_binary=false;
+    self->is_binary = false;
     self->request_asset = 0;
     self->release_asset = asset_handler_shader_release_asset;
     self->type = KASSET_TYPE_SHADER;
@@ -27,6 +27,7 @@ void asset_handler_shader_create(struct asset_handler* self, struct vfs_state* v
     self->binary_deserialize = 0;
     self->text_serialize = kasset_shader_serialize;
     self->text_deserialize = kasset_shader_deserialize;
+    self->size = sizeof(kasset_shader);
 }
 
 void asset_handler_shader_release_asset(struct asset_handler* self, struct kasset* asset) {

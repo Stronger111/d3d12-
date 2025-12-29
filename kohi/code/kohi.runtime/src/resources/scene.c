@@ -160,6 +160,7 @@ void scene_node_initialize(scene* s, khandle parent_handle, scene_node_config* n
         }
 
         // Process attachment configs by type.
+
         //Skyboxs
         if (node_config->skybox_configs) {
             u32 count = darray_length(node_config->skybox_configs);
@@ -555,7 +556,7 @@ b8 scene_initialize(scene* scene) {
     if (scene->config) {
         kresource_scene* config = scene->config;
         if (scene->config->base.name) {
-            scene->name = string_duplicate(scene->config->base.name);
+            scene->name = scene->config->base.name;
         }
         if (scene->config->description) {
             scene->description = string_duplicate(scene->config->description);

@@ -16,8 +16,8 @@ void asset_handler_heightmap_terrain_create(asset_handler* self, vfs_state* vfs)
     KASSERT_MSG(self && vfs, "Valid pointers are required for 'self' and 'vfs'.");
 
     self->vfs = vfs;
-    self->is_binary=false;
-    self->request_asset=0;
+    self->is_binary = false;
+    self->request_asset = 0;
     self->release_asset = asset_handler_heightmap_terrain_release_asset;
     self->type = KASSET_TYPE_HEIGHTMAP_TERRAIN;
     self->type_name = KASSET_TYPE_NAME_HEIGHTMAP_TERRAIN;
@@ -25,6 +25,7 @@ void asset_handler_heightmap_terrain_create(asset_handler* self, vfs_state* vfs)
     self->binary_deserialize = 0;
     self->text_serialize = kasset_heightmap_terrain_serialize;
     self->text_deserialize = kasset_heightmap_terrain_deserialize;
+    self->size = sizeof(kasset_heightmap_terrain);
 }
 
 void asset_handler_heightmap_terrain_release_asset(struct asset_handler* self, struct kasset* asset) {

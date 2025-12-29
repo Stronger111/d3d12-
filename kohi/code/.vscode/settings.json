@@ -169,7 +169,8 @@
         "kohi.plugin.audio.openal_version.h": "c",
         "oal_plugin.h": "c",
         "audio_loader.h": "c",
-        "audio_types.h": "c"
+        "audio_types.h": "c",
+        "identifier.h": "c"
     },
     "C_Cpp.default.compilerPath": "D:/SoftWare/LLVM/bin/clang.exe",
 }

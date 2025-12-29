@@ -309,7 +309,7 @@ b8 platform_window_title_set(struct kwindow* window, const char* title) {
     LPCWSTR wtitle = cstr_to_wcstr(title);
 
     // If the function succeeds,the return value is nonzero.
-    b8 result = (SetWindowText(window->platform_state->hwnd, title) != 0);
+    b8 result = (SetWindowText(window->platform_state->hwnd, wtitle) != 0);
     wcstr_free(wtitle);
     return result;
 }

@@ -102,8 +102,8 @@ typedef struct terrain {
     identifier id;
     u32 generation;
     terrain_state state;
-    char* name;
-    char* resource_name;
+    kname name;
+    kresource_heightmap_terrain* terrain_resource;
     kname material_name;
     // X 轴像素的长度
     u32 tile_count_x;
@@ -133,10 +133,10 @@ typedef struct terrain {
     u8 lod_count;
 
     u32 material_count;
-    char** material_names;
+    kname* material_names;
 } terrain;
 
-KAPI b8 terrain_create(const terrain_config* config, terrain* out_terrain);
+KAPI b8 terrain_create(kresource_heightmap_terrain* terrain_resource, terrain* out_terrain);
 KAPI void terrain_destroy(terrain* t);
 
 KAPI b8 terrain_initialize(terrain* t);

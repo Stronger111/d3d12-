@@ -29,6 +29,7 @@ void asset_handler_system_font_create(struct asset_handler* self, struct vfs_sta
     self->binary_deserialize = 0;
     self->text_serialize = kasset_system_font_serialize;
     self->text_deserialize = kasset_system_font_deserialize;
+    self->size = sizeof(kasset_system_font);
 }
 
 void asset_handler_system_font_request_asset(struct asset_handler* self, struct kasset* asset, void* listener_instance, PFN_kasset_on_result user_callback) {
@@ -135,7 +136,7 @@ static void asset_handler_system_font_on_asset_loaded(struct vfs_state* vfs, vfs
             request_info.import_params_size = 0;
             request_info.vfs_callback = asset_handler_system_font_on_asset_loaded;
             request_info.watch_for_hot_reload = false; // Fonts don't need hot reloading.
-            font_file_data=vfs_request_asset_sync(vfs, request_info);
+            font_file_data = vfs_request_asset_sync(vfs, request_info);
             if (font_file_data.result == VFS_REQUEST_RESULT_SUCCESS) {
                 // Take a copy of the font binary data.
                 typed_asset->font_binary_size = font_file_data.size;

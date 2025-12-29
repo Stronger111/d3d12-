@@ -376,7 +376,7 @@ typedef struct material_request_listener {
 
 static b8 create_default_standard_material(material_system_state* state);
 static b8 create_default_water_material(material_system_state* state);
-static b8 create_default_blended_material(material_system_state* state);
+//static b8 create_default_blended_material(material_system_state* state);
 static void on_material_system_dump(console_command_context context);
 static khandle get_shader_for_material_type(const material_system_state* state, kmaterial_type type);
 static khandle material_handle_create(material_system_state* state, kname name);
@@ -1695,42 +1695,42 @@ static b8 create_default_water_material(material_system_state* state) {
     return true;
 }
 
-static b8 create_default_blended_material(material_system_state* state) {
-    kresource_material_request_info request = { 0 };
-    request.base.type = KRESOURCE_TYPE_MATERIAL;
-    // FIXME: figure out how the layers should look for this material type.
-     //
-    // TODO: Need to add "channel" property to each map separate from the name of
-    // the map to indicate its usage.
-    //
-    // TODO: Layered materials will work somewhat differently than standard (see below
-    // for example). Each "channel" will be represented by a arrayed texture whose number
-    // of elements is equal to the number of layers in the material. This keeps the sampler
-    // count low and also allows the loading of many textures for the terrain at once. The
-    // mesh using this material should indicate the layer to be used at the vertex level (as
-    // sampling this from an image limits to 4 layers (RGBA)).
-    //
-    // TODO: The size of all layers is determined by the channel_size_x/y in the material config,
-    // OR by not specifying it and using the default of 1024. Texture data will be loaded into the
-    // array by copying when the dimensions of the source texture match the channel_size_x/y, or by
-    // blitting the texture onto the layer when it does not match. This gets around the requirement
-    // of having all textures be the same size in an arrayed texture.
-    //
-    // TODO: This process will also be utilized by the metallic_roughness_ao_map (formerly "combined"),
-    // but instead targeting a single channel of the target texture as opposed to a layer of it.
-    request.material_source_text = "\
-version = 3\
-type = \"multi\"\
-\
-materials = [\
-    \"default\"\
-    \"default\"\
-    \"default\"\
-    \"default\"\
-]";
+// static b8 create_default_blended_material(material_system_state* state) {
+//     kresource_material_request_info request = { 0 };
+//     request.base.type = KRESOURCE_TYPE_MATERIAL;
+//     // FIXME: figure out how the layers should look for this material type.
+//      //
+//     // TODO: Need to add "channel" property to each map separate from the name of
+//     // the map to indicate its usage.
+//     //
+//     // TODO: Layered materials will work somewhat differently than standard (see below
+//     // for example). Each "channel" will be represented by a arrayed texture whose number
+//     // of elements is equal to the number of layers in the material. This keeps the sampler
+//     // count low and also allows the loading of many textures for the terrain at once. The
+//     // mesh using this material should indicate the layer to be used at the vertex level (as
+//     // sampling this from an image limits to 4 layers (RGBA)).
+//     //
+//     // TODO: The size of all layers is determined by the channel_size_x/y in the material config,
+//     // OR by not specifying it and using the default of 1024. Texture data will be loaded into the
+//     // array by copying when the dimensions of the source texture match the channel_size_x/y, or by
+//     // blitting the texture onto the layer when it does not match. This gets around the requirement
+//     // of having all textures be the same size in an arrayed texture.
+//     //
+//     // TODO: This process will also be utilized by the metallic_roughness_ao_map (formerly "combined"),
+//     // but instead targeting a single channel of the target texture as opposed to a layer of it.
+//     request.material_source_text = "\
+// version = 3\
+// type = \"multi\"\
+// \
+// materials = [\
+//     \"default\"\
+//     \"default\"\
+//     \"default\"\
+//     \"default\"\
+// ]";
 
-    return true;
-}
+//     return true;
+// }
 
 static void on_material_system_dump(console_command_context context) {
     material_system_dump(engine_systems_get()->material_system);

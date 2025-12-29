@@ -26,6 +26,7 @@ void asset_handler_material_create(struct asset_handler* self, struct vfs_state*
     self->binary_deserialize = 0;
     self->text_serialize = kasset_material_serialize;
     self->text_deserialize = kasset_material_deserialize;
+    self->size = sizeof(kasset_material);
 }
 
 void asset_handler_material_request_asset(struct asset_handler* self, struct kasset* asset, void* listener_instance, PFN_kasset_on_result user_callback) {
@@ -50,7 +51,7 @@ void asset_handler_material_request_asset(struct asset_handler* self, struct kas
     request_info.vfs_callback = asset_handler_base_on_asset_loaded;
     // TODO: Material resource hot reloading.
     request_info.watch_for_hot_reload = false;
-    
+
     vfs_request_asset(vfs_state, request_info);
 }
 

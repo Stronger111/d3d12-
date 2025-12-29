@@ -533,8 +533,7 @@ static b8 serialize_node(scene_node_config* node, kson_object* node_obj) {
 
 static b8 deserialize_node(kasset* asset, scene_node_config* node, kson_object* node_obj) {
 
-    //Name, if exists. Optional.
-    kname name = INVALID_KNAME;
+    //Get  Name,if defined. Not required.
     kson_object_property_value_get_string_as_kname(node_obj, "name", &node->name);
 
     // Get Xform as a string, if it exists. Optional.
