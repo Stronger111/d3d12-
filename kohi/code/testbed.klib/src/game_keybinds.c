@@ -16,7 +16,10 @@
 #include <strings/kstring.h>
 #include <systems/timeline_system.h>
 
+#if KOHI_DEBUG
 #include "debug_console.h"
+#endif
+
 #include "game_state.h"
 #include "identifiers/khandle.h"
 #include "renderer/renderer_types.h"
@@ -103,6 +106,8 @@ void game_on_move_down(keys key, keymap_entry_bind_type type, keymap_modifier mo
     camera_move_down(state->world_camera, state->forward_move_speed * get_engine_delta_time());
 }
 void game_on_console_change_visibility(keys key, keymap_entry_bind_type type, keymap_modifier modifiers, void* user_data) {
+    // No-op unless a debug build
+#if KOHI_DEBUG
     application* game_inst = (application*)user_data;
     testbed_game_state* state = (testbed_game_state*)game_inst->state;
 
@@ -116,6 +121,7 @@ void game_on_console_change_visibility(keys key, keymap_entry_bind_type type, ke
     else {
         input_keymap_pop();
     }
+#endif
 }
 
 void game_on_set_render_mode_default(keys key, keymap_entry_bind_type type, keymap_modifier modifiers, void* user_data) {
@@ -200,6 +206,8 @@ void game_on_toggle_sound(keys key, keymap_entry_bind_type type, keymap_modifier
 }
 
 void game_on_console_scroll(keys key, keymap_entry_bind_type type, keymap_modifier modifiers, void* user_data) {
+    // No-op unless a debug build.
+#if KOHI_DEBUG
     application* app = (application*)user_data;
     testbed_game_state* state = (testbed_game_state*)app->state;
     debug_console_state* console_state = &state->debug_console;
@@ -209,21 +217,30 @@ void game_on_console_scroll(keys key, keymap_entry_bind_type type, keymap_modifi
     else if (key == KEY_PAGEDOWN) {
         debug_console_move_down(console_state);
     }
+#endif
 }
 
 void game_on_console_history_back(keys key, keymap_entry_bind_type type, keymap_modifier modifiers, void* user_data) {
+    // No-op unless a debug build.
+#if KOHI_DEBUG
     application* game_inst = (application*)user_data;
     testbed_game_state* state = (testbed_game_state*)game_inst->state;
     debug_console_history_back(&state->debug_console);
+#endif
 }
 
 void game_on_console_history_forward(keys key, keymap_entry_bind_type type, keymap_modifier modifiers, void* user_data) {
+    // No-op unless a debug build.
+#if KOHI_DEBUG
     application* game_inst = (application*)user_data;
     testbed_game_state* state = (testbed_game_state*)game_inst->state;
     debug_console_history_forward(&state->debug_console);
+#endif
 }
 
 void game_on_console_scroll_hold(keys key, keymap_entry_bind_type type, keymap_modifier modifiers, void* user_data) {
+    // No-op unless a debug build.
+#if KOHI_DEBUG
     application* app = (application*)user_data;
     testbed_game_state* state = (testbed_game_state*)app->state;
     debug_console_state* console_state = &state->debug_console;
@@ -240,6 +257,7 @@ void game_on_console_scroll_hold(keys key, keymap_entry_bind_type type, keymap_m
         }
         accumulated_time = 0.0f;
     }
+#endif
 }
 
 void game_on_debug_texture_swap(keys key, keymap_entry_bind_type type, keymap_modifier modifiers, void* user_data) {
@@ -344,10 +362,12 @@ void game_setup_keymaps(application* game_inst) {
     keymap_binding_add(&state->console_keymap, KEY_DOWN, KEYMAP_BIND_TYPE_PRESS, KEYMAP_MODIFIER_NONE_BIT, game_inst, game_on_console_history_forward);
 
     // If this was done with the console open, push its keymap.
+#if KOHI_DEBUG
     b8 console_visible = debug_console_visible(&state->debug_console);
     if (console_visible) {
         input_keymap_push(&state->console_keymap);
     }
+#endif
 }
 
 void game_remove_keymaps(struct application* game_inst) {

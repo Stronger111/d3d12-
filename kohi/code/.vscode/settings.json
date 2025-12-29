@@ -170,7 +170,8 @@
         "oal_plugin.h": "c",
         "audio_loader.h": "c",
         "audio_types.h": "c",
-        "identifier.h": "c"
+        "identifier.h": "c",
+        "debug_console.h": "c"
     },
     "C_Cpp.default.compilerPath": "D:/SoftWare/LLVM/bin/clang.exe",
 }

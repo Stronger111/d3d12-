@@ -7,7 +7,7 @@
 
 #include "identifiers/khandle.h"
 
-#ifdef _DEBUG
+#if KOHI_DEBUG
 #include <resources/Kohidebug/debug_line3d.h>
 #endif
 
@@ -83,7 +83,7 @@ typedef struct editor_gizmo {
 
     b8 is_dirty;
 
-#ifdef _DEBUG
+#if KOHI_DEBUG
     debug_line3d plane_normal_line;
 #endif
 } editor_gizmo;
