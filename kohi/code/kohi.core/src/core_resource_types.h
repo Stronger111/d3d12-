@@ -17,12 +17,12 @@ typedef enum scene_node_attachment_type {
 
 static const char* scene_node_attachment_type_strings[SCENE_NODE_ATTACHMENT_TYPE_COUNT] = {
     "unknown",
-    "Skybox",           // KASSET_SCENE_NODE_ATTACHMENT_TYPE_SKYBOX,
-    "DirectionalLight", // KASSET_SCENE_NODE_ATTACHMENT_TYPE_DIRECTIONAL_LIGHT,
-    "PointLight",       // KASSET_SCENE_NODE_ATTACHMENT_TYPE_POINT_LIGHT,
-    "StaticMesh",       // KASSET_SCENE_NODE_ATTACHMENT_TYPE_STATIC_MESH,
-    "HeightmapTerrain", // KASSET_SCENE_NODE_ATTACHMENT_TYPE_STATIC_HEIGHTMAP_TERRAIN,
-    "WaterPlane"        // KASSET_SCENE_NODE_ATTACHMENT_TYPE_WATER_PLANE,
+    "skybox",            // SCENE_NODE_ATTACHMENT_TYPE_SKYBOX,
+    "directional_light", // SCENE_NODE_ATTACHMENT_TYPE_DIRECTIONAL_LIGHT,
+    "point_light",       // SCENE_NODE_ATTACHMENT_TYPE_POINT_LIGHT,
+    "static_mesh",        // SCENE_NODE_ATTACHMENT_TYPE_STATIC_MESH,
+    "heightmap_terrain", // SCENE_NODE_ATTACHMENT_TYPE_STATIC_HEIGHTMAP_TERRAIN,
+    "water_plane"        // SCENE_NODE_ATTACHMENT_TYPE_WATER_PLANE,
 };
 
 // Ensure changes to scene attachment types break this if it isn't also updated.

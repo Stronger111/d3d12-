@@ -1949,7 +1949,7 @@ static b8 material_create(material_system_state* state, khandle material_handle,
             return false;
         }
         material->refraction_depth_texture = texture_system_request_depth(kname_create("__waterplane_refraction_depth__"), tex_width, tex_height, false, true);
-        if (!material->reflection_depth_texture) {
+        if (!material->refraction_depth_texture) {
             return false;
         }
 

@@ -4682,16 +4682,16 @@ static b8 vulkan_descriptorset_update_and_bind(
                     u32 image_index = texture->image_count > 1 ? get_current_image_index(context) : 0;
                     vulkan_image* image = &texture->images[image_index];
 
-                    if (strings_equali("__internal_vulkan_swapchain_image_2__", image->name)) {
-                        KERROR("Swapchain image found while trying to update/bind descriptor set.");
-                    }
+                    // if (strings_equali("__internal_vulkan_swapchain_image_2__", image->name)) {
+                    //     KERROR("Swapchain image found while trying to update/bind descriptor set.");
+                    // }
 
-                    if (strings_equali("__internal_vulkan_swapchain_image_1__", image->name)) {
-                        KERROR("Swapchain image found while trying to update/bind descriptor set.");
-                    }
-                    if (strings_equali("__internal_vulkan_swapchain_image_0__", image->name)) {
-                        KERROR("Swapchain image found while trying to update/bind descriptor set.");
-                    }
+                    // if (strings_equali("__internal_vulkan_swapchain_image_1__", image->name)) {
+                    //     KERROR("Swapchain image found while trying to update/bind descriptor set.");
+                    // }
+                    // if (strings_equali("__internal_vulkan_swapchain_image_0__", image->name)) {
+                    //     KERROR("Swapchain image found while trying to update/bind descriptor set.");
+                    // }
 
                     // Only update if the descriptor has not been updated this frame.
                     u16* desc_gen = &descriptor_state->renderer_frame_number[image_index];
