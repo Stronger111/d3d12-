@@ -1,6 +1,6 @@
 #pragma once
 
-#include <audio/audio_types.h>
+#include <audio/kaudio_types.h>
 #include <defines.h>
 
 struct audio_plugin_source;

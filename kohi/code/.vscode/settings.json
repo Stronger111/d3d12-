@@ -172,7 +172,9 @@
         "audio_types.h": "c",
         "identifier.h": "c",
         "debug_console.h": "c",
-        "sstream": "c"
+        "sstream": "c",
+        "kohi.runtime_version.h": "c",
+        "application_types.h": "c"
     },
     "C_Cpp.default.compilerPath": "D:/SoftWare/LLVM/bin/clang.exe",
 }

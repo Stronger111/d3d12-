@@ -364,6 +364,12 @@ static void asset_system_release_internal(struct asset_system_state* state, knam
                 lookup->asset = 0;
                 lookup->reference_count = 0;
                 lookup->auto_release = false;
+
+                //Remove the entry from the bst too.
+                bt_node* deleted = u64_bst_delete(state->lookup_tree, asset_name);
+                if (!deleted) {
+                    state->lookup_tree = 0;
+                }
             }
         }
         else {
@@ -429,7 +435,7 @@ static void asset_deleted_callback(void* listener, u32 file_watch_id) {
     // asset_system_state* state = (asset_system_state*)listener;
 
     // Send out an event for anything that might be interested in this.
-    event_context evt = {0};
+    event_context evt = { 0 };
     evt.data.u32[0] = file_watch_id;
     event_fire(EVENT_CODE_ASSET_DELETED_FROM_DISK, 0, evt);
 }

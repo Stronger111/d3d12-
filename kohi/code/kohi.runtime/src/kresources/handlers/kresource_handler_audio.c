@@ -8,7 +8,6 @@
 #include "strings/kname.h"
 #include "systems/asset_system.h"
 #include "systems/kresource_system.h"
-#include "systems/audio_system.h"
 
 typedef struct audio_resource_handler_info {
     kresource_audio* typed_resource;

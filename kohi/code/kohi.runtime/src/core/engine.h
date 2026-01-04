@@ -15,7 +15,6 @@
 
 #include "defines.h"
 
-#include "audio/audio_types.h"
 #include "identifiers/khandle.h"
 #include "platform/vfs.h"
 

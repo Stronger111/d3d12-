@@ -14,7 +14,7 @@
 
 // Plugin entry point.
 b8 kplugin_create(struct kruntime_plugin* out_plugin) {
-    out_plugin->plugin_state_size = sizeof(audio_backend_interface);
+    out_plugin->plugin_state_size = sizeof(kaudio_backend_interface);
     out_plugin->plugin_state = kallocate(out_plugin->plugin_state_size, MEMORY_TAG_AUDIO);
 
     kaudio_backend_interface* backend = out_plugin->plugin_state;
