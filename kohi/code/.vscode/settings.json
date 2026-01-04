@@ -174,7 +174,9 @@
         "debug_console.h": "c",
         "sstream": "c",
         "kohi.runtime_version.h": "c",
-        "application_types.h": "c"
+        "application_types.h": "c",
+        "stdio.h": "c",
+        "charconv": "c"
     },
     "C_Cpp.default.compilerPath": "D:/SoftWare/LLVM/bin/clang.exe",
 }

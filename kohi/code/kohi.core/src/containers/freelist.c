@@ -33,7 +33,7 @@ KAPI void freelist_create(u64 total_size, u64* memory_requirement, void* memory,
     if (!memory) {
         return;
     }
-    
+
     //NOTE: enable this if we ever need to verify why a lot of small freelists are being created.
     // If the memory required is too small, should warn about it being wasteful to use.
     // u64 mem_min = (sizeof(internal_state) + sizeof(freelist_node)) * 8;
@@ -82,7 +82,8 @@ KAPI b8 freelist_allocate_block(freelist* list, u64 size, u64* out_offset) {
             if (previous) {
                 previous->next = node->next;
                 node_to_return = node;
-            } else {
+            }
+            else {
                 // This node is the head of the list. Reassign the head
                 // and return the previous head node.
                 node_to_return = state->head;
@@ -90,7 +91,8 @@ KAPI b8 freelist_allocate_block(freelist* list, u64 size, u64* out_offset) {
             }
             return_node(list, node_to_return);
             return true;
-        } else if (node->size > size) {
+        }
+        else if (node->size > size) {
             // Node is larger. Deduct the memory from it and move the offset
             // by that amount.
             *out_offset = node->offset;
@@ -112,6 +114,10 @@ KAPI b8 freelist_free_block(freelist* list, u64 size, u64 offset) {
         return false;
     }
     internal_state* state = list->memory;
+    if (offset >= state->total_size) {
+        KFATAL("freelist_free_block - Attempting to free block (offset=%llu, size=%llu) that is out of the range of the freelist [0-%llu].", offset, size, state->total_size);
+        return false;
+    }
     freelist_node* node = state->head;
     freelist_node* previous = 0;
     if (!node) {
@@ -123,11 +129,16 @@ KAPI b8 freelist_free_block(freelist* list, u64 size, u64 offset) {
         new_node->next = 0;
         state->head = new_node;
         return true;
-    } else {
+    }
+    else {
         while (node) {
             if (node->offset + node->size == offset) {
                 // Can  be appended to this node.
                 node->size += size;
+
+                if (offset == 18446603338515483712ULL) {
+                    KINFO("test");
+                }
 
                 // Check if this then connects the range between this and the next
                 // node, and if so, combine them and return the second node..
@@ -138,12 +149,14 @@ KAPI b8 freelist_free_block(freelist* list, u64 size, u64 offset) {
                     return_node(list, next);
                 }
                 return true;
-            } else if (node->offset == offset) {
+            }
+            else if (node->offset == offset) {
                 // If there is an exact match, this means the exact block of memory
                 // that is already free is being freed again.
                 KFATAL("Attempting to free already-freed block of memory at offset %llu", node->offset);
                 return false;
-            } else if (node->offset > offset) {
+            }
+            else if (node->offset > offset) {
                 // Iterated beyond the space to be freed. Need a new node.
                 freelist_node* new_node = get_node(list);
                 new_node->offset = offset;
@@ -153,11 +166,17 @@ KAPI b8 freelist_free_block(freelist* list, u64 size, u64 offset) {
                 if (previous) {
                     previous->next = new_node;
                     new_node->next = node;
-                } else {
+                }
+                else {
                     // Otherwise, the new node becomes the head.
                     new_node->next = node;
                     state->head = new_node;
                 }
+                
+                if (offset == 18446603338515483712ULL) {
+                    KINFO("test");
+                }
+
                 // Double-check next node to see if it can be joined.
                 if (new_node->next && new_node->offset + new_node->size == new_node->next->offset) {
                     new_node->size += new_node->next->size;
@@ -247,7 +266,8 @@ KAPI b8 freelist_resize(freelist* list, u64* memory_requirement, void* new_memor
         state->head->offset = old_state->total_size;
         state->head->size = size_diff;
         state->head->next = 0;
-    } else {
+    }
+    else {
         // Iterate the old nodes.
         // Iterate the old nodes.
         while (old_node) {
@@ -263,14 +283,16 @@ KAPI b8 freelist_resize(freelist* list, u64* memory_requirement, void* new_memor
             if (old_node->next) {
                 // If there is another node, move on.
                 old_node = old_node->next;
-            } else {
+            }
+            else {
                 // Reached the end of the list.
                 // Check if it extends to the end of the block. If so,
                 // just append to the size. Otherwise, create a new node and
                 // attach to it.
                 if (old_node->offset + old_node->size == old_state->total_size) {
                     new_node->size += size_diff;
-                } else {
+                }
+                else {
                     freelist_node* new_node_end = get_node(list);
                     new_node_end->offset = old_state->total_size;
                     new_node_end->size = size_diff;
