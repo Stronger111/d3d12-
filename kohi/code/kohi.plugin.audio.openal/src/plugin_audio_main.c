@@ -3,11 +3,8 @@
 #include <audio/kaudio_types.h>
 #include <logger.h>
 #include <defines.h>
-
-#include "oal_plugin.h"
-#include "kohi.plugin.audio.openal_version.h"
-#include <plugins/plugin_types.h>
 #include <memory/kmemory.h>
+#include <plugins/plugin_types.h>
 
 #include "kohi.plugin.audio.openal_version.h"
 #include "openal_backend.h"

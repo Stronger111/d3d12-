@@ -148,6 +148,17 @@ The items in this list are not in any particular order. This list will be update
 - [x] Handle refactoring
   - [x] Convert shader system to use handles
   - [x] Convert material system to use handles
+- [ ] Audio system
+  - [x] kaudio system refactor.
+  - [x] Audio "instances"
+  - [ ] Audio radius checks (think emitter vs lister pos./falloff)
+  - [ ] Audio instance play position + radius vs. listener + radius indicates if currently bound/playing on a channel.
+  - [ ] Auto-channel selection based on availability (gracefully handle out-of-channels i.e. discard oldest or simply don't play?)
+    - [ ] Channel reservation/sound types or "families"
+  - [ ] Audio velocity
+  - [ ] Reverb
+- [ ] Debug shape
+  - [ ] debug_sphere_3d (similar to the one generated for the editor gizmo)
 
 ## 0.9.0 Release
 
@@ -178,6 +189,7 @@ The items in this list are not in any particular order. This list will be update
     - [ ] Audio
       - [ ] Importers
         - [ ] .wav
+        - [ ] .qoa (Quite OK Audio format)
 - [ ] Asset Packaging
   - [ ] Manifest file generator (utility that looks at directory structure and auto-creates manifest.kson file from that)
   - [ ] Create binary blob format (.kpackage file) and read/write.

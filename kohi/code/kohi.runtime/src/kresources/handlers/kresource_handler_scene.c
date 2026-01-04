@@ -55,7 +55,7 @@ b8 kresource_handler_scene_request(kresource_handler* self, kresource* resource,
     // Request the scene config asset.
     kresource_asset_info* asset = &info->assets.data[0];
 
-    asset_request_info request_info = {0};
+    asset_request_info request_info = { 0 };
     request_info.type = KASSET_TYPE_SCENE;
     request_info.asset_name = asset->asset_name;
     request_info.package_name = asset->package_name;
@@ -146,7 +146,8 @@ static void scene_kasset_on_result(asset_request_result result, const struct kas
         listener->asset = (kasset_scene*)asset;
 
         asset_to_resource(listener->asset, listener->typed_resource);
-    } else {
+    }
+    else {
         KERROR("Failed to load a required asset for scene resource '%s'. Resource may be incorrect.", kname_string_get(listener->typed_resource->base.name));
     }
 
@@ -178,6 +179,9 @@ static void copy_scene_node(const scene_node_config* source, scene_node_config* 
         }
         if (source->water_plane_configs) {
             target->water_plane_configs = darray_duplicate(scene_node_attachment_water_plane_config, source->water_plane_configs);
+        }
+        if (source->audio_emitter_configs) {
+            target->audio_emitter_configs = darray_duplicate(scene_node_attachment_audio_emitter_config, source->audio_emitter_configs);
         }
     }
 

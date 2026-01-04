@@ -176,7 +176,10 @@
         "kohi.runtime_version.h": "c",
         "application_types.h": "c",
         "stdio.h": "c",
-        "charconv": "c"
+        "charconv": "c",
+        "kmath.h": "c",
+        "platform.h": "c",
+        "plugin_types.h": "c"
     },
     "C_Cpp.default.compilerPath": "D:/SoftWare/LLVM/bin/clang.exe",
 }
