@@ -179,7 +179,12 @@
         "charconv": "c",
         "kmath.h": "c",
         "platform.h": "c",
-        "plugin_types.h": "c"
+        "plugin_types.h": "c",
+        "locale": "c",
+        "xlocmon": "c",
+        "xlocnum": "c",
+        "xloctime": "c",
+        "debug_sphere3d.h": "c"
     },
     "C_Cpp.default.compilerPath": "D:/SoftWare/LLVM/bin/clang.exe",
 }

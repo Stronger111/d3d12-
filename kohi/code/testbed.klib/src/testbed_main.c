@@ -761,7 +761,7 @@ b8 application_initialize(struct application* game_inst) {
         KERROR("Failed to play test emitter.");
     }*/
     // Play the test music on channel 7.
-    kaudio_play(state->audio_system, state->test_music, 7);
+    //kaudio_play(state->audio_system, state->test_music, 7);
 
     if (!rendergraph_initialize(&state->forward_graph)) {
         KERROR("Failed to initialize rendergraph. See logs for details.");

@@ -154,17 +154,22 @@ The items in this list are not in any particular order. This list will be update
   - [ ] Audio radius checks (think emitter vs lister pos./falloff)
   - [ ] Audio instance play position + radius vs. listener + radius indicates if currently bound/playing on a channel.
   - [ ] Auto-channel selection based on availability (gracefully handle out-of-channels i.e. discard oldest or simply don't play?)
-    - [ ] Channel reservation/sound types or "families"
+    - [x] Channel reservation/sound types or "categories"
   - [ ] Audio velocity
   - [ ] Reverb
-- [ ] Debug shape
-  - [ ] debug_sphere_3d (similar to the one generated for the editor gizmo)
+- [x] Debug shape
+  - [x] debug_sphere3d (similar to the one generated for the editor gizmo)
 
 ## 0.9.0 Release
 
 - [ ] Rework freelist to take alignment into account.
   - [ ] Rework renderbuffer to take alignment in during creation, and use said alignment for allocations.
   - [ ] Change Vulkan backend to use actual uniform size instead of stride when allocating from renderbuffer.
+- [ ] Rework Vulkan shaders to only use compiled SPIR-V resources in the plugin runtime. This means that "shaderc" would not be
+      required in the release build of the plugin. This also means that it _would_ need to be linked _somewhere_. Adding it to the
+      utils plugin is one option, but having Vulkan-specific stuff there is strange. Could also make _another_ plugin that just contains 
+      the importer. This makes the most sense but has the drawback of being yet another plugin that has to be distributed (although, perhaps)
+      it could be next to/a part of the vulkan renderer plugin somehow?
 - [ ] Remove deprecated geometry functions in renderer.
 - [ ] Remove calls to deprecated darray functions.
 - [ ] Replace regular c arrays throughout the codebase with the new static-sized, type-safe array where it makes sense.

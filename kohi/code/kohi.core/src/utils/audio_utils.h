@@ -9,7 +9,7 @@
  * @param str The string to parse.
  * @return The sound space.
  */
-KAPI kaudio_space string_to_kaudio_space(const char* str);
+KAPI kaudio_space string_to_audio_space(const char* str);
 
 /**
  * @brief Gets the string representation of the given sound space.
@@ -18,7 +18,7 @@ KAPI kaudio_space string_to_kaudio_space(const char* str);
  * @param space The audio space to convert.
  * @return the string representation of the given audio space.
  */
-KAPI const char* kaudio_space_to_string(kaudio_space space);
+KAPI const char* audio_space_to_string(kaudio_space space);
 
 /**
  * @brief Parses the attenuation model from the given string. Defaults to linear if not valid.
