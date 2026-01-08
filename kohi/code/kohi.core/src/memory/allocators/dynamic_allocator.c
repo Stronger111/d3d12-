@@ -1,15 +1,9 @@
-#include "dynamic_allocator.h"
+#include "memory/allocators/dynamic_allocator.h"
 
-#include "kdebug/kassert.h"
-#include "memory/kmemory.h"
-#include "logger.h"
 #include "containers/freelist.h"
-
-#ifndef KALLOC_TRACE
-#include <stdio.h>
-#define KALLOC_TRACE 1
-#define KALLOC_GUARD_VALUE 0xC0FFEE69
-#endif
+#include "kdebug/kassert.h"
+#include "logger.h"
+#include "memory/kmemory.h"
 
 typedef struct dynamic_allocator_state {
     u64 total_size;
@@ -119,6 +113,7 @@ void* dynamic_allocator_allocate_aligned(dynamic_allocator* allocator, u64 size,
             // Store the size just before the user data block
             u32* block_size = (u32*)(aligned_block_offset - KSIZE_STORAGE);  // 指针
             *block_size = (u32)size;
+            KASSERT_MSG(size, "dynamic_allocator_allocate_aligned got a size of 0. Memory corruption likely as this should always be nonzero.");
 #if KALLOC_TRACE
             u32* guard_end = (u32*)(aligned_block_offset - sizeof(u32));
             *guard_end = KALLOC_GUARD_VALUE;
@@ -126,7 +121,9 @@ void* dynamic_allocator_allocate_aligned(dynamic_allocator* allocator, u64 size,
             // Store the header immediately after the user block.
             alloc_header* header = (alloc_header*)(aligned_block_offset + size);
             header->start = ptr;
+            KASSERT_MSG(header->start, "dynamic_allocator_allocate_aligned got a null pointer (0x0). Memory corruption likely as this should always be nonzero.");
             header->alignment = alignment;
+            KASSERT_MSG(header->alignment, "dynamic_allocator_allocate_aligned got an alignment of 0. Memory corruption likely as this should always be nonzero.");
 #if KALLOC_TRACE
             header->guard_start = KALLOC_GUARD_VALUE;
 #endif
@@ -189,13 +186,19 @@ b8 dynamic_allocator_free_aligned(dynamic_allocator* allocator, void* block) {
     return true;
 }
 
-b8 dynamic_allocator_get_size_alignment(void* block, u64* out_size, u16* out_alignment) {
+b8 dynamic_allocator_get_size_alignment(dynamic_allocator* allocator, void* block, u64* out_size, u16* out_alignment) {
+    dynamic_allocator_state* state = allocator->memory;
+    if (block < state->memory_block || block >= ((void*)((u8*)state->memory_block) + state->total_size)) {
+        // Not owned by this block.
+        return false;
+    }
 #if KALLOC_TRACE
     u32* guard_end = (u32*)(block - sizeof(u32));
     KASSERT(*guard_end == KALLOC_GUARD_VALUE);
 #endif
     // Get the header.
     * out_size = *(u32*)((u64)block - KSIZE_STORAGE);
+    KASSERT_MSG(*out_size, "dynamic_allocator_get_size_alignment found an out_size of 0. Memory corruption likely.");
     alloc_header* header = (alloc_header*)((u64)block + *out_size);
 #if KALLOC_TRACE
     KASSERT(header->guard_start == KALLOC_GUARD_VALUE);
@@ -203,6 +206,8 @@ b8 dynamic_allocator_get_size_alignment(void* block, u64* out_size, u16* out_ali
     printf("  Block %p found with size/alignment: %llu/%u.\n", block, *out_size, header->alignment);
 #endif
     * out_alignment = header->alignment;
+    KASSERT_MSG(header->start, "dynamic_allocator_get_size_alignment found a header->start of 0. Memory corruption likely as this should always be at least 1.");
+    KASSERT_MSG(header->alignment, "dynamic_allocator_get_size_alignment found a header->alignment of 0. Memory corruption likely as this should always be at least 1.");
     return true;
 }
 

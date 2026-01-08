@@ -66,7 +66,7 @@ static u32 get_current_image_count(vulkan_context* context);
 
 static b8 vulkan_graphics_pipeline_create(vulkan_context* context, const vulkan_pipeline_config* config, vulkan_pipeline* out_pipeline);
 static void vulkan_pipeline_destroy(vulkan_context* context, vulkan_pipeline* pipeline);
-static void vulkan_pipeline_bind(vulkan_context* context,vulkan_command_buffer* command_buffer, VkPipelineBindPoint bind_point, vulkan_pipeline* pipeline);
+static void vulkan_pipeline_bind(vulkan_context* context, vulkan_command_buffer* command_buffer, VkPipelineBindPoint bind_point, vulkan_pipeline* pipeline);
 static b8 setup_frequency_state(renderer_backend_interface* backend, vulkan_shader* internal_shader, shader_update_frequency frequency, u32* out_frequency_id);
 static b8 release_shader_frequency_state(vulkan_context* context, vulkan_shader* internal_shader, shader_update_frequency frequency, u32 frequency_id);
 static void destroy_shader_frequency_states(shader_update_frequency frequency, vulkan_shader_frequency_state* states, u32 state_count, vulkan_shader_frequency_info* info);
@@ -4790,7 +4790,11 @@ static b8 frequency_has_uniforms(vulkan_shader_frequency_info* frequency_info) {
   * @param allocationScope The allocation scope and lifetime.
   * @return A memory block if successful; otherwise 0.
   */
-void* vulkan_alloc_allocation(void* user_data, size_t size, size_t alignment, VkSystemAllocationScope allocation_scope) {
+static void* vulkan_alloc_allocation(
+    void* user_data,
+    size_t size,
+    size_t alignment,
+    VkSystemAllocationScope allocation_scope) {
     // Null MUST be returned if this fails.
     if (size == 0) {
         return 0;
@@ -4847,7 +4851,12 @@ void vulkan_alloc_free(void* user_data, void* memory) {
  * @param allocation_scope The scope and lifetime of the allocation.
  * @return A memory block if successful; otherwise 0.
  */
-void* vulkan_alloc_reallocation(void* user_data, void* original, size_t size, size_t alignment, VkSystemAllocationScope allocation_scope) {
+static void* vulkan_alloc_reallocation(
+    void* user_data, 
+    void* original, 
+    size_t size, 
+    size_t alignment, 
+    VkSystemAllocationScope allocation_scope) {
     if (!original) {
         return vulkan_alloc_allocation(user_data, size, alignment, allocation_scope);
     }
@@ -4857,10 +4866,11 @@ void* vulkan_alloc_reallocation(void* user_data, void* original, size_t size, si
         return 0;
     }
 
-    // NOTE: if pOriginal is not null, the same alignment must be used for the new allocation as original.
-    u64 alloc_size;
-    u16 alloc_alignment;
-    b8 is_aligned = kmemory_get_size_alignment(original, &alloc_size, &alloc_alignment);
+    // NOTE: if pOriginal is not null, the same alignment must be used for the new 
+    //allocation as original.
+    u64 original_alloc_size;
+    u16 original_alloc_alignment;
+    b8 is_aligned = kmemory_get_size_alignment(original, &original_alloc_size, &original_alloc_alignment);
     if (!is_aligned) {
         KERROR("vulkan_alloc_reallocation of unaligned block %p", original);
         return 0;
@@ -4875,19 +4885,19 @@ void* vulkan_alloc_reallocation(void* user_data, void* original, size_t size, si
     KTRACE("Attempting to realloc block %p...", original);
 #endif
 
-    void* result = vulkan_alloc_allocation(user_data, size, alloc_alignment, allocation_scope);
+    void* result = vulkan_alloc_allocation(user_data, size, original_alloc_alignment, allocation_scope);
     if (result) {
 #ifdef KVULKAN_ALLOCATOR_TRACE
         KTRACE("Block %p reallocated to %p, copying data...", original, result);
 #endif
 
         // Copy over the original memory.
-        kcopy_memory(result, original, alloc_size);
+        kcopy_memory(result, original, KMIN(size, original_alloc_size) - 1);
 #ifdef KVULKAN_ALLOCATOR_TRACE
         KTRACE("Freeing original aligned block %p...", original);
 #endif
         // Free the original memory only if the new allocation was successful.
-        kfree_aligned(original, alloc_size, alloc_alignment, MEMORY_TAG_VULKAN);
+        kfree_aligned(original, original_alloc_size, original_alloc_alignment, MEMORY_TAG_VULKAN);
     }
     else {
 #ifdef KVULKAN_ALLOCATOR_TRACE

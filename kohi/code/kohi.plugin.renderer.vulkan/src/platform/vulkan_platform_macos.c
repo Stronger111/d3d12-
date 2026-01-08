@@ -4,6 +4,8 @@
 
 #if defined(KPLATFORM_APPLE)
 
+#    include "vulkan/vulkan_core.h"
+#    include "vulkan/vulkan_metal.h"
 // Loading function pointers
 #    include <dlfcn.h>
 

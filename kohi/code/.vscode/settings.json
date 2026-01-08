@@ -185,7 +185,8 @@
         "xlocnum": "c",
         "xloctime": "c",
         "debug_sphere3d.h": "c",
-        "vulkan_metal.h": "c"
+        "vulkan_metal.h": "c",
+        "freelist.h": "c"
     },
     "C_Cpp.default.compilerPath": "D:/SoftWare/LLVM/bin/clang.exe",
 }

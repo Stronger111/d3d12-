@@ -52,8 +52,7 @@ else
 		# These are linux-specific, as the default behaviour is the opposite of this, allowing code to compile 
 		# here that would not on other platforms from not being exported (i.e. Windows)
 		# Discovered the solution here for this: https://github.com/ziglang/zig/issues/8180
-		LINKER_FLAGS :=-Wl,--no-undefined,--no-allow-shlib-undefined -shared -lvulkan -lxcb -lX11 -lXrandr -lX11-xcb -lxkbcommon -lm -L$(VULKAN_SDK)/lib -L/usr/X11R6/lib -L./$(BUILD_DIR) $(ADDL_LINK_FLAGS) 		# .c files
-		SRC_FILES := $(shell find $(ASSEMBLY) -name *.c)
+		LINKER_FLAGS :=-Wl,--no-undefined,--no-allow-shlib-undefined -shared -lxcb -lX11 -lX11-xcb -lxkbcommon -lm -L/usr/X11R6/lib -L./$(BUILD_DIR) $(ADDL_LINK_FLAGS) 		# .c files
 		# directories with .h files
 		DIRECTORIES := $(shell find $(ASSEMBLY) -type d)
 		OBJ_FILES := $(SRC_FILES:%=$(OBJ_DIR)/%.o)
