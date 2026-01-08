@@ -21,11 +21,12 @@ int main(int argc, const char** argv) {
     const char* version_text_file = 0;
 
     // Account for null terminator
-    char read_version[MAX_VERSION_FILE_READ_SIZE + 1] = {0};
+    char read_version[MAX_VERSION_FILE_READ_SIZE + 1] = { 0 };
     if (argc == 2) {
         if ((argv[1][0] == '-') && (argv[1][1] == 'n')) {
             b_numeric_mode = 1;
-        } else {
+        }
+        else {
             version_text_file = argv[1];
             // Read the text from the version file.
             FILE* f = fopen(version_text_file, "r");
@@ -33,7 +34,8 @@ int main(int argc, const char** argv) {
                 printf("Error opening verion file: %s. Using a default version of 0.0.0.", version_text_file);
                 strncpy(read_version, "0.0.0", 7);
                 read_version[6] = 0;
-            } else {
+            }
+            else {
                 fseek(f, 0, SEEK_END);
                 long fsize = ftell(f);
                 // Clamp
@@ -42,17 +44,23 @@ int main(int argc, const char** argv) {
                 }
                 fseek(f, 0, SEEK_SET);
 
-                fread(read_version, fsize, 1, f);
+                size_t result = fread(read_version, fsize, 1, f);
+                if (!result) {
+                    printf("Error reading version file. Cannot proceed.");
+                    return 1;
+                }
                 fclose(f);
                 char* lastchar = &read_version[fsize - 2];
                 if (*lastchar == '\n' || *lastchar == '\r') {
                     *lastchar = 0;
-                } else {
+                }
+                else {
                     read_version[fsize] = 0;
                 }
             }
         }
-    } else {
+    }
+    else {
         print_use();
         return 1;
     }
@@ -70,7 +78,8 @@ int main(int argc, const char** argv) {
         // build = last 2 of year and day of year
         // rev = number of seconds since midnight
         printf("%02d%02d%05d", tm_info->tm_year % 100, tm_info->tm_yday, revision);
-    } else {
+    }
+    else {
         // MAJOR.MINOR.PATCH.BUILD-REV
         // build = last 2 of year and day of year
         // rev = number of seconds since midnight

@@ -141,16 +141,22 @@ b8 platform_system_startup(u64* memory_requirement, struct platform_state* state
 }
 
 void platform_system_shutdown(struct platform_state* state) {
-    if (state && state->windows) {
-        u32 len = darray_length(state->windows);
-        for (u32 i = 0; i < len; ++i) {
-            if (state->windows[i]) {
-                platform_window_destroy(state->windows[i]);
-                state->windows[i] = 0;
+     if (state) {
+        if (state->windows) {
+            u32 len = darray_length(state->windows);
+            for (u32 i = 0; i < len; ++i) {
+                if (state->windows[i]) {
+                    platform_window_destroy(state->windows[i]);
+                    state->windows[i] = 0;
+                }
             }
+            darray_destroy(state->windows);
+            state->windows = 0;
         }
-        darray_destroy(state->windows);
-        state->windows = 0;
+        if (state->handle.connection) {
+            free(state->handle.connection);
+            state->handle.connection = 0;
+        }
     }
 }
 

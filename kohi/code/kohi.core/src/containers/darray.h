@@ -121,11 +121,16 @@ KAPI void* _darray_duplicate(u64 stride, void* array);
     * @param array The array to be destroyed.
     */
 KAPI void darray_destroy(void* array);
-
-#define darray_push(array, value)           \
-    {                                       \
-        typeof(value) temp = value;         \
-        array = _darray_push(array, &temp); \
+/**
+ * @brief Pushes a new entry to the given array. Resizes if necessary.
+ * @param array The array to be pushed to.
+ * @param value The value to be pushed. A copy of this value is taken.
+ * @returns A pointer to the array block.
+ */
+#define darray_push(array, value)                              \
+    {                                                          \
+        typeof(value) __k_temp_dingus_value__ = value;         \
+        array = _darray_push(array, &__k_temp_dingus_value__); \
     }
 
 // NOTE: could use __auto_type for temp above, but intellisense
@@ -147,10 +152,10 @@ KAPI void darray_pop(void* array, void* value_ptr);
  * @param value_ptr A pointer holding the value to be inserted.
  * @returns The array block.
  */
-#define darray_insert_at(array, index, value)           \
-    {                                                   \
-        typeof(value) temp = value;                     \
-        array = _darray_insert_at(array, index, &temp); \
+#define darray_insert_at(array, index, value)                              \
+    {                                                                      \
+        typeof(value) __k_temp_dingus_value__ = value;                     \
+        array = _darray_insert_at(array, index, &__k_temp_dingus_value__); \
     }
 
  /**
