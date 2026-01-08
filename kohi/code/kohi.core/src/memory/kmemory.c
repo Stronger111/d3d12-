@@ -319,10 +319,10 @@ KAPI void kfree_aligned(void* block, u64 size, u16 alignment, memory_tag tag) {
         u16 oalignment = 0;
         dynamic_allocator_get_size_alignment(block, &osize, &oalignment);
         if (osize != size) {
-            printf("Free size mismatch! (%llu/%llu)\n", osize, size);
+            printf("Free size mismatch! (original=%llu, requested=%llu)\n", osize, size);
         }
         if (oalignment != alignment) {
-            printf("Free alignment mismatch! (%hu/%hu)\n", oalignment, alignment);
+            printf("Free alignment mismatch! (original=%hu, requested=%hu)\n", oalignment, alignment);
         }
 #endif
 
@@ -403,7 +403,7 @@ KAPI b8 kmemory_get_size_alignment(void* block, u64* out_size, u16* out_alignmen
 }
 
 KAPI void* kzero_memory(void* block, u64 size) {
-    #ifdef K_TRACK_ALLOCATIONS
+#ifdef K_TRACK_ALLOCATIONS
     if (state_ptr && block >= state_ptr->allocator.memory && block < (void*)(((u8*)state_ptr->allocator.memory) + dynamic_allocator_total_space(&state_ptr->allocator))) {
         // Check first if an allocation within the range exists.
         for (u32 i = 0; i < MEMORY_MAX_ALLOCATIONS; ++i) {

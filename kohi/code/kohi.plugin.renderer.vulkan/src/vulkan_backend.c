@@ -3202,7 +3202,7 @@ static b8 create_shader_module(vulkan_context* context, vulkan_shader* internal_
     out_stage->create_info.codeSize = result_length;
     out_stage->create_info.pCode = code;
 
-    VK_CHECK(vkCreateShaderModule(
+    VK_CHECK(rhi->kvkCreateShaderModule(
         context->device.logical_device,
         &out_stage->create_info,
         context->allocator,

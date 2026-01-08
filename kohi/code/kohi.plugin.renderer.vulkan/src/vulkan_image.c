@@ -28,6 +28,8 @@ void vulkan_image_create(vulkan_context* context,
     const char* name,
     u32 mip_levels,
     vulkan_image* out_image) {
+
+    krhi_vulkan* rhi = &context->rhi;
     if (mip_levels < 1) {
         KWARN("Mip levels must be >=1 .Defaulting to 1.");
         mip_levels = 1;
@@ -76,12 +78,12 @@ void vulkan_image_create(vulkan_context* context,
         out_image->image_create_info.flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
     }
 
-    VK_CHECK(vkCreateImage(context->device.logical_device, &out_image->image_create_info, context->allocator, &out_image->handle));
+    VK_CHECK(rhi->kvkCreateImage(context->device.logical_device, &out_image->image_create_info, context->allocator, &out_image->handle));
 
     VK_SET_DEBUG_OBJECT_NAME(context, VK_OBJECT_TYPE_IMAGE, out_image->handle, out_image->name);
 
     // Query memory requirements.
-    vkGetImageMemoryRequirements(context->device.logical_device, out_image->handle, &out_image->memory_requirements);
+    rhi->kvkGetImageMemoryRequirements(context->device.logical_device, out_image->handle, &out_image->memory_requirements);
 
     i32 memory_type = context->find_memory_index(context, out_image->memory_requirements.memoryTypeBits, memory_flags);
     if (memory_type == -1) {
@@ -92,7 +94,7 @@ void vulkan_image_create(vulkan_context* context,
     VkMemoryAllocateInfo memory_allocate_info = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
     memory_allocate_info.allocationSize = out_image->memory_requirements.size;
     memory_allocate_info.memoryTypeIndex = memory_type;
-    VkResult allocate_result = vkAllocateMemory(context->device.logical_device, &memory_allocate_info, context->allocator, &out_image->memory);
+    VkResult allocate_result = rhi->kvkAllocateMemory(context->device.logical_device, &memory_allocate_info, context->allocator, &out_image->memory);
     if (!vulkan_result_is_success(allocate_result)) {
         const char* err_str = vulkan_result_string(allocate_result, true);
         KERROR("Failed to allocate memory for image with the following error: '%s'", err_str);
@@ -106,7 +108,7 @@ void vulkan_image_create(vulkan_context* context,
     }
 
     // Bind the memory
-    VK_CHECK(vkBindImageMemory(context->device.logical_device, out_image->handle, out_image->memory, 0));  // TODO: configurable memory offset
+    VK_CHECK(rhi->kvkBindImageMemory(context->device.logical_device, out_image->handle, out_image->memory, 0));  // TODO: configurable memory offset
     // Report the memory as in-use.
     b8 is_device_memory = (out_image->memory_flags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) == VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
     kallocate_report(out_image->memory_requirements.size, is_device_memory ? MEMORY_TAG_GPU_LOCAL : MEMORY_TAG_VULKAN);
@@ -127,7 +129,7 @@ void vulkan_image_create(vulkan_context* context,
         out_image->view_subresource_range.baseArrayLayer = 0;
         out_image->view_create_info.subresourceRange = out_image->view_subresource_range;;
 
-        VK_CHECK(vkCreateImageView(context->device.logical_device, &out_image->view_create_info, context->allocator, &out_image->view));
+        VK_CHECK(rhi->kvkCreateImageView(context->device.logical_device, &out_image->view_create_info, context->allocator, &out_image->view));
 #if KOHI_DEBUG
         char* formatted_name = string_format("%s_view_idx_global", out_image->name);
         VK_SET_DEBUG_OBJECT_NAME(context, VK_OBJECT_TYPE_IMAGE_VIEW, out_image->view, formatted_name);
@@ -163,7 +165,7 @@ void vulkan_image_create(vulkan_context* context,
                 view_subresource_range->baseArrayLayer = i;
                 view_create_info->subresourceRange = *view_subresource_range;
 
-                VK_CHECK(vkCreateImageView(context->device.logical_device, view_create_info, context->allocator, &out_image->layer_views[i]));
+                VK_CHECK(rhi->kvkCreateImageView(context->device.logical_device, view_create_info, context->allocator, &out_image->layer_views[i]));
 
 #if KOHI_DEBUG
                 char* formatted_name = string_format("%s_view_layer_idx_%u", out_image->name, i);
@@ -176,14 +178,15 @@ void vulkan_image_create(vulkan_context* context,
 }
 
 void vulkan_image_destroy(vulkan_context* context, vulkan_image* image) {
+    krhi_vulkan* rhi = &context->rhi;
     if (image->view) {
-        vkDestroyImageView(context->device.logical_device, image->view, context->allocator);
+        rhi->kvkDestroyImageView(context->device.logical_device, image->view, context->allocator);
         image->view = 0;
     }
 
     if (image->layer_views) {
         for (u32 i = 0; i < image->layer_count; ++i) {
-            vkDestroyImageView(context->device.logical_device, image->layer_views[i], context->allocator);
+            rhi->kvkDestroyImageView(context->device.logical_device, image->layer_views[i], context->allocator);
         }
         kfree(image->layer_views, image->layer_count * sizeof(VkImageView), MEMORY_TAG_ARRAY);
         image->layer_views = 0;
@@ -199,12 +202,12 @@ void vulkan_image_destroy(vulkan_context* context, vulkan_image* image) {
     image->layer_count = 0;
 
     if (image->memory) {
-        vkFreeMemory(context->device.logical_device, image->memory, context->allocator);
+        rhi->kvkFreeMemory(context->device.logical_device, image->memory, context->allocator);
         image->memory = 0;
     }
 
     if (image->handle) {
-        vkDestroyImage(context->device.logical_device, image->handle, context->allocator);
+        rhi->kvkDestroyImage(context->device.logical_device, image->handle, context->allocator);
         image->handle = 0;
     }
     if (image->name) {
@@ -218,30 +221,31 @@ void vulkan_image_destroy(vulkan_context* context, vulkan_image* image) {
 }
 
 void vulkan_image_recreate(vulkan_context* context, vulkan_image* image) {
+    krhi_vulkan* rhi = &context->rhi;
     //Release the old image/views first, then create new.
-    vkDestroyImage(context->device.logical_device, image->handle, context->allocator);
-    vkFreeMemory(context->device.logical_device, image->memory, context->allocator);
+    rhi->kvkDestroyImage(context->device.logical_device, image->handle, context->allocator);
+    rhi->kvkFreeMemory(context->device.logical_device, image->memory, context->allocator);
     b8 is_device_memory = (image->memory_flags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) == VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
     kfree_report(image->memory_requirements.size, is_device_memory ? MEMORY_TAG_GPU_LOCAL : MEMORY_TAG_VULKAN);
     if (image->has_view) {
         //Single view, encapsulating all layers.
-        vkDestroyImageView(context->device.logical_device, image->view, context->allocator);
+        rhi->kvkDestroyImageView(context->device.logical_device, image->view, context->allocator);
 
         //Destroy views per layer.
         u32 layer_count = image->view_subresource_range.layerCount;
         if (layer_count > 1) {
             for (u32 i = 0; i < layer_count; ++i) {
-                vkDestroyImageView(context->device.logical_device, image->layer_views[i], context->allocator);
+                rhi->kvkDestroyImageView(context->device.logical_device, image->layer_views[i], context->allocator);
             }
         }
     }
 
     //Now create the views.
-    VK_CHECK(vkCreateImage(context->device.logical_device, &image->image_create_info, context->allocator, &image->handle));
+    VK_CHECK(rhi->kvkCreateImage(context->device.logical_device, &image->image_create_info, context->allocator, &image->handle));
     VK_SET_DEBUG_OBJECT_NAME(context, VK_OBJECT_TYPE_IMAGE, image->handle, image->name);
 
     //Query memory requirements.
-    vkGetImageMemoryRequirements(context->device.logical_device, image->handle, &image->memory_requirements);
+    rhi->kvkGetImageMemoryRequirements(context->device.logical_device, image->handle, &image->memory_requirements);
 
     i32 memory_type = context->find_memory_index(context, image->memory_requirements.memoryTypeBits, image->memory_flags);
     if (memory_type == -1) {
@@ -252,13 +256,13 @@ void vulkan_image_recreate(vulkan_context* context, vulkan_image* image) {
     VkMemoryAllocateInfo memory_allocate_info = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
     memory_allocate_info.allocationSize = image->memory_requirements.size;
     memory_allocate_info.memoryTypeIndex = memory_type;
-    VK_CHECK(vkAllocateMemory(context->device.logical_device, &memory_allocate_info, context->allocator, &image->memory));
+    VK_CHECK(rhi->kvkAllocateMemory(context->device.logical_device, &memory_allocate_info, context->allocator, &image->memory));
     if (image->name) {
         VK_SET_DEBUG_OBJECT_NAME(context, VK_OBJECT_TYPE_DEVICE_MEMORY, image->memory, image->name);
     }
 
     // Bind the memory
-    VK_CHECK(vkBindImageMemory(context->device.logical_device, image->handle, image->memory, 0));  // TODO: configurable memory offset
+    VK_CHECK(rhi->kvkBindImageMemory(context->device.logical_device, image->handle, image->memory, 0));  // TODO: configurable memory offset
 
     kallocate_report(image->memory_requirements.size, is_device_memory ? MEMORY_TAG_GPU_LOCAL : MEMORY_TAG_VULKAN);
 
@@ -270,7 +274,7 @@ void vulkan_image_recreate(vulkan_context* context, vulkan_image* image) {
         //Update the create info's image handle.
         image->view_create_info.image = image->handle;
 
-        VK_CHECK(vkCreateImageView(context->device.logical_device, &image->view_create_info, context->allocator, &image->view));
+        VK_CHECK(rhi->kvkCreateImageView(context->device.logical_device, &image->view_create_info, context->allocator, &image->view));
 
 #ifdef KOHI_DEBUG
         char* formatted_name = string_format("%s_view_idx_%u", image->name, 0);
@@ -282,7 +286,7 @@ void vulkan_image_recreate(vulkan_context* context, vulkan_image* image) {
         u32 layer_count = image->view_subresource_range.layerCount;
         if (layer_count > 1) {
             for (u32 i = 0; i < layer_count; ++i) {
-                VK_CHECK(vkCreateImageView(context->device.logical_device, &image->layer_view_create_infos[i], context->allocator, &image->layer_views[i]));
+                VK_CHECK(rhi->kvkCreateImageView(context->device.logical_device, &image->layer_view_create_infos[i], context->allocator, &image->layer_views[i]));
             }
         }
     }
@@ -293,6 +297,7 @@ void vulkan_image_transition_layout(vulkan_context* context,
     vulkan_image* image, VkFormat format,
     VkImageLayout old_layout,
     VkImageLayout new_layout) {
+    krhi_vulkan* rhi = &context->rhi;
     //
     VkPipelineStageFlags source_stage;
     VkPipelineStageFlags dest_stage;
@@ -364,7 +369,7 @@ void vulkan_image_transition_layout(vulkan_context* context,
         return;
     }
 
-    vkCmdPipelineBarrier(command_buffer->handle, source_stage, dest_stage, 0, 0, 0, 0, 0, 1, &barrier);
+    rhi->kvkCmdPipelineBarrier(command_buffer->handle, source_stage, dest_stage, 0, 0, 0, 0, 0, 1, &barrier);
 }
 
 b8 vulkan_image_mipmaps_generate(
@@ -375,10 +380,11 @@ b8 vulkan_image_mipmaps_generate(
         KWARN("Attempted to generate mips for an image that isn't configured for them");
         return false;
     }
+    krhi_vulkan* rhi = &context->rhi;
 
     // Check if the image format supports linear blitting
     VkFormatProperties format_properties;
-    vkGetPhysicalDeviceFormatProperties(context->device.physical_device, image->format, &format_properties);
+    rhi->kvkGetPhysicalDeviceFormatProperties(context->device.physical_device, image->format, &format_properties);
 
     if (!(format_properties.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT)) {
         KWARN("Texture image format does not support linear blitting! Mipmaps cannot be created.");
@@ -413,7 +419,7 @@ b8 vulkan_image_mipmaps_generate(
         barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
 
         // Transition the mip image subresource to a transfer layout.
-        vkCmdPipelineBarrier(
+        rhi->kvkCmdPipelineBarrier(
             command_buffer->handle,
             VK_PIPELINE_STAGE_TRANSFER_BIT,
             VK_PIPELINE_STAGE_TRANSFER_BIT,
@@ -448,7 +454,7 @@ b8 vulkan_image_mipmaps_generate(
         blit.dstSubresource.layerCount = image->layer_count;
 
         // Perform the blit for this layer.
-        vkCmdBlitImage(
+        rhi->kvkCmdBlitImage(
             command_buffer->handle,
             image->handle, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
             image->handle, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
@@ -461,7 +467,7 @@ b8 vulkan_image_mipmaps_generate(
         barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
         // Transition the previous mip layer's image subresource to a kshader-readable layout.
-        vkCmdPipelineBarrier(
+        rhi->kvkCmdPipelineBarrier(
             command_buffer->handle,
             VK_PIPELINE_STAGE_TRANSFER_BIT,
             VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
@@ -489,7 +495,7 @@ b8 vulkan_image_mipmaps_generate(
     barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
     barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
-    vkCmdPipelineBarrier(
+    rhi->kvkCmdPipelineBarrier(
         command_buffer->handle,
         VK_PIPELINE_STAGE_TRANSFER_BIT,
         VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
@@ -505,6 +511,7 @@ void vulkan_image_copy_from_buffer(vulkan_context* context,
     VkBuffer buffer,
     u64 offset,
     vulkan_command_buffer* command_buffer) {
+    krhi_vulkan* rhi = &context->rhi;
     VkBufferImageCopy region;
     kzero_memory(&region, sizeof(VkBufferImageCopy));
     region.bufferOffset = offset;
@@ -520,7 +527,7 @@ void vulkan_image_copy_from_buffer(vulkan_context* context,
     region.imageExtent.height = image->height;
     region.imageExtent.depth = 1;
 
-    vkCmdCopyBufferToImage(command_buffer->handle, buffer, image->handle, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+    rhi->kvkCmdCopyBufferToImage(command_buffer->handle, buffer, image->handle, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 }
 
 void vulkan_image_copy_to_buffer(
@@ -528,6 +535,7 @@ void vulkan_image_copy_to_buffer(
     vulkan_image* image,
     VkBuffer buffer,
     vulkan_command_buffer* command_buffer) {
+    krhi_vulkan* rhi = &context->rhi;
     VkBufferImageCopy region = {};
     region.bufferOffset = 0;
     region.bufferRowLength = 0;
@@ -542,7 +550,7 @@ void vulkan_image_copy_to_buffer(
     region.imageExtent.height = image->height;
     region.imageExtent.depth = 1;
 
-    vkCmdCopyImageToBuffer(
+    rhi->kvkCmdCopyImageToBuffer(
         command_buffer->handle,
         image->handle,
         VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
@@ -560,6 +568,7 @@ void vulkan_image_copy_region_to_buffer(
     u32 width,
     u32 height,
     vulkan_command_buffer* command_buffer) {
+    krhi_vulkan* rhi = &context->rhi;
     VkBufferImageCopy region = { 0 };
     region.bufferOffset = 0;
     region.bufferRowLength = 0;
@@ -576,7 +585,7 @@ void vulkan_image_copy_region_to_buffer(
     region.imageExtent.height = height;
     region.imageExtent.depth = 1;
 
-    vkCmdCopyImageToBuffer(
+    rhi->kvkCmdCopyImageToBuffer(
         command_buffer->handle,
         image->handle,
         VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,

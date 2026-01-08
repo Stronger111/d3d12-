@@ -242,8 +242,8 @@ b8 vulkan_device_create(vulkan_context* context) {
         context->vkCmdSetDepthWriteEnableEXT = (PFN_vkCmdSetDepthWriteEnableEXT)rhi->kvkGetInstanceProcAddr(context->instance, "vkCmdSetDepthWriteEnableEXT");
 
         //Dynamic rendering.
-        context->vkCmdBeginRenderingKHR = (PFN_vkCmdBeginRenderingKHR)vkGetInstanceProcAddr(context->instance, "vkCmdBeginRenderingKHR");
-        context->vkCmdEndRenderingKHR = (PFN_vkCmdEndRenderingKHR)vkGetInstanceProcAddr(context->instance, "vkCmdEndRenderingKHR");
+        context->vkCmdBeginRenderingKHR = (PFN_vkCmdBeginRenderingKHR)rhi->kvkGetInstanceProcAddr(context->instance, "vkCmdBeginRenderingKHR");
+        context->vkCmdEndRenderingKHR = (PFN_vkCmdEndRenderingKHR)rhi->kvkGetInstanceProcAddr(context->instance, "vkCmdEndRenderingKHR");
     }
     else {
         if (context->device.support_flags & VULKAN_DEVICE_SUPPORT_FLAG_NATIVE_DYNAMIC_STATE_BIT) {
