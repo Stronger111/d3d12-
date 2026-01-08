@@ -381,8 +381,15 @@
  
      void *library = dlopen(filename, RTLD_NOW);  // "libtestbed_lib_loaded.dylib"
      if (!library) {
-         KERROR("Error opening library: %s", dlerror());
-         return false;
+        kzero_memory(filename, sizeof(char) * 260);
+
+        // try a fallback to /usr/local/lib
+        string_format_unsafe(filename, "/usr/local/lib/%s%s%s", prefix, name, extension);
+        library = dlopen(filename, RTLD_NOW); // "libtestbed_lib_loaded.dylib"
+        if (!library) {
+            KERROR("Error opening library: %s", dlerror());
+            return false;
+        }
      }
  
      out_library->name = string_duplicate(name);
