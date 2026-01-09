@@ -37,7 +37,7 @@ KAPI void kaudio_system_listener_orientation_set(struct kaudio_system_state* sta
 KAPI void kaudio_master_volume_set(struct kaudio_system_state* state, f32 volume);
 KAPI f32 kaudio_master_volume_get(struct kaudio_system_state* state);
 
-KAPI b8 kaudio_acquire(struct kaudio_system_state* state, kname resource_name, kname package_name, b8 is_streaming, kaudio_space audio_space,audio_instance* out_audio_instance);
+KAPI b8 kaudio_acquire(struct kaudio_system_state* state, kname resource_name, kname package_name, b8 is_streaming, kaudio_space audio_space, audio_instance* out_audio_instance);
 KAPI void kaudio_release(struct kaudio_system_state* state, audio_instance* instance);
 
 KAPI vec3 kaudio_position_get(struct kaudio_system_state* state, audio_instance instance);
@@ -49,7 +49,7 @@ KAPI b8 kaudio_outer_radius_set(struct kaudio_system_state* state, audio_instanc
 KAPI f32 kaudio_falloff_get(struct kaudio_system_state* state, audio_instance instance);
 KAPI b8 kaudio_falloff_set(struct kaudio_system_state* state, audio_instance instance, f32 falloff);
 
-KAPI i8 kaudio_category_id_get(struct kaudio_system_state* state,kname name);
+KAPI i8 kaudio_category_id_get(struct kaudio_system_state* state, kname name);
 KAPI b8 kaudio_play_in_category_by_name(struct kaudio_system_state* state, audio_instance instance, kname category_name);
 KAPI b8 kaudio_play_in_category(struct kaudio_system_state* state, audio_instance instance, i8 category_index);
 
@@ -95,3 +95,11 @@ KAPI f32 kaudio_channel_volume_get(struct kaudio_system_state* state, u8 channel
  * @volume The volume to set. Clamped to a range of [0.0-1.0].
  */
 KAPI b8 kaudio_channel_volume_set(struct kaudio_system_state* state, u8 channel_index, f32 volume);
+
+KAPI b8 kaudio_emitter_create(struct kaudio_system_state* state, f32 inner_radius, f32 outer_radius, f32 volume, f32 falloff, b8 is_looping, b8 is_streaming,
+    kname audio_resource_name, kname package_name, khandle* out_emitter);
+
+KAPI b8 kaudio_emitter_load(struct kaudio_system_state* state, khandle emitter_handle);
+KAPI b8 kaudio_emitter_unload(struct kaudio_system_state* state, khandle emitter_handle);
+
+KAPI b8 kaudio_emitter_world_position_set(struct kaudio_system_state* state, khandle emitter_handle, vec3 world_position);
