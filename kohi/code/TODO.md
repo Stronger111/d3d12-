@@ -151,12 +151,10 @@ The items in this list are not in any particular order. This list will be update
 - [ ] Audio system
   - [x] kaudio system refactor.
   - [x] Audio "instances"
-  - [ ] Audio radius checks (think emitter vs lister pos./falloff)
-  - [ ] Audio instance play position + radius vs. listener + radius indicates if currently bound/playing on a channel.
-  - [ ] Auto-channel selection based on availability (gracefully handle out-of-channels i.e. discard oldest or simply don't play?)
+  - [x] Audio radius checks (think emitter vs lister pos./falloff)
+  - [x] Audio instance play position + radius vs. listener + radius indicates if currently bound/playing on a channel.
+  - [x] Auto-channel selection based on availability (gracefully handle out-of-channels i.e. discard oldest or simply don't play?)
     - [x] Channel reservation/sound types or "categories"
-  - [ ] Audio velocity
-  - [ ] Reverb
 - [x] Debug shape
   - [x] debug_sphere3d (similar to the one generated for the editor gizmo)
 
@@ -211,6 +209,13 @@ The items in this list are not in any particular order. This list will be update
   - [ ] Convert lighting system to use handles.
   - [ ] Create skybox system that uses handles.
   - [ ] Create scene system that uses handles.
+- [ ] Audio
+  - [ ] Audio velocity
+  - [ ] Effects
+    - [ ] Reverb
+    - [ ] Low- and Hi-pass filtering
+    - [ ] Ability to apply effects to categories or to channels directly.
+    - [ ] Sound Volumes (namely, echo for caves/tunnels, with properties to adjust in scene config)
 - [ ] Material system
   - [ ] Add a default "warning" material that stands out, to use in place of a non-existent material.
   - [ ] Blended materials
