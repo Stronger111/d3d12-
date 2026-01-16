@@ -24,6 +24,6 @@ KAPI b8 editor_gizmo_rendergraph_node_view_projection_set(struct rendergraph_nod
 KAPI b8 editor_gizmo_rendergraph_node_enabled_set(struct rendergraph_node* self, b8 enabled);
 KAPI b8 editor_gizmo_rendergraph_node_gizmo_set(struct rendergraph_node* self, struct editor_gizmo* gizmo);
 
-b8 editor_gizmo_rendergraph_node_register_factory(void);
+KAPI b8 editor_gizmo_rendergraph_node_register_factory(void);
 
 #endif

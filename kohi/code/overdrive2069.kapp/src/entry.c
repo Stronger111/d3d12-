@@ -1,3 +1,4 @@
+
 #include <containers/darray.h>
 #include <core/event.h>
 #include <entry.h>
@@ -5,11 +6,11 @@
 #include <platform/platform.h>
 #include <strings/kstring.h>
 
-typedef u64(*PFN_application_state_size)(void);
+typedef u64 (*PFN_application_state_size)(void);
 
 b8 load_game_lib(application* app) {
     // Dynamically load game library
-    if (!platform_dynamic_library_load("testbed.klib_loaded", &app->game_library)) {
+    if (!platform_dynamic_library_load("overdrive2069.klib_loaded", &app->game_library)) {
         return false;
     }
 
@@ -69,8 +70,9 @@ b8 watched_file_updated(u16 code, void* sender, void* listener_inst, event_conte
             // Tell the app it is about to be unloaded.
             app->lib_on_unload(app);
 
+            // Actually unload the app's lib.
             if (!platform_dynamic_library_unload(&app->game_library)) {
-                KERROR("Failed to unload game library.");
+                KERROR("Failed to unload game library");
                 return false;
             }
 
@@ -81,8 +83,8 @@ b8 watched_file_updated(u16 code, void* sender, void* listener_inst, event_conte
             const char* extension = platform_dynamic_library_extension();
             char source_file[260];
             char target_file[260];
-            string_format_unsafe(source_file, "%stestbed_lib%s", prefix, extension);
-            string_format_unsafe(target_file, "%stestbed_lib_loaded%s", prefix, extension);
+            string_format_unsafe(source_file, "%soverdrive2069.klib%s", prefix, extension);
+            string_format_unsafe(target_file, "%soverdrive2069.klib_loaded%s", prefix, extension);
 
             platform_error_code err_code = PLATFORM_ERROR_FILE_LOCKED;
             while (err_code == PLATFORM_ERROR_FILE_LOCKED) {
@@ -102,21 +104,18 @@ b8 watched_file_updated(u16 code, void* sender, void* listener_inst, event_conte
             }
         }
     }
-
     return false;
 }
 
 // Define the function to create a game
 b8 create_application(application* out_application) {
-    // application configuration
-
+    // Application configuration.
     platform_error_code err_code = PLATFORM_ERROR_FILE_LOCKED;
     while (err_code == PLATFORM_ERROR_FILE_LOCKED) {
         const char* prefix = platform_dynamic_library_prefix();
         const char* extension = platform_dynamic_library_extension();
-        char* source_file = string_format("%stestbed.klib%s", prefix, extension);;
-        char* target_file = string_format("%stestbed.klib_loaded%s", prefix, extension);
-
+        char* source_file = string_format("%soverdrive2069.klib%s", prefix, extension);
+        char* target_file = string_format("%soverdrive2069.klib_loaded%s", prefix, extension);
         err_code = platform_copy_file(source_file, target_file, true);
         string_free(source_file);
         string_free(target_file);
@@ -141,7 +140,7 @@ b8 create_application(application* out_application) {
 }
 
 const char* application_config_path_get(void) {
-    return "../testbed.kapp/app_config.kson";
+    return "../overdrive2069.kapp/app_config.kson";
 }
 
 b8 initialize_application(application* app) {
@@ -154,11 +153,12 @@ b8 initialize_application(application* app) {
     // FIXME: safe version of string format
     char path[260];
     kzero_memory(path, sizeof(char) * 260);
-    string_format_unsafe(path, "%s%s%s", prefix, "testbed.klib", extension);
+    string_format_unsafe(path, "%s%s%s", prefix, "overdrive2069.klib", extension);
 
     if (!platform_watch_file(path, &app->game_library.watch_id)) {
-        KERROR("Failed to watch the testbed library!");
+        KERROR("Failed to watch the overdrive2069 library!");
         return false;
     }
+
     return true;
 }

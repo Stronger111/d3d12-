@@ -52,12 +52,19 @@ extern b8 create_application(application* out_app);
 
 extern b8 initialize_application(application* app);
 
+/**
+ * @brief Gets the application config path from the application.
+ *
+ * @return const char* The application path.
+ */
+extern const char* application_config_path_get(void);
+
 int main(void) {
     //TODO: load up application config file, get it parsed and ready to hand off.
     // Request the application instance from the application
     application app_inst = { 0 };
 
-    const char* app_file_content = filesystem_read_entire_text_file("../testbed.kapp/app_config.kson");
+    const char* app_file_content = filesystem_read_entire_text_file(application_config_path_get());
     if (!app_file_content) {
         KFATAL("Failed to read app_config.kson file text. Application cannot start.");
         return -68;
