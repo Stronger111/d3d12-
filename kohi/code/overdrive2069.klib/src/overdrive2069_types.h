@@ -15,7 +15,7 @@ typedef enum game_mode {
     GAME_MODE_WORLD,
     GAME_MODE_EDITOR,
     MAIN_MENU,
-    PAUSE_MENU
+    PAUSED_MENU
 }game_mode;
 
 typedef struct overdrive2069_game_state {

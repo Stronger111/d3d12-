@@ -276,11 +276,12 @@ b8 renderer_system_initialize(u64* memory_requirement, struct renderer_system_st
 
 void renderer_system_shutdown(renderer_system_state* state) {
     if (state) {
-        renderer_wait_for_idle();
+        renderer_system_state* typed_state = (renderer_system_state*)state;
+        //renderer_wait_for_idle();
 
         // Destroy buffers.
-        renderer_renderbuffer_destroy(&state->geometry_vertex_buffer);
-        renderer_renderbuffer_destroy(&state->geometry_index_buffer);
+        renderer_renderbuffer_destroy(&typed_state->geometry_vertex_buffer);
+        renderer_renderbuffer_destroy(&typed_state->geometry_index_buffer);
 
         // Destroy generic samplers.
         for (u32 i = 0; i < SHADER_GENERIC_SAMPLER_COUNT; ++i) {
@@ -288,7 +289,7 @@ void renderer_system_shutdown(renderer_system_state* state) {
         }
 
         // Shutdown the plugin
-        state->backend->shutdown(state->backend);
+        state->backend->shutdown(typed_state->backend);
     }
 }
 
