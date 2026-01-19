@@ -191,7 +191,8 @@
         "game_state.h": "c",
         "rendergraph.h": "c",
         "keymap.h": "c",
-        "forward_rendergraph_node.h": "c"
+        "forward_rendergraph_node.h": "c",
+        "frame_data.h": "c"
     },
     "C_Cpp.default.compilerPath": "D:/SoftWare/LLVM/bin/clang.exe",
 }
