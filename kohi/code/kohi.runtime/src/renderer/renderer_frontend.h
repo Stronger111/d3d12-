@@ -370,7 +370,6 @@ KAPI renderbuffer* renderer_renderbuffer_get(renderbuffer_type type);
  * @param geometry A pointer to the geometry to upload.
  * @return True on success; otherwise false.
  */
-KDEPRECATED("The renderer frontend geometry functions will be removed in a future pass. Upload directly to renderbuffers instead.")
 KAPI b8 renderer_geometry_upload(kgeometry* geometry);
 
 /**
@@ -381,14 +380,12 @@ KAPI b8 renderer_geometry_upload(kgeometry* geometry);
  * @param vertex_count The number of vertices which will be updated.
  * @param vertices The vertex data.
  */
-KDEPRECATED("The renderer frontend geometry functions will be removed in a future pass. Upload directly to renderbuffers instead.")
 KAPI void renderer_geometry_vertex_update(kgeometry* g, u32 offset, u32 vertex_count, void* vertices, b8 include_in_frame_workload);
 /**
  * @brief Destroys the given geometry, releasing GPU resources.
  *
  * @param geometry A pointer to the geometry to be destroyed.
  */
-KDEPRECATED("The renderer frontend geometry functions will be removed in a future pass. Upload directly to renderbuffers instead.")
 KAPI void renderer_geometry_destroy(kgeometry* geometry);
 
 /**
@@ -396,7 +393,6 @@ KAPI void renderer_geometry_destroy(kgeometry* geometry);
  *
  * @param data The render data of the geometry to be drawn.
  */
-KDEPRECATED("The renderer frontend geometry functions will be removed in a future pass. Upload directly to renderbuffers instead.")
 KAPI void renderer_geometry_draw(geometry_render_data* data);
 
 /**
