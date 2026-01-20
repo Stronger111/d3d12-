@@ -192,7 +192,8 @@
         "rendergraph.h": "c",
         "keymap.h": "c",
         "forward_rendergraph_node.h": "c",
-        "frame_data.h": "c"
+        "frame_data.h": "c",
+        "cmath": "c"
     },
     "C_Cpp.default.compilerPath": "D:/SoftWare/LLVM/bin/clang.exe",
 }

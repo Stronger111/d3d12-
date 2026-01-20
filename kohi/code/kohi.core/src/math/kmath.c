@@ -29,6 +29,10 @@ f32 ktan(f32 x) {
 
 f32 katan(f32 x) { return atanf(x); }
 
+f32 katan2(f32 x, f32 y) { return atan2(x, y); }
+
+f32 kasin(f32 x) { return asinf(x); }
+
 f32 kacos(f32 x) {
     return acosf(x);
 }

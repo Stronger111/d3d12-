@@ -19,9 +19,20 @@ typedef struct track_point {
     f32 rotation_y;
 }track_point;
 
+typedef struct track_segment {
+    track_point* start;
+    track_point* end;
+
+    //Geometry used to visualize the segment.
+    kgeometry geometry;
+}track_segment;
+
 typedef struct track {
     // darray of points (darray so it's editable)
     track_point* points;
+
+    //Track segments.
+    track_segment* segments;
 
     //Geometry used to visualize the track.
     kgeometry geometry;
@@ -39,4 +50,4 @@ b8 track_load(track* t);
 void track_unload(track* t);
 void track_destroy(track* t);
 
-vec3 track_constrain_object(vec3 object_position,track* t);
+vec3 track_constrain_object(vec3 object_position, track* t);
