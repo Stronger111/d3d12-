@@ -21,8 +21,7 @@
 
 // Locations of uniforms within the static mesh shader.
 typedef struct shadow_staticmesh_shader_locations {
-    u16 projections;
-    u16 views;
+    u16 view_projections;
     u16 model;
     u16 cascade_index;
     u16 base_colour_texture;
@@ -39,8 +38,7 @@ typedef struct shader_per_draw_data {
 }shader_per_draw_data;
 
 typedef struct shadow_terrain_shader_locations {
-    u16 projections;
-    u16 views;
+    u16 view_projections;
     u16 model;
     u16 cascade_index;
 } shadow_terrain_shader_locations;
@@ -150,8 +148,7 @@ b8 shadow_rendergraph_node_initialize(rendergraph_node* self) {
         return false;
     }
 
-    internal_data->staticmesh_shader_locations.projections = shader_system_uniform_location(internal_data->shadow_staticmesh_shader, kname_create("projections"));
-    internal_data->staticmesh_shader_locations.views = shader_system_uniform_location(internal_data->shadow_staticmesh_shader, kname_create("views"));
+    internal_data->staticmesh_shader_locations.view_projections = shader_system_uniform_location(internal_data->shadow_staticmesh_shader, kname_create("view_projections"));
     internal_data->staticmesh_shader_locations.model = shader_system_uniform_location(internal_data->shadow_staticmesh_shader, kname_create("model"));
     internal_data->staticmesh_shader_locations.cascade_index = shader_system_uniform_location(internal_data->shadow_staticmesh_shader, kname_create("cascade_index"));
     internal_data->staticmesh_shader_locations.base_colour_texture = shader_system_uniform_location(internal_data->shadow_staticmesh_shader, kname_create("base_colour_texture"));
@@ -164,8 +161,7 @@ b8 shadow_rendergraph_node_initialize(rendergraph_node* self) {
         return false;
     }
 
-    internal_data->terrain_shader_locations.projections = shader_system_uniform_location(internal_data->shadow_terrain_shader, kname_create("projections"));
-    internal_data->terrain_shader_locations.views = shader_system_uniform_location(internal_data->shadow_terrain_shader, kname_create("views"));
+    internal_data->terrain_shader_locations.view_projections = shader_system_uniform_location(internal_data->shadow_terrain_shader, kname_create("view_projections"));
     internal_data->terrain_shader_locations.model = shader_system_uniform_location(internal_data->shadow_terrain_shader, kname_create("model"));
     internal_data->terrain_shader_locations.cascade_index = shader_system_uniform_location(internal_data->shadow_terrain_shader, kname_create("cascade_index"));
 
@@ -198,7 +194,7 @@ b8 shadow_rendergraph_node_load_resources(rendergraph_node* self) {
     // viewport rect, but is required to be set by the renderer before beginning a renderpass.
     // The projection matrix within this is not used, therefore the fov and clip planes do not matter.
     vec4 viewport_rect = { 0, 0, internal_data->config.resolution, internal_data->config.resolution };
-    if (!viewport_create(viewport_rect, 0.0f, 0.0f, 0.0f, RENDERER_PROJECTION_MATRIX_TYPE_ORTHOGRAPHIC, &internal_data->camera_viewport)) {
+    if (!viewport_create(viewport_rect, 0.0f, 0.0f, 100.0f, RENDERER_PROJECTION_MATRIX_TYPE_ORTHOGRAPHIC, &internal_data->camera_viewport)) {
         KERROR("Failed to create viewport for shadow map pass.");
         return false;
     }
@@ -257,12 +253,8 @@ b8 shadow_rendergraph_node_execute(rendergraph_node* self, frame_data* p_frame_d
             shader_system_bind_frame(internal_data->shadow_staticmesh_shader);
 
             for (u32 i = 0; i < MATERIAL_MAX_SHADOW_CASCADES; ++i) {
-                if (!shader_system_uniform_set_by_location_arrayed(internal_data->shadow_staticmesh_shader, internal_data->staticmesh_shader_locations.projections, i, &internal_data->cascade_data[i].projection)) {
+                if (!shader_system_uniform_set_by_location_arrayed(internal_data->shadow_staticmesh_shader, internal_data->staticmesh_shader_locations.view_projections, i, &internal_data->cascade_data[i].view_projection)) {
                     KERROR("Failed to apply static mesh shadowmap projection uniform (index=%u).", i);
-                    return false;
-                }
-                if (!shader_system_uniform_set_by_location_arrayed(internal_data->shadow_staticmesh_shader, internal_data->staticmesh_shader_locations.views, i, &internal_data->cascade_data[i].view)) {
-                    KERROR("Failed to apply static mesh shadowmap view uniform (index=%u).", i);
                     return false;
                 }
             }
@@ -410,12 +402,8 @@ b8 shadow_rendergraph_node_execute(rendergraph_node* self, frame_data* p_frame_d
 
             for (u32 i = 0; i < MATERIAL_MAX_SHADOW_CASCADES; ++i) {
                 // NOTE: using the internal projection matrix, not one passed in.
-                if (!shader_system_uniform_set_by_location_arrayed(internal_data->shadow_terrain_shader, internal_data->terrain_shader_locations.projections, i, &internal_data->cascade_data[i].projection)) {
+                if (!shader_system_uniform_set_by_location_arrayed(internal_data->shadow_terrain_shader, internal_data->terrain_shader_locations.view_projections, i, &internal_data->cascade_data[i].view_projection)) {
                     KERROR("Failed to apply terrain shadowmap projection uniform (index=%u).", i);
-                    return false;
-                }
-                if (!shader_system_uniform_set_by_location_arrayed(internal_data->shadow_terrain_shader, internal_data->terrain_shader_locations.views, i, &internal_data->cascade_data[i].view)) {
-                    KERROR("Failed to apply terrain shadowmap view uniform (index=%u).", i);
                     return false;
                 }
             }
