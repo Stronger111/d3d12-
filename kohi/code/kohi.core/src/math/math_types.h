@@ -82,9 +82,9 @@ typedef vec4 rect_2d;
 /**
  * @brief A 4-element vector of unsigned ints.
  */
-/**
- * @brief A 4-element vector of unsigned ints.
- */
+ /**
+  * @brief A 4-element vector of unsigned ints.
+  */
 typedef union uvec4_u {
     /** @brief An array of x, y, z, w */
     u32 elements[4];
@@ -201,29 +201,29 @@ typedef struct plane_3d {
  * be edited directly, but done via the functions in transform.h
  * to ensure proper matrix generation.
  */
-// typedef struct transform {
-//     /** @brief The position in the world. */
-//     vec3 position;
-//     /** @brief The rotation in the world. */
-//     quat rotation;
-//     /** @brief The scale in the world. */
-//     vec3 scale;
-//     /**
-//      * @brief Indicates if the position, rotation or scale have changed,
-//      * indicating that the local matrix needs to be recalculated.
-//      */
-//     b8 is_dirty;
-//     /**
-//      * @brief The local transformation matrix, updated whenever
-//      * the position, rotation or scale have changed.
-//      */
-//     mat4 local;
-//     // 行列式
-//     f32 determinant;
+ // typedef struct transform {
+ //     /** @brief The position in the world. */
+ //     vec3 position;
+ //     /** @brief The rotation in the world. */
+ //     quat rotation;
+ //     /** @brief The scale in the world. */
+ //     vec3 scale;
+ //     /**
+ //      * @brief Indicates if the position, rotation or scale have changed,
+ //      * indicating that the local matrix needs to be recalculated.
+ //      */
+ //     b8 is_dirty;
+ //     /**
+ //      * @brief The local transformation matrix, updated whenever
+ //      * the position, rotation or scale have changed.
+ //      */
+ //     mat4 local;
+ //     // 行列式
+ //     f32 determinant;
 
-//     /** @brief A pointer to a parent transform if one is assigned. Can also be null. */
-//     struct transform* parent;
-// } transform;
+ //     /** @brief A pointer to a parent transform if one is assigned. Can also be null. */
+ //     struct transform* parent;
+ // } transform;
 
 #define FRUSTUM_SIDE_COUNT 6
 
@@ -319,3 +319,7 @@ typedef union vec4i_t {
         };
     };
 } vec4i;
+
+typedef struct triangle {
+    vec3 verts[3];
+}triangle;
