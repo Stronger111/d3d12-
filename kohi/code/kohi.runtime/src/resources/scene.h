@@ -1,6 +1,7 @@
 #pragma once
 
 #include "audio/kaudio_types.h"
+#include "core_resource_types.h"
 #include "defines.h"
 #include "graphs/hierarchy_graph.h"
 #include "identifiers/khandle.h"
@@ -89,6 +90,7 @@ typedef struct scene_water_plane_metadata {
 }scene_water_plane_metadata;
 
 struct scene_audio_emitter;
+struct scene_volume;
 
 typedef struct scene {
     u32 id;
@@ -145,6 +147,11 @@ typedef struct scene {
     scene_attachment* water_plane_attachments;
     // Array of water plane metadata.
     scene_water_plane_metadata* water_plane_metadata;
+
+    // darray of volumes.
+    struct scene_volume* volumes;
+    //Array of scene attachments for volumes.
+    scene_attachment* volume_attachments;
 
     // A grid for the scene
     debug_grid grid;
@@ -245,6 +252,6 @@ KAPI b8 scene_terrain_render_data_query_from_line(const scene* scene, vec3 direc
 
 KAPI b8 scene_water_plane_query(const scene* scene, const  frustum* f, vec3 center, struct frame_data* p_frame_data, u32* out_count, struct water_plane*** out_water_planes);
 
-KAPI b8 scene_node_xform_get_by_name(const scene* scene,kname name,khandle* out_xform_handle);
+KAPI b8 scene_node_xform_get_by_name(const scene* scene, kname name, khandle* out_xform_handle);
 
 KAPI b8 scene_save(scene* s);

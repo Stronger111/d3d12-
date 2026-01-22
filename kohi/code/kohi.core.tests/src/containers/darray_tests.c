@@ -932,7 +932,7 @@ static u8 all_darray_tests_after_reserve_3_with_allocator(void) {
      *  - backward iteration
      */
 
-    // Verify that it has been destroyed.
+     // Verify that it has been destroyed.
     darray_u8_destroy(&arr);
     expect_should_be(0, arr.data);
     expect_should_be(0, arr.base.length);
@@ -972,7 +972,7 @@ static u8 darray_all_iterator_tests(void) {
         // Try reverse/backward iteration on an empty array.
         it = arr.rbegin(&arr.base);
         expect_should_be(&arr.base, it.arr);
-        expect_should_be(arr.base.length - 1, it.pos);
+        expect_should_be(arr.base.length - 1, (u32)it.pos);
         expect_should_be(-1, it.dir);
         loop_count = 0;
         for (; !it.end(&it); it.next(&it)) {
@@ -1010,7 +1010,7 @@ static u8 darray_all_iterator_tests(void) {
         // Try reverse/backward iteration.
         it = arr.rbegin(&arr.base);
         expect_should_be(&arr.base, it.arr);
-        expect_should_be(arr.base.length - 1, it.pos);
+        expect_should_be(arr.base.length - 1, (u32)it.pos);
         expect_should_be(-1, it.dir);
         loop_count = 0;
         for (; !it.end(&it); it.next(&it)) {
@@ -1044,7 +1044,8 @@ static u8 darray_all_iterator_tests(void) {
             u8* val = (u8*)it.value(&it);
             if (it.pos == 0) {
                 expect_should_be(69, *val);
-            } else if (it.pos == 1) {
+            }
+            else if (it.pos == 1) {
                 expect_should_be(42, *val);
             }
             loop_count++;
@@ -1054,14 +1055,15 @@ static u8 darray_all_iterator_tests(void) {
         // Try reverse/backward iteration.
         it = arr.rbegin(&arr.base);
         expect_should_be(&arr.base, it.arr);
-        expect_should_be(arr.base.length - 1, it.pos);
+        expect_should_be(arr.base.length - 1,(u32)it.pos);
         expect_should_be(-1, it.dir);
         loop_count = 0;
         for (; !it.end(&it); it.next(&it)) {
             u8* val = it.value(&it);
             if (it.pos == 0) {
                 expect_should_be(69, *val);
-            } else if (it.pos == 1) {
+            }
+            else if (it.pos == 1) {
                 expect_should_be(42, *val);
             }
             loop_count++;
@@ -1091,9 +1093,11 @@ static u8 darray_all_iterator_tests(void) {
             u8* val = it.value(&it);
             if (it.pos == 0) {
                 expect_should_be(69, *val);
-            } else if (it.pos == 1) {
+            }
+            else if (it.pos == 1) {
                 expect_should_be(42, *val);
-            } else if (it.pos == 2) {
+            }
+            else if (it.pos == 2) {
                 expect_should_be(36, *val);
             }
 
@@ -1104,16 +1108,18 @@ static u8 darray_all_iterator_tests(void) {
         // Try reverse/backward iteration.
         it = arr.rbegin(&arr.base);
         expect_should_be(&arr.base, it.arr);
-        expect_should_be(arr.base.length - 1, it.pos);
+        expect_should_be(arr.base.length - 1, (u32)it.pos);
         expect_should_be(-1, it.dir);
         loop_count = 0;
         for (; !it.end(&it); it.next(&it)) {
             u8* val = it.value(&it);
             if (it.pos == 0) {
                 expect_should_be(69, *val);
-            } else if (it.pos == 1) {
+            }
+            else if (it.pos == 1) {
                 expect_should_be(42, *val);
-            } else if (it.pos == 2) {
+            }
+            else if (it.pos == 2) {
                 expect_should_be(36, *val);
             }
 

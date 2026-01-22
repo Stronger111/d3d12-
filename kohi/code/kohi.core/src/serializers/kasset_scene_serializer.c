@@ -881,7 +881,7 @@ static b8 deserialize_attachment(kasset* asset, scene_node_config* node, kson_ob
         }
         darray_push(node->audio_emitter_configs, typed_attachment);
     } break;
-    
+
     case SCENE_NODE_ATTACHMENT_TYPE_STATIC_MESH: {
         scene_node_attachment_static_mesh_config typed_attachment = { 0 };
 
@@ -949,10 +949,76 @@ static b8 deserialize_attachment(kasset* asset, scene_node_config* node, kson_ob
         darray_push(node->water_plane_configs, typed_attachment);
     } break;
 
+    case SCENE_NODE_ATTACHMENT_TYPE_VOLUME: {
+        scene_node_attachment_volume_config typed_attachment = { 0 };
+
+        // shape type is required.
+        const char* shape_type_str = 0;
+        if (!kson_object_property_value_get_string(attachment_obj, "shape_type", &shape_type_str)) {
+            KERROR("Volume definition is missing required property shape_type.");
+            return false;
+        }
+        if (strings_equali(shape_type_str, "sphere")) {
+            typed_attachment.shape_type = SCENE_VOLUME_SHAPE_TYPE_SPHERE;
+
+            // This shape type requires radius.
+            if (!kson_object_property_value_get_float(attachment_obj, "radius", &typed_attachment.shape_config.radius)) {
+                KERROR("Volume sphere definition is missing required property radius.");
+                return false;
+            }
+        }
+        else if (strings_equali(shape_type_str, "rectangle")) {
+            typed_attachment.shape_type = SCENE_VOLUME_SHAPE_TYPE_RECTANGLE;
+
+            // This shape type requires extents.
+            if (!kson_object_property_value_get_vec3(attachment_obj, "extents", &typed_attachment.shape_config.extents)) {
+                KERROR("Volume rectangle definition is missing required property extents.");
+                return false;
+            }
+        }
+        else {
+            KERROR("Unknown volume shape type '%s'.", shape_type_str);
+            return false;
+        }
+
+        // Volume type
+        const char* volume_type_str = 0;
+        if (!kson_object_property_value_get_string(attachment_obj, "volume_type", &volume_type_str)) {
+            KERROR("Volume definition is missing required property volume_type.");
+            return false;
+        }
+        if (strings_equali(volume_type_str, "trigger")) {
+            typed_attachment.volume_type = SCENE_VOLUME_TYPE_TRIGGER;
+        }
+        else {
+            KERROR("Unsupported volume type '%s'.", volume_type_str);
+            return false;
+        }
+
+        // on enter - optional
+        kson_object_property_value_get_string(attachment_obj, "on_enter", &typed_attachment.on_enter_command);
+        // on leave - optional
+        kson_object_property_value_get_string(attachment_obj, "on_leave", &typed_attachment.on_leave_command);
+        // on update - optional
+        kson_object_property_value_get_string(attachment_obj, "on_update", &typed_attachment.on_update_command);
+
+        // Validate that at least one of the above was set.
+        if (!typed_attachment.on_enter_command && !typed_attachment.on_leave_command && !typed_attachment.on_update_command) {
+            KWARN("No commands were set for volume.");
+        }
+
+        // Push to the appropriate array.
+        if (!node->volume_configs) {
+            node->volume_configs = darray_create(scene_node_attachment_volume_config);
+        }
+        darray_push(node->volume_configs, typed_attachment);
+    } break;
+
     case SCENE_NODE_ATTACHMENT_TYPE_COUNT:
         KERROR("Stop trying to serialize the count member of the enum, ya dingus!");
         return false;
     }
+
 
     return true;
 }
