@@ -15,11 +15,11 @@
 #include "defines.h"
 #include "logger.h"
 
-/**
- * @brief Typedef for a console consumer write function, which
- * is invoked every time a logging event occurs. Consumers must
- * implement this and handle the input thusly.
- */
+ /**
+  * @brief Typedef for a console consumer write function, which
+  * is invoked every time a logging event occurs. Consumers must
+  * implement this and handle the input thusly.
+  */
 typedef b8 (*PFN_console_consumer_write)(void* inst, log_level level, const char* message);
 /**
  * @brief Represents a single console command argument's value.
@@ -37,6 +37,10 @@ typedef struct console_command_argument {
  * command (i.e. arguments to the command).
  */
 typedef struct console_command_context {
+    /** @brief The full, original console command. */
+    const char* command;
+    /** @brief The console command name only. */
+    const char* command_name;
     /** @brief The number of arguments passed.*/
     u8 argument_count;
     /** @brief The arguments array. */

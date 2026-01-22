@@ -4,7 +4,6 @@
 #include "kdebug/kassert.h"
 #include "defines.h"
 #include "logger.h"
-
 #include "memory/kmemory.h"
 #include "strings/kstring.h"
 
@@ -345,7 +344,9 @@ KAPI b8 console_command_execute(const char* command) {
             }
             else {
                 // 执行命令，如果需要传递参数
-                console_command_context context = {};
+                console_command_context context = { 0 };
+                context.command = string_duplicate(command);
+                context.command_name = string_duplicate(cmd->name);
                 context.argument_count = cmd->arg_count;
                 if (context.argument_count > 0) {
                     context.arguments = kallocate(sizeof(console_command_argument) * cmd->arg_count, MEMORY_TAG_ARRAY);
