@@ -259,7 +259,6 @@ b8 renderer_system_initialize(u64* memory_requirement, struct renderer_system_st
         KERROR("Error creating vertex buffer.");
         return false;
     }
-    renderer_renderbuffer_bind(&state->geometry_vertex_buffer, 0);
 
     // Geometry index buffer
     // TODO: Make this configurable.
@@ -268,8 +267,6 @@ b8 renderer_system_initialize(u64* memory_requirement, struct renderer_system_st
         KERROR("Error creating index buffer.");
         return false;
     }
-
-    renderer_renderbuffer_bind(&state->geometry_index_buffer, 0);
 
     return true;
 }

@@ -458,7 +458,6 @@ b8 vulkan_renderer_on_window_created(renderer_backend_interface* backend, struct
                 KERROR("Failed to create staging buffer.");
                 return false;
             }
-            renderer_renderbuffer_bind(&window_backend->staging[i], 0);
 
             //Create the pre-frame list of updated texture handles.
             window_backend->frame_texture_updated_list[i] = darray_create(khandle);
@@ -1915,7 +1914,6 @@ b8 vulkan_renderer_texture_write_data(renderer_backend_interface* backend, khand
         // Not including in the frame workload means a temporary staging buffer needs to be created and bound.
         // This buffer is the exact size required for the operation, so no allocation is needed later.
         renderer_renderbuffer_create("temp_staging", RENDERBUFFER_TYPE_STAGING, size * texture->image_count, RENDERBUFFER_TRACK_TYPE_NONE, &temp);
-        renderer_renderbuffer_bind(&temp, 0);
         // Set the temp buffer as the staging buffer to be used.
         staging = &temp;
     }
@@ -2021,7 +2019,6 @@ static b8 texture_read_offset_range(renderer_backend_interface* backend, vulkan_
             KERROR("Failed to create staging buffer for texture read.");
             return false;
         }
-        renderer_renderbuffer_bind(&staging, 0);
 
         vulkan_command_buffer temp_buffer;
         VkCommandPool pool = context->device.graphics_command_pool;
@@ -2550,7 +2547,6 @@ b8 vulkan_renderer_shader_create(renderer_backend_interface* backend, khandle sh
             return false;
         }
         string_free(buffer_name);
-        renderer_renderbuffer_bind(&internal_shader->uniform_buffers[i], 0);
         // Map the entire buffer's memory.
         internal_shader->mapped_uniform_buffer_blocks[i] = vulkan_buffer_map_memory(backend, &internal_shader->uniform_buffers[i], 0, VK_WHOLE_SIZE);
     }
@@ -3347,6 +3343,10 @@ b8 vulkan_buffer_create_internal(renderer_backend_interface* backend, renderbuff
     }
     // Allocate the internal state block of memory at the end once we are sure everything was created successfully.
     buffer->internal_data = kallocate(sizeof(vulkan_buffer), MEMORY_TAG_VULKAN);
+
+    //Bind the allocated memory to the buffer.
+    VK_CHECK(rhi->kvkBindBufferMemory(context->device.logical_device, internal_buffer.handle, internal_buffer.memory, 0));
+
     *((vulkan_buffer*)buffer->internal_data) = internal_buffer;
 
     return true;
@@ -3462,7 +3462,22 @@ b8 vulkan_buffer_bind(renderer_backend_interface* backend, renderbuffer* buffer,
         return false;
     }
     vulkan_buffer* internal_buffer = (vulkan_buffer*)buffer->internal_data;
-    VK_CHECK(rhi->kvkBindBufferMemory(context->device.logical_device, internal_buffer->handle, internal_buffer->memory, offset));
+    vulkan_command_buffer* command_buffer = get_current_command_buffer(context);
+    if (buffer->type == RENDERBUFFER_TYPE_VERTEX) {
+        //Bind vertex buffer at offset.
+        VkDeviceSize offsets[1] = { offset };
+        rhi->kvkCmdBindVertexBuffers(command_buffer->handle, 0, 1, &internal_buffer->handle, offsets);
+        return true;
+    }
+    else if (buffer->type == RENDERBUFFER_TYPE_INDEX) {
+        // Bind index buffer at offset.
+        rhi->kvkCmdBindIndexBuffer(command_buffer->handle, internal_buffer->handle, offset, VK_INDEX_TYPE_UINT32);
+        return true;
+    }
+    else {
+        KWARN("Cannot bind buffer of type: %i", buffer->type);
+        return false;
+    }
     return true;
 }
 
@@ -3539,7 +3554,7 @@ b8 vulkan_buffer_read(renderer_backend_interface* backend, renderbuffer* buffer,
             KERROR("vulkan_buffer_read() - Failed to create read buffer.");
             return false;
         }
-        renderer_renderbuffer_bind(&read, 0);
+
         vulkan_buffer* read_internal = (vulkan_buffer*)read.internal_data;
 
         // Perform the copy from device local to the read buffer.
@@ -3664,31 +3679,28 @@ b8 vulkan_buffer_copy_range(renderer_backend_interface* backend, renderbuffer* s
 }
 
 b8 vulkan_buffer_draw(renderer_backend_interface* backend, renderbuffer* buffer, u64 offset, u32 element_count, b8 bind_only) {
+    if (!vulkan_buffer_bind(backend, buffer, offset)) {
+        KERROR("Failed to bind renderbuffer. See logs for details.");
+        return false;
+    }
+    if (bind_only) {
+        return true;
+    }
     vulkan_context* context = (vulkan_context*)backend->internal_context;
     krhi_vulkan* rhi = &context->rhi;
     vulkan_command_buffer* command_buffer = get_current_command_buffer(context);
 
     if (buffer->type == RENDERBUFFER_TYPE_VERTEX) {
-        // Bind vertex buffer at offset.
-        VkDeviceSize offsets[1] = { offset };
-        rhi->kvkCmdBindVertexBuffers(command_buffer->handle, 0, 1, &((vulkan_buffer*)buffer->internal_data)->handle, offsets);
-        if (!bind_only) {
-            rhi->kvkCmdDraw(command_buffer->handle, element_count, 1, 0, 0);
-        }
-        return true;
+        rhi->kvkCmdDraw(command_buffer->handle, element_count, 1, 0, 0);
     }
     else if (buffer->type == RENDERBUFFER_TYPE_INDEX) {
-        // Bind index buffer at offset.
-        rhi->kvkCmdBindIndexBuffer(command_buffer->handle, ((vulkan_buffer*)buffer->internal_data)->handle, offset, VK_INDEX_TYPE_UINT32);
-        if (!bind_only) {
-            rhi->kvkCmdDrawIndexed(command_buffer->handle, element_count, 1, 0, 0, 0);
-        }
-        return true;
+        rhi->kvkCmdDrawIndexed(command_buffer->handle, element_count, 1, 0, 0, 0);
     }
     else {
         KERROR("Cannot draw buffer of type: %i", buffer->type);
         return false;
     }
+    return true;
 }
 
 void vulkan_renderer_wait_for_idle(renderer_backend_interface* backend) {
@@ -4852,10 +4864,10 @@ void vulkan_alloc_free(void* user_data, void* memory) {
  * @return A memory block if successful; otherwise 0.
  */
 static void* vulkan_alloc_reallocation(
-    void* user_data, 
-    void* original, 
-    size_t size, 
-    size_t alignment, 
+    void* user_data,
+    void* original,
+    size_t size,
+    size_t alignment,
     VkSystemAllocationScope allocation_scope) {
     if (!original) {
         return vulkan_alloc_allocation(user_data, size, alignment, allocation_scope);

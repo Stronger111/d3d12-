@@ -81,18 +81,6 @@ typedef enum material_texture_input {
     MATERIAL_TEXTURE_INPUT_COUNT
 }material_texture_input;
 
-/**
- * @brief A material instance, which contains handles to both
- * the base material as well as the instance itself. Every time
- * an instance is "acquired", one of these is created, and the instance
- * should be referenced using this going from that point.
- */
-typedef struct material_instance {
-    // Handle to the base material.
-    khandle material;
-    // Handle to the instance.
-    khandle instance;
-}material_instance;
 
 /**
  * @brief Initializes the material system.
