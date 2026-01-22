@@ -37,7 +37,7 @@ typedef struct selected_object {
     khandle xform_parent_handle;
 } selected_object;
 
-typedef struct testbed_game_state {
+typedef struct application_state {
     b8 running;
     f32 delta_time;
     camera* world_camera;
@@ -109,7 +109,7 @@ typedef struct testbed_game_state {
     u32 cam_proj_line_indices[24];
 
     // TODO: end temp
-} testbed_game_state;
+} application_state;
 
 typedef struct testbed_application_frame_data {
     i32 dummy;

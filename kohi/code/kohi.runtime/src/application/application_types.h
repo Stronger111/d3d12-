@@ -26,6 +26,8 @@ typedef enum application_stage {
     APPLICATION_STAGE_SHUTTING_DOWN
 } application_stage;
 
+struct application_state;
+
 typedef struct application {
     application_config app_config;
 
@@ -92,7 +94,7 @@ typedef struct application {
     u64 state_memory_requirement;
 
     // Game specific game state created and managed by the game
-    void* state;
+    struct application_state* state;
 
     /** @brief A block of memory to hold the engine state. Created and managed by the engine. */
     void* engine_state;

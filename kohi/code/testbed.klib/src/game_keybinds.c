@@ -37,7 +37,7 @@ void game_on_escape_callback(keys key, keymap_entry_bind_type type, keymap_modif
 
 void game_on_yaw(keys key, keymap_entry_bind_type type, keymap_modifier modifiers, void* user_data) {
     application* game_inst = (application*)user_data;
-    testbed_game_state* state = (testbed_game_state*)game_inst->state;
+    application_state* state = (application_state*)game_inst->state;
 
     f32 f = 0.0f;
     if (key == KEY_LEFT || key == KEY_A) {
@@ -52,7 +52,7 @@ void game_on_yaw(keys key, keymap_entry_bind_type type, keymap_modifier modifier
 
 void game_on_pitch(keys key, keymap_entry_bind_type type, keymap_modifier modifiers, void* user_data) {
     application* game_inst = (application*)user_data;
-    testbed_game_state* state = (testbed_game_state*)game_inst->state;
+    application_state* state = (application_state*)game_inst->state;
 
     f32 f = 0.0f;
     if (key == KEY_UP) {
@@ -66,42 +66,42 @@ void game_on_pitch(keys key, keymap_entry_bind_type type, keymap_modifier modifi
 
 void game_on_move_forward(keys key, keymap_entry_bind_type type, keymap_modifier modifiers, void* user_data) {
     application* game_inst = (application*)user_data;
-    testbed_game_state* state = (testbed_game_state*)game_inst->state;
+    application_state* state = (application_state*)game_inst->state;
 
     camera_move_forward(state->world_camera, state->forward_move_speed * get_engine_delta_time());
 }
 
 void game_on_move_backward(keys key, keymap_entry_bind_type type, keymap_modifier modifiers, void* user_data) {
     application* game_inst = (application*)user_data;
-    testbed_game_state* state = (testbed_game_state*)game_inst->state;
+    application_state* state = (application_state*)game_inst->state;
 
     camera_move_backward(state->world_camera, state->backward_move_speed * get_engine_delta_time());
 }
 
 void game_on_move_left(keys key, keymap_entry_bind_type type, keymap_modifier modifiers, void* user_data) {
     application* game_inst = (application*)user_data;
-    testbed_game_state* state = (testbed_game_state*)game_inst->state;
+    application_state* state = (application_state*)game_inst->state;
 
     camera_move_left(state->world_camera, state->forward_move_speed * get_engine_delta_time());
 }
 
 void game_on_move_right(keys key, keymap_entry_bind_type type, keymap_modifier modifiers, void* user_data) {
     application* game_inst = (application*)user_data;
-    testbed_game_state* state = (testbed_game_state*)game_inst->state;
+    application_state* state = (application_state*)game_inst->state;
 
     camera_move_right(state->world_camera, state->forward_move_speed * get_engine_delta_time());
 }
 
 void game_on_move_up(keys key, keymap_entry_bind_type type, keymap_modifier modifiers, void* user_data) {
     application* game_inst = (application*)user_data;
-    testbed_game_state* state = (testbed_game_state*)game_inst->state;
+    application_state* state = (application_state*)game_inst->state;
 
     camera_move_up(state->world_camera, state->forward_move_speed * get_engine_delta_time());
 }
 
 void game_on_move_down(keys key, keymap_entry_bind_type type, keymap_modifier modifiers, void* user_data) {
     application* game_inst = (application*)user_data;
-    testbed_game_state* state = (testbed_game_state*)game_inst->state;
+    application_state* state = (application_state*)game_inst->state;
 
     camera_move_down(state->world_camera, state->forward_move_speed * get_engine_delta_time());
 }
@@ -109,7 +109,7 @@ void game_on_console_change_visibility(keys key, keymap_entry_bind_type type, ke
     // No-op unless a debug build
 #if KOHI_DEBUG
     application* game_inst = (application*)user_data;
-    testbed_game_state* state = (testbed_game_state*)game_inst->state;
+    application_state* state = (application_state*)game_inst->state;
 
     b8 console_visible = debug_console_visible(&state->debug_console);
     console_visible = !console_visible;
@@ -156,7 +156,7 @@ void game_on_set_render_mode_wireframe(keys key, keymap_entry_bind_type type, ke
 
 void game_on_set_gizmo_mode(keys key, keymap_entry_bind_type type, keymap_modifier modifiers, void* user_data) {
     application* game_inst = (application*)user_data;
-    testbed_game_state* state = (testbed_game_state*)game_inst->state;
+    application_state* state = (application_state*)game_inst->state;
 
     editor_gizmo_mode mode;
     switch (key) {
@@ -179,7 +179,7 @@ void game_on_set_gizmo_mode(keys key, keymap_entry_bind_type type, keymap_modifi
 
 void game_on_gizmo_orientation_set(keys key, keymap_entry_bind_type type, keymap_modifier modifiers, void* user_data) {
     application* game_inst = (application*)user_data;
-    testbed_game_state* state = (testbed_game_state*)game_inst->state;
+    application_state* state = (application_state*)game_inst->state;
 
     editor_gizmo_orientation orientation = editor_gizmo_orientation_get(&state->gizmo);
     orientation++;
@@ -209,7 +209,7 @@ void game_on_console_scroll(keys key, keymap_entry_bind_type type, keymap_modifi
     // No-op unless a debug build.
 #if KOHI_DEBUG
     application* app = (application*)user_data;
-    testbed_game_state* state = (testbed_game_state*)app->state;
+    application_state* state = (application_state*)app->state;
     debug_console_state* console_state = &state->debug_console;
     if (key == KEY_PAGEUP) {
         debug_console_move_up(console_state);
@@ -224,7 +224,7 @@ void game_on_console_history_back(keys key, keymap_entry_bind_type type, keymap_
     // No-op unless a debug build.
 #if KOHI_DEBUG
     application* game_inst = (application*)user_data;
-    testbed_game_state* state = (testbed_game_state*)game_inst->state;
+    application_state* state = (application_state*)game_inst->state;
     debug_console_history_back(&state->debug_console);
 #endif
 }
@@ -233,7 +233,7 @@ void game_on_console_history_forward(keys key, keymap_entry_bind_type type, keym
     // No-op unless a debug build.
 #if KOHI_DEBUG
     application* game_inst = (application*)user_data;
-    testbed_game_state* state = (testbed_game_state*)game_inst->state;
+    application_state* state = (application_state*)game_inst->state;
     debug_console_history_forward(&state->debug_console);
 #endif
 }
@@ -242,7 +242,7 @@ void game_on_console_scroll_hold(keys key, keymap_entry_bind_type type, keymap_m
     // No-op unless a debug build.
 #if KOHI_DEBUG
     application* app = (application*)user_data;
-    testbed_game_state* state = (testbed_game_state*)app->state;
+    application_state* state = (application_state*)app->state;
     debug_console_state* console_state = &state->debug_console;
 
     static f32 accumulated_time = 0.0f;
@@ -268,7 +268,7 @@ void game_on_debug_texture_swap(keys key, keymap_entry_bind_type type, keymap_mo
 
 void game_on_debug_cam_position(keys key, keymap_entry_bind_type type, keymap_modifier modifiers, void* user_data) {
     application* game_inst = (application*)user_data;
-    testbed_game_state* state = (testbed_game_state*)game_inst->state;
+    application_state* state = (application_state*)game_inst->state;
 
     KINFO(
         "Pos:[%.2f, %.2f, %.2f",
@@ -288,7 +288,7 @@ void game_on_debug_vsync_toggle(keys key, keymap_entry_bind_type type, keymap_mo
 
 void game_print_memory_metrics(keys key, keymap_entry_bind_type type, keymap_modifier modifiers, void* user_data) {
     application* game_inst = (application*)user_data;
-    testbed_game_state* state = (testbed_game_state*)game_inst->state;
+    application_state* state = (application_state*)game_inst->state;
 
     char* usage = get_memory_usage_str();
     KINFO(usage);
@@ -347,7 +347,7 @@ void game_setup_keymaps(application* game_inst) {
     input_keymap_push(&testbed_keymap);
 
     // A console-specific keymap. Is not pushed by default.
-    testbed_game_state* state = ((testbed_game_state*)game_inst->state);
+    application_state* state = ((application_state*)game_inst->state);
     state->console_keymap = keymap_create();
     state->console_keymap.overrides_all = true;
     keymap_binding_add(&state->console_keymap, KEY_GRAVE, KEYMAP_BIND_TYPE_PRESS, KEYMAP_MODIFIER_NONE_BIT, game_inst, game_on_console_change_visibility);
@@ -375,7 +375,7 @@ void game_remove_keymaps(struct application* game_inst) {
     while (input_keymap_pop()) {
     }
 
-    testbed_game_state* state = ((testbed_game_state*)game_inst->state);
+    application_state* state = ((application_state*)game_inst->state);
 
     // Remove all bindings for the console keymap, since that's the only one we hold onto.
     keymap_clear(&state->console_keymap);
