@@ -8,7 +8,6 @@
 #include "kresources/kresource_types.h"
 #include "math/math_types.h"
 #include "resources/Kohidebug/debug_grid.h"
-#include "resources/resource_types.h"
 #include "systems/static_mesh_system.h"
 
 struct frame_data;
@@ -46,6 +45,9 @@ typedef struct scene_attachment {
     khandle hierarchy_node_handle;
     // A handle indexing into the resource array of the given type (i.e. meshes).
     khandle resource_handle;
+
+    u32 tag_count;
+    kname* tags;
 } scene_attachment;
 
 typedef enum scene_flag {
@@ -91,6 +93,7 @@ typedef struct scene_water_plane_metadata {
 
 struct scene_audio_emitter;
 struct scene_volume;
+struct scene_hit_sphere;
 
 typedef struct scene {
     u32 id;
@@ -152,6 +155,11 @@ typedef struct scene {
     struct scene_volume* volumes;
     //Array of scene attachments for volumes.
     scene_attachment* volume_attachments;
+
+    // darray of hit spheres.
+    struct scene_hit_sphere* hit_spheres;
+    //Array of scene attachments for hit spheres.
+    scene_attachment* hit_sphere_attachments;
 
     // A grid for the scene
     debug_grid grid;

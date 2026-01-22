@@ -172,6 +172,42 @@ b8 kasset_scene_deserialize(const char* file_text, kasset* out_asset) {
     return false;
 }
 
+static b8 serialize_attachment_base_props(scene_node_attachment_config* attachment, kson_object* attachment_obj, const char* attachment_name) {
+    // Base properties
+    {
+        // Name, if it exists.
+        if (attachment->name) {
+            if (!kson_object_value_add_kname_as_string(attachment_obj, "name", attachment->name)) {
+                KERROR("Failed to add 'name' property for attachment '%s'.", attachment_name);
+                return false;
+            }
+        }
+
+        // Add the type. Required.
+        const char* type_str = scene_node_attachment_type_strings[attachment->type];
+        if (!kson_object_value_add_string(attachment_obj, "type", type_str)) {
+            KERROR("Failed to add 'name' property for attachment '%s'.", attachment_name);
+            return false;
+        }
+
+        // Tags
+        if (attachment->tags && attachment->tag_count) {
+            const char** tag_strs = KALLOC_TYPE_CARRAY(const char*, attachment->tag_count);
+
+            for (u32 t = 1; t < attachment->tag_count; ++t) {
+                tag_strs[t] = kname_string_get(attachment->tags[t]);
+            }
+
+            char* joined_str = string_join(tag_strs, attachment->tag_count, '|');
+            kson_object_value_add_string(attachment_obj, "tags", joined_str);
+            string_free(joined_str);
+            KFREE_TYPE_CARRAY(tag_strs, const char*, attachment->tag_count);
+        }
+    }
+
+    return true;
+}
+
 static b8 serialize_node(scene_node_config* node, kson_object* node_obj) {
     kname node_name = node->name ? node->name : kname_create("unnamed-node");
     //Properties
@@ -202,21 +238,9 @@ static b8 serialize_node(scene_node_config* node, kson_object* node_obj) {
             kson_object attachment_obj = kson_object_create();
             const char* attachment_name = kname_string_get(attachment->name);
             // Base properties
-            {
-                // Name, if it exists.
-                if (attachment->name) {
-                    if (!kson_object_value_add_kname_as_string(&attachment_obj, "name", attachment->name)) {
-                        KERROR("Failed to add 'name' property for attachment '%s'.", attachment_name);
-                        return false;
-                    }
-                }
-
-                // Add the type. Required.
-                const char* type_str = scene_node_attachment_type_strings[attachment->type];
-                if (!kson_object_value_add_string(&attachment_obj, "type", type_str)) {
-                    KERROR("Failed to add 'name' property for attachment '%s'.", attachment_name);
-                    return false;
-                }
+            if (!serialize_attachment_base_props(attachment, &attachment_obj, attachment_name)) {
+                KERROR("Failed to serialize attachment. See logs for details.");
+                return false;
             }
 
             // Cubemap name
@@ -248,21 +272,9 @@ static b8 serialize_node(scene_node_config* node, kson_object* node_obj) {
             const char* attachment_name = kname_string_get(attachment->name);
 
             // Base properties
-            {
-                // Name, if it exists.
-                if (attachment->name) {
-                    if (!kson_object_value_add_kname_as_string(&attachment_obj, "name", attachment->name)) {
-                        KERROR("Failed to add 'name' property for attachment '%s'.", attachment_name);
-                        return false;
-                    }
-                }
-
-                // Add the type. Required.
-                const char* type_str = scene_node_attachment_type_strings[attachment->type];
-                if (!kson_object_value_add_string(&attachment_obj, "type", type_str)) {
-                    KERROR("Failed to add 'name' property for attachment '%s'.", attachment_name);
-                    return false;
-                }
+            if (!serialize_attachment_base_props(attachment, &attachment_obj, attachment_name)) {
+                KERROR("Failed to serialize attachment. See logs for details.");
+                return false;
             }
 
             // Colour
@@ -309,21 +321,9 @@ static b8 serialize_node(scene_node_config* node, kson_object* node_obj) {
             const char* attachment_name = kname_string_get(attachment->name);
 
             // Base properties
-            {
-                // Name, if it exists.
-                if (attachment->name) {
-                    if (!kson_object_value_add_kname_as_string(&attachment_obj, "name", attachment->name)) {
-                        KERROR("Failed to add 'name' property for attachment '%s'.", attachment_name);
-                        return false;
-                    }
-                }
-
-                // Add the type. Required.
-                const char* type_str = scene_node_attachment_type_strings[attachment->type];
-                if (!kson_object_value_add_string(&attachment_obj, "type", type_str)) {
-                    KERROR("Failed to add 'name' property for attachment '%s'.", attachment_name);
-                    return false;
-                }
+            if (!serialize_attachment_base_props(attachment, &attachment_obj, attachment_name)) {
+                KERROR("Failed to serialize attachment. See logs for details.");
+                return false;
             }
 
             // Colour
@@ -370,21 +370,9 @@ static b8 serialize_node(scene_node_config* node, kson_object* node_obj) {
             const char* attachment_name = kname_string_get(attachment->name);
 
             // Base properties
-            {
-                // Name, if it exists.
-                if (attachment->name) {
-                    if (!kson_object_value_add_kname_as_string(&attachment_obj, "name", attachment->name)) {
-                        KERROR("Failed to add 'name' property for attachment '%s'.", attachment_name);
-                        return false;
-                    }
-                }
-
-                // Add the type. Required.
-                const char* type_str = scene_node_attachment_type_strings[attachment->type];
-                if (!kson_object_value_add_string(&attachment_obj, "type", type_str)) {
-                    KERROR("Failed to add 'name' property for attachment '%s'.", attachment_name);
-                    return false;
-                }
+            if (!serialize_attachment_base_props(attachment, &attachment_obj, attachment_name)) {
+                KERROR("Failed to serialize attachment. See logs for details.");
+                return false;
             }
 
             // volume
@@ -449,21 +437,9 @@ static b8 serialize_node(scene_node_config* node, kson_object* node_obj) {
             const char* attachment_name = kname_string_get(attachment->name);
 
             // Base properties
-            {
-                // Name, if it exists.
-                if (attachment->name) {
-                    if (!kson_object_value_add_kname_as_string(&attachment_obj, "name", attachment->name)) {
-                        KERROR("Failed to add 'name' property for attachment '%s'.", attachment_name);
-                        return false;
-                    }
-                }
-
-                // Add the type. Required.
-                const char* type_str = scene_node_attachment_type_strings[attachment->type];
-                if (!kson_object_value_add_string(&attachment_obj, "type", type_str)) {
-                    KERROR("Failed to add 'name' property for attachment '%s'.", attachment_name);
-                    return false;
-                }
+            if (!serialize_attachment_base_props(attachment, &attachment_obj, attachment_name)) {
+                KERROR("Failed to serialize attachment. See logs for details.");
+                return false;
             }
 
             // Asset name
@@ -495,21 +471,9 @@ static b8 serialize_node(scene_node_config* node, kson_object* node_obj) {
             const char* attachment_name = kname_string_get(attachment->name);
 
             // Base properties
-            {
-                // Name, if it exists.
-                if (attachment->name) {
-                    if (!kson_object_value_add_kname_as_string(&attachment_obj, "name", attachment->name)) {
-                        KERROR("Failed to add 'name' property for attachment '%s'.", attachment_name);
-                        return false;
-                    }
-                }
-
-                // Add the type. Required.
-                const char* type_str = scene_node_attachment_type_strings[attachment->type];
-                if (!kson_object_value_add_string(&attachment_obj, "type", type_str)) {
-                    KERROR("Failed to add 'name' property for attachment '%s'.", attachment_name);
-                    return false;
-                }
+            if (!serialize_attachment_base_props(attachment, &attachment_obj, attachment_name)) {
+                KERROR("Failed to serialize attachment. See logs for details.");
+                return false;
             }
 
             // Asset name
@@ -540,25 +504,93 @@ static b8 serialize_node(scene_node_config* node, kson_object* node_obj) {
             kson_object attachment_obj = kson_object_create();
             const char* attachment_name = kname_string_get(attachment->name);
 
-            // Base properties
-            {
-                // Name, if it exists.
-                if (attachment->name) {
-                    if (!kson_object_value_add_kname_as_string(&attachment_obj, "name", attachment->name)) {
-                        KERROR("Failed to add 'name' property for attachment '%s'.", attachment_name);
-                        return false;
-                    }
-                }
+            if (!serialize_attachment_base_props(attachment, &attachment_obj, attachment_name)) {
+                KERROR("Failed to serialize attachment. See logs for details.");
+                return false;
+            }
 
-                // Add the type. Required.
-                const char* type_str = scene_node_attachment_type_strings[attachment->type];
-                if (!kson_object_value_add_string(&attachment_obj, "type", type_str)) {
-                    KERROR("Failed to add 'name' property for attachment '%s'.", attachment_name);
+            // NOTE: No extra properties for now until additional config is added to water planes.
+
+            // Add it to the attachments array.
+            kson_array_value_add_object(&attachment_obj_array, attachment_obj);
+        }
+    }
+
+    if (node->volume_configs) {
+        u32 length = darray_length(node->volume_configs);
+        for (u32 i = 0; i < length; ++i) {
+            scene_node_attachment_volume_config* typed_attachment = &node->volume_configs[i];
+            scene_node_attachment_config* attachment = (scene_node_attachment_config*)typed_attachment;
+            kson_object attachment_obj = kson_object_create();
+            const char* attachment_name = kname_string_get(attachment->name);
+
+            // Base properties
+            if (!serialize_attachment_base_props(attachment, &attachment_obj, attachment_name)) {
+                KERROR("Failed to serialize attachment. See logs for details.");
+                return false;
+            }
+
+            // Shape type
+            char* shape_type_str = 0;
+            switch (typed_attachment->shape_type) {
+            case SCENE_VOLUME_SHAPE_TYPE_SPHERE:
+                shape_type_str = "sphere";
+                // Radius
+                if (!kson_object_value_add_float(&attachment_obj, "radius", typed_attachment->shape_config.radius)) {
+                    KERROR("Failed to add 'radius' property for attachment '%s'.", attachment_name);
+                    return false;
+                }
+                break;
+            case SCENE_VOLUME_SHAPE_TYPE_RECTANGLE:
+                shape_type_str = "rectangle";
+                // Extents
+                if (!kson_object_value_add_vec3(&attachment_obj, "extents", typed_attachment->shape_config.extents)) {
+                    KERROR("Failed to add 'extents' property for attachment '%s'.", attachment_name);
+                    return false;
+                }
+                break;
+            }
+
+            if (!kson_object_value_add_string(&attachment_obj, "shape_type", shape_type_str)) {
+                KERROR("Failed to add 'shape_type' property for attachment '%s'.", attachment_name);
+                return false;
+            }
+
+            if (typed_attachment->on_enter_command) {
+                if (!kson_object_value_add_string(&attachment_obj, "on_enter", typed_attachment->on_enter_command)) {
+                    KERROR("Failed to add 'on_enter' property for attachment '%s'.", attachment_name);
                     return false;
                 }
             }
 
-            // NOTE: No extra properties for now until additional config is added to water planes.
+            if (typed_attachment->on_leave_command) {
+                if (!kson_object_value_add_string(&attachment_obj, "on_leave", typed_attachment->on_leave_command)) {
+                    KERROR("Failed to add 'on_leave' property for attachment '%s'.", attachment_name);
+                    return false;
+                }
+            }
+
+            if (typed_attachment->on_update_command) {
+                if (!kson_object_value_add_string(&attachment_obj, "on_update", typed_attachment->on_update_command)) {
+                    KERROR("Failed to add 'on_update' property for attachment '%s'.", attachment_name);
+                    return false;
+                }
+            }
+
+            // Hit sphere tags
+            if (typed_attachment->hit_sphere_tag_count && typed_attachment->hit_sphere_tags) {
+                const char** tag_strs = KALLOC_TYPE_CARRAY(const char*, typed_attachment->hit_sphere_tag_count);
+
+                for (u32 t = 1; t < typed_attachment->hit_sphere_tag_count; ++t) {
+                    tag_strs[t] = kname_string_get(typed_attachment->hit_sphere_tags[t]);
+                }
+
+                char* joined_str = string_join(tag_strs, typed_attachment->hit_sphere_tag_count, '|');
+                kson_object_value_add_string(&attachment_obj, "hit_sphere_tags", joined_str);
+                string_free(joined_str);
+
+                KFREE_TYPE_CARRAY(tag_strs, const char*, typed_attachment->hit_sphere_tag_count);
+            }
 
             // Add it to the attachments array.
             kson_array_value_add_object(&attachment_obj_array, attachment_obj);
@@ -713,6 +745,23 @@ static b8 deserialize_attachment(kasset* asset, scene_node_config* node, kson_ob
             }
         }
     }
+
+    //Get the tags.Optional.
+    const char* tags_str = 0;
+    u32 tag_count = 0;
+    kname* tags = 0;
+    if (kson_object_property_value_get_string(attachment_obj, "tags", &tags_str)) {
+        // Split by '|'
+        char** split_strings = darray_create(char*);
+        tag_count = string_split(tags_str, '|', &split_strings, true, false);
+        if (tag_count) {
+            tags = KALLOC_TYPE_CARRAY(kname, tag_count);
+            for (u32 i = 0; i < tag_count; ++i) {
+                tags[i] = kname_create(split_strings[i]);
+            }
+        }
+        string_cleanup_split_array(split_strings, tag_count);
+    }
     if (type == SCENE_NODE_ATTACHMENT_TYPE_UNKNOWN) {
         KERROR("Unrecognized attachment type '%s'. Attachment deserialization failed.", type_str);
         return false;
@@ -726,6 +775,8 @@ static b8 deserialize_attachment(kasset* asset, scene_node_config* node, kson_ob
     }break;
     case SCENE_NODE_ATTACHMENT_TYPE_SKYBOX: {
         scene_node_attachment_skybox_config typed_attachment = { 0 };
+        typed_attachment.base.tag_count = tag_count;
+        typed_attachment.base.tags = tags;
         // Cubemap name
         if (!kson_object_property_value_get_string_as_kname(attachment_obj, "cubemap_image_asset_name", &typed_attachment.cubemap_image_asset_name)) {
             // Try fallback name if v1.
@@ -753,6 +804,8 @@ static b8 deserialize_attachment(kasset* asset, scene_node_config* node, kson_ob
 
     case SCENE_NODE_ATTACHMENT_TYPE_DIRECTIONAL_LIGHT: {
         scene_node_attachment_directional_light_config typed_attachment = { 0 };
+        typed_attachment.base.tag_count = tag_count;
+        typed_attachment.base.tags = tags;
 
         // Colour
         if (!kson_object_property_value_get_vec4(attachment_obj, "colour", &typed_attachment.colour)) {
@@ -793,6 +846,8 @@ static b8 deserialize_attachment(kasset* asset, scene_node_config* node, kson_ob
 
     case SCENE_NODE_ATTACHMENT_TYPE_POINT_LIGHT: {
         scene_node_attachment_point_light_config typed_attachment = { 0 };
+        typed_attachment.base.tag_count = tag_count;
+        typed_attachment.base.tags = tags;
 
         // Colour
         if (!kson_object_property_value_get_vec4(attachment_obj, "colour", &typed_attachment.colour)) {
@@ -831,6 +886,8 @@ static b8 deserialize_attachment(kasset* asset, scene_node_config* node, kson_ob
     } break;
     case SCENE_NODE_ATTACHMENT_TYPE_AUDIO_EMITTER: {
         scene_node_attachment_audio_emitter_config typed_attachment = { 0 };
+        typed_attachment.base.tag_count = tag_count;
+        typed_attachment.base.tags = tags;
 
         // volume - optional
         if (!kson_object_property_value_get_float(attachment_obj, "volume", &typed_attachment.volume)) {
@@ -884,6 +941,8 @@ static b8 deserialize_attachment(kasset* asset, scene_node_config* node, kson_ob
 
     case SCENE_NODE_ATTACHMENT_TYPE_STATIC_MESH: {
         scene_node_attachment_static_mesh_config typed_attachment = { 0 };
+        typed_attachment.base.tag_count = tag_count;
+        typed_attachment.base.tags = tags;
 
         // Asset name
         if (!kson_object_property_value_get_string_as_kname(attachment_obj, "asset_name", &typed_attachment.asset_name)) {
@@ -913,6 +972,8 @@ static b8 deserialize_attachment(kasset* asset, scene_node_config* node, kson_ob
 
     case SCENE_NODE_ATTACHMENT_TYPE_HEIGHTMAP_TERRAIN: {
         scene_node_attachment_heightmap_terrain_config typed_attachment = { 0 };
+        typed_attachment.base.tag_count = tag_count;
+        typed_attachment.base.tags = tags;
 
         // Asset name
         if (!kson_object_property_value_get_string_as_kname(attachment_obj, "asset_name", &typed_attachment.asset_name)) {
@@ -941,6 +1002,8 @@ static b8 deserialize_attachment(kasset* asset, scene_node_config* node, kson_ob
 
     case SCENE_NODE_ATTACHMENT_TYPE_WATER_PLANE: {
         scene_node_attachment_water_plane_config typed_attachment = { 0 };
+        typed_attachment.base.tag_count = tag_count;
+        typed_attachment.base.tags = tags;
         // NOTE: Intentionally blank until additional config is added to water planes.
           // Push to the appropriate array.
         if (!node->water_plane_configs) {
@@ -951,6 +1014,8 @@ static b8 deserialize_attachment(kasset* asset, scene_node_config* node, kson_ob
 
     case SCENE_NODE_ATTACHMENT_TYPE_VOLUME: {
         scene_node_attachment_volume_config typed_attachment = { 0 };
+        typed_attachment.base.tag_count = tag_count;
+        typed_attachment.base.tags = tags;
 
         // shape type is required.
         const char* shape_type_str = 0;
@@ -995,6 +1060,23 @@ static b8 deserialize_attachment(kasset* asset, scene_node_config* node, kson_ob
             return false;
         }
 
+        // Hit sphere tags
+        const char* hit_sphere_tags_str = 0;
+        if (kson_object_property_value_get_string(attachment_obj, "hit_sphere_tags", &hit_sphere_tags_str)) {
+            char** hs_tags_str = darray_create(char*);
+            typed_attachment.hit_sphere_tag_count = string_split(hit_sphere_tags_str, '|', &hs_tags_str, true, false);
+            if (typed_attachment.hit_sphere_tag_count) {
+                typed_attachment.hit_sphere_tags = KALLOC_TYPE_CARRAY(kname, typed_attachment.hit_sphere_tag_count);
+                for (u32 t = 0; t < typed_attachment.hit_sphere_tag_count; ++t) {
+                    typed_attachment.hit_sphere_tags[t] = kname_create(hs_tags_str[t]);
+                }
+                string_cleanup_split_array(hs_tags_str, typed_attachment.hit_sphere_tag_count);
+            }
+            else {
+                darray_destroy(hs_tags_str);
+            }
+        }
+
         // on enter - optional
         kson_object_property_value_get_string(attachment_obj, "on_enter", &typed_attachment.on_enter_command);
         // on leave - optional
@@ -1012,6 +1094,24 @@ static b8 deserialize_attachment(kasset* asset, scene_node_config* node, kson_ob
             node->volume_configs = darray_create(scene_node_attachment_volume_config);
         }
         darray_push(node->volume_configs, typed_attachment);
+    } break;
+
+    case SCENE_NODE_ATTACHMENT_TYPE_HIT_SPHERE: {
+        scene_node_attachment_hit_sphere_config typed_attachment = { 0 };
+        typed_attachment.base.tag_count = tag_count;
+        typed_attachment.base.tags = tags;
+
+        // This shape type requires radius.
+        if (!kson_object_property_value_get_float(attachment_obj, "radius", &typed_attachment.radius)) {
+            KERROR("Hit sphere definition is missing required property radius.");
+            return false;
+        }
+
+        // Push to the appropriate array.
+        if (!node->hit_sphere_configs) {
+            node->hit_sphere_configs = darray_create(scene_node_attachment_hit_sphere_config);
+        }
+        darray_push(node->hit_sphere_configs, typed_attachment);
     } break;
 
     case SCENE_NODE_ATTACHMENT_TYPE_COUNT:

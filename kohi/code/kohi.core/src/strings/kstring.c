@@ -406,7 +406,7 @@ KAPI char* string_trim(char* str) {
             p++;  // 找到最后一个非空字符
         }
         while (codepoint_is_space(*(--p)))
-        ;
+            ;
         p[1] = '\0';
     }
 
@@ -1008,6 +1008,40 @@ void string_append_bool(char* dest, const char* source, b8 b) {
 
 void string_append_char(char* dest, const char* source, char c) {
     sprintf(dest, "%s%c", source, c);
+}
+
+char* string_join(const char** strings, u32 count, char delimiter) {
+    if (!strings || !count) {
+        return 0;
+    }
+    if (delimiter == 0) {
+        KERROR("string_join cannot be used with a null terminator character as the delimiter.");
+        return 0;
+    }
+
+    u32 total_length = 0;
+    u32* lengths = KALLOC_TYPE_CARRAY(u32, count);
+    for (u32 i = 0; i < count; ++i) {
+        lengths[i] = string_length(strings[i]);
+        total_length += lengths[i];
+    }
+
+    // Space for delimiters
+    total_length += (count - 1);
+
+    char* out_str = KALLOC_TYPE_CARRAY(char, total_length);
+    u32 offset = 0;
+    for (u32 i = 0; i < count; ++i) {
+        sprintf(out_str + offset, "%s%c", strings[i], delimiter);
+        offset += lengths[i] + 1;
+    }
+
+    // Overwrite the final delimiter character with null terminator.
+    out_str[total_length - 1] = 0;
+
+    KFREE_TYPE_CARRAY(lengths, u32, count);
+
+    return out_str;
 }
 
 void string_directory_from_path(char* dest, const char* path) {
