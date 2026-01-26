@@ -194,7 +194,9 @@
         "forward_rendergraph_node.h": "c",
         "frame_data.h": "c",
         "cmath": "c",
-        "static_mesh_system.h": "c"
+        "static_mesh_system.h": "c",
+        "render_type_utils.h": "c",
+        "kasset_image_serializer.h": "c"
     },
     "C_Cpp.default.compilerPath": "D:/SoftWare/LLVM/bin/clang.exe",
 }

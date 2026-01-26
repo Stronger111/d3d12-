@@ -71,8 +71,8 @@ KAPI char* string_duplicate(const char* str);
  */
 KAPI void string_free(const char* str);
 
-KAPI i64 kstr_ncmp(const char* str0,const char* str1,u32 max_len);
-KAPI i64 kstr_ncmpi(const char* str0,const char* str1,u32 max_len);
+KAPI i64 kstr_ncmp(const char* str0, const char* str1, u32 max_len);
+KAPI i64 kstr_ncmpi(const char* str0, const char* str1, u32 max_len);
 
 // Case -sensitive string comparison . True if the same,otherwise false
 KAPI b8 strings_equal(const char* str0, const char* str1);
@@ -468,6 +468,16 @@ KAPI u32 string_split(const char* str, char delimiter, char*** str_darray, b8 tr
 KAPI void string_cleanup_split_darray(char** str_darray);
 
 /**
+ * @brief Cleans up string allocations in str_array and frees the array itself.
+ *
+ * NOTE: Not for use with darrays! Use string_cleanup_split_darray() instead or memory will be leaked.
+ *
+ * @param str_array The array to be cleaned up and freed.
+ * @param length The number of string elements in the array.
+ */
+KAPI void string_cleanup_array(const char** str_array, u32 length);
+
+/**
  * @brief Splits the given string by the delimiter provided and stores in the
  * provided fixed-size array. Optionally trims each entry.
  * NOTE: A string allocation occurs for each entry, and MUST be freed by the caller.
@@ -480,7 +490,7 @@ KAPI void string_cleanup_split_darray(char** str_darray);
  * @param include_empty Indicates if empty entries should be included.
  * @return The number of entries yielded by the split operation.
  */
-KAPI u32 string_nsplit(const char* str,char delimiter,u32 max_count,char** str_array,b8 trim_entries,b8 include_empty);
+KAPI u32 string_nsplit(const char* str, char delimiter, u32 max_count, char** str_array, b8 trim_entries, b8 include_empty);
 
 /**
  * @brief Cleans up string allocations in the fixed-size str_array, but does not
@@ -489,7 +499,7 @@ KAPI u32 string_nsplit(const char* str,char delimiter,u32 max_count,char** str_a
  * @param str_darray The fixed-size array to be cleaned up.
  * @param max_count The number of entries (and thus the size) of the fixed-size array.
  */
-KAPI void string_cleanup_split_array(char** str_array,u32 max_count);
+KAPI void string_cleanup_split_array(char** str_array, u32 max_count);
 
 /**
  * Appends append to source and returns a new string.
@@ -548,7 +558,7 @@ KAPI void string_append_char(char* dest, const char* source, char c);
  *
  * @returns The joined string. Should be freed by the caller.
  */
-KAPI char* string_join(const char** strings,u32 count,char delimiter);
+KAPI char* string_join(const char** strings, u32 count, char delimiter);
 
 /**
  * @brief Extracts the directory from a full file path.
@@ -591,7 +601,7 @@ KAPI const char* string_extension_from_path(const char* path, b8 include_dot);
  */
 KAPI b8 string_parse_array_length(const char* str, u32* out_length);
 
-KAPI b8 string_line_get(const char* source_str, u16 max_line_length, u32 start_from, char** out_buffer, u32* out_line_length,u8* out_addl_advance);
+KAPI b8 string_line_get(const char* source_str, u16 max_line_length, u32 start_from, char** out_buffer, u32* out_line_length, u8* out_addl_advance);
 
 /** Indicates if provided codepoint is lower-case. Regular ASCII and western European high-ascii characters only. */
 KAPI b8 codepoint_is_lower(i32 codepoint);
