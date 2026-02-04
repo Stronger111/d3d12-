@@ -85,41 +85,26 @@ KAPI kasset_image* asset_system_request_image_from_package_sync(struct asset_sys
 
 KAPI void asset_system_release_image(struct asset_system_state* state, kasset_image* asset);
 
-// /**
-//  * @brief Requests an asset by type, name and package name. This operation is asynchronus, and will provide its result via a
-//  * callback (if provided) at a later time. Internally, a reference count for each asset is maintained each time the asset
-//  * is requested. If the asset's first request had auto-release set to true, it will be released automatically when this
-//  * count reaches 0.
-//  *
-//  * @param A pointer to the asset system state. Required.
-//  * @param info The information about the asset request.
-//  */
-// KAPI void asset_system_request(struct asset_system_state* state, asset_request_info info);
+// ////////////////////////////////////
+// BITMAP FONT ASSETS
+// ////////////////////////////////////
 
-// /**
-//  * @brief Releases an asset via the fully-qualified name.
-//  *
-//  * @param A pointer to the asset system state. Required.
-//  * @param asset_name The name of the asset to be released.
-//  * @param package_name The name of the package containing the asset.
-//  */
-// KAPI void asset_system_release(struct asset_system_state* state, kname asset_name, kname package_name);
+// sync load from game package.
+KAPI kasset_bitmap_font* asset_system_request_bitmap_font_sync(struct asset_system_state* state, const char* name);
 
-// /**
-//  * @brief A callback function to be made from an asset handler when an asset is fully loaded and ready to go.
-//  *
-//  * @param A pointer to the asset system state. Required.
-//  * @param result The result of the load operation.
-//  * @param A pointer to the asset used in the operation.
-//  */
-// KAPI void asset_system_on_handler_result(struct asset_system_state* state, asset_request_result  result, kasset* asset, void* listener_instance, PFN_kasset_on_result callback);
+// sync load from specific package.
+KAPI kasset_bitmap_font* asset_system_request_bitmap_font_from_package_sync(struct asset_system_state* state, const char* package_name, const char* name);
 
-// /**
-//  * @brief Indicates if the provided asset type is a binary asset.
-//  *
-//  * @param type The asset type.
-//  * @return True if binary; otherwise treated as text.
-//  */
-// KAPI b8 asset_type_is_binary(kasset_type type);
+KAPI void asset_system_release_bitmap_font(struct asset_system_state* state, kasset_bitmap_font* asset);
 
-// void asset_system_register_hot_reload_callback(struct asset_system_state* state, void* listener, PFN_asset_system_hot_reload_callback callback);
+// ////////////////////////////////////
+// SYSTEM FONT ASSETS
+// ////////////////////////////////////
+
+// sync load from game package.
+KAPI kasset_system_font* asset_system_request_system_font_sync(struct asset_system_state* state, const char* name);
+
+// sync load from specific package.
+KAPI kasset_system_font* asset_system_request_system_font_from_package_sync(struct asset_system_state* state, const char* package_name, const char* name);
+
+KAPI void asset_system_release_system_font(struct asset_system_state* state, kasset_system_font* asset);
