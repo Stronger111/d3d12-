@@ -197,7 +197,9 @@
         "static_mesh_system.h": "c",
         "render_type_utils.h": "c",
         "kasset_image_serializer.h": "c",
-        "runtime_defines.h": "c"
+        "runtime_defines.h": "c",
+        "asset_handler_image.h": "c",
+        "asset_handler_material.h": "c"
     },
     "C_Cpp.default.compilerPath": "D:/SoftWare/LLVM/bin/clang.exe",
 }

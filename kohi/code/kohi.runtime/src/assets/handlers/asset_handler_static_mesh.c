@@ -10,7 +10,7 @@
 #include <kdebug/kassert.h>
 #include <logger.h>
 #include <platform/vfs.h>
-#include <serializers/kasset_binary_static_mesh_serializer.h>
+#include <serializers/kasset_static_mesh_serializer.h>
 
 void asset_handler_static_mesh_create(struct asset_handler* self, struct vfs_state* vfs) {
     KASSERT_MSG(self && vfs, "Valid pointers are required for 'self' and 'vfs'.");
@@ -21,8 +21,8 @@ void asset_handler_static_mesh_create(struct asset_handler* self, struct vfs_sta
     self->release_asset = asset_handler_static_mesh_release_asset;
     self->type = KASSET_TYPE_STATIC_MESH;
     self->type_name = KASSET_TYPE_NAME_STATIC_MESH;
-    self->binary_serialize = kasset_binary_static_mesh_serialize;
-    self->binary_deserialize = kasset_binary_static_mesh_deserialize;
+    self->binary_serialize = kasset_static_mesh_serialize;
+    self->binary_deserialize = kasset_static_mesh_deserialize;
     self->text_serialize = 0;
     self->text_deserialize = 0;
     self->size = sizeof(kasset_static_mesh);
