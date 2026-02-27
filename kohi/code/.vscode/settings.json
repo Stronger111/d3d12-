@@ -204,7 +204,8 @@
         "kasset_static_mesh_serializer.h": "c",
         "kasset_utils.h": "c",
         "kresource_handler_scene.h": "c",
-        "kresource_handler_system_font.h": "c"
+        "kresource_handler_system_font.h": "c",
+        "stat.h": "c"
     },
     "C_Cpp.default.compilerPath": "D:/SoftWare/LLVM/bin/clang.exe",
 }

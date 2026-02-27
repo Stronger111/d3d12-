@@ -29,11 +29,11 @@ typedef enum file_modes {
         return false;                     \
     }
 
-/**
- * Checks if a file with the given path exists
- * @param path The path of the file to be checked
- * @return True if exists. otherwise false.
- */
+ /**
+  * Checks if a file with the given path exists
+  * @param path The path of the file to be checked
+  * @return True if exists. otherwise false.
+  */
 KAPI b8 filesystem_exists(const char* path);
 
 /**
@@ -141,4 +141,8 @@ KAPI const char* filesystem_read_entire_text_file(const char* filepath);
  * @param A pointer to hold the size of the file read in.
  * @returns A binary block of data read from the file.
  */
-const void* filesystem_read_entire_binary_file(const char* filepath,u64* out_size);
+KAPI const void* filesystem_read_entire_binary_file(const char* filepath, u64* out_size);
+
+KAPI b8 filesystem_write_entire_text_file(const char* filepath, const char* content);
+
+KAPI b8 filesystem_write_entire_binary_file(const char* filepath, u64 size, const void* content);

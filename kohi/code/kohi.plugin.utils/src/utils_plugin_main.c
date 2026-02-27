@@ -29,7 +29,7 @@ b8 kplugin_create(struct kruntime_plugin* out_plugin) {
         const char* image_types[] = { "tga", "png", "jpg", "bmp" };
         for (u8 i = 0;i < 4;++i) {
             kasset_importer image_importer = { 0 };
-            image_importer.import = kasset_importer_image_import;
+            image_importer.import = kasset_image_import;
             image_importer.source_type = image_types[i];
             if (!kasset_importer_registry_register(KASSET_TYPE_IMAGE, image_types[i], image_importer)) {
                 KERROR("Failed to register image asset importer!");
@@ -51,7 +51,7 @@ b8 kplugin_create(struct kruntime_plugin* out_plugin) {
     // Bitmaps fonts - FNT.
     {
         kasset_importer fnt_importer = { 0 };
-        fnt_importer.import = kasset_importer_bitmap_font_fnt;
+        fnt_importer.import = kasset_bitmap_font_fnt_import;
         if (!kasset_importer_registry_register(KASSET_TYPE_BITMAP_FONT, "fnt", fnt_importer)) {
             KERROR("Failed to register bitmap font FNT asset importer!");
             return false;
