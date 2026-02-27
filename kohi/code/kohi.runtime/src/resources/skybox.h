@@ -21,7 +21,7 @@ typedef struct skybox {
     skybox_state state;
 
     kname cubemap_name;
-    kresource_texture* cubemap;
+    ktexture cubemap;
 
     kgeometry geometry;
     u32 group_id;

@@ -19,4 +19,4 @@ KAPI void* kasset_binary_image_serialize(const kasset_image* asset,u64* out_size
  * @param out_asset A pointer to the asset to deserialize to. Required.
  * @returns True on success; otherwise false.
  */
-KAPI b8 kasset_binary_image_deserialize(u64 size,const void* block,kasset_image* out_asset);
+KAPI b8 kasset_image_deserialize(u64 size,const void* block,kasset_image* out_asset);

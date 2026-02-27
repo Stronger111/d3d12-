@@ -502,7 +502,7 @@ b8 engine_create(application* game_inst) {
     // Texture System
     {
         texture_system_config texture_sys_config = { 0 };
-        texture_sys_config.max_texture_count = 65536;
+        texture_sys_config.max_texture_count = 65535;
         texture_system_initialize(&systems->texture_system_memory_requirement, 0, &texture_sys_config);
         systems->texture_system = kallocate(systems->texture_system_memory_requirement, MEMORY_TAG_ENGINE);
         if (!texture_system_initialize(&systems->texture_system_memory_requirement, systems->texture_system, &texture_sys_config)) {

@@ -49,7 +49,7 @@ void* kasset_binary_image_serialize(const kasset_image* asset, u64* out_size) {
     return block;
 }
 
-b8 kasset_binary_image_deserialize(u64 size, const void* block, kasset_image* out_asset) {
+b8 kasset_image_deserialize(u64 size, const void* block, kasset_image* out_asset) {
     if (!size || !block || !out_asset) {
         KERROR("Cannot deserialize without a nonzero size, block of memory and an asset to write to.");
         return false;

@@ -14,6 +14,7 @@
 #include "strings/kstring.h"
 #include "systems/material_system.h"
 #include "systems/shader_system.h"
+#include "systems/texture_system.h"
 #include "systems/xform_system.h"
 #include <runtime_defines.h>
 
@@ -30,7 +31,7 @@ typedef struct editor_gizmo_rendergraph_node_internal_data {
     khandle colour_shader;
     debug_shader_locations debug_locations;
 
-    struct kresource_texture* colourbuffer_texture;
+    ktexture  colourbuffer_texture;
 
     viewport vp;
     mat4 view;
@@ -117,7 +118,7 @@ b8 editor_gizmo_rendergraph_node_initialize(struct rendergraph_node* self) {
 
     // Load debug colour3d shader and get shader uniform locations.
     // Get a pointer to the shader.
-    internal_data->colour_shader = shader_system_get(kname_create(SHADER_NAME_RUNTIME_COLOUR_3D),kname_create(PACKAGE_NAME_RUNTIME));
+    internal_data->colour_shader = shader_system_get(kname_create(SHADER_NAME_RUNTIME_COLOUR_3D), kname_create(PACKAGE_NAME_RUNTIME));
     internal_data->debug_locations.projection = shader_system_uniform_location(internal_data->colour_shader, kname_create("projection"));
     internal_data->debug_locations.view = shader_system_uniform_location(internal_data->colour_shader, kname_create("view"));
     internal_data->debug_locations.model = shader_system_uniform_location(internal_data->colour_shader, kname_create("model"));
@@ -161,7 +162,9 @@ b8 editor_gizmo_rendergraph_node_execute(struct rendergraph_node* self, struct f
 
     if (internal_data->enabled) {
         editor_gizmo_render_frame_prepare(gizmo, p_frame_data);
-        renderer_begin_rendering(internal_data->renderer, p_frame_data, internal_data->vp.rect, 1, &internal_data->colourbuffer_texture->renderer_texture_handle, khandle_invalid(), 0);
+
+        khandle colourbuffer_texture_handle = texture_renderer_handle_get(internal_data->colourbuffer_texture);
+        renderer_begin_rendering(internal_data->renderer, p_frame_data, internal_data->vp.rect, 1, &colourbuffer_texture_handle, khandle_invalid(), 0);
         // Bind the viewport
         renderer_active_viewport_set(&internal_data->vp);
 

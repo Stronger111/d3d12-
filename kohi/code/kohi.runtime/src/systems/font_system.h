@@ -166,7 +166,7 @@ KAPI b8 font_system_bitmap_font_measure_string(struct font_system_state* state, 
 * @param font A handle to the bitmap font to use for measuring.
 * @return A pointer to the font's atlas if successful; otherwise 0.
 */
-KAPI kresource_texture* font_system_bitmap_font_atlas_get(struct font_system_state* state, khandle font);
+KAPI ktexture font_system_bitmap_font_atlas_get(struct font_system_state* state, khandle font);
 
 /**
  * @brief Gets the line height of the given font.
@@ -229,7 +229,7 @@ KAPI b8 font_system_system_font_verify_atlas(struct font_system_state* state, sy
  * @param out_size A pointer to hold the measured size, if successful. Required.
  * @return True on success; otherwise false.
  */
-KAPI b8 font_system_system_font_measure_string(struct font_system_state* state, system_font_variant variant, const char* text,vec2* out_size);
+KAPI b8 font_system_system_font_measure_string(struct font_system_state* state, system_font_variant variant, const char* text, vec2* out_size);
 
 /**
  * @brief Gets the line height of the given font.
@@ -256,4 +256,4 @@ KAPI b8 font_system_system_font_generate_geometry(struct font_system_state* stat
  * @param variant The system font variant to use for retrieval.
  * @return A pointer to the font's atlas if successful; otherwise 0.
  */
-KAPI kresource_texture* font_system_system_font_atlas_get(struct font_system_state* state, system_font_variant variant);
+KAPI ktexture font_system_system_font_atlas_get(struct font_system_state* state, system_font_variant variant);

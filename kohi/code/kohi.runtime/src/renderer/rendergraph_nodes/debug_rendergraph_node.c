@@ -11,6 +11,7 @@
 #include "strings/kstring.h"
 #include "systems/material_system.h"
 #include "systems/shader_system.h"
+#include "systems/texture_system.h"
 #include <runtime_defines.h>
 
 typedef struct debug_shader_locations {
@@ -25,8 +26,8 @@ typedef struct debug_rendergraph_node_internal_data {
     khandle colour_shader;
     debug_shader_locations debug_locations;
 
-    struct kresource_texture* colourbuffer_texture;
-    struct kresource_texture* depthbuffer_texture;
+    ktexture colourbuffer_texture;
+    ktexture depthbuffer_texture;
 
     viewport vp;
     mat4 view;
@@ -109,7 +110,7 @@ b8 debug_rendergraph_node_initialize(struct rendergraph_node* self) {
 
     // Load debug colour3d shader and get shader uniform locations.
     // Get a pointer to the shader.
-    internal_data->colour_shader = shader_system_get(kname_create(SHADER_NAME_RUNTIME_COLOUR_3D),kname_create(PACKAGE_NAME_RUNTIME));
+    internal_data->colour_shader = shader_system_get(kname_create(SHADER_NAME_RUNTIME_COLOUR_3D), kname_create(PACKAGE_NAME_RUNTIME));
     internal_data->debug_locations.projection = shader_system_uniform_location(internal_data->colour_shader, kname_create("projection"));
     internal_data->debug_locations.view = shader_system_uniform_location(internal_data->colour_shader, kname_create("view"));
     internal_data->debug_locations.model = shader_system_uniform_location(internal_data->colour_shader, kname_create("model"));
@@ -146,7 +147,9 @@ b8 debug_rendergraph_node_execute(struct rendergraph_node* self, struct frame_da
 
 
     if (internal_data->geometry_count > 0) {
-        renderer_begin_rendering(internal_data->renderer, p_frame_data, internal_data->vp.rect, 1, &internal_data->colourbuffer_texture->renderer_texture_handle, khandle_invalid(), 0);
+        khandle colourbuffer_texture_handle = texture_renderer_handle_get(internal_data->colourbuffer_texture);
+        khandle depthbuffer_texture_handle = texture_renderer_handle_get(internal_data->depthbuffer_texture);
+        renderer_begin_rendering(internal_data->renderer, p_frame_data, internal_data->vp.rect, 1, &colourbuffer_texture_handle, depthbuffer_texture_handle, 0);
 
         // Bind the viewport
         renderer_active_viewport_set(&internal_data->vp);

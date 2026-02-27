@@ -359,19 +359,19 @@ b8 shader_system_uniform_set_arrayed(khandle shader, kname uniform_name, u32 arr
     return shader_system_uniform_set_by_location_arrayed(shader, index, array_index, value);
 }
 
-b8 shader_system_texture_set(khandle shader, kname sampler_name, const kresource_texture* t) {
+b8 shader_system_texture_set(khandle shader, kname sampler_name, ktexture t) {
     return shader_system_texture_set_arrayed(shader, sampler_name, 0, t);
 }
 
-b8 shader_system_texture_set_arrayed(khandle shader, kname uniform_name, u32 array_index, const kresource_texture* t) {
+b8 shader_system_texture_set_arrayed(khandle shader, kname uniform_name, u32 array_index, ktexture t) {
     return shader_system_uniform_set_arrayed(shader, uniform_name, array_index, t);
 }
 // lcoation 函数
-b8 shader_system_texture_set_by_location(khandle shader, u16 location, const kresource_texture* t) {
+b8 shader_system_texture_set_by_location(khandle shader, u16 location, ktexture t) {
     return shader_system_uniform_set_by_location_arrayed(shader, location, 0, t);
 }
 
-b8 shader_system_texture_set_by_location_arrayed(khandle shader, u16 location, u32 array_index, const kresource_texture* t) {
+b8 shader_system_texture_set_by_location_arrayed(khandle shader, u16 location, u32 array_index, ktexture t) {
     return shader_system_uniform_set_by_location_arrayed(shader, location, array_index, t);
 }
 
