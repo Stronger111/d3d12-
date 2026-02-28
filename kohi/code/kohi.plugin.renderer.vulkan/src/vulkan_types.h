@@ -137,43 +137,11 @@ typedef struct vulkan_image {
     /** @brief The name of the image. */
     char* name;
     /** @brief texture flag bits */
-    texture_flag_bits flags;
+    ktexture_flag_bits flags;
     /** The number of mipmaps to be generated for this image. Must always be at least 1. */
     u32 mip_levels;
     b8 has_view;
 } vulkan_image;
-
-// Struct definition for renderer-specific framebuffer data.
-// typedef struct framebuffer_internal_data {
-//     // The number of VkFramebuffers in the array. Typically 1 unless the attachment
-//     // requires the frame_count to be taken into account.
-//     u32 framebuffer_count;
-//     // Arrat of framebuffers.
-//     VkFramebuffer* framebuffers;
-// } framebuffer_internal_data;
-
-// typedef enum vulkan_render_pass_state {
-//     READY,
-//     RECORDING,
-//     IN_RENDER_PASS,
-//     RECORDING_ENDED,
-//     SUBMITTED,
-//     NOT_ALLOCATED
-// } vulkan_render_pass_state;
-
-/**
- * @brief A representation of the Vulkan renderpass.
- */
- // typedef struct vulkan_renderpass {
- //     /** @brief The internal renderpass handle. */
- //     VkRenderPass handle;
- //     /** @brief Indicates renderpass state. */
- //     vulkan_render_pass_state state;
-
- //     // darray
- //     VkClearValue* clear_values;
- //     /* u32 clear_value_count; */
- // } vulkan_renderpass;
 
 typedef struct vulkan_swapchain {
     /** @brief The swapchain image format. */
@@ -195,7 +163,7 @@ typedef struct vulkan_swapchain {
     /** @brief Supports being used as a blit source. */
     b8 supports_blit_src;
 
-    kresource_texture* swapchain_colour_texture;
+    khandle swapchain_colour_texture;
 
     /** @brief The swapchain image index (i.e. the swapchain image index that will be blitted to). */
     u32 image_index;

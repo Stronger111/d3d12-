@@ -4,8 +4,29 @@ The items in this list are not in any particular order. This list will be update
 
 # Future Releases:
 
-## 0.9.0 Release
+## 0.10.0 Release
+- [ ] Refactor texture system to use ids only, typedefed as a ktexture.
+- [ ] Refactor asset system to use direct types, dispense with handlers/import logic from engine
+  - [ ] Rework import pipeline to exist in kohi.tools instead.
+- [ ] Remove resource system, directly use reworked asset system in dedicated systems.
 
+## 0.11.0 Release
+
+- [ ] Move scene to game code, game-specific. Remove all references to scenes in engine core/runtime.
+
+## 0.12.0 Release
+
+- [ ] Remove rendergraph - have application drive render process directly.
+
+## 0.13.0 Release
+
+- [ ] Remove legacy systems (i.e. lighting, camera, etc.)
+
+## 0.14.0 Release
+
+- [ ] Animated meshes.
+
+## Future Releases
 - [ ] Rework freelist to take alignment into account.
   - [ ] Rework renderbuffer to take alignment in during creation, and use said alignment for allocations.
   - [ ] Change Vulkan backend to use actual uniform size instead of stride when allocating from renderbuffer.

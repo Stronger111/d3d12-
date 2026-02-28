@@ -305,6 +305,10 @@ KAPI void kfree(void* block, u64 size, memory_tag tag) {
 }
 
 KAPI void kfree_aligned(void* block, u64 size, u16 alignment, memory_tag tag) {
+    if (!block) {
+        KFATAL("%s tried to free null block of memory. Check application logic.", __FUNCTION__);
+        return;
+    }
     if (tag == MEMORY_TAG_UNKNOWN) {
         KWARN("kfree_aligned called using MEMORY_TAG_UNKNOWN. Re-class this allocation.");
     }
@@ -317,7 +321,7 @@ KAPI void kfree_aligned(void* block, u64 size, u16 alignment, memory_tag tag) {
 #if K_USE_CUSTOM_MEMORY_ALLOCATOR
         u64 osize = 0;
         u16 oalignment = 0;
-        dynamic_allocator_get_size_alignment(&state_ptr->allocator,block, &osize, &oalignment);
+        dynamic_allocator_get_size_alignment(&state_ptr->allocator, block, &osize, &oalignment);
         if (osize != size) {
             printf("Free size mismatch! (original=%llu, requested=%llu)\n", osize, size);
         }
@@ -392,7 +396,7 @@ KAPI b8 kmemory_get_size_alignment(void* block, u64* out_size, u16* out_alignmen
         return false;
     }
 #if K_USE_CUSTOM_MEMORY_ALLOCATOR
-    b8 result = dynamic_allocator_get_size_alignment(&state_ptr->allocator,block, out_size, out_alignment);
+    b8 result = dynamic_allocator_get_size_alignment(&state_ptr->allocator, block, out_size, out_alignment);
 #else
     * out_size = 0;
     *out_alignment = 0;

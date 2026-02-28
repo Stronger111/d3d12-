@@ -92,7 +92,7 @@ b8 kresource_system_initialize(u64* memory_requirement, struct kresource_system_
             return false;
         }
     }
-    
+
     //Static mesh handler
     {
         kresource_handler handler = { 0 };
@@ -213,10 +213,12 @@ kresource* kresource_system_request(struct kresource_system_state* state, kname 
     if (lookup_index != INVALID_ID && state->lookups[lookup_index].r) {
         resource_lookup* lookup = &state->lookups[lookup_index];
         lookup->reference_count++;
-        //Immediately issue the callback if setup.
-        if (info->user_callback) {
-            info->user_callback(lookup->r, info->listener_inst);
-        }
+        // NOTE: This probably shouldn't happen because it means the load already happened or is in progress.
+       // Disabling for now.
+       //Immediately issue the callback if setup.
+        // if (info->user_callback) {
+        //     info->user_callback(lookup->r, info->listener_inst);
+        // }
         //Return a pointer to the resource.
         return lookup->r;
     }

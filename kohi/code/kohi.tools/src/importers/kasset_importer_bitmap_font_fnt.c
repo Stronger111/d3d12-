@@ -1,32 +1,31 @@
 #include "kasset_importer_bitmap_font_fnt.h"
 
 #include <assets/kasset_types.h>
-#include <core/engine.h>
 #include <core_render_types.h>
 #include <logger.h>
 #include <memory/kmemory.h>
-#include <platform/vfs.h>
+#include <platform/filesystem.h>
 #include <serializers/kasset_bitmap_font_serializer.h>
 #include <strings/kname.h>
 #include <strings/kstring.h>
 
 #include "../serializers/fnt_serializer.h"
 
-b8 kasset_importer_bitmap_font_fnt(kname output_asset_name, kname output_package_name, u64 data_size, const void* data, void* params) {
+b8 kasset_bitmap_font_fnt_import(const char* output_directory, const char* output_filename, u64 data_size, const void* data, void* params) {
     if (!data_size || !data) {
         KERROR("%s requires valid pointers to self and data, as well as a nonzero data_size.", __FUNCTION__);
         return false;
     }
 
-    //Handle FNT file import.
-    fnt_source_asset fnt_asset = { 0 };
+    // Handle FNT file import.
+    fnt_source_asset fnt_asset = {0};
     if (!fnt_serializer_deserialize(data, &fnt_asset)) {
         KERROR("FNT file import failed! See logs for details.");
         return false;
     }
 
     // Convert FNT asset to kasset_bitmap_font.
-    kasset_bitmap_font asset = { 0 };
+    kasset_bitmap_font asset = {0};
     asset.baseline = fnt_asset.baseline;
     asset.face = kname_create(fnt_asset.face_name);
     asset.size = fnt_asset.size;
@@ -51,21 +50,21 @@ b8 kasset_importer_bitmap_font_fnt(kname output_asset_name, kname output_package
     KFREE_TYPE_CARRAY(fnt_asset.kernings, kasset_bitmap_font_kerning, fnt_asset.kerning_count);
     string_free(fnt_asset.face_name);
 
-
     // Serialize data and write out kbf file (binary Kohi Bitmap Font).
-    {
-        u64 serialized_size = 0;
-        void* serialized_data = kasset_bitmap_font_serialize(&asset, &serialized_size);
-        if (!serialized_data || !serialized_size) {
-            KERROR("Failed to serialize binary Kohi Bitmap Font.");
-            return false;
-        }
-
-        // Write out .kbf file.
-        if (!vfs_asset_write_binary(engine_systems_get()->vfs_system_state, output_asset_name, output_package_name, serialized_size, serialized_data)) {
-            KWARN("Failed to write .kbf (Kohi Bitmap Font) file. See logs for details.");
-        }
+    u64 serialized_size = 0;
+    void* serialized_data = kasset_bitmap_font_serialize(&asset, &serialized_size);
+    if (!serialized_data || !serialized_size) {
+        KERROR("Failed to serialize binary Kohi Bitmap Font.");
+        return false;
     }
 
-    return true;
+    // Write out .kbf file.
+    const char* out_path = string_format("%s/%s.%s", output_directory, output_filename, "kbf");
+    b8 success = true;
+    if (!filesystem_write_entire_binary_file(out_path, serialized_size, serialized_data)) {
+        KWARN("Failed to write .kbf (Kohi Bitmap Font) file. See logs for details.");
+        success = false;
+    }
+
+    return success;
 }

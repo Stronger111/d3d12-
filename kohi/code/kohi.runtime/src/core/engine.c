@@ -48,7 +48,7 @@
 struct kwindow;
 
 typedef struct engine_state_t {
-    application* game_inst;
+    application* app;
     b8 is_running;
     b8 is_suspended;
     i16 width;
@@ -121,8 +121,8 @@ static void engine_on_process_mouse_wheel(i8 z_delta);
 static b8 engine_log_file_write(void* engine, log_level level, const char* message);
 static b8 engine_platform_console_write(void* platform, log_level level, const char* message);
 
-b8 engine_create(application* game_inst) {
-    if (game_inst->engine_state) {
+b8 engine_create(application* app) {
+    if (app->engine_state) {
         KERROR("engine_create called more than once.");
         return false;
     }
@@ -143,9 +143,9 @@ b8 engine_create(application* game_inst) {
     metrics_initialize();
 
     // Stand up the application state.
-    game_inst->engine_state = kallocate(sizeof(engine_state_t), MEMORY_TAG_ENGINE);
-    engine_state = game_inst->engine_state;
-    engine_state->game_inst = game_inst;
+    app->engine_state = kallocate(sizeof(engine_state_t), MEMORY_TAG_ENGINE);
+    engine_state = app->engine_state;
+    engine_state->app = app;
     engine_state->is_running = false;
     engine_state->is_suspended = false;
 
@@ -158,7 +158,7 @@ b8 engine_create(application* game_inst) {
     // Platform initialization first (NOTE: NOT window creation - that should happen much later).
     {
         platform_system_config plat_config = { 0 };
-        plat_config.application_name = game_inst->app_config.name;
+        plat_config.application_name = app->app_config.name;
         systems->platform_memory_requirement = 0;
         platform_system_startup(&systems->platform_memory_requirement, 0, &plat_config);
         systems->platform_system = kallocate(systems->platform_memory_requirement, MEMORY_TAG_ENGINE);
@@ -217,7 +217,7 @@ b8 engine_create(application* game_inst) {
     {
         // TODO: Get the generic config from application config first.
         /* application_system_config generic_sys_config = {0};
-        if (!application_config_system_config_get(&game_inst->app_config, "virtual_file_system", &generic_sys_config)) {
+        if (!application_config_system_config_get(&app->app_config, "virtual_file_system", &generic_sys_config)) {
             KERROR("No configuration exists in app config for the virtual file system. This configuration is required.");
             return false;
         } */
@@ -226,7 +226,7 @@ b8 engine_create(application* game_inst) {
         vfs_config vfs_sys_config = { 0 };
         vfs_sys_config.text_user_types = 0;
         //Take a copy of the asset manifest path.
-        vfs_sys_config.manifest_file_path = string_duplicate(game_inst->app_config.manifest_file_path);
+        vfs_sys_config.manifest_file_path = string_duplicate(app->app_config.manifest_file_path);
 
         vfs_initialize(&systems->vfs_system_memory_requirement, 0, 0);
         systems->vfs_system_state = kallocate(systems->vfs_system_memory_requirement, MEMORY_TAG_ENGINE);
@@ -240,7 +240,7 @@ b8 engine_create(application* game_inst) {
     {
         //Get the generic config from application config first.
         application_system_config generic_sys_config = { 0 };
-        if (!application_config_system_config_get(&game_inst->app_config, "asset", &generic_sys_config)) {
+        if (!application_config_system_config_get(&app->app_config, "asset", &generic_sys_config)) {
             KERROR("No configuration exists in app config for the asset system. This configuration is required.");
             return false;
         }
@@ -286,7 +286,7 @@ b8 engine_create(application* game_inst) {
     {
         //Get the generic config from application config first.
         application_system_config generic_sys_config = { 0 };
-        if (!application_config_system_config_get(&game_inst->app_config, "plugin_system", &generic_sys_config)) {
+        if (!application_config_system_config_get(&app->app_config, "plugin_system", &generic_sys_config)) {
             KERROR("No configuration exists in app config for the plugin system,This configuration is required.");
             return false;
         }
@@ -316,7 +316,7 @@ b8 engine_create(application* game_inst) {
         }
     }
 
- 
+
 
     // Input System
     {
@@ -338,7 +338,7 @@ b8 engine_create(application* game_inst) {
     {
         // Get the generic config from application config first.
         application_system_config generic_sys_config = { 0 };
-        if (!application_config_system_config_get(&game_inst->app_config, "renderer", &generic_sys_config)) {
+        if (!application_config_system_config_get(&app->app_config, "renderer", &generic_sys_config)) {
             KERROR("No configuration exists in app config for the renderer system. This configuration is required.");
             return false;
         }
@@ -357,38 +357,6 @@ b8 engine_create(application* game_inst) {
         }
     }
 
-    // Reach into platform and open new window(s) in accordance with app config.
- // Notify renderer of window(s)/setup surface(s), etc.
-    u32 window_count = darray_length(game_inst->app_config.windows);
-    if (window_count > 1) {
-        KFATAL("Multiple windows are not yet implemented at the engine level. Please juse stick to one for now.");
-        return false;
-    }
-
-    engine_state->windows = darray_create(kwindow);
-    for (u32 i = 0;i < window_count;++i) {
-        kwindow_config* window_config = &game_inst->app_config.windows[i];
-        kwindow new_window = { 0 };
-        new_window.name = string_duplicate(window_config->name);
-
-        //Add to tracked window list.
-        darray_push(engine_state->windows, new_window);
-
-        kwindow* window = &engine_state->windows[(darray_length(engine_state->windows) - 1)];
-        if (!platform_window_create(window_config, window, true)) {
-            KERROR("Failed to create window '%s'.", window_config->name);
-            return false;
-        }
-
-        //Tell the renderer about the window.
-        if (!renderer_on_window_created(engine_state->systems.renderer_system, window)) {
-            KERROR("The renderer failed to create resources for the window '%s'.", window_config->name);
-            return false;
-        }
-
-        // Manually call to make sure window is of the right size/viewports and such are the right size.
-        renderer_on_window_resized(engine_state->systems.renderer_system, window);
-    }
 
     // Job system
     {
@@ -448,7 +416,7 @@ b8 engine_create(application* game_inst) {
     {
         //Get the generic config from application config first.
         application_system_config generic_sys_config = { 0 };
-        if (!application_config_system_config_get(&game_inst->app_config, "audio", &generic_sys_config)) {
+        if (!application_config_system_config_get(&app->app_config, "audio", &generic_sys_config)) {
             //TODO: Maybe audio shouldn't be required?
             KERROR("No configuration exists in app config for the audio system. This configuration is required.");
             return false;
@@ -511,6 +479,41 @@ b8 engine_create(application* game_inst) {
         }
     }
 
+    // Reach into platform and open new window(s) in accordance with app config.
+// Notify renderer of window(s)/setup surface(s), etc.
+ // NOTE: This must happen after the texture system is initialized since the window "owns" it's render target textures.
+    u32 window_count = darray_length(app->app_config.windows);
+    if (window_count > 1) {
+        KFATAL("Multiple windows are not yet implemented at the engine level. Please juse stick to one for now.");
+        return false;
+    }
+
+    engine_state->windows = darray_create(kwindow);
+    for (u32 i = 0;i < window_count;++i) {
+        kwindow_config* window_config = &app->app_config.windows[i];
+        kwindow new_window = { 0 };
+        new_window.name = string_duplicate(window_config->name);
+
+        //Add to tracked window list.
+        darray_push(engine_state->windows, new_window);
+
+        kwindow* window = &engine_state->windows[(darray_length(engine_state->windows) - 1)];
+        if (!platform_window_create(window_config, window, true)) {
+            KERROR("Failed to create window '%s'.", window_config->name);
+            return false;
+        }
+
+        //Tell the renderer about the window.
+        if (!renderer_on_window_created(engine_state->systems.renderer_system, window)) {
+            KERROR("The renderer failed to create resources for the window '%s'.", window_config->name);
+            return false;
+        }
+
+        // Manually call to make sure window is of the right size/viewports and such are the right size.
+        renderer_on_window_resized(engine_state->systems.renderer_system, window);
+    }
+
+
     // Material System
     {
         material_system_config material_sys_config = { 0 };
@@ -540,7 +543,7 @@ b8 engine_create(application* game_inst) {
     {
         // Get the generic config from application config first.
         application_system_config generic_sys_config = { 0 };
-        if (!application_config_system_config_get(&game_inst->app_config, "font", &generic_sys_config)) {
+        if (!application_config_system_config_get(&app->app_config, "font", &generic_sys_config)) {
             KERROR("No configuration exists in app config for the font system. This configuration is required.");
             return false;
         }
@@ -595,8 +598,8 @@ b8 engine_create(application* game_inst) {
 
     // NOTE: Boot sequence =======================================================================================================
     // Perform the application's boot sequence.
-    game_inst->stage = APPLICATION_STAGE_BOOTING;
-    if (!game_inst->boot(game_inst)) {
+    app->stage = APPLICATION_STAGE_BOOTING;
+    if (!app->boot(app)) {
         KFATAL("Game boot sequence failed; aborting application.");
         return false;
     }
@@ -614,37 +617,37 @@ b8 engine_create(application* game_inst) {
     //
     // TODO: font system
     // TODO: Load fonts as configured in app config. in post-boot
-    // &game_inst->app_config.font_config
+    // &app->app_config.font_config
 
     // Setup the frame allocator.
-    linear_allocator_create(game_inst->app_config.frame_allocator_size, 0, &engine_state->frame_allocator);
+    linear_allocator_create(app->app_config.frame_allocator_size, 0, &engine_state->frame_allocator);
     engine_state->p_frame_data.allocator.allocate = frame_allocator_allocate;
     engine_state->p_frame_data.allocator.free = frame_allocator_free;
     engine_state->p_frame_data.allocator.free_all = frame_allocator_free_all;
 
     // Allocate for the  application's frame data.
-    if (game_inst->app_config.app_frame_data_size > 0) {
-        engine_state->p_frame_data.application_frame_data = kallocate(game_inst->app_config.app_frame_data_size, MEMORY_TAG_GAME);
+    if (app->app_config.app_frame_data_size > 0) {
+        engine_state->p_frame_data.application_frame_data = kallocate(app->app_config.app_frame_data_size, MEMORY_TAG_GAME);
     }
     else {
         engine_state->p_frame_data.application_frame_data = 0;
     }
 
-    game_inst->stage = APPLICATION_STAGE_BOOT_COMPLETE;
+    app->stage = APPLICATION_STAGE_BOOT_COMPLETE;
 
     // Initialize the game
-    game_inst->stage = APPLICATION_STAGE_INITIALIZING;
-    if (!engine_state->game_inst->initialize(engine_state->game_inst)) {
+    app->stage = APPLICATION_STAGE_INITIALIZING;
+    if (!engine_state->app->initialize(engine_state->app)) {
         KFATAL("Game failed to initialize.");
         return false;
     }
-    game_inst->stage = APPLICATION_STAGE_INITIALIZED;
+    app->stage = APPLICATION_STAGE_INITIALIZED;
 
     return true;
 }
 
-b8 engine_run(application* game_inst) {
-    game_inst->stage = APPLICATION_STAGE_RUNNING;
+b8 engine_run(application* app) {
+    app->stage = APPLICATION_STAGE_RUNNING;
     engine_state->is_running = true;
     kclock_start(&engine_state->clock);
     kclock_update(&engine_state->clock);
@@ -709,7 +712,7 @@ b8 engine_run(application* game_inst) {
                     renderer_frame_prepare_window_surface(engine_state->systems.renderer_system, w, &engine_state->p_frame_data);
 
                     // Notify the application of the resize.
-                    engine_state->game_inst->on_window_resize(engine_state->game_inst, w);
+                    engine_state->app->on_window_resize(engine_state->app, w);
 
                     w->frames_since_resize = 0;
                     w->resizing = false;
@@ -729,11 +732,11 @@ b8 engine_run(application* game_inst) {
                 // (such as VSync) changed, which may also require resource recreation. To handle this,
                 // Notify the application of a resize event, which it can then pass on to its rendergraph(s)
                 // as needed.
-                engine_state->game_inst->on_window_resize(engine_state->game_inst, w);
+                engine_state->app->on_window_resize(engine_state->app, w);
                 continue;
             }
 
-            if (!engine_state->game_inst->update(engine_state->game_inst, &engine_state->p_frame_data)) {
+            if (!engine_state->app->update(engine_state->app, &engine_state->p_frame_data)) {
                 KFATAL("Game update failed,shutting down.");
                 engine_state->is_running = false;
                 break;
@@ -754,7 +757,7 @@ b8 engine_run(application* game_inst) {
             plugin_system_frame_prepare_plugins(engine_state->systems.plugin_system, &engine_state->p_frame_data);
 
             // Have the application generate the render packet.
-            b8 prepare_result = engine_state->game_inst->prepare_frame(engine_state->game_inst, &engine_state->p_frame_data);
+            b8 prepare_result = engine_state->app->prepare_frame(engine_state->app, &engine_state->p_frame_data);
             // End "prepare_frame" render event grouping.
             renderer_end_debug_label();
 
@@ -763,7 +766,7 @@ b8 engine_run(application* game_inst) {
             }
 
             // call the games render routine
-            if (!engine_state->game_inst->render_frame(engine_state->game_inst, &engine_state->p_frame_data)) {
+            if (!engine_state->app->render_frame(engine_state->app, &engine_state->p_frame_data)) {
                 KFATAL("Game update failed,shutting down");
                 engine_state->is_running = false;
                 break;
@@ -819,10 +822,10 @@ b8 engine_run(application* game_inst) {
         }
     }
     engine_state->is_running = false;
-    game_inst->stage = APPLICATION_STAGE_SHUTTING_DOWN;
+    app->stage = APPLICATION_STAGE_SHUTTING_DOWN;
 
     // Shut down the game.
-    engine_state->game_inst->shutdown(engine_state->game_inst);
+    engine_state->app->shutdown(engine_state->app);
 
     // Unregister from events.
     event_unregister(EVENT_CODE_APPLICATION_QUIT, 0, engine_on_event);
@@ -866,7 +869,7 @@ b8 engine_run(application* game_inst) {
         platform_system_shutdown(systems->platform_system);
         memory_system_shutdown();
     }
-    game_inst->stage = APPLICATION_STAGE_UNINITIALIZED;
+    app->stage = APPLICATION_STAGE_UNINITIALIZED;
     return true;
 }
 

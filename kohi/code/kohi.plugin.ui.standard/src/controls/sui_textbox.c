@@ -344,7 +344,7 @@ b8 sui_textbox_control_load(standard_ui_state* state, struct sui_control* self) 
     else {
         // NOTE: Only parenting the transform, the control. This is to have control over how the
         // clipping mask is attached and drawn. See the render function for the other half of this.
-  
+
         // Set an initial position.
         xform_position_set(typed_data->highlight_box.xform, (vec3) { typed_data->nslice.corner_size.x, typed_data->label_line_height - 4.0f, 0.0f });
         typed_data->highlight_box.is_active = true;
@@ -545,7 +545,7 @@ static b8 sui_textbox_on_key(u16 code, void* sender, void* listener_inst, event_
                     typed_data->cursor_position--;
                 }
                 sui_label_text_set(state, &typed_data->content_label, str);
-                kfree(str, len + 1, MEMORY_TAG_STRING);
+                string_free(str);
                 sui_textbox_update_cursor_position(state, self);
             }
         }
@@ -560,7 +560,7 @@ static b8 sui_textbox_on_key(u16 code, void* sender, void* listener_inst, event_
                     typed_data->highlight_range.size = 0;
                     sui_textbox_update_highlight_box(state, self);
                     sui_label_text_set(state, &typed_data->content_label, str);
-                    kfree(str, len + 1, MEMORY_TAG_STRING);
+                    string_free(str);
                     sui_textbox_update_cursor_position(state, self);
                 }
                 else if (typed_data->cursor_position <= len) {
@@ -577,7 +577,7 @@ static b8 sui_textbox_on_key(u16 code, void* sender, void* listener_inst, event_
                         string_remove_at(str, entry_control_text, typed_data->cursor_position, 1);
                     }
                     sui_label_text_set(state, &typed_data->content_label, str);
-                    kfree(str, len + 1, MEMORY_TAG_STRING);
+                    string_free(str);
                     sui_textbox_update_cursor_position(state, self);
                 }
             }

@@ -51,7 +51,7 @@ void* kasset_binary_image_serialize(const kasset_image* asset, u64* out_size) {
 
 b8 kasset_image_deserialize(u64 size, const void* block, kasset_image* out_asset) {
     if (!size || !block || !out_asset) {
-        KERROR("Cannot deserialize without a nonzero size, block of memory and an asset to write to.");
+        KERROR("Cannot deserialize image without a nonzero size, block of memory and an asset to write to.");
         return false;
     }
 
@@ -81,6 +81,10 @@ b8 kasset_image_deserialize(u64 size, const void* block, kasset_image* out_asset
     out_image->width = header->width;
     out_image->mip_levels = header->mip_levels;
     out_image->format = header->format;
+    //Default to RGBA8 if no format is included (legacy image format used 0 instead)
+    if (header->format == 0) {
+        out_image->format = KPIXEL_FORMAT_RGBA8;
+    }
     out_image->pixel_array_size = header->base.data_block_size;
     u8 version = (u8)header->base.version;
     if (version > IMAGE_ASSET_CURRENT_VERSION) {

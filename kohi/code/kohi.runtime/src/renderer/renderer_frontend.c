@@ -331,6 +331,7 @@ b8 renderer_on_window_created(struct renderer_system_state* state, struct kwindo
             .type = KTEXTURE_TYPE_2D,
             .is_depth = true,
             .is_stencil = true,
+            .is_writeable = true,
             .format = KPIXEL_FORMAT_RGBA8,
             .width = window->width,
             .height = window->height,
@@ -346,6 +347,10 @@ void renderer_on_window_destroyed(struct renderer_system_state* state, struct kw
     if (window) {
         // destroy on backend first.
         state->backend->window_destroy(state->backend, window);
+
+        // Release colour/depth buffers.
+        texture_release(window->renderer_state->colourbuffer);
+        texture_release(window->renderer_state->depthbuffer);
     }
 }
 
@@ -1029,7 +1034,7 @@ void renderer_renderbuffer_destroy(renderbuffer* buffer) {
 
         if (buffer->name) {
             u32 length = string_length(buffer->name);
-            kfree(buffer->name, length + 1, MEMORY_TAG_STRING);
+            string_free(buffer->name);
             buffer->name = 0;
         }
 

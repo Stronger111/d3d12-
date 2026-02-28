@@ -540,7 +540,7 @@ kpackage_parse_cleanup:
     }
     kson_tree_cleanup(&tree);
     if (!success) {
-        // Clean up out manifest.
+        // Clean up manifest.
         if (out_manifest->references) {
             u32 ref_count = darray_length(out_manifest->references);
             for (u32 i = 0; i < ref_count; ++i) {
