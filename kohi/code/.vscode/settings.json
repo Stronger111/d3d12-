@@ -207,7 +207,13 @@
         "kresource_handler_system_font.h": "c",
         "stat.h": "c",
         "kohi.plugin.utils_version.h": "c",
-        "obj_mtl_serializer.h": "c"
+        "obj_mtl_serializer.h": "c",
+        "core_audio_types.h": "c",
+        "audio_utils.h": "c",
+        "kson_parser.h": "c",
+        "kresource_handler_shader.h": "c",
+        "kresource_handler_heightmap_terrain.h": "c",
+        "kresource_handler_binary.h": "c"
     },
     "C_Cpp.default.compilerPath": "D:/SoftWare/LLVM/bin/clang.exe",
 }

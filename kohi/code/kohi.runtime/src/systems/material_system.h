@@ -114,6 +114,8 @@ void material_system_shutdown(struct material_system_state* state);
  */
 KAPI b8 material_system_get_handle(struct material_system_state* state, kname name, khandle* out_material_handle);
 
+KAPI b8 material_is_loaded_get(struct material_system_state* state, khandle material);
+
 KAPI ktexture material_texture_get(struct material_system_state* state, khandle material, material_texture_input tex_input);
 KAPI void material_texture_set(struct material_system_state* state, khandle material, material_texture_input tex_input, ktexture texture);
 
@@ -223,18 +225,18 @@ typedef struct material_frame_data {
     ktexture* irradiance_cubemap_textures[MATERIAL_MAX_SHADOW_CASCADES];
 }material_frame_data;
 
-b8 material_system_prepare_frame(struct material_system_state* state,material_frame_data mat_frame_data, struct frame_data* p_frame_data);
+b8 material_system_prepare_frame(struct material_system_state* state, material_frame_data mat_frame_data, struct frame_data* p_frame_data);
 
 b8 material_system_apply(struct material_system_state* state, khandle material, struct frame_data* p_frame_data);
 
-typedef struct material_instance_draw_data{
+typedef struct material_instance_draw_data {
     mat4 model;
     vec4 clipping_plane;
     u32 irradiance_cubemap_index;
     u32 view_index;
 }material_instance_draw_data;
 
-b8 material_system_apply_instance(struct material_system_state* state,const material_instance* instance,struct material_instance_draw_data draw_data,struct frame_data* p_frame_data);
+b8 material_system_apply_instance(struct material_system_state* state, const material_instance* instance, struct material_instance_draw_data draw_data, struct frame_data* p_frame_data);
 
 /**
  * @brief Sets the given material instance flag's state.
@@ -254,7 +256,7 @@ KAPI b8 material_instance_set_flag(struct material_system_state* state, material
  * @param material_flag_bits The flag whose value to get.
  * @returns True if the flag is set; otherwise false.
  */
-KAPI b8 material_instance_flag_get(struct material_system_state* state, material_instance instance,kmaterial_flag_bits flag);
+KAPI b8 material_instance_flag_get(struct material_system_state* state, material_instance instance, kmaterial_flag_bits flag);
 /**
  * @brief Gets the value of the material instance-specific base colour.
  *
@@ -291,7 +293,7 @@ KAPI b8 material_instance_uv_offset_get(struct material_system_state* state, mat
  * @param value The value to be set.
  * @returns True if value was gotten successfully; otherwise false.
  */
-KAPI b8 material_instance_uv_offset_set(struct material_system_state* state, material_instance instance,vec3 value);
+KAPI b8 material_instance_uv_offset_set(struct material_system_state* state, material_instance instance, vec3 value);
 /**
  * @brief Gets the value of the material instance-specific UV scale. Can be used for animating the position of materials.
  *
