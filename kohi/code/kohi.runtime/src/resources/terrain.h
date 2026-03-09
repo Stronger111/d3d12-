@@ -1,10 +1,12 @@
 #pragma once
 
-#include "defines.h"
-#include "identifiers/identifier.h"
-#include "math/math_types.h"
+#include <assets/kasset_types.h>
+#include <defines.h>
+#include <identifiers/identifier.h>
+#include <math/math_types.h>
+#include <strings/kname.h>
+
 #include "resources/resource_types.h"
-#include "systems/material_system.h"
 
 /*
 Need to modify the geometry structure/functions to allow for multiple materials.
@@ -15,7 +17,6 @@ Load heightmaps
 calculate normals/tangents (copy-pasta of existing, but using terrain_vertex
 structure) New material type? (terrain/multi material)
 */
-
 typedef struct terrain_vertex {
     /** @brief The position of the vertex */
     vec3 position;

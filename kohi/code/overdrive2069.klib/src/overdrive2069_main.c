@@ -7,7 +7,6 @@
 #include "overdrive2069_types.h"
 #include "renderer/renderer_types.h"
 #include "strings/kname.h"
-#include "systems/kresource_system.h"
 
 #include <application/application_types.h>
 #include <containers/darray.h>

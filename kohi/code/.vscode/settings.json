@@ -213,7 +213,11 @@
         "kson_parser.h": "c",
         "kresource_handler_shader.h": "c",
         "kresource_handler_heightmap_terrain.h": "c",
-        "kresource_handler_binary.h": "c"
+        "kresource_handler_binary.h": "c",
+        "light_system.h": "c",
+        "kasset_shader_serializer.h": "c",
+        "ui_rendergraph_node.h": "c",
+        "shadow_rendergraph_node.h": "c"
     },
     "C_Cpp.default.compilerPath": "D:/SoftWare/LLVM/bin/clang.exe",
 }

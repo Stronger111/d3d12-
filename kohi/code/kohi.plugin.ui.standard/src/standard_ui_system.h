@@ -13,14 +13,14 @@
 
 #pragma once
 
+#include <defines.h>
+#include <identifiers/identifier.h>
+#include <input_types.h>
+#include <kresources/kresource_types.h>
+#include <math/geometry.h>
 #include <math/math_types.h>
-
-#include "defines.h"
-#include "identifiers/identifier.h"
-#include "input_types.h"
-#include "kresources/kresource_types.h"
-#include "renderer/renderer_types.h"
-#include "systems/xform_system.h"
+#include <renderer/renderer_types.h>
+#include <systems/xform_system.h>
 
  // FIXME修复
  //  FIXME: Need to maintain a list of extension types somewhere and pull from there.
