@@ -167,19 +167,6 @@ static b8 standard_ui_system_move(u16 code, void* sender, void* listener_inst, e
     return false;
 }
 
-static void texture_resource_loaded(kresource* resource, void* listener) {
-    // standard_ui_state* state = (standard_ui_state*)listener;
-
-    // //Setup the texture map.
-    // kresource_texture_map* map = &state->atlas;
-    // map->repeat_u = map->repeat_v = map->repeat_w = TEXTURE_REPEAT_CLAMP_TO_EDGE;
-    // map->filter_minify = map->filter_magnify = TEXTURE_FILTER_MODE_NEAREST;
-    // map->texture = &state->atlas_texture;
-    // if (!renderer_kresource_texture_map_resources_acquire(state->renderer, map)) {
-    //     KERROR("Unable to acquire texture map resources. StandardUI cannot be initialized.");
-    // }
-}
-
 b8 standard_ui_system_initialize(u64* memory_requirement, standard_ui_state* state, standard_ui_system_config* config) {
     if (!memory_requirement) {
         KERROR("standard_ui_system_initialize requires a vaild pointer to memory_requirement.");

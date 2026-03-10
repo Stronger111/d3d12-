@@ -365,7 +365,7 @@ b8 font_system_bitmap_font_load(font_system_state* state, kname resource_name, k
     bitmap_font_lookup* lookup = get_bitmap_font_lookup(state, out_handle);
 
     // Request the resource synchronously.
-    kresource_bitmap_font* font_asset = asset_system_request_bitmap_font_from_package_sync(engine_systems_get()->asset_state, kname_string_get(package_name), kname_string_get(resource_name));
+    kasset_bitmap_font* font_asset = asset_system_request_bitmap_font_from_package_sync(engine_systems_get()->asset_state, kname_string_get(package_name), kname_string_get(resource_name));
     if (!font_asset) {
         KERROR("Failed to load bitmap font resource '%s'. See logs for details.", kname_string_get(resource_name));
         return false;
@@ -413,7 +413,7 @@ b8 font_system_bitmap_font_load(font_system_state* state, kname resource_name, k
     setup_tab_xadvance(&lookup->data);
 
     // Release the font resource.
-    asset_system_release(engine_systems_get()->asset_state, font_asset);
+    asset_system_release_bitmap_font(engine_systems_get()->asset_state, font_asset);
 
     return true;
 }

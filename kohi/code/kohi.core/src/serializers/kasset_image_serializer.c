@@ -22,7 +22,7 @@ typedef struct binary_image_header {
     u8 padding[3];
 }binary_image_header;
 
-void* kasset_binary_image_serialize(const kasset_image* asset, u64* out_size) {
+void* kasset_image_serialize(const kasset_image* asset, u64* out_size) {
     if (!asset) {
         KERROR("Cannot serialize without an asset, ya dingus!");
         return 0;
