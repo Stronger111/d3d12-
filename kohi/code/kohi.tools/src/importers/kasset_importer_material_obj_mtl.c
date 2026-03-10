@@ -14,24 +14,27 @@
 
 #include "../serializers/obj_mtl_serializer.h"
 
-b8 kasset_material_obj_mtl_import(const char* output_directory, const char* output_filename, kname package_name, const char* data) {
+b8 kasset_material_obj_mtl_import(const char* output_directory, const char* output_filename, const char* package_name, const char* data) {
     if (!data) {
         KERROR("%s requires a valid pointer to data.", __FUNCTION__);
         return false;
     }
 
-    obj_mtl_source_asset mtl_asset = {0};
+    kname package_kname = kname_create(package_name);
+
+    obj_mtl_source_asset mtl_asset = { 0 };
     // Deserialize the mtl file content.
     if (!obj_mtl_serializer_deserialize(data, &mtl_asset)) {
         // NOTE: Intentionally not aborting here because the mesh can still be uses sans materials.
         KERROR("%s: Failed to parse MTL file data. See logs for details.", __FUNCTION__);
         return false;
-    } else {
+    }
+    else {
         for (u32 i = 0; i < mtl_asset.material_count; ++i) {
             obj_mtl_source_material* m_src = &mtl_asset.materials[i];
 
             // Convert to kasset_material.
-            kasset_material new_material = {0};
+            kasset_material new_material = { 0 };
 
             // Set material name and package name.
             new_material.name = m_src->name;
@@ -58,14 +61,14 @@ b8 kasset_material_obj_mtl_import(const char* output_directory, const char* outp
                 // Base colour translates from diffuse only for PBR.
                 if (m_src->diffuse_image_asset_name) {
                     new_material.base_colour_map.resource_name = m_src->diffuse_image_asset_name;
-                    new_material.base_colour_map.package_name = package_name;
+                    new_material.base_colour_map.package_name = package_kname;
                 }
                 new_material.base_colour = vec4_from_vec3(m_src->diffuse_colour, 1.0f);
 
                 // Metallic
                 if (m_src->metallic_image_asset_name) {
                     new_material.metallic_map.resource_name = m_src->metallic_image_asset_name;
-                    new_material.metallic_map.package_name = package_name;
+                    new_material.metallic_map.package_name = package_kname;
                     // NOTE: Always assume red channel for OBJ MTL imports.
                     new_material.metallic_map.channel = TEXTURE_CHANNEL_R;
                 }
@@ -74,7 +77,7 @@ b8 kasset_material_obj_mtl_import(const char* output_directory, const char* outp
                 // Roughness
                 if (m_src->roughness_image_asset_name) {
                     new_material.roughness_map.resource_name = m_src->roughness_image_asset_name;
-                    new_material.roughness_map.package_name = package_name;
+                    new_material.roughness_map.package_name = package_kname;
                     // NOTE: Always assume red channel for OBJ MTL imports.
                     new_material.roughness_map.channel = TEXTURE_CHANNEL_R;
                 }
@@ -87,13 +90,14 @@ b8 kasset_material_obj_mtl_import(const char* output_directory, const char* outp
                 // MRA (combined Metallic/Roughness/AO maps)
                 if (m_src->mra_image_asset_name) {
                     new_material.mra_map.resource_name = m_src->mra_image_asset_name;
-                    new_material.mra_map.package_name = package_name;
+                    new_material.mra_map.package_name = package_kname;
                     new_material.use_mra = true;
 
                     // In this one scenario, enable AO since the MRA map can provide it.
                     new_material.ambient_occlusion_enabled = true;
 
-                } else if (new_material.metallic_map.resource_name != INVALID_KNAME && new_material.metallic_map.resource_name == new_material.roughness_map.resource_name == new_material.ambient_occlusion_map.resource_name) {
+                }
+                else if (new_material.metallic_map.resource_name != INVALID_KNAME && new_material.metallic_map.resource_name == new_material.roughness_map.resource_name == new_material.ambient_occlusion_map.resource_name) {
                     // If metallic, roughness and ao all point to the same texture (and there _is_ a texture), switch to MRA instead.
                     new_material.mra_map.resource_name = new_material.metallic_map.resource_name;
                     new_material.mra_map.package_name = new_material.metallic_map.resource_name;
@@ -102,17 +106,19 @@ b8 kasset_material_obj_mtl_import(const char* output_directory, const char* outp
                     // In this one scenario, enable AO since the MRA map can provide it.
                     new_material.ambient_occlusion_enabled = true;
 
-                } else {
+                }
+                else {
                     new_material.use_mra = false;
                 }
-            } else if (new_material.model == KMATERIAL_MODEL_PHONG) {
+            }
+            else if (new_material.model == KMATERIAL_MODEL_PHONG) {
                 // TODO: make use of the ambient colour map.
                 if (m_src->ambient_image_asset_name) {
                     KWARN("Material has ambient colour map set, but will not be imported due to engine limitations.");
                 }
                 if (m_src->diffuse_image_asset_name) {
                     new_material.base_colour_map.resource_name = m_src->diffuse_image_asset_name;
-                    new_material.base_colour_map.package_name = package_name;
+                    new_material.base_colour_map.package_name = package_kname;
                 }
                 // For phong, base colour is ambient + diffuse.
                 new_material.base_colour = vec4_from_vec3(vec3_add(m_src->ambient_colour, m_src->diffuse_colour), 1.0f);
@@ -120,7 +126,7 @@ b8 kasset_material_obj_mtl_import(const char* output_directory, const char* outp
                 // Specular - only used for phong.
                 if (m_src->specular_image_asset_name) {
                     new_material.specular_colour_map.resource_name = m_src->specular_image_asset_name;
-                    new_material.specular_colour_map.package_name = package_name;
+                    new_material.specular_colour_map.package_name = package_kname;
                 }
                 new_material.specular_colour = vec4_from_vec3(m_src->specular_colour, 1.0f);
             }
@@ -128,16 +134,17 @@ b8 kasset_material_obj_mtl_import(const char* output_directory, const char* outp
             // Normal
             if (m_src->normal_image_asset_name) {
                 new_material.normal_map.resource_name = m_src->normal_image_asset_name;
-                new_material.normal_map.package_name = package_name;
+                new_material.normal_map.package_name = package_kname;
                 new_material.normal_enabled = true;
-            } else {
+            }
+            else {
                 new_material.normal_enabled = false;
             }
 
             // Emissive
             if (m_src->emissive_image_asset_name) {
                 new_material.emissive_map.resource_name = m_src->emissive_image_asset_name;
-                new_material.emissive_map.package_name = package_name;
+                new_material.emissive_map.package_name = package_kname;
             }
             new_material.emissive = vec4_from_vec3(m_src->emissive_colour, 1.0f);
 

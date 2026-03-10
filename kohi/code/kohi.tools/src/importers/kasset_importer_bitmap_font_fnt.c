@@ -11,21 +11,27 @@
 
 #include "../serializers/fnt_serializer.h"
 
-b8 kasset_bitmap_font_fnt_import(const char* output_directory, const char* output_filename, u64 data_size, const void* data, void* params) {
-    if (!data_size || !data) {
-        KERROR("%s requires valid pointers to self and data, as well as a nonzero data_size.", __FUNCTION__);
+b8 kasset_bitmap_font_fnt_import(const char* source_path, const char* target_path) {
+    if (!source_path || !target_path) {
+        KERROR("%s requires valid source_path and target_path.", __FUNCTION__);
+        return false;
+    }
+
+    const char* data = filesystem_read_entire_text_file(source_path);
+    if (!data) {
+        KERROR("Error reading source bitmap font file (%s). See logs for details.", source_path);
         return false;
     }
 
     // Handle FNT file import.
-    fnt_source_asset fnt_asset = {0};
+    fnt_source_asset fnt_asset = { 0 };
     if (!fnt_serializer_deserialize(data, &fnt_asset)) {
         KERROR("FNT file import failed! See logs for details.");
         return false;
     }
 
     // Convert FNT asset to kasset_bitmap_font.
-    kasset_bitmap_font asset = {0};
+    kasset_bitmap_font asset = { 0 };
     asset.baseline = fnt_asset.baseline;
     asset.face = kname_create(fnt_asset.face_name);
     asset.size = fnt_asset.size;
@@ -59,11 +65,14 @@ b8 kasset_bitmap_font_fnt_import(const char* output_directory, const char* outpu
     }
 
     // Write out .kbf file.
-    const char* out_path = string_format("%s/%s.%s", output_directory, output_filename, "kbf");
     b8 success = true;
-    if (!filesystem_write_entire_binary_file(out_path, serialized_size, serialized_data)) {
+    if (!filesystem_write_entire_binary_file(target_path, serialized_size, serialized_data)) {
         KWARN("Failed to write .kbf (Kohi Bitmap Font) file. See logs for details.");
         success = false;
+    }
+
+    if (serialized_data) {
+        kfree(serialized_data, serialized_size, MEMORY_TAG_SERIALIZER);
     }
 
     return success;
