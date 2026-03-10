@@ -16,7 +16,7 @@ ifeq ($(OS),Windows_NT)
 # WIN32
     BUILD_PLATFORM := windows
 	EXTENSION := .dll
-	COMPILER_FLAGS := -Wall -Wextra  -Wno-error=deprecated-declarations -Wno-error=unused-function -Wvla -Wgnu-folding-constant -Wno-missing-braces -fdeclspec -Wstrict-prototypes -Wno-unused-parameter -Wno-missing-field-initializers
+	COMPILER_FLAGS := -Wall -Wextra  -Wno-error=deprecated-declarations -Wno-error=unused-function -Wno-error=tautological-compare -Wvla -Wgnu-folding-constant -Wno-missing-braces -fdeclspec -Wstrict-prototypes -Wno-unused-parameter -Wno-missing-field-initializers 
 	INCLUDE_FLAGS := -I$(ASSEMBLY)\src $(ADDL_INC_FLAGS)
 	LINKER_FLAGS := -shared -lwinmm  -L$(OBJ_DIR)\$(ASSEMBLY) -L.\$(BUILD_DIR) $(ADDL_LINK_FLAGS)
 	DEFINES += -D_CRT_SECURE_NO_WARNINGS -DUNICODE
