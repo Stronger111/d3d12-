@@ -14,18 +14,23 @@ typedef struct mesh_vertex_index_data {
     u32 position_index;
     u32 normal_index;
     u32 texcoord_index;
-}mesh_vertex_index_data;
+} mesh_vertex_index_data;
 
 typedef struct mesh_face_data {
     mesh_vertex_index_data vertices[3];
-}mesh_face_data;
+} mesh_face_data;
 
 typedef struct mesh_group_data {
-    //darray
+    // darray
     mesh_face_data* faces;
-}mesh_group_data;
+} mesh_group_data;
 
-static void process_subobject(vec3* positions, vec3* normals, vec2* tex_coords, mesh_face_data* faces, obj_source_geometry* out_data);
+static void process_subobject(
+    vec3* positions,
+    vec3* normals,
+    vec2* tex_coords,
+    mesh_face_data* faces,
+    obj_source_geometry* out_data);
 
 b8 obj_serializer_serialize(const obj_source_asset* out_source_asset, const char** out_file_text) {
     KASSERT_MSG(false, "Not yet implemented");
@@ -38,7 +43,9 @@ b8 obj_serializer_deserialize(const char* obj_file_text, obj_source_asset* out_s
         return false;
     }
 
-    //Positions
+    out_source_asset->material_file_count = 0;
+
+    // Positions
     vec3* positions = darray_reserve(vec3, 16384);
 
     // Normals
@@ -47,12 +54,13 @@ b8 obj_serializer_deserialize(const char* obj_file_text, obj_source_asset* out_s
     // Texture coordinates
     vec2* tex_coords = darray_reserve(vec2, 16384);
 
-    //Groups
+    // Material file names
+    const char** material_file_names = darray_create(const char*);
+
+    // Groups
     mesh_group_data* groups = darray_reserve(mesh_group_data, 4);
 
     obj_source_geometry* geometries_darray = darray_create(obj_source_geometry);
-
-    char material_file_name[512] = "";
 
     char name[512];
     kzero_memory(name, sizeof(char) * 512);
@@ -66,10 +74,10 @@ b8 obj_serializer_deserialize(const char* obj_file_text, obj_source_asset* out_s
     u8 addl_advance = 0;
 
     // index 0 is previous, 1 is previous before that.
-    char prev_first_chars[2] = { 0, 0 };
+    char prev_first_chars[2] = {0, 0};
     u32 start_from = 0;
     while (true) {
-        start_from += line_length + addl_advance;  // todo: might need +1 for \n?
+        start_from += line_length + addl_advance;
         if (!string_line_get(obj_file_text, 511, start_from, &p, &line_length, &addl_advance)) {
             /* if (!filesystem_read_line(obj_file, 511, &p, &line_length)) { */
             break;
@@ -130,20 +138,19 @@ b8 obj_serializer_deserialize(const char* obj_file_text, obj_source_asset* out_s
 
             if (normal_count == 0 || tex_coord_count == 0) {
                 sscanf(line_buf, "%s %d %d %d", t, &face.vertices[0].position_index,
-                    &face.vertices[1].position_index,
-                    &face.vertices[2].position_index);
-            }
-            else {
+                       &face.vertices[1].position_index,
+                       &face.vertices[2].position_index);
+            } else {
                 sscanf(line_buf, "%s %d/%d/%d %d/%d/%d %d/%d/%d", t,
-                    &face.vertices[0].position_index,
-                    &face.vertices[0].texcoord_index, &face.vertices[0].normal_index,
+                       &face.vertices[0].position_index,
+                       &face.vertices[0].texcoord_index, &face.vertices[0].normal_index,
 
-                    &face.vertices[1].position_index,
-                    &face.vertices[1].texcoord_index, &face.vertices[1].normal_index,
+                       &face.vertices[1].position_index,
+                       &face.vertices[1].texcoord_index, &face.vertices[1].normal_index,
 
-                    &face.vertices[2].position_index,
-                    &face.vertices[2].texcoord_index,
-                    &face.vertices[2].normal_index);
+                       &face.vertices[2].position_index,
+                       &face.vertices[2].texcoord_index,
+                       &face.vertices[2].normal_index);
             }
             u64 group_index = darray_length(groups) - 1;
             darray_push(groups[group_index].faces, face);
@@ -152,12 +159,14 @@ b8 obj_serializer_deserialize(const char* obj_file_text, obj_source_asset* out_s
             // Material library file.
             char substr[7];
 
-            sscanf(line_buf, "%s %s", substr, material_file_name);
+            char buf[512];
+            kzero_memory(buf, 512);
+
+            sscanf(line_buf, "%s %s", substr, buf);
 
             // If found, save off the material file name.
             if (strings_nequali(substr, "mtllib", 6)) {
-                // TODO: verification
-                out_source_asset->material_file_name = string_duplicate(material_file_name);
+                darray_push(material_file_names, string_duplicate(buf));
             }
         } break;
         case 'u': {
@@ -181,8 +190,7 @@ b8 obj_serializer_deserialize(const char* obj_file_text, obj_source_asset* out_s
                 obj_source_geometry new_data = {};
                 if (i == 0) {
                     new_data.name = string_duplicate(name);
-                }
-                else if (i > 0) {
+                } else if (i > 0) {
                     new_data.name = string_format("%s%u", name, i);
                 }
                 new_data.material_asset_name = string_duplicate(material_names[i]);
@@ -221,8 +229,7 @@ b8 obj_serializer_deserialize(const char* obj_file_text, obj_source_asset* out_s
         obj_source_geometry new_data = {};
         if (i == 0) {
             new_data.name = string_duplicate(name);
-        }
-        else if (i > 0) {
+        } else if (i > 0) {
             new_data.name = string_format("%s%u", new_data.name, i);
         }
 
@@ -238,18 +245,24 @@ b8 obj_serializer_deserialize(const char* obj_file_text, obj_source_asset* out_s
         darray_destroy(groups[i].faces);
     }
 
+    // Copy over material names.
+    out_source_asset->material_file_count = darray_length(material_file_names);
+    out_source_asset->material_file_names = KALLOC_TYPE_CARRAY(const char*, out_source_asset->material_file_count);
+    KCOPY_TYPE_CARRAY(out_source_asset->material_file_names, material_file_names, const char*, out_source_asset->material_file_count);
+
     // Cleanup
     darray_destroy(groups);
     darray_destroy(positions);
     darray_destroy(normals);
     darray_destroy(tex_coords);
+    darray_destroy(material_file_names);
 
     // De-duplicate geometry
     u32 count = darray_length(geometries_darray);
     for (u64 i = 0; i < count; ++i) {
         obj_source_geometry* g = &((geometries_darray)[i]);
-        //FIXME: pass in a flag to decide on deduplication.
-        //KDEBUG("Geometry de-duplication process starting on geometry object named '%s'...", g->name);
+        // FIXME: pass in a flag to decide on deduplication.
+        // KDEBUG("Geometry de-duplication process starting on geometry object named '%s'...", g->name);
 
         // u32 new_vert_count = 0;
         // vertex_3d* unique_verts = 0;
@@ -261,23 +274,23 @@ b8 obj_serializer_deserialize(const char* obj_file_text, obj_source_asset* out_s
         //     &new_vert_count,
         //     &unique_verts);
 
-        // Destroy the old, large array...
-        //darray_destroy(g->vertices);
+        // // Destroy the old, large array...
+        // darray_destroy(g->vertices);
 
-        // And replace with the de-duplicated one.
+        // // And replace with the de-duplicated one.
         // g->vertices = unique_verts;
         // g->vertex_count = new_vert_count;
 
-        // Take a copy of the indices as a normal, non-darray
-        //u32* indices = kallocate(sizeof(u32) * g->index_count, MEMORY_TAG_ARRAY);
-        //kcopy_memory(indices, g->indices, sizeof(u32) * g->index_count);
-        // Destroy the darray
-        //darray_destroy(g->indices);
-        // Replace with the non-darray version.
-        //g->indices = indices;
+        // // Take a copy of the indices as a normal, non-darray
+        // u32* indices = kallocate(sizeof(u32) * g->index_count, MEMORY_TAG_ARRAY);
+        // kcopy_memory(indices, g->indices, sizeof(u32) * g->index_count);
+        // // Destroy the darray
+        // darray_destroy(g->indices);
+        // // Replace with the non-darray version.
+        // g->indices = indices;
 
-        //Take a non-darray copy of the vertex and index data if not de-duplicating,as the
-        //runtime expects this to be a standard array.
+        // Take a non-darray copy of the vertex and index data if not de-duplicating, as the
+        // runtime expects this to be a standard array.
         vertex_3d* unique_verts = KALLOC_TYPE_CARRAY(vertex_3d, g->vertex_count);
         KCOPY_TYPE_CARRAY(unique_verts, g->vertices, vertex_3d, g->vertex_count);
         darray_destroy(g->vertices);
@@ -366,15 +379,13 @@ static void process_subobject(
 
             if (skip_normals) {
                 vert.normal = vec3_create(0, 0, 1);
-            }
-            else {
+            } else {
                 vert.normal = normals[index_data.normal_index - 1];
             }
 
             if (skip_tex_coords) {
                 vert.texcoord = vec2_zero();
-            }
-            else {
+            } else {
                 vert.texcoord = tex_coords[index_data.texcoord_index - 1];
             }
 
@@ -388,7 +399,7 @@ static void process_subobject(
     // Calculate the center based on the extents.
     for (u8 i = 0; i < 3; ++i) {
         out_data->center.elements[i] = (out_data->extents.min.elements[i] +
-            out_data->extents.max.elements[i]) /
-            2.0f;
+                                        out_data->extents.max.elements[i]) /
+                                       2.0f;
     }
 }
