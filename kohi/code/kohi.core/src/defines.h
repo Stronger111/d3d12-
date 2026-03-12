@@ -217,6 +217,13 @@ STATIC_ASSERT(sizeof(f64) == 8, "Expected f64 to be 8 bytes.");
 #define KOHI_DEBUG 0
 #endif
 
+// Feature build flags.
+#if KOHI_DEBUG
+#    define KOHI_HOT_RELOAD 1
+#else
+#    define KOHI_HOT_RELOAD 0
+#endif
+
 #define KCLAMP(value, min, max) ((value <= min) ? min : (value >= max) ? max \
                                                                        : value)
 

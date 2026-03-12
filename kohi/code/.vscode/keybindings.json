@@ -24,6 +24,15 @@
         "when": "textInputFocus"
     },
     {
+        "key": "ctrl+shift+b",
+        "command": "workbench.action.tasks.build",
+        "when": "taskCommandsRegistered"
+    },
+    {
+        "key": "ctrl+shift+b",
+        "command": "-workbench.action.toggleAuxiliaryBar"
+    },
+    {
         "key": "ctrl+shift+alt+down",
         "command": "-cursorColumnSelectDown",
         "when": "textInputFocus"

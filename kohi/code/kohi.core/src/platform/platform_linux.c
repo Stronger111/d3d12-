@@ -55,6 +55,11 @@ typedef struct linux_handle_info {
 typedef struct linux_file_watch {
     u32 id;
     const char* file_path;
+    b8 is_binary;
+    platform_filewatcher_file_written_callback watcher_written_callback;
+    void* watcher_written_context;
+    platform_filewatcher_file_deleted_callback watcher_deleted_callback;
+    void* watcher_deleted_context;
     long last_write_time;
 } linux_file_watch;
 
@@ -76,10 +81,6 @@ typedef struct platform_state {
 
     // darray of pointers to created windows (owned by the application);
     kwindow** windows;
-    platform_filewatcher_file_deleted_callback watcher_deleted_callback;
-    void* watcher_deleted_context;
-    platform_filewatcher_file_written_callback watcher_written_callback;
-    void* watcher_written_context;
     platform_window_closed_callback window_closed_callback;
     platform_window_resized_callback window_resized_callback;
     platform_process_key process_key;
@@ -141,7 +142,7 @@ b8 platform_system_startup(u64* memory_requirement, struct platform_state* state
 }
 
 void platform_system_shutdown(struct platform_state* state) {
-     if (state) {
+    if (state) {
         if (state->windows) {
             u32 len = darray_length(state->windows);
             for (u32 i = 0; i < len; ++i) {
@@ -342,24 +343,10 @@ b8 platform_window_create(const kwindow_config* config, struct kwindow* window, 
 
     // Tell the server to notify when the window manager
     // attempts to destroy the window.
-    xcb_intern_atom_cookie_t wm_delete_cookie = xcb_intern_atom(
-        state_ptr->handle.connection,
-        0,
-        strlen("WM_DELETE_WINDOW"),
-        "WM_DELETE_WINDOW");
-    xcb_intern_atom_cookie_t wm_protocols_cookie = xcb_intern_atom(
-        state_ptr->handle.connection,
-        0,
-        strlen("WM_PROTOCOLS"),
-        "WM_PROTOCOLS");
-    xcb_intern_atom_reply_t* wm_delete_reply = xcb_intern_atom_reply(
-        state_ptr->handle.connection,
-        wm_delete_cookie,
-        NULL);
-    xcb_intern_atom_reply_t* wm_protocols_reply = xcb_intern_atom_reply(
-        state_ptr->handle.connection,
-        wm_protocols_cookie,
-        NULL);
+    xcb_intern_atom_cookie_t wm_delete_cookie = xcb_intern_atom(state_ptr->handle.connection, 0, strlen("WM_DELETE_WINDOW"), "WM_DELETE_WINDOW");
+    xcb_intern_atom_cookie_t wm_protocols_cookie = xcb_intern_atom(state_ptr->handle.connection, 0, strlen("WM_PROTOCOLS"), "WM_PROTOCOLS");
+    xcb_intern_atom_reply_t* wm_delete_reply = xcb_intern_atom_reply(state_ptr->handle.connection, wm_delete_cookie, NULL);
+    xcb_intern_atom_reply_t* wm_protocols_reply = xcb_intern_atom_reply(state_ptr->handle.connection, wm_protocols_cookie, NULL);
     state_ptr->wm_delete_win = wm_delete_reply->atom;
     state_ptr->wm_protocols = wm_protocols_reply->atom;
 
@@ -372,6 +359,9 @@ b8 platform_window_create(const kwindow_config* config, struct kwindow* window, 
         32,
         1,
         &wm_delete_reply->atom);
+
+    free(wm_delete_reply);
+    free(wm_protocols_reply);
 
     // Map the window to the screen
     xcb_map_window(state_ptr->handle.connection, window->platform_state->window);
@@ -657,16 +647,6 @@ const char* platform_dynamic_library_prefix(void) {
     return "./lib";
 }
 
-void platform_register_watcher_deleted_callback(platform_filewatcher_file_deleted_callback callback, void* context) {
-    state_ptr->watcher_deleted_callback = callback;
-    state_ptr->watcher_deleted_context = context;
-}
-
-void platform_register_watcher_written_callback(platform_filewatcher_file_written_callback callback, void* context) {
-    state_ptr->watcher_written_callback = callback;
-    state_ptr->watcher_written_context = context;
-}
-
 void platform_register_window_closed_callback(platform_window_closed_callback callback) {
     state_ptr->window_closed_callback = callback;
 }
@@ -792,7 +772,15 @@ close_handles:
     return ret_code;
 }
 
-static b8 register_watch(const char* file_path, u32* out_watch_id) {
+static b8 register_watch(
+    const char* file_path,
+    b8 is_binary,
+    platform_filewatcher_file_written_callback watcher_written_callback,
+    void* watcher_written_context,
+    platform_filewatcher_file_deleted_callback watcher_deleted_callback,
+    void* watcher_deleted_context,
+    u32* out_watch_id) {
+
     if (!state_ptr || !file_path || !out_watch_id) {
         if (out_watch_id) {
             *out_watch_id = INVALID_ID;
@@ -832,6 +820,10 @@ static b8 register_watch(const char* file_path, u32* out_watch_id) {
     w.id = count;
     w.file_path = string_duplicate(file_path);
     w.last_write_time = info.st_mtime;
+    w.watcher_written_callback = watcher_written_callback;
+    w.watcher_written_context = watcher_written_context;
+    w.watcher_deleted_callback = watcher_deleted_callback;
+    w.watcher_deleted_context = watcher_deleted_context;
     *out_watch_id = count;
     darray_push(state_ptr->watches, w);
 
@@ -858,8 +850,22 @@ static b8 unregister_watch(u32 watch_id) {
     return true;
 }
 
-b8 platform_watch_file(const char* file_path, u32* out_watch_id) {
-    return register_watch(file_path, out_watch_id);
+b8 platform_watch_file(
+    const char* file_path,
+    b8 is_binary,
+    platform_filewatcher_file_written_callback watcher_written_callback,
+    void* watcher_written_context,
+    platform_filewatcher_file_deleted_callback watcher_deleted_callback,
+    void* watcher_deleted_context,
+    u32* out_watch_id) {
+    return register_watch(
+        file_path,
+        is_binary,
+        watcher_written_callback,
+        watcher_written_context,
+        watcher_deleted_callback,
+        watcher_deleted_context,
+        out_watch_id);
 }
 
 b8 platform_unwatch_file(u32 watch_id) {
@@ -880,8 +886,8 @@ static void platform_update_watches(void) {
             if (result != 0) {
                 if (errno == ENOENT) {
                     // File doesn't exist. Which means it was deleted. Remove the watch.
-                    if (state_ptr->watcher_deleted_callback) {
-                        state_ptr->watcher_deleted_callback(f->id, state_ptr->watcher_written_context);
+                    if (f->watcher_deleted_callback) {
+                        f->watcher_deleted_callback(f->id, f->watcher_written_context);
                     } else {
                         KWARN("Watcher file was deleted but no handler callback was set. Make sure to call platform_register_watcher_deleted_callback()");
                     }
@@ -902,12 +908,8 @@ static void platform_update_watches(void) {
             if (info.st_mtime - f->last_write_time != 0) {
                 KTRACE("File update found.");
                 f->last_write_time = info.st_mtime;
-                // Notify listeners.
-                /* event_context context = {0};
-                context.data.u32[0] = f->id;
-                event_fire(EVENT_CODE_WATCHED_FILE_WRITTEN, 0, context); */
-                if (state_ptr->watcher_written_callback) {
-                    state_ptr->watcher_written_callback(f->id, state_ptr->watcher_written_context);
+                if (f->watcher_written_callback) {
+                    f->watcher_written_callback(f->id, f->file_path, f->is_binary, f->watcher_written_context);
                 } else {
                     KWARN("Watcher file was deleted but no handler callback was set. Make sure to call platform_register_watcher_written_callback()");
                 }
