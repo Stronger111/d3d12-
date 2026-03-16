@@ -530,10 +530,10 @@ u16 size_from_shader_uniform_type(shader_uniform_type type) {
     }
 }
 
-#define PX_ALPHA_LESS_THAN_MAX(type, array, array_size, alpha_max, channel_count, alpha_index) \
+#define PX_ALPHA_LESS_THAN_MAX(type, array, pixel_count, alpha_max, channel_count, alpha_index) \
     {                                                                                          \
         type* px = (type*)array;                                                               \
-        for (u32 i = 0; i < array_size; ++i) {                                                 \
+        for (u32 i = 0; i < pixel_count; ++i) {                                                 \
             type alpha = px[(sizeof(type) * channel_count * i) + alpha_index];                 \
             if (alpha < alpha_max) {                                                           \
                 return true;                                                                   \
@@ -542,8 +542,8 @@ u16 size_from_shader_uniform_type(shader_uniform_type type) {
         return false;                                                                          \
     }
 
-b8 pixel_data_has_transparency(const void* pixels, u32 pixel_array_size, kpixel_format format) {
-    if (!pixels || !pixel_array_size) {
+b8 pixel_data_has_transparency(const void* pixels, u32 pixel_count, kpixel_format format) {
+    if (!pixels || !pixel_count) {
         return false;
     }
 
@@ -554,13 +554,13 @@ b8 pixel_data_has_transparency(const void* pixels, u32 pixel_array_size, kpixel_
         return false;
 
     case KPIXEL_FORMAT_RGBA8: {
-        PX_ALPHA_LESS_THAN_MAX(u8, pixels, pixel_array_size, U8_MAX, 4, 3);
+        PX_ALPHA_LESS_THAN_MAX(u8, pixels, pixel_count, U8_MAX, 4, 3);
     }
     case KPIXEL_FORMAT_RGBA16: {
-        PX_ALPHA_LESS_THAN_MAX(u16, pixels, pixel_array_size, U16_MAX, 4, 3);
+        PX_ALPHA_LESS_THAN_MAX(u16, pixels, pixel_count, U16_MAX, 4, 3);
     }
     case KPIXEL_FORMAT_RGBA32: {
-        PX_ALPHA_LESS_THAN_MAX(u32, pixels, pixel_array_size, U32_MAX, 4, 3);
+    PX_ALPHA_LESS_THAN_MAX(u32, pixels, pixel_count, U32_MAX, 4, 3);
     } break;
 
     case KPIXEL_FORMAT_RGB8:

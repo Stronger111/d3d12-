@@ -1,6 +1,7 @@
 #include "kmemory.h"
 
 #include "kdebug/kassert.h"
+#include "defines.h"
 #include "logger.h"
 #include "memory/allocators/dynamic_allocator.h"
 #include "platform/platform.h"
@@ -10,8 +11,8 @@
 // TODO: Custom string lib
 #include <stdio.h>
 #include <string.h>
-
-#define K_USE_CUSTOM_MEMORY_ALLOCATOR 0
+// NOTE: If this is disabled, C11 must be used to enable aligned_alloc.
+#define K_USE_CUSTOM_MEMORY_ALLOCATOR 1
 
 #if !K_USE_CUSTOM_MEMORY_ALLOCATOR
 #if _MSC_VER
@@ -132,6 +133,7 @@ b8 memory_system_initialize(memory_system_configuration config) {
     }
 #else
     state_ptr = kaligned_alloc(sizeof(memory_system_state), 16);
+    kzero_memory(state_ptr, sizeof(memory_system_state));
     state_ptr->config = config;
     state_ptr->alloc_count = 0;
     state_ptr->allocator_memory_requirement = 0;
@@ -248,7 +250,50 @@ void* kallocate(u64 size, memory_tag tag) {
 }
 
 void* kallocate_aligned(u64 size, u16 alignment, memory_tag tag) {
-    return alloc_internal(size, alignment, tag, 0, 0);
+    KASSERT_MSG(size, "kallocate_aligned requires a nonzero size.");
+    if (tag == MEMORY_TAG_UNKNOWN) {
+        KWARN("kallocate_aligned called using MEMORY_TAG_UNKNOWN. Re-class this allocation.");
+    }
+
+    /* size = get_aligned(size, alignment); */
+
+    // Either allocate from the system's allocator or the OS. The latter shouldn't ever
+    // really happen.
+    void* block = 0;
+    if (state_ptr) {
+        // Make sure multithreaded requests don't trample each other.
+        if (!kmutex_lock(&state_ptr->allocation_mutex)) {
+            KFATAL("Error obtaining mutex lock during allocation.");
+            return 0;
+        }
+
+        // FIXME: Track aligned alloc offset as part of size.
+        state_ptr->stats.total_allocated += size;
+        state_ptr->stats.tagged_allocations[tag] += size;
+        state_ptr->stats.new_tagged_allocations[tag] += size;
+        state_ptr->alloc_count++;
+
+#if K_USE_CUSTOM_MEMORY_ALLOCATOR
+        block = dynamic_allocator_allocate_aligned(&state_ptr->allocator, size, alignment);
+#else
+        block = kaligned_alloc(size, alignment);
+#endif
+        kmutex_unlock(&state_ptr->allocation_mutex);
+    }
+    else {
+        // If the system is not up yet, warn about it but give memory for now.
+        /* KTRACE("Warning: kallocate_aligned called before the memory system is initialized."); */
+        // TODO: Memory alignment
+        block = platform_allocate(size, false);
+    }
+
+    if (block) {
+        platform_zero_memory(block, size);
+        return block;
+    }
+
+    KFATAL("kallocate_aligned failed to allocate successfully.");
+    return 0;
 }
 #endif
 
@@ -300,11 +345,11 @@ void kreallocate_report(u64 old_size, u64 new_size, memory_tag tag) {
     kallocate_report(new_size, tag);
 }
 
-KAPI void kfree(void* block, u64 size, memory_tag tag) {
+void kfree(void* block, u64 size, memory_tag tag) {
     kfree_aligned(block, size, 1, tag);
 }
 
-KAPI void kfree_aligned(void* block, u64 size, u16 alignment, memory_tag tag) {
+void kfree_aligned(void* block, u64 size, u16 alignment, memory_tag tag) {
     if (!block) {
         KFATAL("%s tried to free null block of memory. Check application logic.", __FUNCTION__);
         return;
@@ -318,6 +363,9 @@ KAPI void kfree_aligned(void* block, u64 size, u16 alignment, memory_tag tag) {
             KFATAL("Unable to obtain mutex lock for free operation. Heap corruption is likely.");
             return;
         }
+
+        /* size = get_aligned(size, alignment); */
+
 #if K_USE_CUSTOM_MEMORY_ALLOCATOR
         u64 osize = 0;
         u16 oalignment = 0;
@@ -330,25 +378,6 @@ KAPI void kfree_aligned(void* block, u64 size, u16 alignment, memory_tag tag) {
         }
 #endif
 
-#ifdef K_TRACK_ALLOCATIONS
-        // Look for the allocation.
-        b8 found = false;
-        for (u32 i = 0; i < MEMORY_MAX_ALLOCATIONS; ++i) {
-            memory_allocation* allocation = &state_ptr->active_allocations[i];
-            if (allocation->ptr == block) {
-                // Reset it if found.
-                allocation->ptr = (void*)INVALID_ID_U64;
-                allocation->alignment = 0;
-                allocation->size = 0;
-                allocation->file = 0;
-                allocation->line = 0;
-                found = true;
-                break;
-            }
-        }
-
-        KASSERT_MSG(found, "Allocation not found, but requested to be freed. Debug for details");
-#endif
         state_ptr->stats.total_allocated -= size;
         state_ptr->stats.tagged_allocations[tag] -= size;
         state_ptr->stats.new_tagged_deallocations[tag] += size;
@@ -359,6 +388,7 @@ KAPI void kfree_aligned(void* block, u64 size, u16 alignment, memory_tag tag) {
         kaligned_free(block);
         b8 result = true;
 #endif
+
         kmutex_unlock(&state_ptr->allocation_mutex);
 
         // If the free failed, it's possible this is because the allocation was made
@@ -371,7 +401,6 @@ KAPI void kfree_aligned(void* block, u64 size, u16 alignment, memory_tag tag) {
         }
     }
     else {
-        // 内存对齐 为false
         // TODO: Memory alignment
         platform_free(block, false);
     }
@@ -458,7 +487,7 @@ KAPI char* get_memory_usage_str(void) {
         const char* units[3] = { get_unit_for_size(state_ptr->stats.tagged_allocations[i], &amounts[0]),
                                 get_unit_for_size(state_ptr->stats.new_tagged_allocations[i], &amounts[1]),
                                 get_unit_for_size(state_ptr->stats.new_tagged_deallocations[i], &amounts[2]) };
-        i32 length = snprintf(buffer + offset, 8000, "  %s: %-7.2f %-3s [+ %-7.2f %-3s | - %-7.2f%-3s]\n",
+        i32 length = snprintf(buffer + offset, 8000 - offset, "  %s: %-7.2f %-3s [+ %-7.2f %-3s | - %-7.2f%-3s]\n",
             memory_tag_strings[i],
             amounts[0], units[0], amounts[1], units[1], amounts[2], units[2]);
         offset += length;

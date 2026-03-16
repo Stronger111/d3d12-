@@ -486,12 +486,6 @@ b8 kpackage_parse_manifest_file_content(const char* path, asset_manifest* out_ma
                     // Full source path of the asset.
                     asset.source_path = string_format("%s/%s", out_manifest->path, asset_source_path_temp);
                     string_free(asset_source_path_temp);
-
-                    //HACK:implement some sort of metadata instead.
-                    //flip y - optional
-                    if (!kson_object_property_value_get_bool(&asset_obj, "flip_y", &asset.flip_y)) {
-                        asset.flip_y = true;
-                    }
                 }
                 //add to assets
                 darray_push(out_manifest->assets, asset);

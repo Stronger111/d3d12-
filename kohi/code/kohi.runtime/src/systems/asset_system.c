@@ -378,6 +378,8 @@ kasset_image* asset_system_request_image_from_package(struct asset_system_state*
         .context_size = sizeof(kasset_image_vfs_context) };
     vfs_request_asset(state->vfs, info);
 
+    out_asset->name = kname_create(name);
+
     return out_asset;
 }
 // sync load from specific package.
@@ -401,12 +403,13 @@ kasset_image* asset_system_request_image_from_package_sync(struct asset_system_s
         KFREE_TYPE(out_asset, kasset_image, MEMORY_TAG_ASSET);
         return 0;
     }
-
+    out_asset->name = kname_create(name);
     return out_asset;
 }
 
 void asset_system_release_image(struct asset_system_state* state, kasset_image* asset) {
     if (state && asset) {
+        KTRACE("Releasing image asset '%s'.", kname_string_get(asset->name));
         if (asset->pixel_array_size && asset->pixels) {
             kfree((void*)asset->pixels, asset->pixel_array_size, MEMORY_TAG_ASSET);
         }
@@ -1118,35 +1121,35 @@ static b8 vfs_file_written(u16 code, void* sender, void* listener_inst, event_co
             out_asset = typed_asset;
         } break;
 
-            // NOTE: There isn't much value in hot-reloading the shader config, which is what this asset type is.
-            /* case KASSET_TYPE_SHADER: {
-                kasset_shader* typed_asset = KALLOC_TYPE(kasset_shader, MEMORY_TAG_ASSET);
+                             // NOTE: There isn't much value in hot-reloading the shader config, which is what this asset type is.
+                             /* case KASSET_TYPE_SHADER: {
+                                 kasset_shader* typed_asset = KALLOC_TYPE(kasset_shader, MEMORY_TAG_ASSET);
 
-                b8 result = kasset_shader_deserialize(asset_data->text, typed_asset);
-                if (!result) {
-                    KERROR("Failed to deserialize shader asset. See logs for details.");
-                    KFREE_TYPE(typed_asset, kasset_shader, MEMORY_TAG_ASSET);
-                } else {
-                    typed_asset->name = watch->asset_name;
-                }
-                out_asset = typed_asset;
+                                 b8 result = kasset_shader_deserialize(asset_data->text, typed_asset);
+                                 if (!result) {
+                                     KERROR("Failed to deserialize shader asset. See logs for details.");
+                                     KFREE_TYPE(typed_asset, kasset_shader, MEMORY_TAG_ASSET);
+                                 } else {
+                                     typed_asset->name = watch->asset_name;
+                                 }
+                                 out_asset = typed_asset;
 
-            } break; */
+                             } break; */
 
-            // TODO: hot-reload these types
-            /* case KASSET_TYPE_IMAGE: */
-            /* case KASSET_TYPE_MATERIAL: */
-            /* case KASSET_TYPE_KSON: */
+                             // TODO: hot-reload these types
+                             /* case KASSET_TYPE_IMAGE: */
+                             /* case KASSET_TYPE_MATERIAL: */
+                             /* case KASSET_TYPE_KSON: */
 
-            // NOTE: The below types probalby should not support hot-reloading.
-        /* case KASSET_TYPE_STATIC_MESH: */
-        /* case KASSET_TYPE_HEIGHTMAP_TERRAIN: */
-        /* case KASSET_TYPE_SCENE: */
-        /* case KASSET_TYPE_BITMAP_FONT: */
-        /* case KASSET_TYPE_SYSTEM_FONT: */
-        /* case KASSET_TYPE_VOXEL_TERRAIN: */
-        /* case KASSET_TYPE_SKELETAL_MESH: */
-        /* case KASSET_TYPE_AUDIO: */
+                             // NOTE: The below types probalby should not support hot-reloading.
+                         /* case KASSET_TYPE_STATIC_MESH: */
+                         /* case KASSET_TYPE_HEIGHTMAP_TERRAIN: */
+                         /* case KASSET_TYPE_SCENE: */
+                         /* case KASSET_TYPE_BITMAP_FONT: */
+                         /* case KASSET_TYPE_SYSTEM_FONT: */
+                         /* case KASSET_TYPE_VOXEL_TERRAIN: */
+                         /* case KASSET_TYPE_SKELETAL_MESH: */
+                         /* case KASSET_TYPE_AUDIO: */
         case KASSET_TYPE_UNKNOWN:
         default:
             KWARN("%s: Asset type '%s' not supported for hot reload.", __FUNCTION__, kasset_type_to_string(watch->type));
@@ -1158,9 +1161,10 @@ static b8 vfs_file_written(u16 code, void* sender, void* listener_inst, event_co
         // watcher every time this happens.
         if (out_asset) {
             event_context evt_context = {
-                .data.u32[0] = watch_id};
+                .data.u32[0] = watch_id };
             event_fire(EVENT_CODE_ASSET_HOT_RELOADED, out_asset, evt_context);
-        } else {
+        }
+        else {
             KWARN("%s: out_asset not set - notification event will not be fired.", __FUNCTION__);
         }
     }
