@@ -217,7 +217,10 @@
         "light_system.h": "c",
         "kasset_shader_serializer.h": "c",
         "ui_rendergraph_node.h": "c",
-        "shadow_rendergraph_node.h": "c"
+        "shadow_rendergraph_node.h": "c",
+        "application_config.h": "c",
+        "camera_system.h": "c",
+        "hierarchy_graph.h": "c"
     },
     "C_Cpp.default.compilerPath": "D:/SoftWare/LLVM/bin/clang.exe",
 }

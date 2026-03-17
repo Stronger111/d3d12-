@@ -81,6 +81,10 @@ IF %ERRORLEVEL% NEQ 0 (echo Error:%ERRORLEVEL% && exit)
 ::make -j -f "Makefile.library.mak" %ACTION% TARGET=%TARGET% ASSEMBLY=overdrive2069.klib DO_VERSION=%DO_VERSION% ADDL_INC_FLAGS="%INC_CORE_RT% -Ikohi.plugin.ui.standard\src -Ikohi.plugin.audio.openal\src -Ikohi.plugin.utils\src" ADDL_LINK_FLAGS="%LNK_CORE_RT% -lkohi.plugin.ui.standard -lkohi.plugin.audio.openal -lkohi.plugin.utils"
 ::IF %ERRORLEVEL% NEQ 0 (echo Error:%ERRORLEVEL% && exit)
 
+REM Shadows of Illumina Lib
+make -j -f "Makefile.library.mak" %ACTION% TARGET=%TARGET% ASSEMBLY=soi.klib DO_VERSION=%DO_VERSION% ADDL_INC_FLAGS="%INC_CORE_RT% -Ikohi.plugin.ui.standard\src -Ikohi.plugin.audio.openal\src -Ikohi.plugin.utils\src" ADDL_LINK_FLAGS="%LNK_CORE_RT% -lkohi.plugin.ui.standard -lkohi.plugin.audio.openal -lkohi.plugin.utils"
+IF %ERRORLEVEL% NEQ 0 (echo Error:%ERRORLEVEL% && exit)
+
 @REM ---------------------------------------------------
 @REM Executables
 @REM ---------------------------------------------------
@@ -89,9 +93,13 @@ REM Testbed
 make -j -f "Makefile.executable.mak" %ACTION% TARGET=%TARGET% ASSEMBLY=testbed.kapp  ADDL_INC_FLAGS="%INC_CORE_RT% " ADDL_LINK_FLAGS="%LNK_CORE_RT%"
 IF %ERRORLEVEL% NEQ 0 (echo Error:%ERRORLEVEL% && exit)
 
-::REM Overdrive2069 app
+::REM Overdrive2069 Game Execulable
 ::make -j -f "Makefile.executable.mak" %ACTION% TARGET=%TARGET% ASSEMBLY=overdrive2069.kapp ADDL_INC_FLAGS="%INC_CORE_RT%" ADDL_LINK_FLAGS="%LNK_CORE_RT%"
 ::IF %ERRORLEVEL% NEQ 0 (echo Error:%ERRORLEVEL% && exit)
+
+REM Shadows of Illumina Game Execulable
+make -j -f "Makefile.executable.mak" %ACTION% TARGET=%TARGET% ASSEMBLY=soi.kapp ADDL_INC_FLAGS="%INC_CORE_RT%" ADDL_LINK_FLAGS="%LNK_CORE_RT%"
+IF %ERRORLEVEL% NEQ 0 (echo Error:%ERRORLEVEL% && exit)
 
 REM Tests
 make -j -f "Makefile.executable.mak" %ACTION% TARGET=%TARGET% ASSEMBLY=kohi.core.tests ADDL_INC_FLAGS="%INC_CORE_RT% "  ADDL_LINK_FLAGS="%LNK_CORE_RT%"

@@ -16,6 +16,7 @@ typedef struct console_command {
     const char* name;
     u8 arg_count;
     PFN_console_command func;
+    void* listener;
 } console_command;
 
 typedef struct console_object {
@@ -106,7 +107,7 @@ void console_write(log_level level, const char* message) {
     }
 }
 
-KAPI b8 console_command_register(const char* command, u8 arg_count, PFN_console_command func) {
+KAPI b8 console_command_register(const char* command, u8 arg_count, void* listener, PFN_console_command func) {
     KASSERT_MSG(state_ptr && command, "console_register_command requires state and valid command");
 
     // 确定之前不存在
@@ -118,10 +119,10 @@ KAPI b8 console_command_register(const char* command, u8 arg_count, PFN_console_
         }
     }
 
-    console_command new_command = {};
-    new_command.arg_count = arg_count;
-    new_command.func = func;
-    new_command.name = string_duplicate(command);
+    console_command new_command = { .arg_count = arg_count,
+    .func = func,
+    .name = string_duplicate(command),
+    .listener = listener };
     darray_push(state_ptr->registered_commands, new_command);
 
     return true;
@@ -354,6 +355,8 @@ KAPI b8 console_command_execute(const char* command) {
                         context.arguments[j].value = parts[j + 1];
                     }
                 }
+
+                context.listener = cmd->listener;
 
                 cmd->func(context);
 

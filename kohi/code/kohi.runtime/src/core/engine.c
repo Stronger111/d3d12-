@@ -1,6 +1,5 @@
 #include "engine.h"
 
-#include <platform/filesystem.h>
 #include <containers/darray.h>
 #include <containers/registry.h>
 #include <identifiers/khandle.h>
@@ -8,6 +7,7 @@
 #include <logger.h>
 #include <memory/allocators/linear_allocator.h>
 #include <memory/kmemory.h>
+#include <platform/filesystem.h>
 #include <platform/platform.h>
 #include <platform/vfs.h>
 #include <strings/kstring.h>
@@ -16,9 +16,9 @@
 // Version reporting
 #include "kohi.runtime_version.h"
 
-#include "audio/audio_frontend.h"
 #include "application/application_config.h"
 #include "application/application_types.h"
+#include "audio/audio_frontend.h"
 #include "console.h"
 #include "core/event.h"
 #include "core/input.h"
@@ -30,13 +30,13 @@
 #include "renderer/rendergraph.h"
 
 // systems
-#include "systems/plugin_system.h"
 #include "systems/asset_system.h"
 #include "systems/camera_system.h"
 #include "systems/font_system.h"
 #include "systems/job_system.h"
 #include "systems/light_system.h"
 #include "systems/material_system.h"
+#include "systems/plugin_system.h"
 #include "systems/shader_system.h"
 #include "systems/static_mesh_system.h"
 #include "systems/texture_system.h"
@@ -591,12 +591,6 @@ b8 engine_create(application* app) {
         return false;
     }
 
-    // TODO: Handle post-boot items in systems that require app config.
-    //
-    // TODO: font system
-    // TODO: Load fonts as configured in app config. in post-boot
-    // &app->app_config.font_config
-
     // Setup the frame allocator.
     linear_allocator_create(app->app_config.frame_allocator_size, 0, &engine_state->frame_allocator);
     engine_state->p_frame_data.allocator.allocate = frame_allocator_allocate;
@@ -803,7 +797,7 @@ b8 engine_run(application* app) {
     app->stage = APPLICATION_STAGE_SHUTTING_DOWN;
 
     // Shut down the game.
-    engine_state->app->shutdown(engine_state->app);
+    app->shutdown(app);
 
     // Unregister from events.
     event_unregister(EVENT_CODE_APPLICATION_QUIT, 0, engine_on_event);

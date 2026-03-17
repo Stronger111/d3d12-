@@ -25,7 +25,7 @@ typedef struct kvar_state {
 
 static kvar_state* state_ptr;
 
-static void kvar_console_commands_register(void);
+static void kvar_console_commands_register(kvar_state* state);
 
 b8 kvar_system_initialize(u64* memory_requirement, struct kvar_state* memory, void* config) {
     *memory_requirement = sizeof(kvar_state);
@@ -38,7 +38,7 @@ b8 kvar_system_initialize(u64* memory_requirement, struct kvar_state* memory, vo
 
     kzero_memory(state_ptr, sizeof(kvar_state));
 
-    kvar_console_commands_register();
+    kvar_console_commands_register(memory);
     return true;
 }
 
@@ -99,18 +99,18 @@ static b8 kvar_entry_set_desc_value(kvar_entry* entry, kvar_types type, const ch
 
     // Update the value.
     switch (entry->type) {
-        case KVAR_TYPE_STRING:
-            entry->value.s = string_duplicate(value);
-            break;
-        case KVAR_TYPE_FLOAT:
-            entry->value.f = *((f32*)value);
-            break;
-        case KVAR_TYPE_INT:
-            entry->value.i = *((i32*)value);
-            break;
-        default:
-            KFATAL("Trying to set a kvar with an unknown type. This should not happen unless a new type has been added.");
-            return false;
+    case KVAR_TYPE_STRING:
+        entry->value.s = string_duplicate(value);
+        break;
+    case KVAR_TYPE_FLOAT:
+        entry->value.f = *((f32*)value);
+        break;
+    case KVAR_TYPE_INT:
+        entry->value.i = *((i32*)value);
+        break;
+    default:
+        KFATAL("Trying to set a kvar with an unknown type. This should not happen unless a new type has been added.");
+        return false;
     }
 
     // If a description as provided, update it.
@@ -122,7 +122,7 @@ static b8 kvar_entry_set_desc_value(kvar_entry* entry, kvar_types type, const ch
     }
 
     // Send out a notification that the variable was changed.
-    event_context context = {0};
+    event_context context = { 0 };
     context.data.custom_data.size = sizeof(kvar_change);
     context.data.custom_data.data = kallocate(context.data.custom_data.size, MEMORY_TAG_ENGINE);  // FIXME: event tag.
     kvar_change* change_data = context.data.custom_data.data;
@@ -147,24 +147,24 @@ b8 kvar_i32_get(const char* name, i32* out_value) {
     }
 
     switch (entry->type) {
-        case KVAR_TYPE_INT:
-            // If int, set output as-is.
-            *out_value = entry->value.i;
-            return true;
-        case KVAR_TYPE_FLOAT:
-            // For float, just cast it, but warn about truncation.
-            KWARN("The kvar '%s' is of type f32 but its value was requested as i32. This will result in a truncated value. Get the value as a float instead.", name);
-            *out_value = (i32)entry->value.f;
-            return true;
-        case KVAR_TYPE_STRING:
-            if (!string_to_i32(entry->value.s, out_value)) {
-                KERROR("The kvar '%s' is of type string and could not successfully be parsed to i32. Get the value as a string instead.", name);
-                return false;
-            }
-            return true;
-        default:
-            KERROR("The kvar '%s' is was found but is of an unknown type. This means an unsupported type exists or indicates memory corruption.", name);
+    case KVAR_TYPE_INT:
+        // If int, set output as-is.
+        *out_value = entry->value.i;
+        return true;
+    case KVAR_TYPE_FLOAT:
+        // For float, just cast it, but warn about truncation.
+        KWARN("The kvar '%s' is of type f32 but its value was requested as i32. This will result in a truncated value. Get the value as a float instead.", name);
+        *out_value = (i32)entry->value.f;
+        return true;
+    case KVAR_TYPE_STRING:
+        if (!string_to_i32(entry->value.s, out_value)) {
+            KERROR("The kvar '%s' is of type string and could not successfully be parsed to i32. Get the value as a string instead.", name);
             return false;
+        }
+        return true;
+    default:
+        KERROR("The kvar '%s' is was found but is of an unknown type. This means an unsupported type exists or indicates memory corruption.", name);
+        return false;
     }
 }
 
@@ -198,22 +198,22 @@ b8 kvar_f32_get(const char* name, f32* out_value) {
     }
 
     switch (entry->type) {
-        case KVAR_TYPE_INT:
-            KWARN("The kvar '%s' is of type i32 but its value was requested as f32. It is recommended to get the value as int instead.", name);
-            *out_value = (f32)entry->value.i;
-            return true;
-        case KVAR_TYPE_FLOAT:
-            *out_value = entry->value.f;
-            return true;
-        case KVAR_TYPE_STRING:
-            if (!string_to_f32(entry->value.s, out_value)) {
-                KERROR("The kvar '%s' is of type string and could not successfully be parsed to f32. Get the value as a string instead.", name);
-                return false;
-            }
-            return true;
-        default:
-            KERROR("The kvar '%s' is was found but is of an unknown type. This means an unsupported type exists or indicates memory corruption.", name);
+    case KVAR_TYPE_INT:
+        KWARN("The kvar '%s' is of type i32 but its value was requested as f32. It is recommended to get the value as int instead.", name);
+        *out_value = (f32)entry->value.i;
+        return true;
+    case KVAR_TYPE_FLOAT:
+        *out_value = entry->value.f;
+        return true;
+    case KVAR_TYPE_STRING:
+        if (!string_to_f32(entry->value.s, out_value)) {
+            KERROR("The kvar '%s' is of type string and could not successfully be parsed to f32. Get the value as a string instead.", name);
             return false;
+        }
+        return true;
+    default:
+        KERROR("The kvar '%s' is was found but is of an unknown type. This means an unsupported type exists or indicates memory corruption.", name);
+        return false;
     }
 }
 
@@ -247,17 +247,17 @@ const char* kvar_string_get(const char* name) {
     }
 
     switch (entry->type) {
-        case KVAR_TYPE_INT:
-            KWARN("The kvar '%s' is of type i32 but its value was requested as string. It is recommended to get the value as int instead.", name);
-            return i32_to_string(entry->value.i);
-        case KVAR_TYPE_FLOAT:
-            KWARN("The kvar '%s' is of type i32 but its value was requested as string. It is recommended to get the value as float instead.", name);
-            return f32_to_string(entry->value.f);
-        case KVAR_TYPE_STRING:
-            return string_duplicate(entry->value.s);
-        default:
-            KERROR("The kvar '%s' is was found but is of an unknown type. This means an unsupported type exists or indicates memory corruption.", name);
-            return 0;
+    case KVAR_TYPE_INT:
+        KWARN("The kvar '%s' is of type i32 but its value was requested as string. It is recommended to get the value as int instead.", name);
+        return i32_to_string(entry->value.i);
+    case KVAR_TYPE_FLOAT:
+        KWARN("The kvar '%s' is of type i32 but its value was requested as string. It is recommended to get the value as float instead.", name);
+        return f32_to_string(entry->value.f);
+    case KVAR_TYPE_STRING:
+        return string_duplicate(entry->value.s);
+    default:
+        KERROR("The kvar '%s' is was found but is of an unknown type. This means an unsupported type exists or indicates memory corruption.", name);
+        return 0;
     }
 }
 
@@ -281,23 +281,23 @@ b8 kvar_string_set(const char* name, const char* desc, const char* value) {
 
 static void kvar_print(kvar_entry* entry, b8 include_name) {
     if (!entry) {
-        char name_equals[512] = {0};
+        char name_equals[512] = { 0 };
         if (include_name) {
             string_format_unsafe(name_equals, "%s = ", entry->name);
         }
         switch (entry->type) {
-            case KVAR_TYPE_INT:
-                KINFO("%s%i", name_equals, entry->value.i);
-                break;
-            case KVAR_TYPE_FLOAT:
-                KINFO("%s%f", name_equals, entry->value.f);
-                break;
-            case KVAR_TYPE_STRING:
-                KINFO("%s%s", name_equals, entry->value.s);
-                break;
-            default:
-                KERROR("kvar '%s' has an unknown type. Possible corruption?");
-                break;
+        case KVAR_TYPE_INT:
+            KINFO("%s%i", name_equals, entry->value.i);
+            break;
+        case KVAR_TYPE_FLOAT:
+            KINFO("%s%f", name_equals, entry->value.f);
+            break;
+        case KVAR_TYPE_STRING:
+            KINFO("%s%s", name_equals, entry->value.s);
+            break;
+        default:
+            KERROR("kvar '%s' has an unknown type. Possible corruption?");
+            break;
         }
     }
 }
@@ -320,46 +320,46 @@ static void kvar_console_command_print(console_command_context context) {
 
 static void kvar_set_by_str(const char* name, const char* value_str, const char* desc, kvar_types type) {
     switch (type) {
-        case KVAR_TYPE_INT: {
-            // Try to convert to int and set the value.
-            i32 value = 0;
-            if (!string_to_i32(value_str, &value)) {
-                KERROR("Failed to convert argument 1 to i32: '%s'.", value_str);
-                return;
-            }
-            // if (!kvar_int_set(name, desc, value)) {
-            //     KERROR("Failed to set int kvar called '%s'. See logs for details.", name);
-            //     return;
-            // }
-            // Print out the result to the console.
-            KINFO("%s = %i", name, value);
-        } break;
-        case KVAR_TYPE_FLOAT: {
-            // Try to convert to float and set the value.
-            f32 value = 0;
-            if (!string_to_f32(value_str, &value)) {
-                KERROR("Failed to convert argument 1 to f32: '%s'.", value_str);
-                return;
-            }
-            if (!kvar_f32_set(name, desc, value)) {
-                KERROR("Failed to set float kvar called '%s'. See logs for details.", name);
-                return;
-            }
-            // Print out the result to the console.
-            KINFO("%s = %f", name, value);
-        } break;
-        case KVAR_TYPE_STRING: {
-            // Set as string.
-            if (!kvar_string_set(name, desc, value_str)) {
-                KERROR("Failed to set string kvar called '%s'. See logs for details.", name);
-                return;
-            }
-            // Print out the result to the console.
-            KINFO("%s = '%s'", name, value_str);
-        } break;
-        default:
-            KERROR("Unable to set kvar of unknown type: %u", type);
-            break;
+    case KVAR_TYPE_INT: {
+        // Try to convert to int and set the value.
+        i32 value = 0;
+        if (!string_to_i32(value_str, &value)) {
+            KERROR("Failed to convert argument 1 to i32: '%s'.", value_str);
+            return;
+        }
+        // if (!kvar_int_set(name, desc, value)) {
+        //     KERROR("Failed to set int kvar called '%s'. See logs for details.", name);
+        //     return;
+        // }
+        // Print out the result to the console.
+        KINFO("%s = %i", name, value);
+    } break;
+    case KVAR_TYPE_FLOAT: {
+        // Try to convert to float and set the value.
+        f32 value = 0;
+        if (!string_to_f32(value_str, &value)) {
+            KERROR("Failed to convert argument 1 to f32: '%s'.", value_str);
+            return;
+        }
+        if (!kvar_f32_set(name, desc, value)) {
+            KERROR("Failed to set float kvar called '%s'. See logs for details.", name);
+            return;
+        }
+        // Print out the result to the console.
+        KINFO("%s = %f", name, value);
+    } break;
+    case KVAR_TYPE_STRING: {
+        // Set as string.
+        if (!kvar_string_set(name, desc, value_str)) {
+            KERROR("Failed to set string kvar called '%s'. See logs for details.", name);
+            return;
+        }
+        // Print out the result to the console.
+        KINFO("%s = '%s'", name, value_str);
+    } break;
+    default:
+        KERROR("Unable to set kvar of unknown type: %u", type);
+        break;
     }
 }
 
@@ -392,41 +392,41 @@ static void kvar_console_command_print_all(console_command_context context) {
     for (u32 i = 0; i < KVAR_MAX_COUNT; ++i) {
         kvar_entry* entry = &state_ptr->values[i];
         if (entry->name) {
-            char val_str[1024] = {0};
+            char val_str[1024] = { 0 };
             switch (entry->type) {
-                case KVAR_TYPE_INT:
-                    string_format_unsafe(val_str, "i32 %s = %i, desc='%s'", entry->name, entry->value.i, entry->description ? entry->description : "");
-                    break;
-                case KVAR_TYPE_FLOAT:
-                    string_format_unsafe(val_str, "f32 %s = %f, desc='%s'", entry->name, entry->value.f, entry->description ? entry->description : "");
-                    break;
-                case KVAR_TYPE_STRING:
-                    string_format_unsafe(val_str, "str %s = '%s', desc='%s'", entry->name, entry->value.s, entry->description ? entry->description : "");
-                    break;
-                default:
-                    // Unknown type found. Bleat about it, but try printing it out anyway.
-                    console_write(LOG_LEVEL_WARN, "kvar of unknown type found. Possible corruption?");
-                    string_format_unsafe(val_str, "??? %s = ???, desc='%s'", entry->name, entry->description ? entry->description : "");
-                    break;
+            case KVAR_TYPE_INT:
+                string_format_unsafe(val_str, "i32 %s = %i, desc='%s'", entry->name, entry->value.i, entry->description ? entry->description : "");
+                break;
+            case KVAR_TYPE_FLOAT:
+                string_format_unsafe(val_str, "f32 %s = %f, desc='%s'", entry->name, entry->value.f, entry->description ? entry->description : "");
+                break;
+            case KVAR_TYPE_STRING:
+                string_format_unsafe(val_str, "str %s = '%s', desc='%s'", entry->name, entry->value.s, entry->description ? entry->description : "");
+                break;
+            default:
+                // Unknown type found. Bleat about it, but try printing it out anyway.
+                console_write(LOG_LEVEL_WARN, "kvar of unknown type found. Possible corruption?");
+                string_format_unsafe(val_str, "??? %s = ???, desc='%s'", entry->name, entry->description ? entry->description : "");
+                break;
             }
             console_write(LOG_LEVEL_INFO, val_str);
         }
     }
 }
 
-static void kvar_console_commands_register(void) {
+static void kvar_console_commands_register(kvar_state* state) {
     // Print a var by name
-    console_command_register("kvar_print", 1, kvar_console_command_print);
+    console_command_register("kvar_print", 1, state, kvar_console_command_print);
     // Print all keys
-    console_command_register("kvar_print_all", 0, kvar_console_command_print_all);
+    console_command_register("kvar_print_all", 0, state, kvar_console_command_print_all);
 
     // Create/Set an int-type kvar by name
-    console_command_register("kvar_set_int", 2, kvar_console_command_i32_set);
-    console_command_register("kvar_set_i32", 2, kvar_console_command_i32_set);  // alias
+    console_command_register("kvar_set_int", 2, state, kvar_console_command_i32_set);
+    console_command_register("kvar_set_i32", 2, state, kvar_console_command_i32_set);  // alias
 
     // Create/set a float-type kvar by name.
-    console_command_register("kvar_set_float", 2, kvar_console_command_f32_set);
-    console_command_register("kvar_set_f32", 2, kvar_console_command_f32_set);  // alias
+    console_command_register("kvar_set_float", 2, state, kvar_console_command_f32_set);
+    console_command_register("kvar_set_f32", 2, state, kvar_console_command_f32_set);  // alias
     // Create/set a string-type kvar by name.
-    console_command_register("kvar_set_string", 2, kvar_console_command_string_set);
+    console_command_register("kvar_set_string", 2, state, kvar_console_command_string_set);
 }
